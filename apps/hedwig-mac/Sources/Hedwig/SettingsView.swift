@@ -24,9 +24,21 @@ struct AgentSettings: View {
     @State private var text = ""
     @State private var rules: [LearnedRule] = []
     @State private var saved = false
+    @State private var language = ""
 
     var body: some View {
         Form {
+            Section("Profiel van \(model.me?.person.name ?? "")") {
+                HStack {
+                    TextField("Taal van de bots", text: $language, prompt: Text("Standaard van de server"))
+                        .onSubmit { Task { try? await model.setLanguage(language) } }
+                    Button("Bewaar") { Task { try? await model.setLanguage(language) } }
+                }
+                Text("Bijvoorbeeld Nederlands of English. Geldt voor jouw mailboxen, op elke Mac.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .disabled(model.me?.can(.organize) != true)
             Section("Instructies") {
                 TextEditor(text: $text)
                     .font(.body)
@@ -74,6 +86,7 @@ struct AgentSettings: View {
         .formStyle(.grouped)
         .onChange(of: text) { saved = false }
         .task {
+            language = model.me?.language ?? ""
             text = (try? await model.api?.instructions()) ?? ""
             rules = (try? await model.api?.rules()) ?? []
         }
@@ -165,6 +178,8 @@ struct MailboxSettingsRow: View {
     @Environment(AppModel.self) private var model
     let box: MailboxSummary
     @State private var name = ""
+    @State private var instructions = ""
+    @State private var editing = false
     @State private var failure: String?
 
     var body: some View {
@@ -179,17 +194,32 @@ struct MailboxSettingsRow: View {
                 .fixedSize()
             }
             Text("\(box.address) · \(providerName(box))").font(.caption).foregroundStyle(.secondary)
+            DisclosureGroup("Instructies voor deze mailbox", isExpanded: $editing) {
+                TextEditor(text: $instructions)
+                    .font(.body)
+                    .frame(minHeight: 70)
+                HStack {
+                    Text("Bijvoorbeeld: klantmail nooit archiveren.").font(.caption).foregroundStyle(.secondary)
+                    Spacer()
+                    Button("Bewaar") { save(instructions: instructions) }
+                }
+            }
+            .font(.caption)
             if let failure { Text(failure).font(.caption).foregroundStyle(.red) }
         }
         .disabled(model.me?.can(.organize) != true)
-        .onAppear { name = box.name == box.address ? "" : box.name }
+        .onAppear {
+            name = box.name == box.address ? "" : box.name
+            instructions = box.instructions ?? ""
+        }
     }
 
-    private func save(name: String? = nil, role: MailboxRole? = nil) {
+    private func save(name: String? = nil, role: MailboxRole? = nil, instructions: String? = nil) {
         Task {
             do {
                 let trimmed = name?.trimmingCharacters(in: .whitespaces)
-                try await model.updateMailbox(box.id, name: trimmed.map { $0.isEmpty ? box.address : $0 }, role: role)
+                try await model.updateMailbox(
+                    box.id, name: trimmed.map { $0.isEmpty ? box.address : $0 }, role: role, instructions: instructions)
                 failure = nil
             } catch {
                 failure = error.localizedDescription

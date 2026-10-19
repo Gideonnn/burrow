@@ -59,6 +59,8 @@ public struct MailboxSummary: Codable, Hashable, Identifiable, Sendable {
     public var name: String
     // Optional so an older server without roles still decodes.
     public var role: MailboxRole?
+    /// Extra bot instructions for mail in this mailbox.
+    public var instructions: String?
 
     public var kind: MailboxRole { role ?? .private }
 }
@@ -70,6 +72,8 @@ public struct Me: Codable, Sendable {
     public var key: Key
     public var rights: [Right]
     public var mailboxes: [MailboxSummary]
+    /// The language this person's bots write in; nil is the server's default.
+    public var language: String?
 
     public func can(_ right: Right) -> Bool { rights.contains(right) }
 }

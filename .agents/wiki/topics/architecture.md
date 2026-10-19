@@ -30,9 +30,11 @@ allows and send actions back. The designs in `docs/design/` show the intended pr
   server operations and teaches a rule for that person.
 - Each mailbox has a **role** (`private`, `work`, `school`) and a name its owner sets
   (`PATCH /api/mailboxes/:id`, right `organize`). Hedwig groups the sidebar by role and
-  offers each role's inboxes merged ("Alle werk"). Everything else personal (bot
-  instructions, learned rules, routines, tasks) is already per person, so a person's
-  key is their profile on any Mac.
+  offers each role's inboxes merged ("Alle werk"). A mailbox can carry its own bot
+  instructions, added to the person's in the triage prompt. The person's bot language
+  (`PATCH /api/me`) overrides `BURROW_LANGUAGE`. Everything else personal (instructions,
+  learned rules, routines, tasks) is per person, so a person's key is their profile on
+  any Mac.
 
 ## People, keys and rights
 

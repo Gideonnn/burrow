@@ -47,4 +47,17 @@ import Testing
         #expect(model.mailbox("w1")?.name == "Colloport")
         #expect(server.requests("PATCH", "/api/mailboxes/w1").first?.contains(#""name":"Colloport""#) == true)
     }
+
+    @Test func mailboxInstructionsAndTheLanguageAreSaved() async throws {
+        let server = server()
+        server.on("PATCH", "/api/mailboxes/w1", json: #"{"id":"w1","ownerId":"p1","provider":"gmail","address":"gideon@werk.example","name":"Werk","role":"work","instructions":"Nooit klantmail archiveren."}"#)
+        server.on("PATCH", "/api/me", json: #"{"language":"Dutch"}"#)
+        let model = model(server)
+        await model.start()
+        try await model.updateMailbox("w1", instructions: "Nooit klantmail archiveren.")
+        #expect(model.mailbox("w1")?.instructions == "Nooit klantmail archiveren.")
+        try await model.setLanguage("Dutch")
+        #expect(model.me?.language == "Dutch")
+        #expect(server.requests("PATCH", "/api/me").first?.contains(#""language":"Dutch""#) == true)
+    }
 }

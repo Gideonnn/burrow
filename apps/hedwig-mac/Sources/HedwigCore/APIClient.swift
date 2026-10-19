@@ -91,9 +91,22 @@ public struct APIClient: Sendable {
         return try await call("GET", "api/mailboxes/\(mailboxId)/messages", query: query)
     }
 
-    public func updateMailbox(id: String, name: String?, role: MailboxRole?) async throws -> MailboxSummary {
-        struct Body: Encodable { var name: String?; var role: MailboxRole? }
-        return try await call("PATCH", "api/mailboxes/\(id)", body: Body(name: name, role: role))
+    public func updateMailbox(id: String, name: String?, role: MailboxRole?, instructions: String? = nil) async throws -> MailboxSummary {
+        struct Body: Encodable { var name: String?; var role: MailboxRole?; var instructions: String? }
+        return try await call("PATCH", "api/mailboxes/\(id)", body: Body(name: name, role: role, instructions: instructions))
+    }
+
+    /// Sets the language the person's bots write in; nil returns to the server default.
+    public func setLanguage(_ language: String?) async throws {
+        struct Body: Encodable {
+            var language: String?
+            func encode(to encoder: Encoder) throws {
+                var c = encoder.container(keyedBy: CodingKeys.self)
+                try c.encode(language, forKey: .language) // null must be sent, not left out
+            }
+            enum CodingKeys: CodingKey { case language }
+        }
+        let _: [String: String?] = try await call("PATCH", "api/me", body: Body(language: language))
     }
 
     public func sync(mailboxId: String) async throws {

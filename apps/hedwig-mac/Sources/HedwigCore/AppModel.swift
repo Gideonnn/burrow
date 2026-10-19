@@ -150,10 +150,18 @@ public final class AppModel {
         }
     }
 
-    public func updateMailbox(_ id: String, name: String? = nil, role: MailboxRole? = nil) async throws {
+    public func updateMailbox(_ id: String, name: String? = nil, role: MailboxRole? = nil, instructions: String? = nil) async throws {
         guard let api else { return }
-        let updated = try await api.updateMailbox(id: id, name: name, role: role)
+        let updated = try await api.updateMailbox(id: id, name: name, role: role, instructions: instructions)
         if let index = me?.mailboxes.firstIndex(where: { $0.id == id }) { me?.mailboxes[index] = updated }
+    }
+
+    public func setLanguage(_ language: String?) async throws {
+        guard let api else { return }
+        let trimmed = language?.trimmingCharacters(in: .whitespaces)
+        let value = trimmed?.isEmpty == false ? trimmed : nil
+        try await api.setLanguage(value)
+        me?.language = value
     }
 
     public func loadSelection(keepSelection: Bool = false) async {
