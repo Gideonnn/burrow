@@ -1,3 +1,4 @@
+import { resolve } from 'node:path';
 import { serve } from '@hono/node-server';
 import {
   ClaudeCliRunner,
@@ -93,6 +94,7 @@ const app = createApp({
   insights,
   routines,
   onArrived,
+  clientsDir: resolve(config.dataDir, 'clients'),
 });
 
 startSyncLoop(mail, onArrived);

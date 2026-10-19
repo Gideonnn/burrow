@@ -10,6 +10,7 @@ import type { Accounts } from './mail/accounts';
 import type { MailService } from './mail/service';
 import { accessRoutes } from './routes/access';
 import { catalogRoutes } from './routes/catalog';
+import { clientRoutes } from './routes/clients';
 import { connectRoutes } from './routes/connect';
 import { draftRoutes } from './routes/drafts';
 import { insightsRoutes } from './routes/insights';
@@ -33,6 +34,8 @@ export type AppOptions = {
   catalog?: Catalog;
   insights?: InsightsService;
   routines?: RoutineService;
+  // Where signed client builds are published; without it there are no updates.
+  clientsDir?: string;
 };
 
 export function createApp({
@@ -46,6 +49,7 @@ export function createApp({
   catalog,
   insights,
   routines,
+  clientsDir,
 }: AppOptions) {
   const app = new Hono<AppEnv>();
 
@@ -71,6 +75,7 @@ export function createApp({
   if (catalog) api.route('/', catalogRoutes(catalog));
   if (insights) api.route('/', insightsRoutes(insights));
   if (routines) api.route('/', routineRoutes(routines));
+  if (clientsDir) api.route('/', clientRoutes(clientsDir));
   if (accounts) {
     const connect = connectRoutes(accounts);
     api.route('/', connect.api);

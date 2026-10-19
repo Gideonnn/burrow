@@ -20,7 +20,7 @@ import { TriageService } from './triage/service';
 // A fresh in-memory household for one test: an app, a database, a fake
 // provider per mailbox, and helpers that create people, mailboxes and keys
 // and call the API with them.
-export function testHousehold() {
+export function testHousehold({ clientsDir }: { clientsDir?: string } = {}) {
   const db = openDb(':memory:');
   const events = new EventBus();
   const providers = new Map<string, FakeProvider>();
@@ -99,6 +99,7 @@ export function testHousehold() {
   const arrived: string[] = [];
   const app = createApp({
     version: 'test',
+    clientsDir,
     db,
     mail,
     events,
