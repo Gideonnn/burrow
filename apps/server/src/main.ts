@@ -5,6 +5,7 @@ import {
   FallbackRunner,
 } from './agents/runner';
 import { createApp } from './app';
+import { behindCloudflareAccess } from './auth/cloudflareAccess';
 import { loadCatalog } from './catalog/loadCatalog';
 import { loadConfig } from './config';
 import { SecretBox } from './crypto/secretBox';
@@ -111,3 +112,13 @@ serve(
     );
   },
 );
+
+if (config.cloudflareAccess) {
+  const { team, audience, port } = config.cloudflareAccess;
+  const tunnel = behindCloudflareAccess(app, { db, team, audience });
+  serve({ fetch: tunnel.fetch, port, hostname: config.host }, (info) =>
+    console.log(
+      `for the Cloudflare Tunnel, behind Access: http://${info.address}:${info.port}`,
+    ),
+  );
+}

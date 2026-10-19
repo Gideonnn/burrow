@@ -10,6 +10,17 @@ export function createPerson(db: Db, name: string) {
   return db.insert(people).values({ name }).returning().get();
 }
 
+export function setPersonEmail(db: Db, personId: string, email: string) {
+  const row = db
+    .update(people)
+    .set({ email: email.trim().toLowerCase() })
+    .where(eq(people.id, personId))
+    .returning()
+    .get();
+  if (!row) throw new AccessError('unknown person');
+  return row;
+}
+
 export function listPeople(db: Db) {
   return db.select().from(people).orderBy(people.createdAt).all();
 }

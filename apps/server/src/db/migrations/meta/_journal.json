@@ -43,6 +43,13 @@
       "when": 1792410750615,
       "tag": "0005_complete_anita_blake",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1792416003772,
+      "tag": "0006_faulty_shocker",
+      "breakpoints": true
     }
   ]
 }

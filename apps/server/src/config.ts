@@ -13,6 +13,11 @@ const env = z.object({
   GOOGLE_CLIENT_SECRET: z.string().optional(),
   MICROSOFT_CLIENT_ID: z.string().optional(),
   MICROSOFT_CLIENT_SECRET: z.string().optional(),
+  // With both set, a second port serves the Cloudflare Tunnel and admits only
+  // people logged in through Access. TEAM is e.g. household.cloudflareaccess.com.
+  CLOUDFLARE_ACCESS_TEAM: z.string().optional(),
+  CLOUDFLARE_ACCESS_AUD: z.string().optional(),
+  BURROW_TUNNEL_PORT: z.coerce.number().int().positive().default(4718),
   // Colon-separated; later directories override earlier ones by name.
   BURROW_BOTS_DIRS: z.string().optional(),
   BURROW_SKILLS_DIRS: z.string().optional(),
@@ -36,6 +41,9 @@ export type Config = {
   secretKey: string | undefined;
   google: OAuthAppConfig | undefined;
   microsoft: OAuthAppConfig | undefined;
+  cloudflareAccess:
+    | { team: string; audience: string; port: number }
+    | undefined;
   botsDirs: string[];
   skillsDirs: string[];
   triageBot: string;
@@ -46,6 +54,15 @@ export type Config = {
 export function loadConfig(source: NodeJS.ProcessEnv = process.env): Config {
   const parsed = env.parse(source);
   const dataDir = resolve(parsed.BURROW_DATA_DIR);
+  const team = parsed.CLOUDFLARE_ACCESS_TEAM?.replace(
+    /^https:\/\//,
+    '',
+  ).replace(/\/$/, '');
+  if (!team !== !parsed.CLOUDFLARE_ACCESS_AUD) {
+    throw new Error(
+      'set both CLOUDFLARE_ACCESS_TEAM and CLOUDFLARE_ACCESS_AUD, or neither',
+    );
+  }
   return {
     port: parsed.BURROW_PORT,
     host: parsed.BURROW_HOST,
@@ -81,6 +98,14 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): Config {
           clientSecret: parsed.MICROSOFT_CLIENT_SECRET,
         }
       : undefined,
+    cloudflareAccess:
+      team && parsed.CLOUDFLARE_ACCESS_AUD
+        ? {
+            team,
+            audience: parsed.CLOUDFLARE_ACCESS_AUD,
+            port: parsed.BURROW_TUNNEL_PORT,
+          }
+        : undefined,
   };
 }
 

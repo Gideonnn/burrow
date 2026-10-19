@@ -3,6 +3,7 @@
 //
 //   pnpm --filter @burrow/server cli init <name>        first person + admin key
 //   pnpm --filter @burrow/server cli add-person <name>
+//   pnpm --filter @burrow/server cli set-email <name> <email>  login through Cloudflare Access
 //   pnpm --filter @burrow/server cli list
 //   pnpm --filter @burrow/server cli generate-secret    value for BURROW_SECRET_KEY
 //   pnpm --filter @burrow/server cli seed-demo          invented household for development
@@ -12,6 +13,7 @@ import {
   createPerson,
   listKeys,
   listPeople,
+  setPersonEmail,
 } from './access/service';
 import { loadConfig } from './config';
 import { SecretBox } from './crypto/secretBox';
@@ -46,9 +48,23 @@ switch (command) {
     console.log(`Created ${person.name} (${person.id}).`);
     break;
   }
+  case 'set-email': {
+    const store = db();
+    const name = required(args[0], 'name');
+    const person = listPeople(store).find((p) => p.name === name);
+    if (!person) fail(`no person named ${name}`);
+    const updated = setPersonEmail(
+      store,
+      person.id,
+      required(args[1], 'email'),
+    );
+    console.log(`${updated.name} logs in as ${updated.email}.`);
+    break;
+  }
   case 'list': {
     const store = db();
-    for (const p of listPeople(store)) console.log(`person ${p.id}  ${p.name}`);
+    for (const p of listPeople(store))
+      console.log(`person ${p.id}  ${p.name}${p.email ? `  ${p.email}` : ''}`);
     for (const k of listKeys(store)) {
       console.log(
         `key    ${k.id}  ${k.prefix}…  ${k.name}  [${k.rights.join(', ')}]${k.revokedAt ? '  revoked' : ''}`,
@@ -145,7 +161,7 @@ switch (command) {
     break;
   default:
     fail(
-      'usage: cli init <name> | add-person <name> | list | generate-secret | seed-demo',
+      'usage: cli init <name> | add-person <name> | set-email <name> <email> | list | generate-secret | seed-demo | backup <file>',
     );
 }
 

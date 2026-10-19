@@ -33,6 +33,8 @@ const createdAt = () =>
 export const people = sqliteTable('people', {
   id: id(),
   name: text('name').notNull(),
+  // Lower-cased; the address the person logs in with through Cloudflare Access.
+  email: text('email').unique(),
   createdAt: createdAt(),
 });
 
