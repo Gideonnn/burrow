@@ -1,0 +1,15 @@
+# Who can decrypt which file under infra/secrets/. Public keys only; every
+# encrypted file carries them in its metadata anyway. Adding a recipient to an
+# existing file needs `sops updatekeys <file>` by the operator.
+
+keys:
+  # The operator's Mac.
+  - &operator age1etlgj43ke8pzth95w3trdzuhx4d33gr397c93w0m2w0ym3vtzyaqqemsts
+
+creation_rules:
+  # Tokens for operator tooling on the Mac, such as the Cloudflare API token.
+  # Nothing deployed reads them, so no machine is a recipient.
+  - path_regex: ^infra/secrets/tools\.env\.enc$
+    key_groups:
+      - age:
+          - *operator

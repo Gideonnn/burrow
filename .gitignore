@@ -14,7 +14,6 @@ coverage/
 .data/
 infra/dobby/backups/
 infra/dobby/backup-recipients.txt
-.sops.yaml
 *.sqlite
 *.sqlite-*
 *.db

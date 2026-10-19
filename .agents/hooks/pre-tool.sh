@@ -16,4 +16,9 @@ if [ "$tool" = Bash ]; then
   if grep -qE '(^|[^a-zA-Z0-9_-])(npm|npx)([^a-zA-Z0-9_-]|$)' <<<"$cmd"; then
     deny "Use pnpm instead of npm/npx."
   fi
+  # Agents use secrets through `pnpm with-secrets`; decrypting or editing is
+  # the operator's.
+  if grep -qE '(^|[;&|(]\s*)sops(\s|$)|sops:edit' <<<"$cmd"; then
+    deny "Running sops is the operator's. Use pnpm with-secrets or pnpm sops:verify."
+  fi
 fi

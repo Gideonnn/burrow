@@ -27,6 +27,12 @@ expect 0 '{"tool_name":"Read","tool_input":{"file_path":"/Users/x/.ssh/id_ed2551
 expect 2 '{"tool_name":"Write","tool_input":{"file_path":"/x/data/burrow.sqlite"}}' 'mail database'
 expect 0 '{"tool_name":"Read","tool_input":{"file_path":"/x/AGENTS.md"}}' 'ordinary file'
 expect 2 '{"tool_name":"Read"}' 'malformed payload'
+expect 2 '{"tool_name":"Bash","tool_input":{"command":"sops -d infra/secrets/tools.env.enc"}}' 'agent decrypts with sops'
+expect 2 '{"tool_name":"Bash","tool_input":{"command":"cd infra && sops decrypt secrets/tools.env.enc"}}' 'sops after another command'
+expect 2 '{"tool_name":"Bash","tool_input":{"command":"pnpm sops:edit infra/secrets/tools.env.enc"}}' 'agent edits with sops'
+expect 0 '{"tool_name":"Bash","tool_input":{"command":"pnpm with-secrets tools ./script.sh"}}' 'the with-secrets wrapper'
+expect 0 '{"tool_name":"Bash","tool_input":{"command":"pnpm sops:verify infra/secrets/tools.env.enc"}}' 'verify shows no values'
+expect 0 '{"tool_name":"Bash","tool_input":{"command":"git commit -m \"docs: explain sops\""}}' 'sops in a commit message'
 
 [ "$failed" = 0 ] && echo "hooks: all checks passed"
 exit "$failed"

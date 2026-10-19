@@ -58,6 +58,8 @@ This repository may become public. Treat every commit as published.
   `example.com`/`example.nl` domains. No real names of family, employers or contacts.
 - Hostnames, domains and IP addresses stay out of the code; they come from config.
 - Never read plaintext env files, vault files or SSH private keys.
+- Use encrypted secrets only through `pnpm with-secrets`; running `sops` is the operator's
+  (see [secrets](.agents/wiki/topics/secrets.md)).
 
 ## Safety rules for agents in the product
 
