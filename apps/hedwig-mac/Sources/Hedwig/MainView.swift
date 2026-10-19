@@ -43,47 +43,96 @@ struct MainToolbar: ToolbarContent {
         }
     }
 
+    // Three glass capsules like Apple Mail: compose on its own, then the reply
+    // trio, then archive, delete and spam. macOS 26 merges neighbouring toolbar
+    // items into one glass, also across ToolbarSpacer here, so each item hides
+    // the shared background and draws its own. Flagging is in the menu (⇧⌘L).
     var body: some ToolbarContent {
-        ToolbarItem(placement: .navigation) {
-            Button { if let d = model.newMessage() { openWindow(value: d) } } label: {
-                Label("Nieuw bericht", systemImage: "square.and.pencil")
+        if #available(macOS 26, *) {
+            ToolbarItem(placement: .primaryAction) {
+                compose.frame(width: 40, height: 40).glassEffect(.regular.interactive(), in: .circle)
             }
-            .help("Nieuw bericht (⌘N)")
+            .sharedBackgroundVisibility(.hidden)
+            ToolbarItem(placement: .primaryAction) {
+                replies.frame(height: 40).glassEffect(.regular.interactive(), in: .capsule)
+            }
+            .sharedBackgroundVisibility(.hidden)
+            ToolbarItem(placement: .primaryAction) {
+                organizing.frame(height: 40).glassEffect(.regular.interactive(), in: .capsule)
+            }
+            .sharedBackgroundVisibility(.hidden)
+        } else {
+            ToolbarItem(placement: .primaryAction) { compose }
+            ToolbarItem(placement: .primaryAction) { replies }
+            ToolbarItem(placement: .primaryAction) { organizing }
         }
-        ToolbarItemGroup(placement: .primaryAction) {
-            if showsMail {
-            ControlGroup {
-                Button { if let d = model.reply() { openWindow(value: d) } } label: {
-                    Label("Antwoord", systemImage: "arrowshape.turn.up.left")
-                }
-                Button { if let d = model.reply(all: true) { openWindow(value: d) } } label: {
-                    Label("Allen antwoorden", systemImage: "arrowshape.turn.up.left.2")
-                }
-                Button { if let d = model.forward() { openWindow(value: d) } } label: {
-                    Label("Stuur door", systemImage: "arrowshape.turn.up.right")
-                }
-            }
-            .disabled(model.detail == nil || model.me?.can(.send) != true)
+    }
 
-            ControlGroup {
-                Button { Task { await model.perform([.archive]) } } label: {
-                    Label("Archiveer", systemImage: "archivebox")
-                }
-                Button { Task { await model.perform([.trash]) } } label: {
-                    Label("Verwijder", systemImage: "trash")
-                }
-                .accessibilityIdentifier("hedwig.trash")
-                Button { Task { await model.perform([.moveToSpam, .markRead]) } } label: {
-                    Label("Spam", systemImage: "xmark.bin")
-                }
-            }
-            .disabled(model.detail == nil || model.me?.can(.organize) != true)
-
-            Button { Task { await model.toggleFlag() } } label: {
-                Label("Vlag", systemImage: model.currentSummary?.flagged == true ? "flag.fill" : "flag")
-            }
-            .disabled(model.detail == nil || model.me?.can(.organize) != true)
-            }
+    private var compose: some View {
+        Button { if let d = model.newMessage() { openWindow(value: d) } } label: {
+            Label("Nieuw bericht", systemImage: "square.and.pencil")
         }
+        .labelStyle(.iconOnly)
+        .buttonStyle(.borderless)
+        .imageScale(.large)
+        .help("Nieuw bericht (⌘N)")
+    }
+
+    private var replies: some View {
+        ToolbarCapsule {
+            Button { if let d = model.reply() { openWindow(value: d) } } label: {
+                Label("Antwoord", systemImage: "arrowshape.turn.up.left")
+            }
+            .help("Antwoord (⌘R)")
+            Divider()
+            Button { if let d = model.reply(all: true) { openWindow(value: d) } } label: {
+                Label("Allen antwoorden", systemImage: "arrowshape.turn.up.left.2")
+            }
+            .help("Allen antwoorden (⇧⌘R)")
+            Divider()
+            Button { if let d = model.forward() { openWindow(value: d) } } label: {
+                Label("Stuur door", systemImage: "arrowshape.turn.up.right")
+            }
+            .help("Stuur door (⇧⌘F)")
+        }
+        .disabled(!canReply)
+    }
+
+    private var organizing: some View {
+        ToolbarCapsule {
+            Button { Task { await model.perform([.archive]) } } label: {
+                Label("Archiveer", systemImage: "archivebox")
+            }
+            .help("Archiveer (⌃⌘A)")
+            Divider()
+            Button { Task { await model.perform([.trash]) } } label: {
+                Label("Verwijder", systemImage: "trash")
+            }
+            .accessibilityIdentifier("hedwig.trash")
+            .help("Verwijder (⌘⌫)")
+            Divider()
+            Button { Task { await model.perform([.moveToSpam, .markRead]) } } label: {
+                Label("Spam", systemImage: "xmark.bin")
+            }
+            .help("Markeer als spam (⇧⌘J)")
+        }
+        .disabled(!canOrganize)
+    }
+
+    private var canReply: Bool { showsMail && model.detail != nil && model.me?.can(.send) == true }
+    private var canOrganize: Bool { showsMail && model.detail != nil && model.me?.can(.organize) == true }
+}
+
+/// Icon buttons side by side with thin dividers, inside one toolbar item.
+private struct ToolbarCapsule<Content: View>: View {
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        HStack(spacing: 12) { content }
+            .labelStyle(.iconOnly)
+            .buttonStyle(.borderless)
+            .imageScale(.large)
+            .fixedSize()
+            .padding(.horizontal, 14)
     }
 }
