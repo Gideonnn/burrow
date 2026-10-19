@@ -14,10 +14,11 @@ export type CloudflareAccessOptions = {
   keys?: JWTVerifyGetKey;
 };
 
-// The app as served to the Cloudflare Tunnel, on its own port. Access already
-// asks for a login at Cloudflare; checking its signed token here as well means
-// a mistake in the Access policy does not open the server, and only people of
-// the household get in. API routes still require a key on top.
+// The app as served to the Cloudflare Tunnel, on its own port. Browser pages
+// need an Access login; checking its signed token here as well means a mistake
+// in the Access policy does not open them, and only people of the household get
+// in. Access lets /api through so Hedwig and agents need only their key, which
+// every API route requires.
 export function behindCloudflareAccess(
   app: App,
   {
@@ -28,6 +29,7 @@ export function behindCloudflareAccess(
   }: CloudflareAccessOptions,
 ) {
   const requireLogin = createMiddleware<AppEnv>(async (c, next) => {
+    if (c.req.path.startsWith('/api/')) return next();
     const token = c.req.header('cf-access-jwt-assertion');
     const email = token
       ? await jwtVerify(token, keys, {

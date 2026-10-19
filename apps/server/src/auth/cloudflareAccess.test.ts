@@ -83,16 +83,30 @@ describe('the tunnel behind Cloudflare Access', () => {
     expect(res.status).toBe(403);
   });
 
-  it('still asks for an API key on the API', async () => {
+  it('lets clients reach the API with only their key, as Access lets /api through', async () => {
     const h = await household();
-    const login = await h.sign({ email: 'gideon@example.com' });
-    expect((await h.visit('/api/me', login)).status).toBe(401);
     const token = h.key(h.gideon.id, ['read']);
     const me = meResponse.parse(
       await (
-        await h.visit('/api/me', login, { authorization: `Bearer ${token}` })
+        await h.visit('/api/me', undefined, {
+          authorization: `Bearer ${token}`,
+        })
       ).json(),
     );
     expect(me.person.name).toBe('Gideon');
+  });
+
+  it('still asks for an API key on the API, even with a login', async () => {
+    const h = await household();
+    const login = await h.sign({ email: 'gideon@example.com' });
+    expect((await h.visit('/api/me', login)).status).toBe(401);
+    expect((await h.visit('/api/me')).status).toBe(401);
+  });
+
+  it('does not let a path that only looks like the API past the login', async () => {
+    const h = await household();
+    for (const path of ['/apix', '/api/../health', '/%61pi/../health']) {
+      expect((await h.visit(path)).status).not.toBe(200);
+    }
   });
 });

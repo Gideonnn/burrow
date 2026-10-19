@@ -6,7 +6,7 @@ const env = z.object({
   BURROW_HOST: z.string().default('127.0.0.1'),
   BURROW_DATA_DIR: z.string().default('.data'),
   // The address browsers use to reach the server, for OAuth redirects. On
-  // Dobby this is the Tailscale HTTPS name.
+  // Dobby this is the public hostname of the Cloudflare Tunnel.
   BURROW_PUBLIC_URL: z.url().optional(),
   BURROW_SECRET_KEY: z.string().optional(),
   GOOGLE_CLIENT_ID: z.string().optional(),
