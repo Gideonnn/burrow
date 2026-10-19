@@ -56,7 +56,7 @@ This repository may become public. Treat every commit as published.
 - Never commit secrets, tokens, `.env` files, databases or real mail.
 - Test fixtures and examples use invented people, addresses and companies, with
   `example.com`/`example.nl` domains. No real names of family, employers or contacts.
-- Hostnames, tailnet names and IP addresses stay out of the code; they come from config.
+- Hostnames, domains and IP addresses stay out of the code; they come from config.
 - Never read plaintext env files, vault files or SSH private keys.
 
 ## Safety rules for agents in the product
@@ -102,8 +102,8 @@ kebab-case.
   (`server`, `hedwig`, `contracts`, `bots`, `skills`, `agents`, `repo`), max 100 characters. Use the body
   for *why* when it is not obvious.
 - Never add `Co-Authored-By` or any other trailer.
-- Integration goes through pull requests into `main` with a merge commit. Never push
-  directly to `main` once the GitHub repository exists.
+- Work on `main` and push directly after each validated commit; no feature branches or
+  pull requests unless asked. Worktree agents merge their branch into `main` when done.
 
 ## How to explain things
 
