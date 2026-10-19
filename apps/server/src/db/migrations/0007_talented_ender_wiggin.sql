@@ -1,0 +1,1 @@
+ALTER TABLE `mailboxes` ADD `role` text DEFAULT 'private' NOT NULL;

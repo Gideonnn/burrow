@@ -109,3 +109,43 @@ describe('admin routes', () => {
     expect(res.status).toBe(400);
   });
 });
+
+describe('mailbox name and role', () => {
+  it('starts as private and can be renamed and given a role by its owner', async () => {
+    const h = household();
+    const token = h.key(h.gideon.id, ['read', 'organize']);
+    let me = meResponse.parse(await (await h.call(token, '/api/me')).json());
+    expect(me.mailboxes.find((m) => m.id === h.work.id)?.role).toBe('private');
+
+    const res = await h.call(token, `/api/mailboxes/${h.work.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ name: 'Werk', role: 'work' }),
+    });
+    expect(res.status).toBe(200);
+    me = meResponse.parse(await (await h.call(token, '/api/me')).json());
+    expect(me.mailboxes.find((m) => m.id === h.work.id)).toMatchObject({
+      name: 'Werk',
+      role: 'work',
+    });
+  });
+
+  it('cannot be changed through a key that does not see the mailbox or may not organize', async () => {
+    const h = household();
+    const patch = (token: string, body: object) =>
+      h.call(token, `/api/mailboxes/${h.evas.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(body),
+      });
+    expect(
+      (await patch(h.key(h.gideon.id, ['read', 'organize']), { role: 'work' }))
+        .status,
+    ).toBe(404);
+    expect(
+      (await patch(h.key(h.eva.id, ['read']), { role: 'school' })).status,
+    ).toBe(403);
+    expect(
+      (await patch(h.key(h.eva.id, ['read', 'organize']), { role: 'hobby' }))
+        .status,
+    ).toBe(400);
+  });
+});

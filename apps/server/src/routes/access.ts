@@ -1,7 +1,9 @@
 import {
   createKeyRequest,
   createPersonRequest,
+  type MailboxSummary,
   type MeResponse,
+  updateMailboxRequest,
 } from '@burrow/contracts';
 import { zValidator } from '@hono/zod-validator';
 import { eq, inArray } from 'drizzle-orm';
@@ -15,6 +17,7 @@ import {
   listPeople,
   revokeKey,
 } from '../access/service';
+import { canSeeMailbox } from '../auth/access';
 import { requireRight } from '../auth/middleware';
 import { mailboxes, people } from '../db/schema';
 import type { AppEnv } from '../env';
@@ -25,6 +28,7 @@ const mailboxColumns = {
   provider: mailboxes.provider,
   address: mailboxes.address,
   name: mailboxes.name,
+  role: mailboxes.role,
 };
 
 export const accessRoutes = new Hono<AppEnv>()
@@ -50,6 +54,25 @@ export const accessRoutes = new Hono<AppEnv>()
       mailboxes: boxes,
     });
   })
+  // The person renames a mailbox or says what it is for (private, work, school).
+  .patch(
+    '/mailboxes/:id',
+    requireRight('organize'),
+    zValidator('json', updateMailboxRequest),
+    (c) => {
+      const id = c.req.param('id');
+      if (!canSeeMailbox(c.var.access, id)) {
+        throw new HTTPException(404, { message: 'unknown mailbox' });
+      }
+      const row = c.var.db
+        .update(mailboxes)
+        .set(c.req.valid('json'))
+        .where(eq(mailboxes.id, id))
+        .returning(mailboxColumns)
+        .get();
+      return c.json<MailboxSummary>(row!);
+    },
+  )
   .use('/admin/*', requireRight('admin'))
   .get('/admin/people', (c) =>
     c.json(listPeople(c.var.db).map(({ id, name }) => ({ id, name }))),

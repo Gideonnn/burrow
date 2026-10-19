@@ -1,5 +1,6 @@
 import type {
   Address,
+  MailboxRole,
   MailFolder,
   MailProvider,
   Right,
@@ -44,6 +45,7 @@ export const mailboxes = sqliteTable('mailboxes', {
     .notNull()
     .references(() => people.id),
   provider: text('provider').$type<MailProvider>().notNull(),
+  role: text('role').$type<MailboxRole>().notNull().default('private'),
   address: text('address').notNull(),
   name: text('name').notNull(),
   // Provider credentials (OAuth tokens or an API token), encrypted with

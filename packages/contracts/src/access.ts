@@ -8,12 +8,17 @@ export const person = z.object({
 });
 export type Person = z.infer<typeof person>;
 
+// What a mailbox is for; clients group and merge inboxes by it.
+export const mailboxRole = z.enum(['private', 'work', 'school']);
+export type MailboxRole = z.infer<typeof mailboxRole>;
+
 export const mailboxSummary = z.object({
   id: z.string(),
   ownerId: z.string(),
   provider: mailProvider,
   address: z.string(),
   name: z.string(),
+  role: mailboxRole,
 });
 export type MailboxSummary = z.infer<typeof mailboxSummary>;
 
@@ -24,6 +29,12 @@ export const meResponse = z.object({
   mailboxes: z.array(mailboxSummary),
 });
 export type MeResponse = z.infer<typeof meResponse>;
+
+export const updateMailboxRequest = z.object({
+  name: z.string().trim().min(1).optional(),
+  role: mailboxRole.optional(),
+});
+export type UpdateMailboxRequest = z.infer<typeof updateMailboxRequest>;
 
 export const createPersonRequest = z.object({ name: z.string().trim().min(1) });
 
