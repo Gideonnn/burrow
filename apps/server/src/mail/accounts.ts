@@ -4,6 +4,7 @@ import {
   exchangeCode,
   type Fetch,
   GmailClient,
+  GraphClient,
   GOOGLE,
   MICROSOFT,
   type MailProviderClient,
@@ -164,6 +165,9 @@ function defaultClient(
     case 'gmail':
       return (session, fetchFn) =>
         new GmailClient(session as OAuthSession, fetchFn);
+    case 'microsoft':
+      return (session, fetchFn) =>
+        new GraphClient(session as OAuthSession, fetchFn);
     default:
       return () => {
         throw new Error(`no client for ${provider} yet`);

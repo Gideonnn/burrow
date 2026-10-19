@@ -39,3 +39,22 @@ Sync uses `users.history.list` from a history id; an expired id (older than abou
 triggers a full resync of the last 100 inbox messages. Drafts are skipped. Server
 operations become one `messages.modify` call per message; missing user labels are
 created on first use.
+
+## Microsoft (Outlook.com and Microsoft 365)
+
+1. In the Microsoft Entra admin center, register an application with supported account
+   types **personal Microsoft accounts and accounts in any organizational directory**.
+2. Add a **Web** platform with the same two redirect URIs as Google.
+3. Add delegated Graph permissions `offline_access`, `User.Read`, `Mail.ReadWrite`,
+   `Mail.Send`, and create a client secret.
+4. Put the application (client) id and secret in `MICROSOFT_CLIENT_ID` and
+   `MICROSOFT_CLIENT_SECRET`.
+
+A work tenant may block user consent for outside apps; then its IT admin has to approve
+the app before the login succeeds. Ask before connecting a work account: its mail goes
+through the household's agent.
+
+Sync tracks the Inbox and Junk Email folders with delta queries, starting with the last
+30 days. All calls ask for immutable ids, so a message keeps its id when it moves; a
+message that leaves a tracked folder is fetched to see whether it moved (archive, trash)
+or was deleted. Replies go through the `reply` endpoint to keep the conversation.
