@@ -5,6 +5,13 @@ and API key hashes live in the server's database on Dobby, never in the reposito
 deployment configuration (OAuth client credentials, a backup encryption key, a Tailscale
 auth key for provisioning).
 
+## Where the server's secrets live
+
+The first install on Dobby generates `BURROW_SECRET_KEY` there and keeps every server
+secret in the settings file under `~/.config/burrow/` (mode 600), next to the OAuth client
+credentials the operator adds. Nothing is in git. SOPS below is only needed if secrets
+ever move into the repository.
+
 ## SOPS in a public repository
 
 SOPS with age is designed for this: values are encrypted with AES-256-GCM to the listed

@@ -2,14 +2,14 @@
 
 Issue-ready entries, roughly in build order. Delete an entry in the commit that finishes it.
 
-## First deploy on Dobby (operator)
+## Finish Dobby (operator)
 
-**What:** the one-time steps in the deploy topic: SSH alias and host key, Docker on
-Dobby, the SOPS-encrypted environment, `tailscale serve`, the agent logins in the
-container, `cli init`, and the backup timer with its age recipients.
-**Why:** the artifacts exist and CI builds and starts the image, but only Gideon can
-create the secrets and change Dobby.
-**Scope:** about an hour, following `.agents/wiki/topics/deploy.md`.
+**What:** enable Tailscale Serve with the link the install prints, put the Google and
+Microsoft client ids in the settings on Dobby, and add age recipients for backups. Then
+rerun `pnpm server:deploy`.
+**Why:** the server runs on Dobby since 2026-10-19 and has an admin key, but the Mac
+reaches it only through an SSH tunnel and no real mailbox is connected yet.
+**Scope:** about half an hour; see the deploy topic.
 
 ## Invoice routine
 

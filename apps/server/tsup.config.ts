@@ -11,5 +11,6 @@ export default defineConfig({
   noExternal: [/^@burrow\//],
   // The bundle resolves migrations next to itself (dist/migrations).
   // Replace, not merge: cp -R into an existing folder nests a second copy.
-  onSuccess: 'rm -rf dist/migrations && cp -R src/db/migrations dist/migrations',
+  onSuccess:
+    'rm -rf dist/migrations && cp -R src/db/migrations dist/migrations',
 });
