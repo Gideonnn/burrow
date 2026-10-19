@@ -28,6 +28,11 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: ./.agents/hooks/test-hooks.sh
+      - name: A second server build still finds its migrations
+        run: |
+          pnpm --filter @burrow/server build
+          pnpm --filter @burrow/server build
+          test -f apps/server/dist/migrations/meta/_journal.json
 
   secrets:
     runs-on: ubuntu-latest
