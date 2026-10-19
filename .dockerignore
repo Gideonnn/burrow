@@ -1,0 +1,12 @@
+**/node_modules
+**/dist
+**/.turbo
+**/.build
+apps/hedwig-mac
+docs
+.git
+.data
+*.sqlite
+# Secrets never enter an image: every env file except the examples.
+**/.env*
+!**/*.example

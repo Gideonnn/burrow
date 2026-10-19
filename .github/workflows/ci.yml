@@ -48,3 +48,17 @@ jobs:
       - uses: actions/checkout@v4
       - run: swift build
       - run: swift test
+
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -f apps/server/Dockerfile -t burrow-server .
+      - name: Start the image and check /health
+        run: |
+          docker run -d --name burrow -p 4717:4717 -e BURROW_SECRET_KEY="$(openssl rand -base64 32)" burrow-server
+          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:4717/health && exit 0; sleep 1; done
+          docker logs burrow
+          exit 1
+      - name: The CLI runs inside the image
+        run: docker exec burrow node dist/cli.js list

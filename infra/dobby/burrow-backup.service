@@ -1,0 +1,9 @@
+[Unit]
+Description=Burrow database backup
+After=docker.service
+
+[Service]
+Type=oneshot
+# Replace %h's user with the account that owns ~/burrow when installing.
+WorkingDirectory=%h/burrow/infra/dobby
+ExecStart=%h/burrow/infra/dobby/backup.sh

@@ -1,0 +1,27 @@
+# The Burrow server on Dobby. Run from this folder on Dobby; deploy.sh does it
+# for you from the Mac.
+name: burrow
+
+services:
+  server:
+    build:
+      context: ../..
+      dockerfile: apps/server/Dockerfile
+    image: burrow-server:latest
+    restart: unless-stopped
+    # Only on the host's loopback: Tailscale serve publishes it to the tailnet
+    # with HTTPS, and nothing is reachable from the home network or internet.
+    ports:
+      - "127.0.0.1:4717:4717"
+    # Written by deploy.sh from the SOPS file; never committed.
+    env_file: burrow.env
+    volumes:
+      - data:/data
+      - claude:/home/node/.claude
+      - codex:/home/node/.codex
+      - ./backups:/backups
+
+volumes:
+  data:
+  claude:
+  codex:

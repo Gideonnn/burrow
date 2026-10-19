@@ -2,11 +2,14 @@
 
 Issue-ready entries, roughly in build order. Delete an entry in the commit that finishes it.
 
-## Deploy to Dobby
+## First deploy on Dobby (operator)
 
-**What:** Dockerfile and Compose for the server, `tailscale serve` for HTTPS, nightly
-encrypted backup of the database, deploy configuration in SOPS with age (recipients:
-Gideon's Mac and Dobby). **Why:** run it at home. **Scope:** `infra/` plus a runbook topic.
+**What:** the one-time steps in the deploy topic: SSH alias and host key, Docker on
+Dobby, the SOPS-encrypted environment, `tailscale serve`, the agent logins in the
+container, `cli init`, and the backup timer with its age recipients.
+**Why:** the artifacts exist and CI builds and starts the image, but only Gideon can
+create the secrets and change Dobby.
+**Scope:** about an hour, following `.agents/wiki/topics/deploy.md`.
 
 ## Routines, task queue and runners on clients
 
