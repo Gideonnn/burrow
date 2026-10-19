@@ -11,6 +11,9 @@ usage: hedwigctl <command>
   select <id>           select a row
   show <place>          inbox, inbox:<address>, filtered, drafts, tasks, archive, sent, spam
   open <messageId>      open a message from the current list
+  update                look for a newer signed build and get it ready
+  restart [--force]     quit and start again, installing a ready update; refuses
+                        while a message is being written unless --force
 
 Ids come from tree or find and change when the interface does.
 """
@@ -24,7 +27,8 @@ func fail(_ message: String, code: Int32 = 1) -> Never {
 guard let cmd = args.first else { fail(usage) }
 var request: [String: Any] = ["cmd": cmd]
 switch (cmd, args.count) {
-case ("state", 1), ("tree", 1): break
+case ("state", 1), ("tree", 1), ("update", 1), ("restart", 1): break
+case ("restart", 2) where args[1] == "--force": request = ["cmd": "restart", "force": true]
 case ("find", 2...), ("show", 2...): request["text"] = args.dropFirst().joined(separator: " ")
 case ("press", 2), ("select", 2), ("open", 2): request["id"] = args[1]
 case ("type", 3...):

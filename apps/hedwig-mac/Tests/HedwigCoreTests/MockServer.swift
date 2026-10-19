@@ -8,6 +8,7 @@ final class MockServer: @unchecked Sendable {
 
     private let lock = NSLock()
     private var routes: [String: Handler] = [:]
+    private var dataRoutes: [String: Data] = [:]
     private(set) var log: [(method: String, path: String, body: String)] = []
 
     func on(_ method: String, _ path: String, status: Int = 200, json: String) {
@@ -18,6 +19,11 @@ final class MockServer: @unchecked Sendable {
         lock.withLock { routes["\(method) \(path)"] = handler }
     }
 
+    /// A binary body, such as a zipped build.
+    func onData(_ method: String, _ path: String, _ data: Data) {
+        lock.withLock { dataRoutes["\(method) \(path)"] = data }
+    }
+
     func requests(_ method: String, _ path: String) -> [String] {
         lock.withLock { log.filter { $0.method == method && $0.path == path }.map(\.body) }
     }
@@ -26,10 +32,11 @@ final class MockServer: @unchecked Sendable {
         let method = request.httpMethod ?? "GET"
         let path = request.url?.path() ?? ""
         let body = request.httpBodyStream.map(readAll) ?? request.httpBody.map { String(decoding: $0, as: UTF8.self) } ?? ""
-        let handler = lock.withLock {
+        let (handler, data) = lock.withLock {
             log.append((method, path, body))
-            return routes["\(method) \(path)"]
+            return (routes["\(method) \(path)"], dataRoutes["\(method) \(path)"])
         }
+        if let data { return (200, data) }
         guard let handler else { return (404, Data(#"{"error":"not found"}"#.utf8)) }
         let (status, json) = handler(request)
         return (status, Data(json.utf8))

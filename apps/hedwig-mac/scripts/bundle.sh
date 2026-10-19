@@ -10,6 +10,9 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 VERSION="${HEDWIG_VERSION:-0.1.0}"
+# The build number decides updates: a Hedwig installs a published build only
+# when its number is higher. The commit count on main only grows.
+BUILD="${HEDWIG_BUILD:-$(git rev-list --count HEAD)}"
 APP="build/Hedwig.app"
 
 swift build -c release --product Hedwig
@@ -32,7 +35,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleIconFile</key><string>AppIcon</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleShortVersionString</key><string>${VERSION}</string>
-  <key>CFBundleVersion</key><string>${VERSION}</string>
+  <key>CFBundleVersion</key><string>${BUILD}</string>
   <key>CFBundleDevelopmentRegion</key><string>nl</string>
   <key>LSMinimumSystemVersion</key><string>14.0</string>
   <key>LSApplicationCategoryType</key><string>public.app-category.productivity</string>

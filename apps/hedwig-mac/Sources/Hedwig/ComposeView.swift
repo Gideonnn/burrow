@@ -44,6 +44,8 @@ struct ComposeView: View {
             .padding(12)
         }
         .navigationTitle(draft.subject.isEmpty ? "Nieuw bericht" : draft.subject)
+        .onAppear { model.composing += 1 }
+        .onDisappear { model.composing -= 1 }
     }
 
     private func send() async {

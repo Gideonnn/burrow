@@ -8,6 +8,7 @@ swift build && swift test            # from this folder
 ./scripts/bundle.sh                  # build/Hedwig.app
 ./scripts/install.sh                  # install in /Applications for Spotlight and Raycast
 ./scripts/make-icon.sh               # after changing Resources/AppIcon.svg
+pnpm hedwig:release                  # from the repo root: publish to every Mac (signed)
 ```
 
 Open it from Raycast by adding the alias `email` to Hedwig in Raycast's settings.
@@ -51,9 +52,16 @@ hedwigctl find Archiveer        # elements by label; then:
 hedwigctl press <id>
 hedwigctl type <id> "text"
 hedwigctl select <id>           # a row in a list
+hedwigctl update                # look for a newer signed build
+hedwigctl restart               # restart, installing a ready build
 ```
 
 Password and key fields cannot be read or typed into, and a key shown after creating
 it stays hidden. Pressing Verstuur or Verwijder opens a dialog in Hedwig: nothing is
 sent or deleted until you allow it, and the agent cannot see or press that dialog.
 
+## Updates
+
+`pnpm hedwig:install` tries a change on this Mac only; `pnpm hedwig:release` publishes
+a signed build that every Hedwig offers as "Update klaar · Herstart". See
+`.agents/wiki/topics/hedwig-updates.md`.

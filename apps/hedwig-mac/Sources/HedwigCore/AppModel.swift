@@ -35,6 +35,8 @@ public final class AppModel {
     public private(set) var unreadCounts: [String: Int] = [:]
     public private(set) var isLoading = false
     public var error: String?
+    /// Open compose windows; restarting would lose what is in them.
+    public var composing = 0
 
     private let store: ConnectionStore
     private let makeClient: @Sendable (Connection) -> APIClient

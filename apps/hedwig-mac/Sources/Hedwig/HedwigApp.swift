@@ -10,6 +10,7 @@ struct HedwigApp: App {
         WindowGroup("Hedwig", id: "main") {
             RootView()
                 .environment(model)
+                .environment(delegate.updater)
                 .frame(minWidth: 960, minHeight: 600)
         }
         .commands { HedwigCommands(model: model) }
@@ -90,13 +91,54 @@ struct HedwigCommands: Commands {
 /// runner and live updates keep going with every window closed.
 final class AppDelegate: NSObject, NSApplicationDelegate {
     @MainActor let model = AppModel()
+    @MainActor lazy var updater: Updater = {
+        let model = model
+        return Updater(
+            currentVersion: Self.installedBuild,
+            publicKey: ReleaseKey.publicKey,
+            stagingDir: FileManager.default.homeDirectoryForCurrentUser
+                .appendingPathComponent("Library/Application Support/Hedwig/Updates"),
+            api: { model.api })
+    }()
     private var control: ControlSocketServer?
+
+    /// The build number of this .app; 0 when running outside a bundle, which
+    /// turns updates off for development runs.
+    private static var installedBuild: Int {
+        guard Bundle.main.bundleURL.pathExtension == "app" else { return 0 }
+        return Int(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "") ?? 0
+    }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         Task { @MainActor in
             if model.connection != nil { await model.start() }
         }
         Task { @MainActor in startControl() }
+        Task { @MainActor [updater] in
+            while !Task.isCancelled {
+                await updater.check()
+                try? await Task.sleep(for: .seconds(3600))
+            }
+        }
+    }
+
+    /// Quits and starts again, swapping in a staged update if there is one.
+    @MainActor func restart() {
+        let script = FileManager.default.temporaryDirectory.appendingPathComponent("hedwig-restart.sh")
+        let target = Bundle.main.bundleURL
+        do {
+            try updater.relaunchScript(target: target, pid: ProcessInfo.processInfo.processIdentifier)
+                .write(to: script, atomically: true, encoding: .utf8)
+            let sh = Process()
+            sh.executableURL = URL(fileURLWithPath: "/bin/sh")
+            sh.arguments = [script.path]
+            sh.standardOutput = FileHandle.nullDevice
+            sh.standardError = FileHandle.nullDevice
+            try sh.run()
+            NSApp.terminate(nil)
+        } catch {
+            model.error = "Herstarten lukte niet: \(error.localizedDescription)"
+        }
     }
 
     /// Lets agents on this Mac operate Hedwig with `hedwigctl`.
@@ -110,6 +152,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         service.register("open") { request in
             try await model.open(messageId: request["id"] as? String ?? "")
             return model.controlState()
+        }
+        let updater = updater
+        service.register("update") { _ in
+            await updater.check()
+            return [
+                "installed": updater.currentVersion,
+                "ready": updater.ready as Any? ?? NSNull(),
+                "error": updater.lastError as Any? ?? NSNull(),
+            ] as [String: Any]
+        }
+        service.register("restart") { [weak self] request in
+            if model.composing > 0, request["force"] as? Bool != true {
+                throw ControlError("a message is being written; ask the person, or pass force")
+            }
+            // Answer first, then quit.
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(300))
+                self?.restart()
+            }
+            return ["restarting": true, "installing": updater.ready as Any? ?? NSNull()] as [String: Any]
         }
         do {
             control = try ControlSocketServer { request in await service.handle(request) }

@@ -49,9 +49,34 @@ struct SidebarView: View {
             }
         }
         .listStyle(.sidebar)
-        .safeAreaInset(edge: .bottom) { ConnectionBadge() }
+        .safeAreaInset(edge: .bottom) {
+            VStack(spacing: 0) {
+                UpdateBanner()
+                ConnectionBadge()
+            }
+        }
     }
 
+}
+
+struct UpdateBanner: View {
+    @Environment(Updater.self) private var updater
+
+    var body: some View {
+        if let version = updater.ready {
+            HStack(spacing: 8) {
+                Image(systemName: "arrow.down.circle.fill").foregroundStyle(.tint)
+                Text("Update klaar").font(.caption.weight(.semibold))
+                Spacer()
+                Button("Herstart") { (NSApp.delegate as? AppDelegate)?.restart() }
+                    .controlSize(.small)
+            }
+            .help("Build \(version) staat klaar; Hedwig start opnieuw op met de nieuwe versie.")
+            .padding(10)
+            .background(.tint.opacity(0.12), in: RoundedRectangle(cornerRadius: 9))
+            .padding(.horizontal, 8)
+        }
+    }
 }
 
 struct ConnectionBadge: View {
