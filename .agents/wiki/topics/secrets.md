@@ -2,8 +2,8 @@
 
 Few secrets exist, and none of them belong in git as plaintext. Per-user OAuth tokens
 and API key hashes live in the server's database on Dobby, never in the repository. What remains is
-deployment configuration (OAuth client credentials, a backup encryption key, a Tailscale
-auth key for provisioning).
+deployment configuration (OAuth client credentials, a backup encryption key, the Cloudflare
+Tunnel token).
 
 ## Where the server's secrets live
 

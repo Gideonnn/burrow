@@ -2,10 +2,10 @@
 
 The server runs on Dobby (Ubuntu, x86_64) as a systemd **user** service, without Docker
 or sudo: `infra/dobby/install.sh` builds the checkout in `~/burrow`, writes the settings
-once, installs `burrow.service` and a nightly backup timer, waits for `/health` and
-publishes the port on the tailnet with `tailscale serve`. From the Mac,
-`pnpm server:deploy` (`infra/dobby/deploy.sh`) moves Dobby's checkout to `origin/main` and
-runs the install again. Every step is safe to repeat.
+once, installs `burrow.service`, a nightly backup timer and, once a token exists, the
+Cloudflare Tunnel, then waits for `/health`. From the Mac, `pnpm server:deploy`
+(`infra/dobby/deploy.sh`) moves Dobby's checkout to `origin/main` over SSH and runs the
+install again. Every step is safe to repeat.
 
 ## What lives where on Dobby
 
@@ -15,66 +15,75 @@ runs the install again. Every step is safe to repeat.
 | Settings and secrets | `~/.config/burrow/burrow.env`, mode 600, created by the first install; never printed, copied or committed |
 | Tunnel token | `~/.config/burrow/tunnel.env`, mode 600, written by the operator |
 | Database, personal bots and skills, backups | `~/.local/share/burrow` |
-| Log | `~/.local/state/burrow/server.log` (the user journal is not readable there) |
+| Logs | `~/.local/state/burrow/server.log` and `tunnel.log` (the user journal is not readable there) |
 | Units | `~/.config/systemd/user/burrow.service`, `burrow-backup.{service,timer}`, `burrow-tunnel.service` when a tunnel token exists; linger is on, so they run without a login |
 | Agent CLIs | `~/.local/bin/claude` and `/usr/bin/codex`, logged in as the `dobby` user |
 
-The server listens on `127.0.0.1:4717` only. `tailscale serve` adds HTTPS on
-`https://dobby-ubuntu.<tailnet>.ts.net`, the `BURROW_PUBLIC_URL` the first install
-writes. Run the server CLI with the settings loaded through `infra/dobby/cli.sh`, e.g.
+Run the server CLI with the settings loaded through `infra/dobby/cli.sh`, e.g.
 `~/burrow/infra/dobby/cli.sh list`.
 
-## Public access: Cloudflare Tunnel and Access
+## How it is reached: Cloudflare Tunnel and Access
 
-Household members without Tailscale reach the server on a public hostname through a
-Cloudflare Tunnel, with Cloudflare Access asking for a login first. The tunnel points at a
-**second port, 4718**, which the server opens only when `CLOUDFLARE_ACCESS_TEAM` and
-`CLOUDFLARE_ACCESS_AUD` are set. On that port every request needs a valid Access token
-(`Cf-Access-Jwt-Assertion`, checked against the team's keys and the application's
-audience tag) whose email belongs to a person; API routes still need a key on top. Port
-4717 stays for the tailnet, so Hedwig and agents keep using Serve and their keys.
-Code: `apps/server/src/auth/cloudflareAccess.ts`.
+Everything outside Dobby reaches the server on one public hostname through a Cloudflare
+Tunnel; no port on the home router is open. The server listens on two local ports:
+
+- **4717**, unauthenticated apart from API keys, for Dobby itself (the install's health
+  check, `ssh -L 4717:127.0.0.1:4717 dobby` when debugging).
+- **4718**, which the tunnel points at, opened only when `CLOUDFLARE_ACCESS_TEAM` and
+  `CLOUDFLARE_ACCESS_AUD` are set. Browser pages there need a valid Access token
+  (`Cf-Access-Jwt-Assertion`, checked against the team's keys and the application's
+  audience tag) whose email belongs to a person. `/api/*` passes without it: Access lets
+  it through so Hedwig, agents and MCP need only their API key, which every API route
+  checks. Code: `apps/server/src/auth/cloudflareAccess.ts`.
 
 Setup, in this order so the hostname is never open without a login:
 
-1. **Access application** (Zero Trust › Access › Applications, self-hosted) for the
-   public hostname, with an Allow policy listing the household's addresses. Copy the
-   *Application Audience (AUD) tag*.
-2. **Settings on Dobby:** in the server settings file set `CLOUDFLARE_ACCESS_TEAM` (the
+1. **Access applications** (Zero Trust › Access › Applications, self-hosted):
+   - the public hostname, with an Allow policy listing the household's addresses. Copy
+     its *Application Audience (AUD) tag*;
+   - the same hostname with path `api`, with a **Bypass** policy for Everyone. The more
+     specific path wins.
+2. **Rate limit** (the zone › Security › WAF › Rate limiting rules): one rule on
+   `/api/` per IP, so a stranger cannot hammer the API.
+3. **Settings on Dobby:** in the server settings file set `CLOUDFLARE_ACCESS_TEAM` (the
    team domain, `<team>.cloudflareaccess.com`), `CLOUDFLARE_ACCESS_AUD` and
    `BURROW_PUBLIC_URL=https://<public hostname>`. Give each person their login address:
    `~/burrow/infra/dobby/cli.sh set-email <name> <email>`.
-3. **Tunnel** (Zero Trust › Networks › Tunnels): create one, add the public hostname with
+4. **Tunnel** (Zero Trust › Networks › Tunnels): create one, add the public hostname with
    service `http://127.0.0.1:4718`, and put its token as `TUNNEL_TOKEN=` in
    `~/.config/burrow/tunnel.env` (mode 600). That file is separate so the server and
    its agents never see the token.
-4. **Rerun the install.** It downloads `cloudflared` into `~/.local/bin` and runs it as
-   `burrow-tunnel.service`; its log is `~/.local/state/burrow/tunnel.log`.
-5. **OAuth redirect URIs** at Google and Microsoft become
-   `https://<public hostname>/oauth/callback`.
+5. **Rerun the install.** It downloads `cloudflared` into `~/.local/bin` and runs it as
+   `burrow-tunnel.service`.
+6. **Clients:** Hedwig's server address and MCP URLs become `https://<public hostname>`.
 
 Cloudflare terminates TLS, so it can read the traffic that passes through the tunnel,
-mail included. The tailnet does not have that property.
+mail included. Accepted for the household.
+
+## SSH through the tunnel
+
+Deploying needs SSH to Dobby from anywhere. Add a second public hostname to the same
+tunnel with service `ssh://127.0.0.1:22` and an Access application for it that admits
+only the operator. On the Mac, install `cloudflared` and point the `dobby` host in the
+SSH config at that hostname with
+`ProxyCommand cloudflared access ssh --hostname %h`; the first connection opens a
+browser login. `deploy.sh` keeps using `ssh dobby`.
 
 ## Remaining one-time steps
 
-1. **Enable Serve for the tailnet.** The install prints a `login.tailscale.com/f/serve`
-   link when Serve is off; open it once, then rerun the install. Until then Hedwig on the
-   Mac reaches the server only through `ssh -L 4717:127.0.0.1:4717 dobby`.
-2. **Google and Microsoft.** Put the client ids and secrets from the
+1. **Google and Microsoft.** Put the client ids and secrets from the
    [providers topic](providers.md) in the settings file on Dobby and rerun the install.
-   Their redirect URI is `<BURROW_PUBLIC_URL>/oauth/callback`; with the tunnel that is
-   the public hostname.
-3. **Backups off the machine.** Put age public keys in `infra/dobby/backup-recipients.txt`
+   Their redirect URI is `<BURROW_PUBLIC_URL>/oauth/callback`.
+2. **Backups off the machine.** Put age public keys in `infra/dobby/backup-recipients.txt`
    on Dobby (at least one whose private key is elsewhere); without it backups are plain
    copies in the data folder. Copy them off Dobby regularly.
 
 ## Traps
 
-- `tailscale serve` without Serve enabled prints a link and **waits**; the install wraps
-  it in a timeout.
 - Rebuilding used to nest `dist/migrations/migrations`, and the restarted server could
   not find its migrations. The build now replaces the folder, and CI builds twice.
+- An Access login is not enough for `/api`: the server still wants a key, so a browser
+  cannot call the API yet. A web interface needs its own session on top of the login.
 
 ## Docker
 

@@ -13,8 +13,9 @@ allows and send actions back. The designs in `docs/design/` show the intended pr
   people, keys, runners, routines and skills.
 - Storage is SQLite on the server. Provider OAuth tokens are encrypted at rest; API keys are
   stored only as hashes.
-- The server binds to localhost by default and is reached through Tailscale (`tailscale
-  serve` for HTTPS), so no port on the home router is opened.
+- The server binds to localhost and is reached through a Cloudflare Tunnel with
+  Cloudflare Access in front, so no port on the home router is opened (see
+  [deploy](deploy.md)).
 
 ## Hedwig (mail)
 

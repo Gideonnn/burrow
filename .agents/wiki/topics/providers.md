@@ -18,8 +18,8 @@ an API key ever passes through the browser:
    the code, asks the provider for the address and stores the mailbox. Connecting the
    same address again for the same person replaces the credentials.
 
-The browser must reach `BURROW_PUBLIC_URL`. On Dobby that is the Tailscale HTTPS name,
-so connecting only works from a device on the tailnet.
+The browser must reach `BURROW_PUBLIC_URL`. On Dobby that is the public hostname of the
+Cloudflare Tunnel, behind an Access login, so a person logs in at Cloudflare first.
 
 ## Gmail (Google Cloud)
 
@@ -32,7 +32,7 @@ so connecting only works from a device on the tailnet.
    one warning.
 4. Create an OAuth client of type **Web application** with the redirect URIs
    `http://127.0.0.1:4717/oauth/callback` (local) and
-   `https://<dobby's tailscale name>/oauth/callback`.
+   `https://<public hostname>/oauth/callback`.
 5. Put the client id and secret in `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`.
 
 Sync uses `users.history.list` from a history id; an expired id (older than about a week)
