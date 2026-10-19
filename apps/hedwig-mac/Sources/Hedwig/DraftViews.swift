@@ -5,10 +5,10 @@ import SwiftUI
 /// and sends them.
 struct DraftListView: View {
     @Environment(AppModel.self) private var model
-    @State private var selected: String?
 
     var body: some View {
-        List(selection: $selected) {
+        @Bindable var model = model
+        List(selection: $model.selectedDraftId) {
             ForEach(model.drafts) { draft in
                 VStack(alignment: .leading, spacing: 2) {
                     HStack {
@@ -30,7 +30,7 @@ struct DraftListView: View {
             if model.drafts.isEmpty { ContentUnavailableView("Geen concepten", systemImage: "doc") }
         }
         .navigationTitle("Concepten")
-        .onChange(of: selected) { DraftSelection.shared.id = selected }
+        .onChange(of: model.selectedDraftId, initial: true) { DraftSelection.shared.id = model.selectedDraftId }
     }
 }
 

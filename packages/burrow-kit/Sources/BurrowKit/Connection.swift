@@ -11,16 +11,19 @@ public struct Connection: Equatable, Sendable {
     }
 }
 
-/// Keeps the server address in UserDefaults and the API key in the Keychain.
+/// Keeps the server address in UserDefaults and the API key in the Keychain,
+/// per app: each app logs in with its own device key.
 public struct ConnectionStore: Sendable {
     let service: String
     let account = "api-key"
     let defaultsKey: String
 
-    public init(service: String = "app.burrow.hedwig") {
+    public init(service: String) {
         self.service = service
         self.defaultsKey = "\(service).serverURL"
     }
+
+    public init(app: String) { self.init(service: "app.burrow.\(app)") }
 
     public func load() -> Connection? {
         guard let text = UserDefaults.standard.string(forKey: defaultsKey), let url = URL(string: text) else { return nil }

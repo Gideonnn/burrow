@@ -1,3 +1,4 @@
+import BurrowUI
 import HedwigCore
 import SwiftUI
 
@@ -10,7 +11,7 @@ struct HedwigApp: App {
         WindowGroup("Hedwig", id: "main") {
             RootView()
                 .environment(model)
-                .environment(delegate.updater)
+                .environment(delegate.services.updater)
                 .frame(minWidth: 960, minHeight: 600)
         }
         .commands { HedwigCommands(model: model) }
@@ -38,7 +39,9 @@ struct RootView: View {
     var body: some View {
         Group {
             if model.connection == nil {
-                ConnectView()
+                LoginView(appName: "Hedwig", app: "hedwig", accent: BurrowColor.hedwig) { url, token in
+                    try await model.connect(serverURL: url, token: token)
+                }
             } else {
                 MainView()
             }
@@ -91,96 +94,64 @@ struct HedwigCommands: Commands {
 /// runner and live updates keep going with every window closed.
 final class AppDelegate: NSObject, NSApplicationDelegate {
     @MainActor let model = AppModel()
-    @MainActor lazy var updater: Updater = {
+    @MainActor lazy var services: AppServices = {
         let model = model
-        return Updater(
-            currentVersion: Self.installedBuild,
-            publicKey: ReleaseKey.publicKey,
-            stagingDir: FileManager.default.homeDirectoryForCurrentUser
-                .appendingPathComponent("Library/Application Support/Hedwig/Updates"),
-            api: { model.api })
+        return AppServices(app: "hedwig", appName: "Hedwig", api: { model.api })
     }()
-    private var control: ControlSocketServer?
-
-    /// The build number of this .app; 0 when running outside a bundle, which
-    /// turns updates off for development runs.
-    private static var installedBuild: Int {
-        guard Bundle.main.bundleURL.pathExtension == "app" else { return 0 }
-        return Int(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "") ?? 0
-    }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         Task { @MainActor in
             if model.connection != nil { await model.start() }
         }
         Task { @MainActor in startControl() }
-        Task { @MainActor [updater] in
-            while !Task.isCancelled {
-                await updater.check()
-                try? await Task.sleep(for: .seconds(3600))
-            }
-        }
+        Task { @MainActor in services.startUpdates() }
     }
 
-    /// Quits and starts again, swapping in a staged update if there is one.
     @MainActor func restart() {
-        let script = FileManager.default.temporaryDirectory.appendingPathComponent("hedwig-restart.sh")
-        let target = Bundle.main.bundleURL
-        do {
-            try updater.relaunchScript(target: target, pid: ProcessInfo.processInfo.processIdentifier)
-                .write(to: script, atomically: true, encoding: .utf8)
-            let sh = Process()
-            sh.executableURL = URL(fileURLWithPath: "/bin/sh")
-            sh.arguments = [script.path]
-            sh.standardOutput = FileHandle.nullDevice
-            sh.standardError = FileHandle.nullDevice
-            try sh.run()
-            NSApp.terminate(nil)
-        } catch {
-            model.error = "Herstarten lukte niet: \(error.localizedDescription)"
-        }
+        services.restart { [model] in model.error = $0 }
     }
 
-    /// Lets agents on this Mac operate Hedwig with `hedwigctl`.
+    /// Lets agents on this Mac operate Hedwig with `burrowctl hedwig` (or
+    /// `hedwigctl`) and the `burrowctl mcp` tools.
     @MainActor private func startControl() {
         let model = model
-        let service = ControlService(surface: AccessibilitySurface(), state: { model.controlState() }, approve: approveControlAction)
-        service.register("show") { request in
-            try await model.show(request["text"] as? String ?? "inbox")
-            return model.controlState()
-        }
-        service.register("open") { request in
-            try await model.open(messageId: request["id"] as? String ?? "")
-            return model.controlState()
-        }
-        let updater = updater
-        service.register("update") { _ in
-            await updater.check()
-            return [
-                "installed": updater.currentVersion,
-                "ready": updater.ready as Any? ?? NSNull(),
-                "error": updater.lastError as Any? ?? NSNull(),
-            ] as [String: Any]
-        }
-        service.register("restart") { [weak self] request in
-            if model.composing > 0, request["force"] as? Bool != true {
-                throw ControlError("a message is being written; ask the person, or pass force")
+        services.addLocalSetting(LocalSetting(
+            name: "runner", help: "Whether this Mac runs bot tasks meant for it while Hedwig is open (on or off).",
+            get: { model.runsTasks ? "on" : "off" },
+            set: { value in
+                guard ["on", "off"].contains(value) else { throw ControlError("runner is on or off") }
+                model.runsTasks = value == "on"
+            }))
+        services.startControl(
+            state: { model.controlState() },
+            busy: { model.composing > 0 ? "a message is being written" : nil },
+            onError: { model.error = $0 }
+        ) { service in
+            service.register(
+                "show", help: "Show a list: inbox, inbox:<address>, private, work, school, filtered, drafts, tasks, archive, sent or spam.",
+                arguments: [.init("text", "where to go")]
+            ) { request in
+                try await model.show(request["text"] as? String ?? "inbox")
+                return model.controlState()
             }
-            // Answer first, then quit.
-            Task { @MainActor in
-                try? await Task.sleep(for: .milliseconds(300))
-                self?.restart()
+            service.register("open", help: "Open a message from the current list.", arguments: [.init("id", "the message id from state")]) { request in
+                try await model.open(messageId: request["id"] as? String ?? "")
+                return model.controlState()
             }
-            return ["restarting": true, "installing": updater.ready as Any? ?? NSNull()] as [String: Any]
-        }
-        do {
-            control = try ControlSocketServer { request in await service.handle(request) }
-        } catch {
-            NSLog("Hedwig control socket unavailable: \(error.localizedDescription)")
+            service.register(
+                "draft", help: "Prepare a new message or a reply and show it in a compose window; the person reviews and sends it.",
+                arguments: [.init("to", "addresses, comma separated"), .init("subject", "the subject"), .init("body", "the text")]
+            ) { request in
+                try await model.prepareDraft(
+                    to: request["to"] as? String ?? "", subject: request["subject"] as? String ?? "",
+                    body: request["body"] as? String ?? "", replyTo: request["replyTo"] as? String)
+            }
         }
     }
 
-    func applicationWillTerminate(_ notification: Notification) { control?.stop() }
+    func applicationWillTerminate(_ notification: Notification) {
+        MainActor.assumeIsolated { services.stop() }
+    }
 
     // Closing the last window keeps Hedwig (and its runner) running, like Mail.
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }

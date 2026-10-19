@@ -1,13 +1,25 @@
 import Foundation
 
 public enum ControlSocket {
-    /// Inside the user's Library, so only processes of this user reach it.
-    /// HEDWIG_CONTROL_SOCKET points app and CLI elsewhere, e.g. for a test copy.
-    public static var defaultPath: String {
-        if let path = ProcessInfo.processInfo.environment["HEDWIG_CONTROL_SOCKET"], !path.isEmpty { return path }
-        let dir = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Library/Application Support/Hedwig", isDirectory: true)
-        return dir.appendingPathComponent("control.sock").path
+    /// One socket per app, inside the user's Library, so only processes of this
+    /// user reach them. BURROW_CONTROL_DIR points apps and CLI elsewhere, e.g.
+    /// for a test copy.
+    public static var directory: URL {
+        if let dir = ProcessInfo.processInfo.environment["BURROW_CONTROL_DIR"], !dir.isEmpty {
+            return URL(fileURLWithPath: dir, isDirectory: true)
+        }
+        return FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Application Support/Burrow/control", isDirectory: true)
+    }
+
+    public static func path(for app: String) -> String {
+        directory.appendingPathComponent("\(app).sock").path
+    }
+
+    /// The apps whose socket exists, running or left behind by a crash.
+    public static func apps() -> [String] {
+        let names = (try? FileManager.default.contentsOfDirectory(atPath: directory.path)) ?? []
+        return names.filter { $0.hasSuffix(".sock") }.map { String($0.dropLast(5)) }.sorted()
     }
 
     static func address(_ path: String) throws -> sockaddr_un {
@@ -50,7 +62,7 @@ public final class ControlSocketServer: @unchecked Sendable {
     private let fd: Int32
     private let path: String
 
-    public init(path: String = ControlSocket.defaultPath, handler: @escaping @Sendable (Data) async -> Data) throws {
+    public init(path: String, handler: @escaping @Sendable (Data) async -> Data) throws {
         self.path = path
         let dir = (path as NSString).deletingLastPathComponent
         try FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
@@ -102,7 +114,9 @@ private final class ResponseBox: @unchecked Sendable {
 public struct ControlSocketClient: Sendable {
     public let path: String
 
-    public init(path: String = ControlSocket.defaultPath) { self.path = path }
+    public init(path: String) { self.path = path }
+
+    public init(app: String) { self.path = ControlSocket.path(for: app) }
 
     public func send(_ request: Data) throws -> Data {
         let fd = socket(AF_UNIX, SOCK_STREAM, 0)
@@ -112,13 +126,13 @@ public struct ControlSocketClient: Sendable {
         let connected = withUnsafePointer(to: &addr) {
             $0.withMemoryRebound(to: sockaddr.self, capacity: 1) { connect(fd, $0, socklen_t(MemoryLayout<sockaddr_un>.size)) }
         }
-        guard connected == 0 else { throw ControlError("Hedwig is not running, or its control socket is missing at \(path)") }
+        guard connected == 0 else { throw ControlError("the app is not running, or its control socket is missing at \(path)") }
         // Sending and deleting wait for the person; give up after five minutes.
         var timeout = timeval(tv_sec: 300, tv_usec: 0)
         setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, socklen_t(MemoryLayout<timeval>.size))
         ControlSocket.writeAll(fd, request + Data("\n".utf8))
         let reply = ControlSocket.readLine(fd)
-        guard !reply.isEmpty else { throw ControlError("no answer from Hedwig; is it waiting for the person to approve?") }
+        guard !reply.isEmpty else { throw ControlError("no answer from the app; is it waiting for the person to approve?") }
         return reply
     }
 }

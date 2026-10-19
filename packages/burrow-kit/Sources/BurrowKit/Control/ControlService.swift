@@ -42,10 +42,34 @@ public struct ControlError: Error, LocalizedError {
     public var errorDescription: String? { message }
 }
 
-/// Lets an agent on this Mac read and operate Hedwig the way a person does,
+public struct ControlArgument: Sendable {
+    public var name: String
+    public var help: String
+
+    public init(_ name: String, _ help: String) {
+        self.name = name
+        self.help = help
+    }
+}
+
+/// What an app command is for, so `burrowctl` and its MCP tools can explain it.
+public struct ControlCommandInfo: Sendable {
+    public var name: String
+    public var help: String
+    // In order: `burrowctl <app> <cmd> a b` fills them positionally.
+    public var arguments: [ControlArgument]
+
+    public init(name: String, help: String, arguments: [ControlArgument] = []) {
+        self.name = name
+        self.help = help
+        self.arguments = arguments
+    }
+}
+
+/// Lets an agent on this Mac read and operate an app the way a person does,
 /// over newline-delimited JSON: `{"cmd":"tree"}`, `{"cmd":"press","id":"0/3/1"}`.
-/// Password and key fields stay unreadable and untypable; sending and deleting
-/// wait until the person approves.
+/// Password and key fields stay unreadable and untypable; sending, deleting
+/// and anything else in `approvalIdentifiers` wait until the person approves.
 @MainActor
 public final class ControlService {
     public typealias Command = @MainActor ([String: Any]) async throws -> Any
@@ -54,6 +78,7 @@ public final class ControlService {
     private let state: @MainActor () -> Any
     private let approve: @MainActor (String) async -> Bool
     private var commands: [String: Command] = [:]
+    private var infos: [String: ControlCommandInfo] = [:]
 
     public init(
         surface: ControlSurface,
@@ -66,9 +91,24 @@ public final class ControlService {
     }
 
     /// Adds an app-level command, such as opening a message by id.
-    public func register(_ name: String, _ command: @escaping Command) {
+    public func register(_ name: String, help: String = "", arguments: [ControlArgument] = [], _ command: @escaping Command) {
         commands[name] = command
+        infos[name] = ControlCommandInfo(name: name, help: help, arguments: arguments)
     }
+
+    /// Every command with its help, the built-in ones first.
+    public var catalog: [ControlCommandInfo] {
+        Self.builtIn + infos.values.sorted { $0.name < $1.name }
+    }
+
+    static let builtIn: [ControlCommandInfo] = [
+        .init(name: "state", help: "What the app shows right now, as JSON."),
+        .init(name: "tree", help: "Every window, button, field and menu item, with ids."),
+        .init(name: "find", help: "Elements whose label, identifier or value contains the text.", arguments: [.init("text", "what to look for")]),
+        .init(name: "press", help: "Press a button or menu item; sending and deleting ask the person.", arguments: [.init("id", "an id from tree or find")]),
+        .init(name: "type", help: "Type into a text field; password and key fields are refused.", arguments: [.init("id", "an id from tree or find"), .init("text", "what to type")]),
+        .init(name: "select", help: "Select a row.", arguments: [.init("id", "an id from tree or find")]),
+    ]
 
     public func handle(_ data: Data) async -> Data {
         let reply: [String: Any]
@@ -85,6 +125,13 @@ public final class ControlService {
 
     private func run(_ cmd: String, _ request: [String: Any]) async throws -> Any {
         switch cmd {
+        case "commands":
+            return catalog.map { info in
+                [
+                    "name": info.name, "help": info.help,
+                    "arguments": info.arguments.map { ["name": $0.name, "help": $0.help] },
+                ] as [String: Any]
+            }
         case "state":
             return state()
         case "tree":
@@ -165,14 +212,18 @@ public final class ControlService {
         return out
     }
 
+    /// Secure fields, anything an app marks `<app>.secret…`, and API keys.
     static func isSecret(_ node: ControlNode) -> Bool {
         node.subrole == "AXSecureTextField"
-            || node.identifier?.hasPrefix("hedwig.secret") == true
+            || node.identifier?.contains(".secret") == true
             || node.value?.range(of: #"bk_[A-Za-z0-9_-]{20,}"#, options: .regularExpression) != nil
     }
 
+    /// Sending, deleting, logging out and recording are for the person: an app
+    /// marks such buttons `<app>.approve.…`; the older Hedwig ids still count.
     static func needsApproval(_ node: ControlNode) -> Bool {
-        ["hedwig.send", "hedwig.trash"].contains(node.identifier ?? "")
-            || ["verstuur", "verwijder"].contains(node.label?.lowercased() ?? "")
+        let id = node.identifier ?? ""
+        return id.contains(".approve.") || ["hedwig.send", "hedwig.trash"].contains(id)
+            || ["verstuur", "verwijder", "uitloggen", "neem op"].contains(node.label?.lowercased() ?? "")
     }
 }

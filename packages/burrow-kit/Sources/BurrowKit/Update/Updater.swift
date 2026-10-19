@@ -11,28 +11,32 @@ public struct ClientRelease: Codable, Equatable, Sendable {
 }
 
 extension APIClient {
-    /// The latest published Hedwig build, or nil before anything is published.
-    public func latestHedwig() async throws -> ClientRelease? {
+    /// The latest published build of an app, or nil before anything is published.
+    public func latestRelease(of client: String) async throws -> ClientRelease? {
         do {
-            return try await call("GET", "api/clients/hedwig/latest")
+            return try await call("GET", "api/clients/\(client)/latest")
         } catch APIError.notFound {
             return nil
         }
     }
 
-    public func downloadHedwig(_ version: Int) async throws -> Data {
-        let (bytes, response) = try await session.data(for: request("GET", "api/clients/hedwig/\(version).zip"))
+    public func downloadRelease(of client: String, _ version: Int) async throws -> Data {
+        let (bytes, response) = try await session.data(for: request("GET", "api/clients/\(client)/\(version).zip"))
         guard (response as? HTTPURLResponse)?.statusCode == 200 else { throw APIError.notFound }
         return bytes
     }
 }
 
-/// Finds a newer Hedwig on the server, checks its signature and unpacks it
-/// next to the running app, ready to be swapped in on the next restart.
+/// Finds a newer build of the app on the server, checks its signature and
+/// unpacks it next to the running app, ready to be swapped in on the next
+/// restart.
 @MainActor
 @Observable
 public final class Updater {
     public let currentVersion: Int
+    // "hedwig" on the server, "Hedwig.app" in the zip.
+    public let client: String
+    public let appName: String
     public private(set) var ready: Int?
     public private(set) var lastError: String?
     public private(set) var stagedApp: URL?
@@ -42,7 +46,12 @@ public final class Updater {
     private let api: @MainActor () -> APIClient?
     private var checking = false
 
-    public init(currentVersion: Int, publicKey: String, stagingDir: URL, api: @escaping @MainActor () -> APIClient?) {
+    public init(
+        client: String, appName: String, currentVersion: Int, publicKey: String, stagingDir: URL,
+        api: @escaping @MainActor () -> APIClient?
+    ) {
+        self.client = client
+        self.appName = appName
         self.currentVersion = currentVersion
         self.publicKey = publicKey
         self.stagingDir = stagingDir
@@ -56,10 +65,10 @@ public final class Updater {
         checking = true
         defer { checking = false }
         do {
-            guard let release = try await api.latestHedwig(),
+            guard let release = try await api.latestRelease(of: client),
                   release.version > currentVersion, release.version != ready
             else { return }
-            let zip = try await api.downloadHedwig(release.version)
+            let zip = try await api.downloadRelease(of: client, release.version)
             try verify(zip, release)
             let app = try unpack(zip, version: release.version)
             stagedApp = app
@@ -87,7 +96,7 @@ public final class Updater {
         try? fm.removeItem(at: stagingDir)
         let dir = stagingDir.appendingPathComponent("\(version)")
         try fm.createDirectory(at: dir, withIntermediateDirectories: true)
-        let archive = dir.appendingPathComponent("Hedwig.zip")
+        let archive = dir.appendingPathComponent("\(appName).zip")
         try zip.write(to: archive)
         let ditto = Process()
         ditto.executableURL = URL(fileURLWithPath: "/usr/bin/ditto")
@@ -95,7 +104,7 @@ public final class Updater {
         try ditto.run()
         ditto.waitUntilExit()
         try? fm.removeItem(at: archive)
-        let app = dir.appendingPathComponent("Hedwig.app")
+        let app = dir.appendingPathComponent("\(appName).app")
         guard ditto.terminationStatus == 0, fm.fileExists(atPath: app.path) else {
             throw ControlError("build \(version) did not unpack")
         }

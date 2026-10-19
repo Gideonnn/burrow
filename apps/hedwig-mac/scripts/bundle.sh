@@ -12,7 +12,7 @@ cd "$(dirname "$0")/.."
 VERSION="${HEDWIG_VERSION:-0.1.0}"
 # The build number decides updates: a Hedwig installs a published build only
 # when its number is higher. The commit count on main only grows.
-BUILD="${HEDWIG_BUILD:-$(git rev-list --count HEAD)}"
+BUILD="${APP_BUILD:-${HEDWIG_BUILD:-$(git rev-list --count HEAD)}}"
 APP="build/Hedwig.app"
 
 swift build -c release --product Hedwig
@@ -47,7 +47,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 </plist>
 PLIST
 
-# A fixed identity (scripts/signing-identity.sh) keeps the keychain from asking
+# A fixed identity (packages/burrow-kit/scripts/signing-identity.sh) keeps the keychain from asking
 # again after every update; without it the app is signed ad hoc.
 IDENTITY="${HEDWIG_SIGN_IDENTITY:-Burrow Hedwig}"
 if security find-certificate -c "$IDENTITY" >/dev/null 2>&1; then

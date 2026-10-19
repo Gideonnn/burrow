@@ -31,6 +31,7 @@ public final class AppModel {
     public private(set) var filtered: [FilteredEntry] = []
     public var selectedFilteredId: String?
     public private(set) var drafts: [Draft] = []
+    public var selectedDraftId: String?
     public private(set) var tasks: [TaskItem] = []
     public var selectedTaskId: String?
     public let runner = LocalRunner()
@@ -48,7 +49,7 @@ public final class AppModel {
     var messageLoad: Task<Void, Never>?
 
     public init(
-        store: ConnectionStore = ConnectionStore(),
+        store: ConnectionStore = ConnectionStore(app: "hedwig"),
         makeClient: @escaping @Sendable (Connection) -> APIClient = { APIClient(baseURL: $0.serverURL, token: $0.token) },
         connection: Connection? = nil
     ) {
@@ -482,6 +483,7 @@ extension AppModel {
         runner.start(
             api: { [weak self] in self?.api },
             name: name,
+            kinds: ["routine"],
             agent: { [weak self] in ClaudeCLI.find(override: self?.claudePath.isEmpty == false ? self?.claudePath : nil) },
             onChange: { [weak self] in Task { await self?.refreshTasks() } })
     }

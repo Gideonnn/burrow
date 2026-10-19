@@ -84,8 +84,9 @@ public struct ClaudeCLI: Sendable {
 }
 
 /// Claims tasks meant for this Mac while the app is open, runs them one at a
-/// time, and reports the result. Stops when the app quits; the server gives a
-/// task back to the queue if a run never reports.
+/// time, and reports the result. Each app claims only the task kinds it knows.
+/// Stops when the app quits; the server gives a task back to the queue if a
+/// run never reports.
 @MainActor
 @Observable
 public final class LocalRunner {
@@ -95,11 +96,14 @@ public final class LocalRunner {
 
     public init() {}
 
-    public func start(api: @escaping @MainActor () -> APIClient?, name: String, agent: @escaping @MainActor () -> ClaudeCLI?, onChange: @escaping @MainActor () -> Void) {
+    public func start(
+        api: @escaping @MainActor () -> APIClient?, name: String, kinds: [String] = ["routine"],
+        agent: @escaping @MainActor () -> ClaudeCLI?, onChange: @escaping @MainActor () -> Void
+    ) {
         loop?.cancel()
         loop = Task { [weak self] in
             while !Task.isCancelled {
-                await self?.runOnce(api: api(), name: name, agent: agent())
+                await self?.runOnce(api: api(), name: name, kinds: kinds, agent: agent())
                 onChange()
                 try? await Task.sleep(nanoseconds: 60 * 1_000_000_000)
             }
@@ -111,25 +115,25 @@ public final class LocalRunner {
         status = "Uit"
     }
 
-    public func runOnce(api: APIClient?, name: String, agent: ClaudeCLI?) async {
+    public func runOnce(api: APIClient?, name: String, kinds: [String] = ["routine"], agent: ClaudeCLI?) async {
         guard let api else { return }
         guard let agent else {
             status = RunnerError.agentNotFound.errorDescription!
             return
         }
-        guard let claimed = try? await api.claim(runner: name), let next = claimed.first else {
+        guard let claimed = try? await api.claim(runner: name, kinds: kinds), let next = claimed.first else {
             status = "Wacht op taken"
             return
         }
-        status = "Bezig: \(next.task.routineName)"
+        status = "Bezig: \(next.task.displayTitle)"
         do {
             let answer = try await agent.run(next.request)
             try await api.complete(task: next.task.id, answer: answer)
             completed += 1
-            status = "Klaar: \(next.task.routineName)"
+            status = "Klaar: \(next.task.displayTitle)"
         } catch {
             try? await api.fail(task: next.task.id, error: error.localizedDescription)
-            status = "Mislukt: \(next.task.routineName)"
+            status = "Mislukt: \(next.task.displayTitle)"
         }
     }
 }

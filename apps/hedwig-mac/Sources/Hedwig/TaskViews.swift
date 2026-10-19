@@ -77,8 +77,8 @@ struct TaskDetailView: View {
                             .padding(12)
                             .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 10))
                         }
-                        if !result.ops.isEmpty {
-                            Label("Bij goedkeuren: \(result.ops.map(opName).joined(separator: ", "))", systemImage: "server.rack")
+                        if !result.mailOps.isEmpty {
+                            Label("Bij goedkeuren: \(result.mailOps.map(opName).joined(separator: ", "))", systemImage: "server.rack")
                                 .font(.callout)
                         }
                         if let draft = result.draft {

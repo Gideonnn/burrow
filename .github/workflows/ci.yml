@@ -45,14 +45,16 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   mac:
-    runs-on: macos-15
-    defaults:
-      run:
-        working-directory: apps/hedwig-mac
+    # The apps use macOS 26 APIs (Liquid Glass), which need its SDK.
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
-      - run: swift build
-      - run: swift test
+      - name: BurrowKit
+        working-directory: packages/burrow-kit
+        run: swift build && swift test
+      - name: Hedwig
+        working-directory: apps/hedwig-mac
+        run: swift build && swift test
 
   image:
     runs-on: ubuntu-latest

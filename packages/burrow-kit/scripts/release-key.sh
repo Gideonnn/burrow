@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
-# One time, by the operator: makes the Hedwig release key.
+# One time, by the operator: makes the release key every Burrow app checks.
 #
-#   ./apps/hedwig-mac/scripts/release-key.sh
+#   ./packages/burrow-kit/scripts/release-key.sh
 #
 # The private half goes into infra/secrets/tools.env.enc as HEDWIG_RELEASE_KEY
-# without being shown; the public half goes into ReleaseKey.swift, which you
-# commit. Hedwig installs only builds signed with this key.
+# (named after the first app) without being shown; the public half goes into
+# ReleaseKey.swift, which you commit. The apps install only builds signed with
+# this key.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 REPO="$(cd ../.. && pwd)"
@@ -37,5 +38,5 @@ chmod +x "$EDITOR_SCRIPT"
 (cd "$REPO" && EDITOR="$EDITOR_SCRIPT" sops --input-type dotenv --output-type dotenv "$SECRETS")
 unset HEDWIG_RELEASE_KEY_LINE
 
-sed -i '' "s|public static let publicKey = \".*\"|public static let publicKey = \"$PUBLIC\"|" Sources/HedwigCore/Update/ReleaseKey.swift
+sed -i '' "s|public static let publicKey = \".*\"|public static let publicKey = \"$PUBLIC\"|" Sources/BurrowKit/Update/ReleaseKey.swift
 echo "Release key made. Tell the agent; it commits ReleaseKey.swift and $SECRETS."

@@ -77,6 +77,26 @@ extension AppModel {
         }
     }
 
+    /// Prepares a draft (a reply when `replyTo` names a message) and shows it
+    /// under Concepten. Sending stays with the person.
+    public func prepareDraft(to: String, subject: String, body: String, replyTo: String?) async throws -> [String: Any] {
+        guard let api else { throw ControlError("not logged in") }
+        let original = replyTo.flatMap { id in messages.first { $0.id == id } }
+        if replyTo != nil, original == nil { throw ControlError("message \(replyTo!) is not in the current list") }
+        let recipients = Address.parseList(to)
+        let mailboxId = original?.mailboxId ?? currentMailboxId ?? me?.mailboxes.first?.id
+        guard let mailboxId else { throw ControlError("there is no mailbox to write from") }
+        guard !recipients.isEmpty || original != nil else { throw ControlError("give at least one address in to") }
+        let draft = try await api.createDraft(
+            mailboxId: mailboxId, to: recipients.isEmpty ? [original!.from] : recipients,
+            subject: subject.isEmpty ? (original.map { "Re: \($0.subject)" } ?? "") : subject,
+            body: body, inReplyTo: original?.id)
+        selection = .drafts
+        await selectionLoad?.value
+        selectedDraftId = draft.id
+        return ["draft": draft.id, "shown": "Concepten"]
+    }
+
     /// Opens a message from the current list.
     public func open(messageId: String) async throws {
         guard messages.contains(where: { $0.id == messageId }) else {

@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import HedwigCore
+@testable import BurrowKit
 
 /// A window as the accessibility tree would report it, with a log of what the
 /// service did to it.

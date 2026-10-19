@@ -2,7 +2,7 @@
 # One time, by the operator: makes a self-signed code signing identity
 # "Burrow Hedwig" in the login keychain, which bundle.sh then uses.
 #
-#   ./apps/hedwig-mac/scripts/signing-identity.sh
+#   ./packages/burrow-kit/scripts/signing-identity.sh
 #
 # Why: an ad hoc signature changes with every build, so macOS asks for the
 # login password before each new Hedwig may read its API key from the
@@ -39,4 +39,4 @@ PASS="$(/usr/bin/openssl rand -hex 16)"
 /usr/bin/openssl pkcs12 -export -inkey "$WORK/private" -in "$WORK/certificate" -name "$NAME" \
   -out "$WORK/identity" -passout "pass:$PASS" 2>/dev/null
 security import "$WORK/identity" -f pkcs12 -k "$HOME/Library/Keychains/login.keychain-db" -P "$PASS" -T /usr/bin/codesign
-echo "Made \"$NAME\". Build Hedwig again (pnpm hedwig:install); later releases use it too."
+echo "Made \"$NAME\". Build the apps again (pnpm hedwig:install, pnpm pensieve:install); later releases use it too."

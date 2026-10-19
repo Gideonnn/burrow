@@ -1,8 +1,9 @@
+import BurrowKit
 import Foundation
-import HedwigCore
 
+// The same as `burrowctl hedwig <command>`, kept for scripts and habits.
 let usage = """
-usage: hedwigctl <command>
+usage: hedwigctl <command>   (or: burrowctl hedwig <command>)
   state                 what Hedwig shows: mailboxes, the message list, the open message
   tree                  every window, button, field and menu item, with ids
   find <text>           elements whose label, identifier or value contains the text
@@ -38,7 +39,7 @@ default: fail(usage)
 }
 
 do {
-    let reply = try ControlSocketClient().send(try JSONSerialization.data(withJSONObject: request))
+    let reply = try ControlSocketClient(app: "hedwig").send(try JSONSerialization.data(withJSONObject: request))
     print(String(decoding: reply, as: UTF8.self))
     let ok = (try? JSONSerialization.jsonObject(with: reply) as? [String: Any])?["ok"] as? Bool
     exit(ok == true ? 0 : 1)

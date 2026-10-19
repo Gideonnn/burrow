@@ -1,8 +1,8 @@
-// Prints the release metadata for a zipped Hedwig build, signed with the
+// Prints the release metadata for a zipped app build, signed with the
 // release key in HEDWIG_RELEASE_KEY (Ed25519, PKCS#8 DER in base64):
-//   node scripts/sign-release.mjs build/Hedwig-123.zip 123
+//   node sign-release.mjs build/Pensieve-123.zip 123
 // The public key goes to stderr so the release script can compare it with
-// the one compiled into Hedwig.
+// the one compiled into BurrowKit.
 import {
   createHash,
   createPrivateKey,

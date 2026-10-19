@@ -1,19 +1,28 @@
+import BurrowUI
 import HedwigCore
 import SwiftUI
 
 struct SettingsView: View {
     @Environment(AppModel.self) private var model
+    @State private var household: HouseholdModel?
 
     var body: some View {
         TabView {
             AgentSettings().tabItem { Label("Agent", systemImage: "sparkles") }
             AccountSettings().tabItem { Label("Accounts", systemImage: "tray.2") }
-            if model.me?.can(.admin) == true {
-                AccessSettings().tabItem { Label("Toegang", systemImage: "person.2") }
+            if let household {
+                HouseholdSettingsView(model: household).tabItem { Label("Huishouden", systemImage: "house") }
+                WorkersView(model: household).tabItem { Label("Workers", systemImage: "person.2.wave.2") }
             }
-            ConnectionSettings().tabItem { Label("Verbinding", systemImage: "key") }
+            if model.me?.can(.admin) == true {
+                AccessSettings().tabItem { Label("Sleutels", systemImage: "key.horizontal") }
+            }
+            ConnectionSettings().tabItem { Label("Verbinding", systemImage: "network") }
         }
         .padding(20)
+        .onAppear {
+            if household == nil { household = HouseholdModel(api: { [model] in model.api }) }
+        }
     }
 }
 

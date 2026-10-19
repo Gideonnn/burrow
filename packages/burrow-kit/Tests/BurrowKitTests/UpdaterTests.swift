@@ -1,7 +1,7 @@
 import CryptoKit
 import Foundation
 import Testing
-@testable import HedwigCore
+@testable import BurrowKit
 
 @MainActor
 @Suite(.serialized) struct UpdaterTests {
@@ -32,7 +32,7 @@ import Testing
         let staging = FileManager.default.temporaryDirectory.appendingPathComponent("updates-\(UUID().uuidString)")
         let client = server.client()
         let updater = Updater(
-            currentVersion: current,
+            client: "hedwig", appName: "Hedwig", currentVersion: current,
             publicKey: key.publicKey.rawRepresentation.base64EncodedString(),
             stagingDir: staging,
             api: { client })

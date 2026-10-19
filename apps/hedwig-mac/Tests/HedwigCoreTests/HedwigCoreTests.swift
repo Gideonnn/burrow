@@ -30,7 +30,10 @@ import Testing
         var parser = SSEParser()
         #expect(parser.feed("event: message.new") == nil)
         #expect(parser.feed(#"data: {"type":"message.new","mailboxId":"mb1","messageId":"m9"}"#) == nil)
-        #expect(parser.feed("") == ServerEvent(type: "message.new", mailboxId: "mb1", messageId: "m9"))
+        let event = parser.feed("")
+        #expect(event?.type == "message.new")
+        #expect(event?.mailboxId == "mb1")
+        #expect(event?.messageId == "m9")
         #expect(parser.feed("") == nil)
     }
 }
@@ -80,6 +83,26 @@ import Testing
         await model.openSelected()
         #expect(model.detail?.unread == false)
         #expect(model.messages.first?.unread == false)
+    }
+
+    @Test func anAgentPreparesAReplyAndHedwigShowsItUnderConcepten() async throws {
+        let server = server()
+        let draft = #"{"id":"d1","mailboxId":"mb1","createdBy":"Hedwig op Testmac","inReplyTo":"m1","to":[{"name":"Marieke","email":"marieke@example.nl"}],"cc":[],"subject":"Re: Eerste","body":"Ja, gezellig!","createdAt":"2026-10-20T08:00:00.000Z"}"#
+        server.on("POST", "/api/drafts", status: 201, json: draft)
+        server.on("GET", "/api/drafts", json: "[\(draft)]")
+        let model = model(server)
+        await model.start()
+        model.selection = .inbox(mailboxId: "mb1")
+        await model.loadSelection()
+
+        let shown = try await model.prepareDraft(to: "", subject: "", body: "Ja, gezellig!", replyTo: "m1")
+        #expect(shown["draft"] as? String == "d1")
+        #expect(model.selection == .drafts)
+        #expect(model.selectedDraftId == "d1")
+        let sent = try #require(server.requests("POST", "/api/drafts").first)
+        #expect(sent.contains(#""inReplyTo":"m1""#))
+        #expect(sent.contains("marieke@example.nl"))
+        #expect(server.requests("POST", "/api/send").isEmpty)
     }
 
     @Test func replyAddressesTheSenderAndQuotesTheMessage() async throws {

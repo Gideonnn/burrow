@@ -1,9 +1,17 @@
 import Foundation
 
+/// One event from the server's live stream: its type ("message.new",
+/// "task.changed", "recording.changed") and the fields that came with it.
 public struct ServerEvent: Equatable, Sendable {
     public var type: String
-    public var mailboxId: String?
-    public var messageId: String?
+    public var fields: [String: String]
+
+    public init(type: String, fields: [String: String] = [:]) {
+        self.type = type
+        self.fields = fields
+    }
+
+    public subscript(_ name: String) -> String? { fields[name] }
 }
 
 /// Parses a Server-Sent Events stream line by line ("event:" and "data:"
@@ -18,9 +26,8 @@ public struct SSEParser: Sendable {
         if line.isEmpty {
             defer { event = "message"; data = "" }
             guard !data.isEmpty else { return nil }
-            struct Payload: Decodable { var mailboxId: String?; var messageId: String? }
-            let payload = try? JSONDecoder().decode(Payload.self, from: Data(data.utf8))
-            return ServerEvent(type: event, mailboxId: payload?.mailboxId, messageId: payload?.messageId)
+            let payload = (try? JSONDecoder().decode([String: JSONValue].self, from: Data(data.utf8))) ?? [:]
+            return ServerEvent(type: event, fields: payload.compactMapValues(\.string))
         }
         if line.hasPrefix("event:") {
             event = line.dropFirst(6).trimmingCharacters(in: .whitespaces)
@@ -32,8 +39,8 @@ public struct SSEParser: Sendable {
 }
 
 extension APIClient {
-    /// Live changes for this key's mailboxes. Reconnects with a growing pause
-    /// until the task is cancelled.
+    /// Live changes this key may see. Reconnects with a growing pause until
+    /// the task is cancelled.
     public func events() -> AsyncStream<ServerEvent> {
         AsyncStream { continuation in
             let task = Task {

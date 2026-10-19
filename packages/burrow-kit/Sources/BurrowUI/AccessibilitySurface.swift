@@ -1,7 +1,7 @@
 import AppKit
-import HedwigCore
+import BurrowKit
 
-/// Hedwig's own windows and menu bar, read through the accessibility tree from
+/// The app's own windows and menu bar, read through the accessibility tree from
 /// inside the app, so no Accessibility permission is needed and every button a
 /// person can press is there.
 ///
@@ -9,10 +9,12 @@ import HedwigCore
 /// assistive apps use (`accessibilityAttributeValue`), and many of them do not
 /// adopt the newer NSAccessibility protocol, so everything goes through that API.
 @MainActor
-final class AccessibilitySurface: ControlSurface {
+public final class AccessibilitySurface: ControlSurface {
+    public init() {}
+
     private let maxDepth = 40
 
-    func snapshot() -> [ControlNode] {
+    public func snapshot() -> [ControlNode] {
         for flag in ["AXEnhancedUserInterface", "AXManualAccessibility"] {
             NSApp.accessibilitySetValue(true, forAttribute: NSAccessibility.Attribute(rawValue: flag))
         }
@@ -24,7 +26,7 @@ final class AccessibilitySurface: ControlSurface {
         return roots
     }
 
-    func press(_ node: ControlNode) throws {
+    public func press(_ node: ControlNode) throws {
         if let item = node.handle as? NSMenuItem, let menu = item.menu {
             menu.performActionForItem(at: menu.index(of: item))
             return
@@ -43,7 +45,7 @@ final class AccessibilitySurface: ControlSurface {
         }
     }
 
-    func type(_ node: ControlNode, _ text: String) throws {
+    public func type(_ node: ControlNode, _ text: String) throws {
         guard let element = node.handle as? NSObject else { throw ControlError("not a text field") }
         // Typing through the field editor runs the normal editing path, so the
         // SwiftUI binding sees the change; setting the value would bypass it.
@@ -62,7 +64,7 @@ final class AccessibilitySurface: ControlSurface {
         }
     }
 
-    func select(_ node: ControlNode) throws {
+    public func select(_ node: ControlNode) throws {
         // SwiftUI lists ignore an accessibility selection; selecting the row in
         // the table reaches the list's selection binding.
         if let row = node.handle as? TableRow {
@@ -171,16 +173,17 @@ private final class TableRow {
     }
 }
 
-private let approvalWindow = NSUserInterfaceItemIdentifier("hedwig.approval")
+private let approvalWindow = NSUserInterfaceItemIdentifier("burrow.approval")
 
-/// Asks the person before an agent sends or deletes; the safe answer is the default.
+/// Asks the person before an agent sends, deletes, logs out or records; the
+/// safe answer is the default.
 @MainActor
-func approveControlAction(_ action: String) async -> Bool {
+public func approveControlAction(_ action: String) async -> Bool {
     NSApp.activate()
     let alert = NSAlert()
     alert.window.identifier = approvalWindow
     alert.messageText = "Een agent wil op ‘\(action)’ drukken"
-    alert.informativeText = [NSApp.keyWindow?.title, "Versturen en verwijderen doet een agent alleen met jouw goedkeuring."]
+    alert.informativeText = [NSApp.keyWindow?.title, "Versturen, verwijderen, uitloggen en opnemen doet een agent alleen met jouw goedkeuring."]
         .compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: "\n\n")
     alert.alertStyle = .warning
     alert.addButton(withTitle: "Weiger")

@@ -2,48 +2,12 @@ import Foundation
 
 // Swift mirrors of packages/contracts. Field names match the JSON exactly.
 
-public struct Address: Codable, Hashable, Sendable {
-    public var name: String?
-    public var email: String
-
-    public init(name: String? = nil, email: String) {
-        self.name = name
-        self.email = email
-    }
-
-    public var display: String { name?.isEmpty == false ? name! : email }
-
-    /// Parses "Name <a@b>" or a bare address; used by the composer fields.
-    public static func parseList(_ text: String) -> [Address] {
-        text.split(separator: ",").compactMap { part in
-            let trimmed = part.trimmingCharacters(in: .whitespaces)
-            guard !trimmed.isEmpty else { return nil }
-            if let open = trimmed.firstIndex(of: "<"), let close = trimmed.lastIndex(of: ">"), open < close {
-                let name = trimmed[..<open].trimmingCharacters(in: CharacterSet(charactersIn: " \""))
-                let email = String(trimmed[trimmed.index(after: open)..<close])
-                return Address(name: name.isEmpty ? nil : name, email: email)
-            }
-            return Address(email: trimmed)
-        }
-    }
-
-    public static func format(_ list: [Address]) -> String {
-        list.map { address in
-            address.name.map { "\($0) <\(address.email)>" } ?? address.email
-        }.joined(separator: ", ")
-    }
-}
-
 public enum MailProvider: String, Codable, Sendable {
     case gmail, microsoft, fastmail
 }
 
 public enum MailFolder: String, Codable, Sendable, CaseIterable {
     case inbox, archive, spam, trash, sent
-}
-
-public enum Right: String, Codable, Sendable, CaseIterable {
-    case read, organize, draft, send, tasks, admin
 }
 
 /// What a mailbox is for; the sidebar groups by it and merges each group's inboxes.
@@ -74,8 +38,15 @@ public struct Me: Codable, Sendable {
     public var mailboxes: [MailboxSummary]
     /// The language this person's bots write in; nil is the server's default.
     public var language: String?
+    public var admin: Bool?
+    public var settings: [String: SettingValue]?
 
     public func can(_ right: Right) -> Bool { rights.contains(right) }
+
+    /// A feature or setting that is on for this person.
+    public func enabled(_ setting: String) -> Bool {
+        settings?[setting]?.bool ?? true
+    }
 }
 
 public struct MessageSummary: Codable, Hashable, Identifiable, Sendable {
@@ -193,12 +164,6 @@ public struct LearnedRule: Codable, Hashable, Identifiable, Sendable {
     public var createdAt: Date
 }
 
-public struct Person: Codable, Hashable, Identifiable, Sendable {
-    public var id: String
-    public var name: String
-}
-
-/// What the composer edits, and what opens a compose window.
 public struct ComposeDraft: Codable, Hashable, Sendable {
     public var mailboxId: String
     public var to: String
@@ -240,88 +205,4 @@ public struct MessageInsights: Codable, Hashable, Sendable {
 
     public var summary: String?
     public var replies: [Reply]
-}
-
-/// Any JSON value, for the JSON Schema the server sends with a claimed task.
-public enum JSONValue: Codable, Hashable, Sendable {
-    case null, bool(Bool), number(Double), string(String), array([JSONValue]), object([String: JSONValue])
-
-    public init(from decoder: Decoder) throws {
-        let c = try decoder.singleValueContainer()
-        if c.decodeNil() { self = .null }
-        else if let v = try? c.decode(Bool.self) { self = .bool(v) }
-        else if let v = try? c.decode(Double.self) { self = .number(v) }
-        else if let v = try? c.decode(String.self) { self = .string(v) }
-        else if let v = try? c.decode([JSONValue].self) { self = .array(v) }
-        else { self = .object(try c.decode([String: JSONValue].self)) }
-    }
-
-    public func encode(to encoder: Encoder) throws {
-        var c = encoder.singleValueContainer()
-        switch self {
-        case .null: try c.encodeNil()
-        case .bool(let v): try c.encode(v)
-        case .number(let v): try c.encode(v)
-        case .string(let v): try c.encode(v)
-        case .array(let v): try c.encode(v)
-        case .object(let v): try c.encode(v)
-        }
-    }
-}
-
-public struct TaskResult: Codable, Hashable, Sendable {
-    public struct DraftProposal: Codable, Hashable, Sendable {
-        public var to: [Address]
-        public var subject: String
-        public var body: String
-    }
-
-    public var summary: String
-    public var fields: [String: String]
-    public var ops: [ServerOp]
-    public var draft: DraftProposal?
-}
-
-public struct TaskItem: Codable, Hashable, Identifiable, Sendable {
-    public var id: String
-    public var routineId: String
-    public var routineName: String
-    public var skill: String
-    public var bot: String
-    public var `where`: String
-    public var status: String
-    public var messageId: String?
-    public var result: TaskResult?
-    public var error: String?
-    public var claimedBy: String?
-    public var createdAt: Date
-    public var updatedAt: Date
-}
-
-public struct AgentRequest: Codable, Hashable, Sendable {
-    public var model: String
-    public var system: String
-    public var prompt: String
-    public var schema: JSONValue
-}
-
-public struct ClaimedTask: Codable, Hashable, Sendable {
-    public var task: TaskItem
-    public var request: AgentRequest
-}
-
-public struct ApiKeySummary: Codable, Hashable, Identifiable, Sendable {
-    public var id: String
-    public var personId: String
-    public var name: String
-    public var prefix: String
-    public var rights: [Right]
-    public var mailboxIds: [String]?
-    public var lastUsedAt: Date?
-    public var revokedAt: Date?
-}
-
-public struct CreatedKey: Codable, Sendable {
-    public var key: ApiKeySummary
-    public var token: String
 }

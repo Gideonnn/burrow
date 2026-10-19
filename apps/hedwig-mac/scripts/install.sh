@@ -6,7 +6,8 @@
 #
 # Quits a running Hedwig first and starts the new one afterwards. In Raycast,
 # give Hedwig the alias "email" (Raycast Settings › Extensions › Applications).
-# Also installs hedwigctl, the CLI agents use to operate Hedwig, in ~/.local/bin.
+# Also installs burrowctl (and hedwigctl), the CLI agents use to operate the
+# Burrow apps, in ~/.local/bin.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -17,9 +18,11 @@ LSREGISTER="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchS
 echo "→ built build/Hedwig.app"
 
 swift build -c release --product hedwigctl >/dev/null
+swift build -c release --product burrowctl >/dev/null
 mkdir -p "$HOME/.local/bin"
 /bin/cp -f "$(swift build -c release --show-bin-path)/hedwigctl" "$HOME/.local/bin/hedwigctl"
-echo "→ installed ~/.local/bin/hedwigctl"
+/bin/cp -f "$(swift build -c release --show-bin-path)/burrowctl" "$HOME/.local/bin/burrowctl"
+echo "→ installed ~/.local/bin/burrowctl and hedwigctl"
 
 if pgrep -xq Hedwig; then
   osascript -e 'tell application "Hedwig" to quit' >/dev/null 2>&1 || pkill -x Hedwig || true

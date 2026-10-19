@@ -2,7 +2,8 @@ import HedwigCore
 import SwiftUI
 
 /// People, their mailboxes and every API key: who sees what. Only for keys
-/// with the admin right. A new key is shown once.
+/// with the admin right. A new key is shown once and is always for the person
+/// making it; the other person logs in on their own Mac.
 struct AccessSettings: View {
     @Environment(AppModel.self) private var model
     @State private var people: [Person] = []
@@ -128,10 +129,10 @@ struct NewKeySheet: View {
                 .foregroundStyle(.secondary)
             Form {
                 TextField("Naam", text: $name, prompt: Text("Bijvoorbeeld: Claude Code werklaptop"))
-                Picker("Voor", selection: $personId) {
-                    ForEach(people) { Text($0.name).tag($0.id) }
-                }
-                Toggle("Alle mailboxen van deze persoon, ook later toegevoegde", isOn: $allMailboxes)
+                Text("Een sleutel is altijd voor jezelf: hij leest jouw mail. Iemand anders logt op zijn eigen Mac in.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Toggle("Al mijn mailboxen, ook later toegevoegde", isOn: $allMailboxes)
                 if !allMailboxes {
                     ForEach(mailboxes.filter { $0.ownerId == personId }) { box in
                         Toggle(box.address, isOn: Binding(
@@ -157,7 +158,7 @@ struct NewKeySheet: View {
         }
         .padding(20)
         .frame(width: 520, height: 600)
-        .onAppear { personId = model.me?.person.id ?? people.first?.id ?? "" }
+        .onAppear { personId = model.me?.person.id ?? "" }
     }
 
     private func create() async {

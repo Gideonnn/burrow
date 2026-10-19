@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import HedwigCore
+@testable import BurrowKit
 
 @MainActor
 @Suite(.serialized) struct LocalRunnerTests {
