@@ -58,3 +58,16 @@ Sync tracks the Inbox and Junk Email folders with delta queries, starting with t
 30 days. All calls ask for immutable ids, so a message keeps its id when it moves; a
 message that leaves a tracked folder is fetched to see whether it moved (archive, trash)
 or was deleted. Replies go through the `reply` endpoint to keep the conversation.
+
+## Fastmail (JMAP)
+
+Fastmail only offers OAuth to registered partner apps, so a person creates an API token:
+Settings › Privacy & Security › Integrations › API tokens, with access to **Email** and
+**Email submission** and without "read-only". An admin client sends it to
+`POST /api/admin/accounts/fastmail`; the server checks it against the JMAP session before
+storing it sealed.
+
+Sync queries the inbox once (last 100 messages), then follows `Email/changes` from the
+state, starting over when the server answers `cannotCalculateChanges`. Labels are JMAP
+keywords (non-`$`); moves replace `mailboxIds` with the target role's mailbox. Sending
+creates a draft and an `EmailSubmission` that files it under Sent on success.

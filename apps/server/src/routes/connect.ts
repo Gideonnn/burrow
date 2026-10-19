@@ -20,6 +20,11 @@ type Pending = {
 
 const TTL_MS = 10 * 60_000;
 
+const fastmailRequest = z.object({
+  personId: z.string(),
+  token: z.string().trim().min(10),
+});
+
 const connectRequest = z.object({
   personId: z.string(),
   provider: z.enum(['gmail', 'microsoft']),
@@ -42,35 +47,76 @@ export function connectRoutes(accounts: Accounts) {
     return entry;
   };
 
-  const api = new Hono<AppEnv>().post(
-    '/admin/accounts/connect',
-    requireRight('admin'),
-    zValidator('json', connectRequest),
-    (c) => {
-      const { personId, provider } = c.req.valid('json');
-      if (!accounts.isConfigured(provider)) {
-        throw new HTTPException(400, {
-          message: `${provider} is not configured on this server`,
+  const api = new Hono<AppEnv>()
+    .post(
+      '/admin/accounts/connect',
+      requireRight('admin'),
+      zValidator('json', connectRequest),
+      (c) => {
+        const { personId, provider } = c.req.valid('json');
+        if (!accounts.isConfigured(provider)) {
+          throw new HTTPException(400, {
+            message: `${provider} is not configured on this server`,
+          });
+        }
+        const person = c.var.db
+          .select()
+          .from(people)
+          .where(eq(people.id, personId))
+          .get();
+        if (!person)
+          throw new HTTPException(400, { message: 'unknown person' });
+        const handle = randomBytes(24).toString('base64url');
+        pending.set(handle, {
+          personId,
+          provider,
+          verifier: '',
+          expiresAt: Date.now() + TTL_MS,
         });
-      }
-      const person = c.var.db
-        .select()
-        .from(people)
-        .where(eq(people.id, personId))
-        .get();
-      if (!person) throw new HTTPException(400, { message: 'unknown person' });
-      const handle = randomBytes(24).toString('base64url');
-      pending.set(handle, {
-        personId,
-        provider,
-        verifier: '',
-        expiresAt: Date.now() + TTL_MS,
-      });
-      return c.json({
-        url: `${accounts.publicUrl}/oauth/start/${handle}`,
-      });
-    },
-  );
+        return c.json({
+          url: `${accounts.publicUrl}/oauth/start/${handle}`,
+        });
+      },
+    )
+    // Fastmail only allows OAuth for registered partner apps, so a person
+    // pastes an API token instead; the server checks it before storing.
+    .post(
+      '/admin/accounts/fastmail',
+      requireRight('admin'),
+      zValidator('json', fastmailRequest),
+      async (c) => {
+        const { personId, token } = c.req.valid('json');
+        const person = c.var.db
+          .select()
+          .from(people)
+          .where(eq(people.id, personId))
+          .get();
+        if (!person)
+          throw new HTTPException(400, { message: 'unknown person' });
+        const credentials = { kind: 'token' as const, token };
+        let address: string;
+        try {
+          address = await accounts.probe('fastmail', credentials).address();
+        } catch (error) {
+          throw new HTTPException(400, {
+            message: `Fastmail did not accept the token: ${(error as Error).message}`,
+          });
+        }
+        const mailbox = accounts.upsertMailbox({
+          ownerId: personId,
+          provider: 'fastmail',
+          address,
+          credentials,
+        });
+        void c.var.mail
+          .sync(mailbox.id)
+          .then(c.var.onArrived)
+          .catch((error: Error) =>
+            console.error(`first sync of ${address} failed: ${error.message}`),
+          );
+        return c.json({ id: mailbox.id, address }, 201);
+      },
+    );
 
   const browser = new Hono<AppEnv>()
     .get('/oauth/start/:handle', (c) => {
