@@ -1,17 +1,11 @@
 import { FakeProvider } from '@burrow/hedwig';
+import { Accounts, mailboxes } from '@burrow/hedwig/server';
+import { createKey, SecretBox } from '@burrow/platform';
 import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
-import { createKey, createPerson } from '../access/service';
-import { createApp } from '../app';
-import { SecretBox } from '../crypto/secretBox';
-import { openDb } from '../db/client';
-import { mailboxes } from '../db/schema';
-import { EventBus } from '../events';
-import { Accounts } from '../mail/accounts';
-import { MailService } from '../mail/service';
+import { testHousehold } from '../testing';
 
 function setup() {
-  const db = openDb(':memory:');
   const tokenRequests: URLSearchParams[] = [];
   const fetchFn = (async (_url: string, init: RequestInit) => {
     tokenRequests.push(new URLSearchParams(String(init.body)));
@@ -26,45 +20,40 @@ function setup() {
   const fake = new FakeProvider();
   fake.address = async () => 'jane@example.com';
   const box = new SecretBox(SecretBox.generateKey());
-  const accounts = new Accounts({
-    db,
-    box,
-    publicUrl: 'https://burrow.example',
-    apps: { gmail: { clientId: 'cid', clientSecret: 'secret' } },
-    fetchFn,
-    clients: {
-      gmail: () => fake,
-      fastmail: (token) => {
-        const jmap = new FakeProvider();
-        jmap.address = async () => {
-          if (token !== 'fmu1-good-token') throw new Error('401 unauthorized');
-          return 'jane@fastmail.example';
-        };
-        return jmap;
-      },
-    },
+  const h = testHousehold({
+    accounts: (db) =>
+      new Accounts({
+        db,
+        box,
+        publicUrl: 'https://burrow.example',
+        apps: { gmail: { clientId: 'cid', clientSecret: 'secret' } },
+        fetchFn,
+        clients: {
+          gmail: () => fake,
+          fastmail: (token) => {
+            const jmap = new FakeProvider();
+            jmap.address = async () => {
+              if (token !== 'fmu1-good-token')
+                throw new Error('401 unauthorized');
+              return 'jane@fastmail.example';
+            };
+            return jmap;
+          },
+        },
+      }),
   });
-  const events = new EventBus();
-  const app = createApp({
-    version: 'test',
-    db,
-    events,
-    accounts,
-    mail: new MailService(db, accounts.clientFor, events),
-  });
-  const jane = createPerson(db, 'Jane');
-  const admin = createKey(db, {
-    personId: jane.id,
-    name: 'admin',
-    rights: ['admin'],
-    mailboxIds: null,
-  }).token;
-  const reader = createKey(db, {
-    personId: jane.id,
-    name: 'reader',
-    rights: ['read'],
-    mailboxIds: null,
-  }).token;
+  const { db, app } = h;
+  const jane = h.person('Jane');
+  const keyFor = (name: string, rights: ('admin' | 'read')[]) =>
+    createKey(db, {
+      personId: jane.id,
+      name,
+      rights,
+      mailboxIds: null,
+      restrictions: {},
+    }).token;
+  const admin = keyFor('admin', ['admin']);
+  const reader = keyFor('reader', ['read']);
   const post = (token: string, body: object) =>
     app.request('/api/admin/accounts/connect', {
       method: 'POST',

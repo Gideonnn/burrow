@@ -1,25 +1,18 @@
 import { resolve } from 'node:path';
-import { serve } from '@hono/node-server';
+import { Accounts, hedwigModule } from '@burrow/hedwig/server';
 import {
   ClaudeCliRunner,
   CodexCliRunner,
   FallbackRunner,
-} from './agents/runner';
+  loadCatalog,
+  Platform,
+  SecretBox,
+} from '@burrow/platform';
+import { serve } from '@hono/node-server';
 import { createApp } from './app';
 import { behindCloudflareAccess } from './auth/cloudflareAccess';
-import { loadCatalog } from './catalog/loadCatalog';
 import { loadConfig } from './config';
-import { SecretBox } from './crypto/secretBox';
 import { openDb } from './db/client';
-import { EventBus } from './events';
-import { Accounts } from './mail/accounts';
-import { startSyncLoop } from './mail/scheduler';
-import { MailService } from './mail/service';
-import { RoutineService } from './routines/service';
-import { InsightsService, LONG_MESSAGE } from './triage/insights';
-import { TriageService } from './triage/service';
-
-const RETRY_EVERY_MS = 10 * 60_000;
 
 const config = loadConfig();
 if (!config.secretKey) {
@@ -30,14 +23,6 @@ if (!config.secretKey) {
 }
 
 const db = openDb(config.dbPath);
-const events = new EventBus();
-const accounts = new Accounts({
-  db,
-  box: new SecretBox(config.secretKey),
-  publicUrl: config.publicUrl,
-  apps: { gmail: config.google, microsoft: config.microsoft },
-});
-const mail = new MailService(db, accounts.clientFor, events);
 const catalog = await loadCatalog({
   bots: config.botsDirs,
   skills: config.skillsDirs,
@@ -46,61 +31,42 @@ const runner = new FallbackRunner(
   config.agents.map(({ name, command }) =>
     name === 'claude'
       ? new ClaudeCliRunner(command)
-      : new CodexCliRunner(command),
+      : new CodexCliRunner(command, config.codexModel),
   ),
 );
-const insights = new InsightsService({
+const platform = new Platform({
   db,
-  mail,
-  catalog,
-  runner,
-  bot: config.triageBot,
-  language: config.language,
-});
-const routines = new RoutineService({
-  db,
-  mail,
+  dataDir: config.dataDir,
+  publicUrl: config.publicUrl,
   catalog,
   runner,
   language: config.language,
+  workers: config.workers,
+  agents: config.agentRuns,
 });
-const triage = new TriageService({
+
+const accounts = new Accounts({
   db,
-  mail,
-  catalog,
-  runner,
-  bot: config.triageBot,
-  language: config.language,
-  // Suggestions are ready by the time someone opens mail that needs an
-  // answer, and long mail gets its summary up front.
-  onDecided: (messageId, decision) => {
-    const body = mail.message(messageId)?.bodyText ?? '';
-    if (decision.action.kind === 'needs-reply' || body.length > LONG_MESSAGE) {
-      insights.prefetch(messageId);
-    }
-    routines.onTriaged(messageId, decision);
-  },
+  box: new SecretBox(config.secretKey),
+  publicUrl: config.publicUrl,
+  apps: { gmail: config.google, microsoft: config.microsoft },
 });
-const onArrived = (ids: string[]) => void triage.enqueue(ids);
+platform.use(
+  hedwigModule(platform, {
+    clientFor: accounts.clientFor,
+    accounts,
+    bot: config.triageBot,
+  }).module,
+);
 
 const app = createApp({
   version: process.env.npm_package_version ?? 'dev',
-  db,
-  mail,
-  events,
-  accounts,
-  triage,
-  catalog,
-  insights,
-  routines,
-  onArrived,
+  platform,
   clientsDir: resolve(config.dataDir, 'clients'),
+  devLoginAs: config.devLoginAs,
 });
 
-startSyncLoop(mail, onArrived);
-void triage.retryUntriaged();
-setInterval(() => void triage.retryUntriaged(), RETRY_EVERY_MS).unref();
-setInterval(() => routines.tick(), 60_000).unref();
+platform.start();
 
 serve(
   { fetch: app.fetch, port: config.port, hostname: config.host },
@@ -108,9 +74,9 @@ serve(
     console.log(
       `burrow server listening on http://${info.address}:${info.port}`,
     );
-    console.log(`public URL for OAuth: ${config.publicUrl}`);
+    console.log(`public URL for OAuth and logins: ${config.publicUrl}`);
     console.log(
-      `bots: ${[...catalog.bots.keys()].join(', ')}; triage by ${config.triageBot} via ${config.agents.map((a) => a.name).join(' then ')}`,
+      `modules: ${platform.modules.map((m) => m.name).join(', ')}; bots: ${[...catalog.bots.keys()].join(', ')}; agents: ${config.agents.map((a) => a.name).join(' then ')}`,
     );
   },
 );

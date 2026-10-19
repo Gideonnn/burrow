@@ -57,7 +57,7 @@ describe('routines', () => {
       fields: { Totaal: '€ 5,00' },
       ops: [{ op: 'archive' }],
     });
-    await s.routines.runOnServer('none');
+    await s.workers.drain();
 
     const [t] = await tasks(s, s.token);
     expect(t).toMatchObject({
@@ -80,7 +80,7 @@ describe('routines', () => {
     const s = await setup();
     await s.post(s.token, '/api/routines', invoiceRoutine);
     await invoiceArrives(s, { summary: 'x', ops: [{ op: 'archive' }] });
-    await s.routines.runOnServer('none');
+    await s.workers.drain();
     const [t] = await tasks(s, s.token);
     await s.post(s.token, `/api/tasks/${t!.id}/reject`);
     expect((await tasks(s, s.token))[0]?.status).toBe('rejected');
@@ -94,7 +94,7 @@ describe('routines', () => {
       approval: false,
     });
     await invoiceArrives(s, { summary: 'x', ops: [{ op: 'trash' }] });
-    await s.routines.runOnServer('none');
+    await s.workers.drain();
     expect((await tasks(s, s.token))[0]?.status).toBe('failed');
   });
 
@@ -115,12 +115,12 @@ describe('routines', () => {
       trigger: { kind: 'schedule', everyMinutes: 60 },
     });
     s.decisions.push({ summary: 'Goedemorgen.' }, { summary: 'Weer een uur.' });
-    s.routines.tick(new Date('2026-10-19T07:00:00Z'));
-    s.routines.tick(new Date('2026-10-19T07:30:00Z'));
-    await s.routines.runOnServer('none');
+    s.platform.tick(new Date('2026-10-19T07:00:00Z'));
+    s.platform.tick(new Date('2026-10-19T07:30:00Z'));
+    await s.workers.drain();
     expect(await tasks(s, s.token)).toHaveLength(1);
-    s.routines.tick(new Date('2026-10-19T08:00:00Z'));
-    await s.routines.runOnServer('none');
+    s.platform.tick(new Date('2026-10-19T08:00:00Z'));
+    await s.workers.drain();
     expect(await tasks(s, s.token)).toHaveLength(2);
   });
 });
@@ -180,8 +180,8 @@ describe('client runners', () => {
     });
     await invoiceArrives(s);
     s.decisions.push({ summary: 'Door de server gedaan.' });
-    s.routines.tick(new Date(Date.now() + 25 * 3_600_000));
-    await s.routines.runOnServer('none');
+    s.platform.tick(new Date(Date.now() + 25 * 3_600_000));
+    await s.workers.drain();
     expect((await tasks(s, s.token))[0]).toMatchObject({
       status: 'review',
       claimedBy: 'server',

@@ -1,3 +1,6 @@
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import type {
   MailProvider,
   MessageInsights,
@@ -5,34 +8,34 @@ import type {
   TriageDecision,
 } from '@burrow/contracts';
 import { FakeProvider } from '@burrow/hedwig';
-import { createKey, createPerson } from './access/service';
-import type { AgentRequest, AgentRunner } from './agents/runner';
+import { type Accounts, hedwigModule, mailboxes } from '@burrow/hedwig/server';
+import {
+  type AgentRequest,
+  type AgentRunner,
+  type Catalog,
+  createKey,
+  createPerson,
+  type Db,
+  Platform,
+} from '@burrow/platform';
 import { createApp } from './app';
-import type { Catalog } from './catalog/loadCatalog';
 import { openDb } from './db/client';
-import { mailboxes } from './db/schema';
-import { EventBus } from './events';
-import { MailService } from './mail/service';
-import { RoutineService } from './routines/service';
-import { InsightsService } from './triage/insights';
-import { TriageService } from './triage/service';
 
 // A fresh in-memory household for one test: an app, a database, a fake
 // provider per mailbox, and helpers that create people, mailboxes and keys
 // and call the API with them.
-export function testHousehold({ clientsDir }: { clientsDir?: string } = {}) {
+export function testHousehold({
+  clientsDir,
+  devLoginAs,
+  accounts: makeAccounts,
+}: {
+  clientsDir?: string;
+  devLoginAs?: string;
+  // Real accounts (with fake provider clients inside) instead of fakes.
+  accounts?: (db: Db) => Accounts;
+} = {}) {
   const db = openDb(':memory:');
-  const events = new EventBus();
   const providers = new Map<string, FakeProvider>();
-  const mail = new MailService(
-    db,
-    (box) => {
-      let fake = providers.get(box.id);
-      if (!fake) providers.set(box.id, (fake = new FakeProvider()));
-      return fake;
-    },
-    events,
-  );
   // The bot's answers, consumed in order; an Error makes that run fail.
   const decisions: (TriageDecision | MessageInsights | object | Error)[] = [];
   const agentRequests: AgentRequest[] = [];
@@ -45,6 +48,7 @@ export function testHousehold({ clientsDir }: { clientsDir?: string } = {}) {
           displayName: 'Kreacher',
           description: 'Sorts mail.',
           model: 'haiku',
+          agent: 'claude',
           skills: ['sorting-hat', 'reply-suggestions'],
           rights: ['read', 'organize', 'draft'],
           persona: 'You are Kreacher.',
@@ -80,33 +84,35 @@ export function testHousehold({ clientsDir }: { clientsDir?: string } = {}) {
       return next;
     },
   };
-  const routines = new RoutineService({ db, mail, catalog, runner });
-  const triage = new TriageService({
+  const dataDir = mkdtempSync(join(tmpdir(), 'burrow-test-'));
+  const platform = new Platform({
     db,
-    mail,
-    bot: 'kreacher',
-    catalog,
-    runner,
-    onDecided: (id, decision) => routines.onTriaged(id, decision),
-  });
-  const insights = new InsightsService({
-    db,
-    mail,
-    bot: 'kreacher',
+    dataDir,
+    publicUrl: 'https://burrow.example.com',
     catalog,
     runner,
   });
+  const accounts = makeAccounts?.(db);
   const arrived: string[] = [];
+  const hedwig = hedwigModule(platform, {
+    bot: 'kreacher',
+    sync: false,
+    accounts,
+    onArrived: (ids) => arrived.push(...ids),
+    clientFor:
+      accounts?.clientFor ??
+      ((box) => {
+        let fake = providers.get(box.id);
+        if (!fake) providers.set(box.id, (fake = new FakeProvider()));
+        return fake;
+      }),
+  });
+  platform.use(hedwig.module);
   const app = createApp({
     version: 'test',
+    platform,
     clientsDir,
-    db,
-    mail,
-    events,
-    triage,
-    insights,
-    routines,
-    onArrived: (ids) => arrived.push(...ids),
+    devLoginAs,
   });
 
   const person = (name: string) => createPerson(db, name);
@@ -131,7 +137,12 @@ export function testHousehold({ clientsDir }: { clientsDir?: string } = {}) {
     personId: string,
     rights: Right[],
     mailboxIds: string[] | null = null,
-  ) => createKey(db, { personId, name: 'test key', rights, mailboxIds }).token;
+  ) =>
+    createKey(
+      db,
+      { personId, name: 'test key', rights, mailboxIds, restrictions: {} },
+      platform.restrictionChecks,
+    ).token;
 
   const call = (token: string, path: string, init: RequestInit = {}) =>
     app.request(path, {
@@ -146,12 +157,15 @@ export function testHousehold({ clientsDir }: { clientsDir?: string } = {}) {
   return {
     db,
     app,
-    mail,
-    events,
+    platform,
+    dataDir,
+    mail: hedwig.mail,
+    events: platform.events,
+    triage: hedwig.triage,
+    insights: hedwig.insights,
+    routines: platform.routines,
+    workers: platform.workers,
     arrived,
-    triage,
-    insights,
-    routines,
     decisions,
     agentRequests,
     person,

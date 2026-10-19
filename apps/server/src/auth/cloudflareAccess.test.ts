@@ -1,7 +1,7 @@
 import { meResponse } from '@burrow/contracts';
+import { setPersonEmail } from '@burrow/platform';
 import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT } from 'jose';
 import { describe, expect, it } from 'vitest';
-import { setPersonEmail } from '../access/service';
 import { testHousehold } from '../testing';
 import { behindCloudflareAccess } from './cloudflareAccess';
 

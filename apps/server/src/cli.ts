@@ -10,18 +10,18 @@
 //   pnpm --filter @burrow/server cli seed-demo          invented household for development
 //   pnpm --filter @burrow/server cli backup <file>        consistent copy of the database
 import { right } from '@burrow/contracts';
+import { Accounts } from '@burrow/hedwig/server';
 import {
   createKey,
   createPerson,
   listKeys,
   listPeople,
+  routines,
+  SecretBox,
   setPersonEmail,
-} from './access/service';
+} from '@burrow/platform';
 import { loadConfig } from './config';
-import { SecretBox } from './crypto/secretBox';
 import { openDb } from './db/client';
-import { routines } from './db/schema';
-import { Accounts } from './mail/accounts';
 
 const [command, ...args] = process.argv.slice(2);
 const db = () => openDb(loadConfig().dbPath);
@@ -40,6 +40,7 @@ switch (command) {
       name: 'Admin (created by init)',
       rights: ['read', 'organize', 'draft', 'send', 'tasks', 'admin'],
       mailboxIds: null,
+      restrictions: {},
     });
     console.log(`Created ${person.name} (${person.id}).`);
     console.log(`Admin key, shown once:\n\n  ${token}\n`);
@@ -84,6 +85,7 @@ switch (command) {
       name: required(args[1], 'key name'),
       rights: rights.data,
       mailboxIds: null,
+      restrictions: {},
     });
     console.log(
       `Key for ${person.name} [${rights.data.join(', ')}], shown once:\n\n  ${token}\n`,
@@ -161,6 +163,7 @@ switch (command) {
           name: 'MacBook Gideon',
           rights: [...all],
           mailboxIds: null,
+          restrictions: {},
         }),
       ],
       [
@@ -170,6 +173,7 @@ switch (command) {
           name: 'Mac Eva',
           rights: ['read', 'organize', 'draft', 'send', 'tasks'],
           mailboxIds: null,
+          restrictions: {},
         }),
       ],
     ] as const;

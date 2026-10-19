@@ -29,6 +29,9 @@ export const botDefinition = z.object({
   displayName: z.string().min(1),
   description: z.string().min(1),
   model: z.enum(['haiku', 'sonnet', 'opus']).default('haiku'),
+  // The agent CLI this bot prefers; the others are the fallback. Bots that
+  // read untrusted input should prefer claude, which runs without tools.
+  agent: z.enum(['claude', 'codex', 'any']).default('any'),
   skills: z.array(slug).default([]),
   // Agents never get `send` or `admin`: sending is a user action and admin
   // manages keys. See AGENTS.md, "Safety rules for agents in the product".

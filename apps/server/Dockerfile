@@ -11,6 +11,7 @@ COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY apps/server/package.json apps/server/
 COPY modules/hedwig/package.json modules/hedwig/
 COPY packages/contracts/package.json packages/contracts/
+COPY packages/platform/package.json packages/platform/
 RUN pnpm install --frozen-lockfile --filter @burrow/server...
 COPY tsconfig.base.json ./
 COPY apps/server apps/server

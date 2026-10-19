@@ -52,8 +52,8 @@ describe('API keys', () => {
         await h.call(admin, '/api/admin/keys', {
           method: 'POST',
           body: JSON.stringify({
-            personId: h.eva.id,
-            name: 'Mac Eva',
+            personId: h.gideon.id,
+            name: 'MacBook Gideon',
             rights: ['read'],
           }),
         })
@@ -74,19 +74,35 @@ describe('admin routes', () => {
     expect((await h.call(token, '/api/admin/keys')).status).toBe(403);
   });
 
-  it('refuse a key for one person that includes another person’s mailbox', async () => {
+  it('refuse a key that includes another person’s mailbox', async () => {
     const h = household();
     const admin = h.key(h.gideon.id, ['admin']);
     const res = await h.call(admin, '/api/admin/keys', {
       method: 'POST',
       body: JSON.stringify({
-        personId: h.eva.id,
+        personId: h.gideon.id,
         name: 'sneaky',
         rights: ['read'],
         mailboxIds: [h.evas.id, h.work.id],
       }),
     });
     expect(res.status).toBe(400);
+  });
+
+  // A key reads its person's mail, so an admin making one for someone else
+  // could read their mail; that person logs in on their own device instead.
+  it('refuse a key for another person, even to an admin', async () => {
+    const h = household();
+    const admin = h.key(h.gideon.id, ['admin']);
+    const res = await h.call(admin, '/api/admin/keys', {
+      method: 'POST',
+      body: JSON.stringify({
+        personId: h.eva.id,
+        name: 'Mac Eva',
+        rights: ['read'],
+      }),
+    });
+    expect(res.status).toBe(403);
   });
 
   it('never return a key hash or token in the list', async () => {

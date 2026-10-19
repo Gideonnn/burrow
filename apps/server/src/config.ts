@@ -1,4 +1,5 @@
 import { resolve } from 'node:path';
+import type { OAuthAppConfig } from '@burrow/hedwig/server';
 import { z } from 'zod';
 
 const env = z.object({
@@ -28,9 +29,20 @@ const env = z.object({
   BURROW_AGENTS: z.string().default('claude,codex'),
   BURROW_CLAUDE_COMMAND: z.string().default('claude'),
   BURROW_CODEX_COMMAND: z.string().default('codex'),
+  // A Codex model; empty uses Codex's own default.
+  BURROW_CODEX_MODEL: z.string().optional(),
+  // Server tasks at once, and agent CLI runs at once across everything.
+  BURROW_WORKERS: z.coerce.number().int().min(1).max(8).default(2),
+  BURROW_AGENT_RUNS: z.coerce.number().int().min(1).max(8).default(2),
+  // Development without Cloudflare Access: the person the device login
+  // assumes for requests from this machine. Ignored when Access is set.
+  BURROW_DEV_LOGIN: z.string().optional(),
+  // Pensieve: transcription through OpenAI, and the ffmpeg binary.
+  OPENAI_API_KEY: z.string().optional(),
+  BURROW_TRANSCRIBE_MODEL: z.string().default('gpt-4o-transcribe'),
+  BURROW_FFMPEG: z.string().default('ffmpeg'),
+  BURROW_FFPROBE: z.string().default('ffprobe'),
 });
-
-export type OAuthAppConfig = { clientId: string; clientSecret?: string };
 
 export type Config = {
   port: number;
@@ -49,6 +61,14 @@ export type Config = {
   triageBot: string;
   language: string;
   agents: { name: 'claude' | 'codex'; command: string }[];
+  codexModel: string | undefined;
+  workers: number;
+  agentRuns: number;
+  devLoginAs: string | undefined;
+  openaiKey: string | undefined;
+  transcribeModel: string;
+  ffmpeg: string;
+  ffprobe: string;
 };
 
 export function loadConfig(source: NodeJS.ProcessEnv = process.env): Config {
@@ -92,6 +112,14 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): Config {
             ? parsed.BURROW_CLAUDE_COMMAND
             : parsed.BURROW_CODEX_COMMAND,
       })),
+    codexModel: parsed.BURROW_CODEX_MODEL || undefined,
+    workers: parsed.BURROW_WORKERS,
+    agentRuns: parsed.BURROW_AGENT_RUNS,
+    devLoginAs: team ? undefined : parsed.BURROW_DEV_LOGIN,
+    openaiKey: parsed.OPENAI_API_KEY || undefined,
+    transcribeModel: parsed.BURROW_TRANSCRIBE_MODEL,
+    ffmpeg: parsed.BURROW_FFMPEG,
+    ffprobe: parsed.BURROW_FFPROBE,
     microsoft: parsed.MICROSOFT_CLIENT_ID
       ? {
           clientId: parsed.MICROSOFT_CLIENT_ID,

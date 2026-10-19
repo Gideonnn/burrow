@@ -76,14 +76,24 @@ export const taskStatus = z.enum([
 ]);
 export type TaskStatus = z.infer<typeof taskStatus>;
 
+// What a task is about, owned by a module: a mail message, a recording.
+export const subject = z.object({ type: z.string(), id: z.string() });
+export type Subject = z.infer<typeof subject>;
+
 export const task = z.object({
   id: z.string(),
-  routineId: z.string(),
+  // The task kind, e.g. "routine" or "pensieve.transcribe".
+  kind: z.string(),
+  // What people see in a list: the routine's name or what the step does.
+  title: z.string(),
+  routineId: z.string().nullable(),
   routineName: z.string(),
   skill: z.string(),
   bot: z.string(),
   where: taskWhere,
   status: taskStatus,
+  subject: subject.nullable(),
+  // subject.id when the subject is a message, kept for older clients.
   messageId: z.string().nullable(),
   result: taskResult.nullable(),
   error: z.string().nullable(),
@@ -102,6 +112,17 @@ export const claimedTask = z.object({
     system: z.string(),
     prompt: z.string(),
     schema: z.record(z.string(), z.unknown()),
+    // Which agent CLI the bot prefers; the runner falls back to another.
+    agent: z.enum(['claude', 'codex', 'any']).default('any'),
+    timeoutMs: z.number().int().positive().optional(),
   }),
 });
 export type ClaimedTask = z.infer<typeof claimedTask>;
+
+// A client runner asks for tasks of the kinds it can run.
+export const claimRequest = z.object({
+  runner: z.string().min(1).max(80),
+  max: z.number().int().min(1).max(5).default(2),
+  kinds: z.array(z.string().min(1)).min(1).default(['routine']),
+});
+export type ClaimRequest = z.infer<typeof claimRequest>;

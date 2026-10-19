@@ -1,63 +1,32 @@
 import type { HealthResponse } from '@burrow/contracts';
+import { type Platform, type PlatformEnv, platformApi } from '@burrow/platform';
 import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
-import { requireKey } from './auth/middleware';
-import type { Catalog } from './catalog/loadCatalog';
-import type { Db } from './db/client';
-import type { AppEnv } from './env';
-import type { EventBus } from './events';
-import type { Accounts } from './mail/accounts';
-import type { MailService } from './mail/service';
-import { accessRoutes } from './routes/access';
-import { catalogRoutes } from './routes/catalog';
-import { clientRoutes } from './routes/clients';
-import { connectRoutes } from './routes/connect';
-import { draftRoutes } from './routes/drafts';
-import { insightsRoutes } from './routes/insights';
-import { mailRoutes } from './routes/mail';
-import { mcpRoutes } from './routes/mcp';
-import { routineRoutes } from './routes/routines';
-import { triageRoutes } from './routes/triage';
-import type { RoutineService } from './routines/service';
-import type { InsightsService } from './triage/insights';
-import type { TriageService } from './triage/service';
+import { deviceLogin } from './auth/deviceLogin';
 
 export type AppOptions = {
   version: string;
-  db: Db;
-  mail: MailService;
-  events: EventBus;
-  onArrived?: (messageIds: string[]) => void;
-  // Without accounts the server cannot connect new OAuth mailboxes.
-  accounts?: Accounts;
-  triage?: TriageService;
-  catalog?: Catalog;
-  insights?: InsightsService;
-  routines?: RoutineService;
+  platform: Platform;
   // Where signed client builds are published; without it there are no updates.
   clientsDir?: string;
+  // Development only: who the device login assumes without Cloudflare Access.
+  devLoginAs?: string;
 };
 
+// The whole HTTP surface: health, the device login, every module's browser
+// pages, and the API under /api.
 export function createApp({
   version,
-  db,
-  mail,
-  events,
-  onArrived = () => {},
-  accounts,
-  triage,
-  catalog,
-  insights,
-  routines,
+  platform,
   clientsDir,
+  devLoginAs,
 }: AppOptions) {
-  const app = new Hono<AppEnv>();
+  const app = new Hono<PlatformEnv>();
 
   app.use(async (c, next) => {
-    c.set('db', db);
-    c.set('mail', mail);
-    c.set('events', events);
-    c.set('onArrived', onArrived);
+    c.set('db', platform.db);
+    c.set('events', platform.events);
+    c.set('platform', platform);
     await next();
   });
 
@@ -65,23 +34,14 @@ export function createApp({
     c.json<HealthResponse>({ status: 'ok', service: 'burrow-server', version }),
   );
 
-  const api = new Hono<AppEnv>()
-    .use(requireKey)
-    .route('/', accessRoutes)
-    .route('/', mailRoutes)
-    .route('/', draftRoutes)
-    .route('/', mcpRoutes(version));
-  if (triage) api.route('/', triageRoutes(triage));
-  if (catalog) api.route('/', catalogRoutes(catalog));
-  if (insights) api.route('/', insightsRoutes(insights));
-  if (routines) api.route('/', routineRoutes(routines));
-  if (clientsDir) api.route('/', clientRoutes(clientsDir));
-  if (accounts) {
-    const connect = connectRoutes(accounts);
-    api.route('/', connect.api);
-    app.route('/', connect.browser);
+  app.route(
+    '/',
+    deviceLogin({ publicUrl: platform.publicUrl, devPersonName: devLoginAs }),
+  );
+  for (const module of platform.modules) {
+    if (module.browser) app.route('/', module.browser);
   }
-  app.route('/api', api);
+  app.route('/api', platformApi(platform, { version, clientsDir }));
 
   app.onError((error, c) => {
     if (error instanceof HTTPException) {
