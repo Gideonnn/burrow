@@ -43,6 +43,10 @@ export class FakeProvider implements MailProviderClient {
     return message;
   }
 
+  async address(): Promise<string> {
+    return 'owner@example.com';
+  }
+
   async sync(cursor: string | null): Promise<SyncResult> {
     const since = cursor === null ? 0 : Number(cursor);
     const ids = new Set(

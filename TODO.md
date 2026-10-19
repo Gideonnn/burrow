@@ -2,14 +2,6 @@
 
 Issue-ready entries, roughly in build order. Delete an entry in the commit that finishes it.
 
-## Hedwig: Gmail provider
-
-**What:** a `MailProviderClient` for the Gmail API: OAuth (the Mac app runs the browser
-login with PKCE and hands the code to the server), sync with `history.list`, and `apply`
-for the server operations. Tokens encrypted at rest.
-**Why:** the old private Gmail address is the main source of spam.
-**Scope:** provider plus fixtures-based tests; no real mailbox in tests.
-
 ## Hedwig: Microsoft Graph and Fastmail JMAP providers
 
 **What:** the same interface for Graph (delta queries, polling) and JMAP (EventSource push,
