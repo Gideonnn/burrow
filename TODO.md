@@ -19,8 +19,9 @@ attachment download in the providers and a decision about the bookkeeping packag
 **Why:** chosen by Gideon as the first household routine; deferred on purpose.
 **Scope:** design note first.
 
-## Open-source readiness
+## Licence
 
-**What:** choose a licence, add GitHub Actions (format check, lint, typecheck, tests, hook
-tests) and gitleaks, and review `docs/design/` for personal details before going public.
-**Why:** the repository may become public. **Scope:** one PR.
+**What:** choose a licence for the public repository (MIT, or AGPL to keep hosted
+forks open) and add `LICENSE`.
+**Why:** without one, nobody may legally reuse the code, which defeats publishing it.
+**Scope:** one file; Gideon decides.

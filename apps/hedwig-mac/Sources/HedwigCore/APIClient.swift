@@ -179,6 +179,24 @@ public struct APIClient: Sendable {
 
     public func people() async throws -> [Person] { try await call("GET", "api/admin/people") }
 
+    public func addPerson(name: String) async throws -> Person {
+        try await call("POST", "api/admin/people", body: ["name": name])
+    }
+
+    public func allMailboxes() async throws -> [MailboxSummary] { try await call("GET", "api/admin/mailboxes") }
+
+    public func keys() async throws -> [ApiKeySummary] { try await call("GET", "api/admin/keys") }
+
+    public func createKey(personId: String, name: String, rights: [Right], mailboxIds: [String]?) async throws -> CreatedKey {
+        try await call("POST", "api/admin/keys", body: NewKey(personId: personId, name: name, rights: rights, mailboxIds: mailboxIds))
+    }
+
+    public func revokeKey(_ id: String) async throws {
+        let _: Empty = try await call("DELETE", "api/admin/keys/\(id)")
+    }
+
+    struct NewKey: Encodable { var personId: String; var name: String; var rights: [Right]; var mailboxIds: [String]? }
+
     /// A one-time link that the browser opens to log in at Google or Microsoft.
     public func connectLink(personId: String, provider: MailProvider) async throws -> URL {
         let r: [String: String] = try await call(

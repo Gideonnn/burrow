@@ -42,7 +42,7 @@ public enum MailFolder: String, Codable, Sendable, CaseIterable {
     case inbox, archive, spam, trash, sent
 }
 
-public enum Right: String, Codable, Sendable {
+public enum Right: String, Codable, Sendable, CaseIterable {
     case read, organize, draft, send, tasks, admin
 }
 
@@ -295,4 +295,20 @@ public struct AgentRequest: Codable, Hashable, Sendable {
 public struct ClaimedTask: Codable, Hashable, Sendable {
     public var task: TaskItem
     public var request: AgentRequest
+}
+
+public struct ApiKeySummary: Codable, Hashable, Identifiable, Sendable {
+    public var id: String
+    public var personId: String
+    public var name: String
+    public var prefix: String
+    public var rights: [Right]
+    public var mailboxIds: [String]?
+    public var lastUsedAt: Date?
+    public var revokedAt: Date?
+}
+
+public struct CreatedKey: Codable, Sendable {
+    public var key: ApiKeySummary
+    public var token: String
 }

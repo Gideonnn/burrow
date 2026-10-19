@@ -105,3 +105,18 @@ import Testing
         #expect(model.error != nil)
     }
 }
+
+@Suite struct AccessTests {
+    @Test func aKeyForAllMailboxesLeavesTheListOutSoTheServerIncludesFutureOnes() async throws {
+        let server = MockServer()
+        server.on("POST", "/api/admin/keys", json: """
+        {"key":{"id":"k2","personId":"p2","name":"Mac Eva","prefix":"bk_abc","rights":["read"],"mailboxIds":null,
+          "lastUsedAt":null,"revokedAt":null},"token":"bk_secret"}
+        """)
+        let created = try await server.client().createKey(personId: "p2", name: "Mac Eva", rights: [.read], mailboxIds: nil)
+        #expect(created.token == "bk_secret")
+        let body = try #require(server.requests("POST", "/api/admin/keys").first)
+        #expect(!body.contains("mailboxIds"))
+        #expect(body.contains(#""rights":["read"]"#))
+    }
+}

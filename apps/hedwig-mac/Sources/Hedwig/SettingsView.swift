@@ -2,10 +2,15 @@ import HedwigCore
 import SwiftUI
 
 struct SettingsView: View {
+    @Environment(AppModel.self) private var model
+
     var body: some View {
         TabView {
             AgentSettings().tabItem { Label("Agent", systemImage: "sparkles") }
             AccountSettings().tabItem { Label("Accounts", systemImage: "tray.2") }
+            if model.me?.can(.admin) == true {
+                AccessSettings().tabItem { Label("Toegang", systemImage: "person.2") }
+            }
             ConnectionSettings().tabItem { Label("Verbinding", systemImage: "key") }
         }
         .padding(20)
