@@ -36,8 +36,7 @@ status() {
   if health >/dev/null; then echo "health: $(health)"; else echo "health: not answering"; fi
   echo
   echo "Next steps:"
-  echo "  first person and admin key:  node $REPO/apps/server/dist/cli.js init <name>"
-  echo "     (run with the env loaded: set -a; . $ENV_FILE; set +a)"
+  echo "  first person and admin key:  $REPO/infra/dobby/cli.sh init <name>"
   echo "  logs:                         tail -f $LOG_DIR/server.log"
   echo "  Google/Microsoft accounts:    add the client ids to $ENV_FILE, then rerun this script"
 }
