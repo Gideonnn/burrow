@@ -1,6 +1,18 @@
-import type { MailProvider, Right } from '@burrow/contracts';
+import type {
+  Address,
+  MailFolder,
+  MailProvider,
+  Right,
+} from '@burrow/contracts';
+import type { ProviderMessage } from '@burrow/hedwig';
 import { sql } from 'drizzle-orm';
-import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import {
+  index,
+  integer,
+  sqliteTable,
+  text,
+  uniqueIndex,
+} from 'drizzle-orm/sqlite-core';
 
 const id = () =>
   text('id')
@@ -49,3 +61,43 @@ export const apiKeys = sqliteTable('api_keys', {
   revokedAt: integer('revoked_at', { mode: 'timestamp_ms' }),
   createdAt: createdAt(),
 });
+
+export const messages = sqliteTable(
+  'messages',
+  {
+    id: id(),
+    mailboxId: text('mailbox_id')
+      .notNull()
+      .references(() => mailboxes.id, { onDelete: 'cascade' }),
+    providerId: text('provider_id').notNull(),
+    threadId: text('thread_id'),
+    from: text('from', { mode: 'json' }).$type<Address>().notNull(),
+    to: text('to', { mode: 'json' }).$type<Address[]>().notNull(),
+    cc: text('cc', { mode: 'json' }).$type<Address[]>().notNull(),
+    subject: text('subject').notNull(),
+    snippet: text('snippet').notNull(),
+    bodyText: text('body_text'),
+    bodyHtml: text('body_html'),
+    receivedAt: integer('received_at', { mode: 'timestamp_ms' }).notNull(),
+    folder: text('folder').$type<MailFolder>().notNull(),
+    unread: integer('unread', { mode: 'boolean' }).notNull(),
+    flagged: integer('flagged', { mode: 'boolean' }).notNull(),
+    labels: text('labels', { mode: 'json' }).$type<string[]>().notNull(),
+    hasAttachments: integer('has_attachments', { mode: 'boolean' }).notNull(),
+    headers: text('headers', { mode: 'json' })
+      .$type<ProviderMessage['headers']>()
+      .notNull(),
+    // Set once triage has looked at the message, so a restart never
+    // triages the same mail twice.
+    triagedAt: integer('triaged_at', { mode: 'timestamp_ms' }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex('messages_mailbox_provider').on(t.mailboxId, t.providerId),
+    index('messages_mailbox_folder_received').on(
+      t.mailboxId,
+      t.folder,
+      t.receivedAt,
+    ),
+  ],
+);

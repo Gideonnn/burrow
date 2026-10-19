@@ -3,35 +3,69 @@ import { z } from 'zod';
 export const mailProvider = z.enum(['gmail', 'microsoft', 'fastmail']);
 export type MailProvider = z.infer<typeof mailProvider>;
 
-export const mailbox = z.object({
-  id: z.string(),
-  owner: z.string(),
-  provider: mailProvider,
-  address: z.email(),
-  name: z.string(),
-});
-export type Mailbox = z.infer<typeof mailbox>;
+export const mailFolder = z.enum(['inbox', 'archive', 'spam', 'trash', 'sent']);
+export type MailFolder = z.infer<typeof mailFolder>;
 
 export const address = z.object({
   name: z.string().optional(),
-  email: z.email(),
+  email: z.string(),
 });
 export type Address = z.infer<typeof address>;
 
-export const message = z.object({
+export const messageSummary = z.object({
   id: z.string(),
   mailboxId: z.string(),
-  providerId: z.string(),
-  threadId: z.string().optional(),
+  threadId: z.string().nullable(),
   from: address,
   to: z.array(address),
   subject: z.string(),
   snippet: z.string(),
   receivedAt: z.iso.datetime(),
+  folder: mailFolder,
   unread: z.boolean(),
+  flagged: z.boolean(),
+  labels: z.array(z.string()),
   hasAttachments: z.boolean(),
 });
-export type Message = z.infer<typeof message>;
+export type MessageSummary = z.infer<typeof messageSummary>;
+
+export const messageDetail = messageSummary.extend({
+  cc: z.array(address),
+  bodyText: z.string().nullable(),
+  bodyHtml: z.string().nullable(),
+});
+export type MessageDetail = z.infer<typeof messageDetail>;
+
+// Operations on a message at its provider. The server applies them through
+// the provider API so phones see the same state as Hedwig.
+export const serverOp = z.discriminatedUnion('op', [
+  z.object({ op: z.literal('markRead') }),
+  z.object({ op: z.literal('markUnread') }),
+  z.object({ op: z.literal('moveToSpam') }),
+  z.object({ op: z.literal('moveToInbox') }),
+  z.object({ op: z.literal('archive') }),
+  z.object({ op: z.literal('trash') }),
+  z.object({ op: z.literal('flag') }),
+  z.object({ op: z.literal('unflag') }),
+  z.object({ op: z.literal('addLabel'), label: z.string().min(1) }),
+  z.object({ op: z.literal('removeLabel'), label: z.string().min(1) }),
+]);
+export type ServerOp = z.infer<typeof serverOp>;
+
+export const messageActionsRequest = z.object({
+  ops: z.array(serverOp).min(1),
+});
+
+export const sendRequest = z.object({
+  mailboxId: z.string(),
+  to: z.array(address).min(1),
+  cc: z.array(address).default([]),
+  subject: z.string(),
+  body: z.string(),
+  // Set when replying; the server adds the threading headers.
+  inReplyTo: z.string().optional(),
+});
+export type SendRequest = z.infer<typeof sendRequest>;
 
 // The only things an agent may do to a message. Sending and deleting are
 // deliberately absent: mail is untrusted input, so a crafted message can at
