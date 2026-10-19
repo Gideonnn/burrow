@@ -10,6 +10,7 @@
 - [Triage](topics/triage.md): how the bot sorts new mail, the review and learned rules.
 - [MCP](topics/mcp.md): the tools agents get, per right, and how to connect Claude Code and Codex.
 - [Operating Hedwig as an agent](topics/hedwig-control.md): `hedwigctl` to read and press anything in the running app, and its limits.
+- [Hedwig updates](topics/hedwig-updates.md): local iteration, signed releases through the server, the restart.
 - [Deploy to Dobby](topics/deploy.md): systemd user service, Cloudflare Tunnel and Access, backups and the first setup.
 - [Routines and tasks](topics/routines.md): triggers, tasks, approval and runners on server and clients.
 

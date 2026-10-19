@@ -11,7 +11,8 @@ interface only shows the current list.
 message and its plain-text body. `show <place>` (`inbox`, `inbox:<address>`,
 `filtered`, `drafts`, `tasks`, `archive`, `sent`, `spam`) and `open <messageId>` wait
 until the list or message has loaded. `tree` and `find <text>` give every window, button,
-field and menu item with an id; `press`, `type` and `select` act on an id. Ids are paths
+field and menu item with an id; `press`, `type` and `select` act on an id. `update` and
+`restart` are described in [Hedwig updates](hedwig-updates.md). Ids are paths
 in the current tree and change when the interface does, so read the tree again after
 anything that changes the screen.
 
