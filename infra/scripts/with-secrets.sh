@@ -3,7 +3,11 @@
 # environment. The plaintext lives only in this process and the command.
 #
 #   pnpm with-secrets tools ./some-script.sh
-#   pnpm with-secrets tools sh -c 'curl -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" ...'
+#   ./infra/scripts/with-secrets.sh tools sh -c 'curl -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" ...'
+#
+# Call the script directly when the command mentions a variable: pnpm runs its
+# arguments through a shell first, which expands `$CLOUDFLARE_API_TOKEN` to
+# nothing before this script has set it.
 set -euo pipefail
 
 if [ $# -lt 2 ]; then

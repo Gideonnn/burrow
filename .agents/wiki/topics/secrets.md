@@ -26,6 +26,11 @@ recipients.
   `pnpm with-secrets <file> <command>`, which puts them in the command's environment, and
   check a file with `pnpm sops:verify <file>`, which prints key names and lengths only.
   The `pre-tool` hook blocks every other `sops` call.
+- **Variables in the command need the script itself**:
+  `./infra/scripts/with-secrets.sh tools sh -c 'curl -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" …'`.
+  Through pnpm the arguments pass a shell first, which expands the variable to nothing
+  before the wrapper sets it; Cloudflare then answers "Invalid format for Authorization
+  header".
 - **The operator edits** with `pnpm sops:edit infra/secrets/<file>.env.enc`, which opens
   the decrypted file in the editor and encrypts it again on save.
 - **One file per recipient set.** Before adding a key to a file, ask whether every
