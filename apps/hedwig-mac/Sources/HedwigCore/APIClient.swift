@@ -145,6 +145,38 @@ public struct APIClient: Sendable {
         let _: Empty = try await call("DELETE", "api/rules/\(id)")
     }
 
+    // MARK: Tasks
+
+    public func tasks() async throws -> [TaskItem] { try await call("GET", "api/tasks") }
+
+    public func approve(task id: String) async throws {
+        let _: Empty = try await call("POST", "api/tasks/\(id)/approve")
+    }
+
+    public func reject(task id: String) async throws {
+        let _: Empty = try await call("POST", "api/tasks/\(id)/reject")
+    }
+
+    public func claim(runner: String, max: Int = 1) async throws -> [ClaimedTask] {
+        try await call("POST", "api/runner/claim", body: ClaimBody(runner: runner, max: max))
+    }
+
+    /// Posts the agent's raw JSON answer; the server validates it.
+    public func complete(task id: String, answer: Data) async throws {
+        var request = request("POST", "api/runner/tasks/\(id)/complete", body: answer)
+        request.timeoutInterval = 60
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            throw APIError.server(status: (response as? HTTPURLResponse)?.statusCode ?? 0, message: Self.message(data))
+        }
+    }
+
+    public func fail(task id: String, error: String) async throws {
+        let _: Empty = try await call("POST", "api/runner/tasks/\(id)/fail", body: ["error": error])
+    }
+
+    struct ClaimBody: Encodable { var runner: String; var max: Int }
+
     public func people() async throws -> [Person] { try await call("GET", "api/admin/people") }
 
     /// A one-time link that the browser opens to log in at Google or Microsoft.

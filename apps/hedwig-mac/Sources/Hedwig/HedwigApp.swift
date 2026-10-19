@@ -3,14 +3,14 @@ import SwiftUI
 
 @main
 struct HedwigApp: App {
-    @State private var model = AppModel()
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
+    private var model: AppModel { delegate.model }
 
     var body: some Scene {
         WindowGroup("Hedwig", id: "main") {
             RootView()
                 .environment(model)
                 .frame(minWidth: 960, minHeight: 600)
-                .task { if model.connection != nil { await model.start() } }
         }
         .commands { HedwigCommands(model: model) }
 
@@ -84,4 +84,19 @@ struct HedwigCommands: Commands {
                 .keyboardShortcut("n", modifiers: [.command, .shift])
         }
     }
+}
+
+/// Owns the model and starts it at launch, not when a window appears: the
+/// runner and live updates keep going with every window closed.
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    @MainActor let model = AppModel()
+
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        Task { @MainActor in
+            if model.connection != nil { await model.start() }
+        }
+    }
+
+    // Closing the last window keeps Hedwig (and its runner) running, like Mail.
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
 }

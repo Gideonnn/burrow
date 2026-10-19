@@ -3,7 +3,7 @@ name: kreacher
 displayName: Kreacher
 description: The household's house-elf. Sorts incoming mail and keeps the inboxes tidy.
 model: haiku
-skills: [sorting-hat, reply-suggestions]
+skills: [sorting-hat, reply-suggestions, key-facts]
 rights: [read, organize, draft]
 ---
 

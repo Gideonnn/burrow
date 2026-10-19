@@ -32,4 +32,7 @@ and optionally `HEDWIG_OPEN=filtered|drafts|archive`.
 - Archive, delete, spam, read and flag act at the provider, so phones see the same.
 - "Gefilterd": what the bot filtered, with its reason; confirm or restore.
 - "Concepten": drafts prepared by bots or agents through MCP, to review and send.
+- "Taken": what routines propose, to approve or reject. While Hedwig runs (also with
+  every window closed) it claims tasks meant for this Mac and runs them with the local
+  `claude`; switch it off or set the path under Settings › Agent.
 - Settings: the bot instructions and learned rules, adding accounts (admin keys).

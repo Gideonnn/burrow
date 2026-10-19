@@ -228,3 +228,71 @@ public struct MessageInsights: Codable, Hashable, Sendable {
     public var summary: String?
     public var replies: [Reply]
 }
+
+/// Any JSON value, for the JSON Schema the server sends with a claimed task.
+public enum JSONValue: Codable, Hashable, Sendable {
+    case null, bool(Bool), number(Double), string(String), array([JSONValue]), object([String: JSONValue])
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.singleValueContainer()
+        if c.decodeNil() { self = .null }
+        else if let v = try? c.decode(Bool.self) { self = .bool(v) }
+        else if let v = try? c.decode(Double.self) { self = .number(v) }
+        else if let v = try? c.decode(String.self) { self = .string(v) }
+        else if let v = try? c.decode([JSONValue].self) { self = .array(v) }
+        else { self = .object(try c.decode([String: JSONValue].self)) }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.singleValueContainer()
+        switch self {
+        case .null: try c.encodeNil()
+        case .bool(let v): try c.encode(v)
+        case .number(let v): try c.encode(v)
+        case .string(let v): try c.encode(v)
+        case .array(let v): try c.encode(v)
+        case .object(let v): try c.encode(v)
+        }
+    }
+}
+
+public struct TaskResult: Codable, Hashable, Sendable {
+    public struct DraftProposal: Codable, Hashable, Sendable {
+        public var to: [Address]
+        public var subject: String
+        public var body: String
+    }
+
+    public var summary: String
+    public var fields: [String: String]
+    public var ops: [ServerOp]
+    public var draft: DraftProposal?
+}
+
+public struct TaskItem: Codable, Hashable, Identifiable, Sendable {
+    public var id: String
+    public var routineId: String
+    public var routineName: String
+    public var skill: String
+    public var bot: String
+    public var `where`: String
+    public var status: String
+    public var messageId: String?
+    public var result: TaskResult?
+    public var error: String?
+    public var claimedBy: String?
+    public var createdAt: Date
+    public var updatedAt: Date
+}
+
+public struct AgentRequest: Codable, Hashable, Sendable {
+    public var model: String
+    public var system: String
+    public var prompt: String
+    public var schema: JSONValue
+}
+
+public struct ClaimedTask: Codable, Hashable, Sendable {
+    public var task: TaskItem
+    public var request: AgentRequest
+}

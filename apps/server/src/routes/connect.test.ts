@@ -18,7 +18,7 @@ function setup() {
     return new Response(
       JSON.stringify({
         access_token: 'at',
-        refresh_token: 'rt',
+        refresh_token: 'refresh-token-very-secret',
         expires_in: 3600,
       }),
     );
@@ -110,8 +110,10 @@ describe('connecting a Gmail account', () => {
       .where(eq(mailboxes.ownerId, s.jane.id))
       .all();
     expect(row?.address).toBe('jane@example.com');
-    expect(row?.credentials).not.toContain('rt');
-    expect(s.box.open(row!.credentials)).toMatchObject({ refreshToken: 'rt' });
+    expect(row?.credentials).not.toContain('refresh-token-very-secret');
+    expect(s.box.open(row!.credentials)).toMatchObject({
+      refreshToken: 'refresh-token-very-secret',
+    });
   });
 
   it('replaces credentials instead of adding a duplicate when connected twice', async () => {
