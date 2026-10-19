@@ -123,8 +123,17 @@ health >/dev/null || fail "the server did not start; see: journalctl --user -u b
 
 if command -v tailscale >/dev/null; then
   say "publishing on the tailnet with tailscale serve"
-  if ! tailscale serve --bg --https=443 "http://127.0.0.1:$PORT" >/dev/null 2>&1; then
-    echo "  not allowed for this user; run once:  sudo tailscale serve --bg --https=443 http://127.0.0.1:$PORT"
+  # When Serve is not enabled for the tailnet, the command prints a link and
+  # waits for it to be opened; a timeout keeps the install from hanging.
+  out="$(timeout 15 tailscale serve --bg --https=443 "http://127.0.0.1:$PORT" 2>&1 || true)"
+  if tailscale serve status 2>/dev/null | grep -q "127.0.0.1:$PORT"; then
+    echo "  published"
+  elif link="$(grep -o 'https://login.tailscale.com/[^ ]*' <<<"$out" | head -1)" && [ -n "$link" ]; then
+    echo "  Serve is not enabled for the tailnet yet. Open this link once, then rerun this script:"
+    echo "  $link"
+  else
+    echo "  not published: ${out:-no output}"
+    echo "  if this user may not configure Tailscale, run once: sudo tailscale set --operator=$USER"
   fi
 fi
 
