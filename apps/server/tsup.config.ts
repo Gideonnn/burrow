@@ -9,4 +9,6 @@ export default defineConfig({
   // Workspace packages export TS source, so the server bundle must inline
   // them; node_modules dependencies stay external.
   noExternal: [/^@burrow\//],
+  // The bundle resolves migrations next to itself (dist/migrations).
+  onSuccess: 'cp -R src/db/migrations dist/migrations',
 });
