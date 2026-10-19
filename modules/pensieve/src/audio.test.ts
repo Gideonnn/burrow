@@ -53,6 +53,15 @@ describe.skipIf(!hasFfmpeg)('ffmpeg', () => {
     expect(statSync(out).size).toBeLessThan(statSync(file).size / 5);
   });
 
+  it('drops the sliver a split at an exact multiple leaves behind', async () => {
+    const { dir, file } = wav();
+    const audio = new FfmpegAudio();
+    const stored = join(dir, 'audio.m4a');
+    await audio.compress(file, stored);
+    const parts = await audio.split(stored, dir, 5);
+    expect(parts).toHaveLength(2);
+  });
+
   it('splits stored audio into parts the transcription API accepts', async () => {
     const { dir, file } = wav();
     const audio = new FfmpegAudio();

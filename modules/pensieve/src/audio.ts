@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process';
-import { readdir } from 'node:fs/promises';
+import { readdir, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 
@@ -30,6 +30,8 @@ const ENCODE = [
   '32k',
 ];
 const TIMEOUT_MS = 30 * 60_000;
+// About half a second at 32 kbit/s.
+const MIN_PART_BYTES = 2_048;
 
 export class FfmpegAudio implements Audio {
   constructor(
@@ -83,10 +85,17 @@ export class FfmpegAudio implements Audio {
       ],
       { timeout: TIMEOUT_MS },
     );
-    return (await readdir(dir))
+    const parts = (await readdir(dir))
       .filter((f) => f.startsWith('part-'))
       .sort()
       .map((f) => join(dir, f));
+    // Cutting at exact multiples leaves a last part of a few milliseconds,
+    // which the transcription API refuses as too short.
+    const kept: string[] = [];
+    for (const part of parts) {
+      if ((await stat(part)).size >= MIN_PART_BYTES) kept.push(part);
+    }
+    return kept;
   }
 
   async duration(file: string): Promise<number> {
