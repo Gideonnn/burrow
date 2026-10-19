@@ -2,7 +2,6 @@
 # Builds Hedwig.app from the Swift package, without an Xcode project.
 #
 #   ./apps/hedwig-mac/scripts/bundle.sh            release build in apps/hedwig-mac/build/
-#   ./apps/hedwig-mac/scripts/bundle.sh --install  also copy it to ~/Applications
 #
 # The icon comes from Resources/AppIcon.icns (regenerate it with make-icon.sh).
 # The app is signed ad hoc; macOS may ask once to allow Keychain access after
@@ -47,10 +46,3 @@ PLIST
 
 codesign --force --sign - "$APP" >/dev/null
 echo "built $(pwd)/$APP"
-
-if [ "${1:-}" = "--install" ]; then
-  mkdir -p "$HOME/Applications"
-  /bin/rm -rf "$HOME/Applications/Hedwig.app"
-  /bin/cp -R "$APP" "$HOME/Applications/Hedwig.app"
-  echo "installed ~/Applications/Hedwig.app (Raycast: add the alias \"email\")"
-fi
