@@ -1,0 +1,41 @@
+# Mail providers
+
+How each provider is connected, and the one-time setup the operator does at the provider.
+The code lives in `modules/hedwig` (clients) and `apps/server/src/mail/accounts.ts`
+(credentials, connecting). Credentials are sealed with `BURROW_SECRET_KEY`; losing that
+key means reconnecting every mailbox.
+
+## Connecting an account
+
+OAuth providers (Gmail, Microsoft) connect in three steps, so neither the password nor
+an API key ever passes through the browser:
+
+1. An admin client calls `POST /api/admin/accounts/connect` with the person and
+   provider, and gets a one-time link valid for ten minutes.
+2. The browser opens the link; the server redirects to the provider's own login page
+   with PKCE.
+3. The provider redirects to `<BURROW_PUBLIC_URL>/oauth/callback`; the server exchanges
+   the code, asks the provider for the address and stores the mailbox. Connecting the
+   same address again for the same person replaces the credentials.
+
+The browser must reach `BURROW_PUBLIC_URL`. On Dobby that is the Tailscale HTTPS name,
+so connecting only works from a device on the tailnet.
+
+## Gmail (Google Cloud)
+
+1. In the Google Cloud console, create a project (or reuse the one from `mail-mcp`) and
+   enable the **Gmail API**.
+2. OAuth consent screen: type **External**, add the scope
+   `https://www.googleapis.com/auth/gmail.modify`, add each Google address as a test user.
+3. **Publish the app.** While it is in *Testing*, Google expires refresh tokens after
+   7 days. Unverified but published is fine for a household: each person clicks through
+   one warning.
+4. Create an OAuth client of type **Web application** with the redirect URIs
+   `http://127.0.0.1:4717/oauth/callback` (local) and
+   `https://<dobby's tailscale name>/oauth/callback`.
+5. Put the client id and secret in `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`.
+
+Sync uses `users.history.list` from a history id; an expired id (older than about a week)
+triggers a full resync of the last 100 inbox messages. Drafts are skipped. Server
+operations become one `messages.modify` call per message; missing user labels are
+created on first use.

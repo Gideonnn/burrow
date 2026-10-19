@@ -46,6 +46,8 @@ export type OutgoingMessage = Omit<SendRequest, 'mailboxId' | 'inReplyTo'> & {
 // One implementation per provider API (Gmail API, Microsoft Graph, Fastmail
 // JMAP). IMAP is deliberately not supported; see the architecture topic.
 export interface MailProviderClient {
+  // The address the credentials belong to, used when connecting an account.
+  address(): Promise<string>;
   // Without a cursor: the recent inbox, plus a cursor for the next call.
   sync(cursor: string | null): Promise<SyncResult>;
   apply(providerId: string, ops: ServerOp[]): Promise<void>;
