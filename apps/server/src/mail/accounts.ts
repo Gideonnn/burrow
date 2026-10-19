@@ -1,6 +1,7 @@
 import type { MailProvider } from '@burrow/contracts';
 import {
   type Credentials,
+  DemoProvider,
   exchangeCode,
   type Fetch,
   GmailClient,
@@ -46,6 +47,7 @@ const OAUTH: Record<OAuthMailProvider, OAuthProvider> = {
 // connected through OAuth. Credentials are only ever decrypted here.
 export class Accounts {
   private readonly fetchFn: Fetch;
+  private readonly demos = new Map<string, DemoProvider>();
 
   constructor(private readonly options: AccountsOptions) {
     this.fetchFn = options.fetchFn ?? fetch;
@@ -81,6 +83,15 @@ export class Accounts {
 
   readonly clientFor: ClientFor = (mailbox) => {
     const credentials = this.options.box.open<Credentials>(mailbox.credentials);
+    if (credentials.kind === 'demo') {
+      // Cached so a demo session keeps its state between requests.
+      let demo = this.demos.get(mailbox.id);
+      if (!demo) {
+        demo = new DemoProvider(credentials.seed, mailbox.address);
+        this.demos.set(mailbox.id, demo);
+      }
+      return demo;
+    }
     const make =
       this.options.clients?.[mailbox.provider] ??
       defaultClient(mailbox.provider);

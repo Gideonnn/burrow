@@ -62,4 +62,6 @@ export type Credentials =
       refreshToken: string;
       expiresAt: number;
     }
-  | { kind: 'token'; token: string };
+  | { kind: 'token'; token: string }
+  // Invented mail for development and demos (cli seed-demo); never a real account.
+  | { kind: 'demo'; seed: string };
