@@ -2,14 +2,6 @@
 
 Issue-ready entries, roughly in build order. Delete an entry in the commit that finishes it.
 
-## People, API keys and rights on the server
-
-**What:** SQLite with Drizzle in `apps/server`; tables for people, mailboxes and API keys
-(stored as a hash, shown once). Middleware that resolves a key to a person, its mailboxes
-and rights, and rejects everything outside them. Admin routes to create and revoke keys.
-**Why:** every later feature (sync, MCP, the Mac app, runners) depends on scoped access.
-**Scope:** one PR; tests for each right and for a key that tries another person's mailbox.
-
 ## Hedwig: Gmail provider
 
 **What:** a `MailProviderClient` for the Gmail API: OAuth (the Mac app runs the browser
