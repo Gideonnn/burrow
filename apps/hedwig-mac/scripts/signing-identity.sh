@@ -38,5 +38,5 @@ PASS="$(/usr/bin/openssl rand -hex 16)"
   -keyout "$WORK/private" -out "$WORK/certificate" 2>/dev/null
 /usr/bin/openssl pkcs12 -export -inkey "$WORK/private" -in "$WORK/certificate" -name "$NAME" \
   -out "$WORK/identity" -passout "pass:$PASS" 2>/dev/null
-security import "$WORK/identity" -k "$HOME/Library/Keychains/login.keychain-db" -P "$PASS" -T /usr/bin/codesign
+security import "$WORK/identity" -f pkcs12 -k "$HOME/Library/Keychains/login.keychain-db" -P "$PASS" -T /usr/bin/codesign
 echo "Made \"$NAME\". Build Hedwig again (pnpm hedwig:install); later releases use it too."
