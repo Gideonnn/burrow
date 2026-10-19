@@ -2,11 +2,6 @@
 
 Issue-ready entries, roughly in build order. Delete an entry in the commit that finishes it.
 
-## Hedwig: Microsoft Graph and Fastmail JMAP providers
-
-**What:** the same interface for Graph (delta queries, polling) and JMAP (EventSource push,
-API token). **Why:** the other accounts. **Scope:** one PR per provider.
-
 ## Triage with bots and skills
 
 **What:** a runner on the server that hands a new message, the owner's instructions and a

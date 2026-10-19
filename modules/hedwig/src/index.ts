@@ -3,6 +3,7 @@ export * from './fake-provider';
 export * from './gmail';
 export * from './graph';
 export * from './html';
+export * from './jmap';
 export * from './mime';
 export * from './oauth';
 export * from './provider';

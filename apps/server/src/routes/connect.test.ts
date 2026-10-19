@@ -32,7 +32,17 @@ function setup() {
     publicUrl: 'https://burrow.example',
     apps: { gmail: { clientId: 'cid', clientSecret: 'secret' } },
     fetchFn,
-    clients: { gmail: () => fake },
+    clients: {
+      gmail: () => fake,
+      fastmail: (token) => {
+        const jmap = new FakeProvider();
+        jmap.address = async () => {
+          if (token !== 'fmu1-good-token') throw new Error('401 unauthorized');
+          return 'jane@fastmail.example';
+        };
+        return jmap;
+      },
+    },
   });
   const events = new EventBus();
   const app = createApp({
@@ -139,5 +149,40 @@ describe('connecting a Gmail account', () => {
       (await s.post(s.admin, { personId: s.jane.id, provider: 'microsoft' }))
         .status,
     ).toBe(400);
+  });
+});
+
+describe('connecting a Fastmail account', () => {
+  const add = (s: ReturnType<typeof setup>, token: string, key = s.admin) =>
+    s.app.request('/api/admin/accounts/fastmail', {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${key}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ personId: s.jane.id, token }),
+    });
+
+  it('checks the token with Fastmail and stores it sealed', async () => {
+    const s = setup();
+    const res = await add(s, 'fmu1-good-token');
+    expect(res.status).toBe(201);
+    const [row] = s.db.select().from(mailboxes).all();
+    expect(row).toMatchObject({
+      provider: 'fastmail',
+      address: 'jane@fastmail.example',
+    });
+    expect(row?.credentials).not.toContain('fmu1-good-token');
+  });
+
+  it('refuses a token Fastmail rejects, without storing anything', async () => {
+    const s = setup();
+    expect((await add(s, 'fmu1-wrong-token')).status).toBe(400);
+    expect(s.db.select().from(mailboxes).all()).toEqual([]);
+  });
+
+  it('needs the admin right', async () => {
+    const s = setup();
+    expect((await add(s, 'fmu1-good-token', s.reader)).status).toBe(403);
   });
 });

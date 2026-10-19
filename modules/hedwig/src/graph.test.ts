@@ -116,7 +116,7 @@ function fakeGraph() {
       m.parentFolderId = FOLDER_IDS[dest]!;
       return json(m);
     }
-    if (/\/reply$/.test(path) || path === '/sendMail')
+    if (path.endsWith('/reply') || path === '/sendMail')
       return new Response(null, { status: 202 });
     return json({ error: `unhandled ${method} ${path}` }, 500);
   };

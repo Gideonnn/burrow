@@ -5,6 +5,7 @@ import {
   type Fetch,
   GmailClient,
   GraphClient,
+  JmapClient,
   GOOGLE,
   MICROSOFT,
   type MailProviderClient,
@@ -168,6 +169,8 @@ function defaultClient(
     case 'microsoft':
       return (session, fetchFn) =>
         new GraphClient(session as OAuthSession, fetchFn);
+    case 'fastmail':
+      return (token, fetchFn) => new JmapClient(token as string, fetchFn);
     default:
       return () => {
         throw new Error(`no client for ${provider} yet`);
