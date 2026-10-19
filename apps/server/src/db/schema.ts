@@ -3,7 +3,11 @@ import type {
   MailFolder,
   MailProvider,
   Right,
+  RoutineTrigger,
   ServerOp,
+  TaskResult,
+  TaskStatus,
+  TaskWhere,
   TriageAction,
   TriageStatus,
 } from '@burrow/contracts';
@@ -172,3 +176,46 @@ export const messageInsights = sqliteTable('message_insights', {
     .notNull(),
   createdAt: createdAt(),
 });
+
+export const routines = sqliteTable('routines', {
+  id: id(),
+  personId: text('person_id')
+    .notNull()
+    .references(() => people.id),
+  name: text('name').notNull(),
+  trigger: text('trigger', { mode: 'json' }).$type<RoutineTrigger>().notNull(),
+  skill: text('skill').notNull(),
+  bot: text('bot').notNull(),
+  where: text('where').$type<TaskWhere>().notNull(),
+  fallbackAfterHours: integer('fallback_after_hours'),
+  approval: integer('approval', { mode: 'boolean' }).notNull(),
+  enabled: integer('enabled', { mode: 'boolean' }).notNull(),
+  lastRunAt: integer('last_run_at', { mode: 'timestamp_ms' }),
+  createdAt: createdAt(),
+});
+
+export const tasks = sqliteTable(
+  'tasks',
+  {
+    id: id(),
+    routineId: text('routine_id')
+      .notNull()
+      .references(() => routines.id, { onDelete: 'cascade' }),
+    personId: text('person_id')
+      .notNull()
+      .references(() => people.id),
+    messageId: text('message_id').references(() => messages.id, {
+      onDelete: 'set null',
+    }),
+    status: text('status').$type<TaskStatus>().notNull(),
+    result: text('result', { mode: 'json' }).$type<TaskResult>(),
+    error: text('error'),
+    claimedBy: text('claimed_by'),
+    claimedAt: integer('claimed_at', { mode: 'timestamp_ms' }),
+    createdAt: createdAt(),
+    updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+      .notNull()
+      .default(sql`(unixepoch() * 1000)`),
+  },
+  (t) => [index('tasks_person_status').on(t.personId, t.status)],
+);
