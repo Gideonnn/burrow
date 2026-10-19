@@ -53,11 +53,14 @@ describe('MCP', () => {
     expect((await reader.listTools()).tools.map((t) => t.name).sort()).toEqual([
       'get_instructions',
       'get_message',
+      'get_recording',
       'get_settings',
       'list_mailboxes',
+      'list_recordings',
       'list_routines',
       'list_tasks',
       'search_messages',
+      'search_recordings',
     ]);
     const full = await connect(s, ['read', 'organize', 'draft', 'send']);
     const names = (await full.listTools()).tools.map((t) => t.name);

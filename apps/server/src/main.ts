@@ -1,6 +1,11 @@
 import { resolve } from 'node:path';
 import { Accounts, hedwigModule } from '@burrow/hedwig/server';
 import {
+  FfmpegAudio,
+  OpenAITranscriber,
+  pensieveModule,
+} from '@burrow/pensieve';
+import {
   ClaudeCliRunner,
   CodexCliRunner,
   FallbackRunner,
@@ -58,6 +63,18 @@ platform.use(
     bot: config.triageBot,
   }).module,
 );
+platform.use(
+  pensieveModule(platform, {
+    audio: new FfmpegAudio(config.ffmpeg, config.ffprobe),
+    transcriber: config.openaiKey
+      ? new OpenAITranscriber(config.openaiKey, config.transcribeModel)
+      : undefined,
+    bot: config.notesBot,
+  }).module,
+);
+if (!config.openaiKey) {
+  console.log('Pensieve: no OPENAI_API_KEY, so recordings are not transcribed');
+}
 
 const app = createApp({
   version: process.env.npm_package_version ?? 'dev',

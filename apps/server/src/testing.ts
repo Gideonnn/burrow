@@ -1,4 +1,5 @@
 import { mkdtempSync } from 'node:fs';
+import { copyFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type {
@@ -9,6 +10,7 @@ import type {
 } from '@burrow/contracts';
 import { FakeProvider } from '@burrow/hedwig';
 import { type Accounts, hedwigModule, mailboxes } from '@burrow/hedwig/server';
+import { type Audio, pensieveModule, type Transcriber } from '@burrow/pensieve';
 import {
   type AgentRequest,
   type AgentRunner,
@@ -54,6 +56,19 @@ export function testHousehold({
           persona: 'You are Kreacher.',
         },
       ],
+      [
+        'winky',
+        {
+          name: 'winky',
+          displayName: 'Winky',
+          description: 'Writes notes.',
+          model: 'sonnet',
+          agent: 'any',
+          skills: ['meeting-notes'],
+          rights: ['read'],
+          persona: 'You are Winky.',
+        },
+      ],
     ]),
     skills: new Map([
       [
@@ -70,6 +85,14 @@ export function testHousehold({
           name: 'reply-suggestions',
           description: 'Suggests.',
           instructions: 'Suggest replies.',
+        },
+      ],
+      [
+        'meeting-notes',
+        {
+          name: 'meeting-notes',
+          description: 'Notes.',
+          instructions: 'Write notes.',
         },
       ],
     ]),
@@ -108,6 +131,36 @@ export function testHousehold({
       }),
   });
   platform.use(hedwig.module);
+  // Stand-ins for ffmpeg and OpenAI: compressing copies the file, and each
+  // transcribed part takes the next queued text (an Error fails that part).
+  const transcripts: (string | Error)[] = [];
+  const audio: Audio = {
+    compress: async (input, output) => {
+      await copyFile(input, output);
+      return { seconds: 61 };
+    },
+    split: async (input, dir) => {
+      const part = join(dir, 'part-000.m4a');
+      await copyFile(input, part);
+      return [part];
+    },
+  };
+  const transcriber: Transcriber = {
+    name: 'fake',
+    maxSeconds: 1200,
+    transcribe: async () => {
+      const next = transcripts.shift();
+      if (next === undefined || next instanceof Error)
+        throw next ?? new Error('no transcript queued');
+      return next;
+    },
+  };
+  const pensieve = pensieveModule(platform, {
+    audio,
+    transcriber,
+    bot: 'winky',
+  });
+  platform.use(pensieve.module);
   const app = createApp({
     version: 'test',
     platform,
@@ -166,6 +219,8 @@ export function testHousehold({
     routines: platform.routines,
     workers: platform.workers,
     arrived,
+    recordings: pensieve.recordings,
+    transcripts,
     decisions,
     agentRequests,
     person,

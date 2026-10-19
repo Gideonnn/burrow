@@ -65,6 +65,10 @@ export const peopleRoutes = new Hono<PlatformEnv>()
       return c.json({ language });
     },
   )
+  // Names only, so anyone can pick the other person to share something with.
+  .get('/people', requireRight('read'), (c) =>
+    c.json(listPeople(c.var.db).map(({ id, name }) => ({ id, name }))),
+  )
   .get('/settings/schema', (c) => c.json(c.var.platform.settings.schema()))
   .get('/me/settings', requireRight('read'), (c) =>
     c.json(c.var.platform.settings.values(c.var.access.personId)),

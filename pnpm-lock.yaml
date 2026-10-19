@@ -32,6 +32,9 @@ importers:
       '@burrow/hedwig':
         specifier: workspace:^
         version: link:../../modules/hedwig
+      '@burrow/pensieve':
+        specifier: workspace:^
+        version: link:../../modules/pensieve
       '@burrow/platform':
         specifier: workspace:^
         version: link:../../packages/platform
@@ -86,6 +89,37 @@ importers:
         version: 5.0.5(@types/node@26.6.5)(vite@8.3.4(@types/node@26.6.5)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1))
 
   modules/hedwig:
+    dependencies:
+      '@burrow/contracts':
+        specifier: workspace:^
+        version: link:../../packages/contracts
+      '@burrow/platform':
+        specifier: workspace:^
+        version: link:../../packages/platform
+      '@hono/zod-validator':
+        specifier: ^0.9.1
+        version: 0.9.1(hono@4.13.13)(zod@4.6.7)
+      '@modelcontextprotocol/sdk':
+        specifier: ^1.32.1
+        version: 1.32.1(zod@4.6.7)
+      drizzle-orm:
+        specifier: ^0.45.4
+        version: 0.45.4(@types/better-sqlite3@9.6.0)(better-sqlite3@13.0.3)
+      hono:
+        specifier: ^4.13.13
+        version: 4.13.13
+      zod:
+        specifier: ^4
+        version: 4.6.7
+    devDependencies:
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+      vitest:
+        specifier: ^5.0.5
+        version: 5.0.5(@types/node@26.6.5)(vite@8.3.4(@types/node@26.6.5)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1))
+
+  modules/pensieve:
     dependencies:
       '@burrow/contracts':
         specifier: workspace:^

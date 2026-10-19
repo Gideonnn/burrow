@@ -7,7 +7,7 @@ import {
   type TaskWhere,
   taskResult,
 } from '@burrow/contracts';
-import { and, desc, eq, inArray, lte, lt, ne } from 'drizzle-orm';
+import { and, desc, eq, inArray, lt, lte, ne, sql } from 'drizzle-orm';
 import type { Access } from '../access';
 import type { AgentRequest, AgentRunner } from '../agents/runner';
 import type { Db } from '../db';
@@ -245,24 +245,29 @@ export class Workers {
     access: Access,
     filter: { limit?: number; kinds?: string[]; subject?: Subject } = {},
   ): Task[] {
-    return this.o.db
-      .select()
-      .from(tasks)
-      .where(
-        and(
-          eq(tasks.personId, access.personId),
-          filter.kinds?.length ? inArray(tasks.kind, filter.kinds) : undefined,
-          filter.subject
-            ? eq(tasks.subjectType, filter.subject.type)
-            : undefined,
-          filter.subject ? eq(tasks.subjectId, filter.subject.id) : undefined,
-        ),
-      )
-      .orderBy(desc(tasks.createdAt))
-      .limit(filter.limit ?? 100)
-      .all()
-      .filter((t) => this.visible(t, access))
-      .map((t) => this.toTask(t));
+    return (
+      this.o.db
+        .select()
+        .from(tasks)
+        .where(
+          and(
+            eq(tasks.personId, access.personId),
+            filter.kinds?.length
+              ? inArray(tasks.kind, filter.kinds)
+              : undefined,
+            filter.subject
+              ? eq(tasks.subjectType, filter.subject.type)
+              : undefined,
+            filter.subject ? eq(tasks.subjectId, filter.subject.id) : undefined,
+          ),
+        )
+        // Tasks made in the same millisecond keep the order they were made in.
+        .orderBy(desc(tasks.createdAt), desc(sql`rowid`))
+        .limit(filter.limit ?? 100)
+        .all()
+        .filter((t) => this.visible(t, access))
+        .map((t) => this.toTask(t))
+    );
   }
 
   async approve(id: string, access: Access) {

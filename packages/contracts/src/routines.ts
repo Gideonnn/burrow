@@ -18,6 +18,12 @@ export const routineTrigger = z.discriminatedUnion('kind', [
     kind: z.literal('schedule'),
     everyMinutes: z.number().int().min(15),
   }),
+  z.object({
+    // A recording whose notes are ready (Pensieve), optionally only when the
+    // title contains this text.
+    kind: z.literal('recording'),
+    title: z.string().min(1).optional(),
+  }),
 ]);
 export type RoutineTrigger = z.infer<typeof routineTrigger>;
 
