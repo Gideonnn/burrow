@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3a5a9b"/>
+      <stop offset="1" stop-color="#1b2850"/>
+    </linearGradient>
+    <linearGradient id="owl" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#e4e9f2"/>
+    </linearGradient>
+    <radialGradient id="eye" cx="0.5" cy="0.45" r="0.6">
+      <stop offset="0" stop-color="#ffd46b"/>
+      <stop offset="1" stop-color="#f0a21f"/>
+    </radialGradient>
+  </defs>
+  <!-- macOS icon grid: 824px squircle centred in 1024 -->
+  <rect x="100" y="100" width="824" height="824" rx="186" fill="url(#bg)"/>
+  <!-- envelope flap behind the owl -->
+  <path d="M232 470 L512 650 L792 470" fill="none" stroke="#8fa6d6" stroke-width="22" stroke-linejoin="round" opacity="0.55"/>
+  <!-- body with ear tufts -->
+  <path d="M512 262
+           C 440 262 392 238 352 196
+           C 344 262 330 312 318 372
+           C 294 486 300 610 352 700
+           C 398 778 452 812 512 812
+           C 572 812 626 778 672 700
+           C 724 610 730 486 706 372
+           C 694 312 680 262 672 196
+           C 632 238 584 262 512 262 Z" fill="url(#owl)"/>
+  <!-- speckles -->
+  <g fill="#b8c4dc">
+    <circle cx="430" cy="640" r="9"/><circle cx="470" cy="690" r="8"/><circle cx="512" cy="650" r="9"/>
+    <circle cx="556" cy="692" r="8"/><circle cx="596" cy="642" r="9"/><circle cx="512" cy="735" r="8"/>
+  </g>
+  <!-- eyes -->
+  <circle cx="430" cy="440" r="78" fill="#eef2f8"/>
+  <circle cx="594" cy="440" r="78" fill="#eef2f8"/>
+  <circle cx="430" cy="440" r="54" fill="url(#eye)"/>
+  <circle cx="594" cy="440" r="54" fill="url(#eye)"/>
+  <circle cx="430" cy="444" r="26" fill="#1b2235"/>
+  <circle cx="594" cy="444" r="26" fill="#1b2235"/>
+  <circle cx="420" cy="432" r="8" fill="#ffffff"/>
+  <circle cx="584" cy="432" r="8" fill="#ffffff"/>
+  <!-- beak -->
+  <path d="M488 512 L536 512 L512 562 Z" fill="#3b3f4a"/>
+</svg>

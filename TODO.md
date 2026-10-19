@@ -2,13 +2,6 @@
 
 Issue-ready entries, roughly in build order. Delete an entry in the commit that finishes it.
 
-## Hedwig for macOS
-
-**What:** `apps/hedwig-mac` in SwiftUI: connect screen (server URL and key), per-account
-inboxes, reading, replying, Gefilterd review. Decide between an XcodeGen `project.yml` and
-a Swift package with a bundling script before starting. Raycast alias `email`.
-**Why:** the primary mail app. **Scope:** several PRs, screen by screen.
-
 ## Deploy to Dobby
 
 **What:** Dockerfile and Compose for the server, `tailscale serve` for HTTPS, nightly

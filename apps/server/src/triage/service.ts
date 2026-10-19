@@ -34,6 +34,7 @@ export type TriageOptions = {
   runner: AgentRunner;
   catalog: Catalog;
   bot: string;
+  language?: string;
 };
 
 export class TriageService {
@@ -110,6 +111,7 @@ export class TriageService {
         mailbox: { address: box.address, provider: box.provider },
         message,
         ownerWroteToSender: this.ownerWroteTo(owner.id, message.from.email),
+        language: this.o.language ?? 'English',
       }),
       schema: decisionSchema,
     });
