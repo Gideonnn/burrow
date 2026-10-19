@@ -8,6 +8,7 @@
 - [Secrets](topics/secrets.md): what is secret, where it lives, SOPS in a public repo.
 - [Mail providers](topics/providers.md): connecting Gmail, Microsoft and Fastmail, and their one-time setup.
 - [Triage](topics/triage.md): how the bot sorts new mail, the review and learned rules.
+- [MCP](topics/mcp.md): the tools agents get, per right, and how to connect Claude Code and Codex.
 
 ## Diary
 

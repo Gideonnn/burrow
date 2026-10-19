@@ -2,12 +2,6 @@
 
 Issue-ready entries, roughly in build order. Delete an entry in the commit that finishes it.
 
-## MCP endpoint
-
-**What:** `/mcp` on the server (streamable HTTP), authenticated with an API key and scoped
-by its mailboxes and rights: search, read, organize, draft. **Why:** Claude Code and Codex
-must use the mail. **Scope:** one PR.
-
 ## Hedwig for macOS
 
 **What:** `apps/hedwig-mac` in SwiftUI: connect screen (server URL and key), per-account

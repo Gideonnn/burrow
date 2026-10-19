@@ -11,7 +11,9 @@ import type { MailService } from './mail/service';
 import { accessRoutes } from './routes/access';
 import { catalogRoutes } from './routes/catalog';
 import { connectRoutes } from './routes/connect';
+import { draftRoutes } from './routes/drafts';
 import { mailRoutes } from './routes/mail';
+import { mcpRoutes } from './routes/mcp';
 import { triageRoutes } from './routes/triage';
 import type { TriageService } from './triage/service';
 
@@ -54,7 +56,9 @@ export function createApp({
   const api = new Hono<AppEnv>()
     .use(requireKey)
     .route('/', accessRoutes)
-    .route('/', mailRoutes);
+    .route('/', mailRoutes)
+    .route('/', draftRoutes)
+    .route('/', mcpRoutes(version));
   if (triage) api.route('/', triageRoutes(triage));
   if (catalog) api.route('/', catalogRoutes(catalog));
   if (accounts) {
