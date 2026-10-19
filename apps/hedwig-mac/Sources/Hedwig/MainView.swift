@@ -15,6 +15,7 @@ struct MainView: View {
                 switch model.selection {
                 case .filtered: FilteredListView()
                 case .drafts: DraftListView()
+                case .tasks: TaskListView()
                 default: MessageListView()
                 }
             }
@@ -23,6 +24,7 @@ struct MainView: View {
             switch model.selection {
             case .filtered: FilteredDetailView()
             case .drafts: DraftDetailView()
+            case .tasks: TaskDetailView()
             default: MessageDetailView()
             }
         }
@@ -36,7 +38,7 @@ struct MainToolbar: ToolbarContent {
 
     private var showsMail: Bool {
         switch model.selection {
-        case .filtered, .drafts: false
+        case .filtered, .drafts, .tasks: false
         default: true
         }
     }

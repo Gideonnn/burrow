@@ -41,6 +41,12 @@ struct AgentSettings: View {
                     .disabled(model.me?.can(.organize) != true)
                 }
             }
+            Section("Taken op deze Mac") {
+                Toggle("Deze Mac voert taken uit zolang Hedwig open is", isOn: Binding(get: { model.runsTasks }, set: { model.runsTasks = $0 }))
+                    .disabled(model.me?.can(.tasks) != true)
+                TextField("Pad naar claude (leeg: zoek zelf)", text: Binding(get: { model.claudePath }, set: { model.claudePath = $0 }))
+                LabeledContent("Status", value: model.runner.status)
+            }
             Section("Geleerd van jouw controles") {
                 if rules.isEmpty { Text("Nog niets geleerd.").foregroundStyle(.secondary) }
                 ForEach(rules) { rule in

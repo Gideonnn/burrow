@@ -35,11 +35,15 @@ final class MockServer: @unchecked Sendable {
         return (status, Data(json.utf8))
     }
 
+    // Each server answers on its own host, so suites running in parallel never
+    // reach each other's routes.
+    private let host = "\(UUID().uuidString.lowercased()).test"
+
     func client() -> APIClient {
         let config = URLSessionConfiguration.ephemeral
         config.protocolClasses = [MockProtocol.self]
-        MockProtocol.server = self
-        return APIClient(baseURL: URL(string: "http://burrow.test")!, token: "bk_test", session: URLSession(configuration: config))
+        MockProtocol.register(self, host: host)
+        return APIClient(baseURL: URL(string: "http://\(host)")!, token: "bk_test", session: URLSession(configuration: config))
     }
 }
 
@@ -57,13 +61,19 @@ private func readAll(_ stream: InputStream) -> String {
 }
 
 final class MockProtocol: URLProtocol {
-    nonisolated(unsafe) static var server: MockServer?
+    nonisolated(unsafe) private static var servers: [String: MockServer] = [:]
+    private static let lock = NSLock()
+
+    static func register(_ server: MockServer, host: String) {
+        lock.withLock { servers[host] = server }
+    }
 
     override class func canInit(with request: URLRequest) -> Bool { true }
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
 
     override func startLoading() {
-        let (status, data) = Self.server!.respond(to: request)
+        let server = Self.lock.withLock { Self.servers[request.url?.host() ?? ""] }!
+        let (status, data) = server.respond(to: request)
         let response = HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: "HTTP/1.1", headerFields: ["Content-Type": "application/json"])!
         client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
         client?.urlProtocol(self, didLoad: data)

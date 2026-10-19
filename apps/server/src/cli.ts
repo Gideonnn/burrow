@@ -16,6 +16,7 @@ import {
 import { loadConfig } from './config';
 import { SecretBox } from './crypto/secretBox';
 import { openDb } from './db/client';
+import { routines } from './db/schema';
 import { Accounts } from './mail/accounts';
 
 const [command, ...args] = process.argv.slice(2);
@@ -84,6 +85,21 @@ switch (command) {
         credentials: { kind: 'demo', seed },
       });
     }
+    // A routine that runs on the owner's Mac, to show tasks and runners.
+    store
+      .insert(routines)
+      .values({
+        personId: gideon.id,
+        name: 'Facturen uitlezen',
+        trigger: { kind: 'message', subject: 'factuur' },
+        skill: 'key-facts',
+        bot: 'kreacher',
+        where: 'client',
+        fallbackAfterHours: 24,
+        approval: true,
+        enabled: true,
+      })
+      .run();
     const all = [
       'read',
       'organize',

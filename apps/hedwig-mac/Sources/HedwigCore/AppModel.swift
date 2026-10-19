@@ -5,6 +5,7 @@ public enum SidebarItem: Hashable, Sendable {
     case inbox(mailboxId: String)
     case filtered
     case drafts
+    case tasks
     case folder(MailFolder)
 }
 
@@ -28,6 +29,9 @@ public final class AppModel {
     public private(set) var filtered: [FilteredEntry] = []
     public var selectedFilteredId: String?
     public private(set) var drafts: [Draft] = []
+    public private(set) var tasks: [TaskItem] = []
+    public var selectedTaskId: String?
+    public let runner = LocalRunner()
     public private(set) var unreadCounts: [String: Int] = [:]
     public private(set) var isLoading = false
     public var error: String?
@@ -93,6 +97,7 @@ public final class AppModel {
         switch ProcessInfo.processInfo.environment["HEDWIG_OPEN"] {
         case "filtered": selection = .filtered
         case "drafts": selection = .drafts
+        case "tasks": selection = .tasks
         case "archive": selection = .folder(.archive)
         case let address?: if let box = me?.mailboxes.first(where: { $0.address == address }) { selection = .inbox(mailboxId: box.id) }
         default: break
@@ -100,6 +105,8 @@ public final class AppModel {
         await refreshCounts()
         await refreshFiltered()
         await refreshDrafts()
+        await refreshTasks()
+        startRunner()
         eventsTask?.cancel()
         eventsTask = Task { [weak self] in
             guard let stream = self?.api?.events() else { return }
@@ -142,6 +149,9 @@ public final class AppModel {
                 messages = []
             case .drafts:
                 await refreshDrafts()
+                messages = []
+            case .tasks:
+                await refreshTasks()
                 messages = []
             }
             if !keepSelection || !messages.contains(where: { $0.id == selectedMessageId }) {
@@ -370,5 +380,68 @@ extension AppModel {
         guard var draft = self.reply() else { return nil }
         draft.body = reply.body + draft.body
         return draft
+    }
+}
+
+// MARK: Tasks
+
+extension AppModel {
+    public func refreshTasks() async {
+        guard let api else { return }
+        if let list = try? await api.tasks() {
+            tasks = list
+            if selectedTaskId == nil || !list.contains(where: { $0.id == selectedTaskId }) {
+                selectedTaskId = list.first(where: { $0.status == "review" })?.id ?? list.first?.id
+            }
+        }
+    }
+
+    public func approve(_ task: TaskItem) async {
+        guard let api else { return }
+        do {
+            try await api.approve(task: task.id)
+            await refreshTasks()
+            await refreshDrafts()
+        } catch {
+            self.error = error.localizedDescription
+        }
+    }
+
+    public func reject(_ task: TaskItem) async {
+        guard let api else { return }
+        do {
+            try await api.reject(task: task.id)
+            await refreshTasks()
+        } catch {
+            self.error = error.localizedDescription
+        }
+    }
+
+    public var tasksAwaitingReview: Int { tasks.filter { $0.status == "review" }.count }
+
+    /// Whether this Mac runs tasks meant for clients; on by default.
+    public var runsTasks: Bool {
+        get { !UserDefaults.standard.bool(forKey: "app.burrow.hedwig.runnerOff") }
+        set {
+            UserDefaults.standard.set(!newValue, forKey: "app.burrow.hedwig.runnerOff")
+            startRunner()
+        }
+    }
+
+    public var claudePath: String {
+        get { UserDefaults.standard.string(forKey: "app.burrow.hedwig.claudePath") ?? "" }
+        set { UserDefaults.standard.set(newValue, forKey: "app.burrow.hedwig.claudePath") }
+    }
+
+    func startRunner() {
+        guard runsTasks, me?.can(.tasks) == true, let name = me?.key.name else {
+            runner.stop()
+            return
+        }
+        runner.start(
+            api: { [weak self] in self?.api },
+            name: name,
+            agent: { [weak self] in ClaudeCLI.find(override: self?.claudePath.isEmpty == false ? self?.claudePath : nil) },
+            onChange: { [weak self] in Task { await self?.refreshTasks() } })
     }
 }

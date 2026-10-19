@@ -27,6 +27,10 @@ struct SidebarView: View {
                     Label("Gefilterd", systemImage: "checkmark.shield")
                 }
                 .badge(model.filtered.count)
+                NavigationLink(value: SidebarItem.tasks) {
+                    Label("Taken", systemImage: "checklist")
+                }
+                .badge(model.tasksAwaitingReview)
                 NavigationLink(value: SidebarItem.drafts) {
                     Label("Concepten", systemImage: "doc")
                 }

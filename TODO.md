@@ -11,14 +11,6 @@ container, `cli init`, and the backup timer with its age recipients.
 create the secrets and change Dobby.
 **Scope:** about an hour, following `.agents/wiki/topics/deploy.md`.
 
-## Runner and Taken view in Hedwig
-
-**What:** a "Taken" list in Hedwig with approve and reject, and a runner in the app that
-claims client tasks while it is open and runs them with the local `claude` (absolute
-path, since GUI apps do not inherit the shell PATH).
-**Why:** the server side exists; clients cannot run or review tasks yet.
-**Scope:** one PR in `apps/hedwig-mac`.
-
 ## Invoice routine
 
 **What:** a skill that reads an invoice (fields, PDF attachment), files it and proposes a
