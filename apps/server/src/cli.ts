@@ -4,10 +4,12 @@
 //   pnpm --filter @burrow/server cli init <name>        first person + admin key
 //   pnpm --filter @burrow/server cli add-person <name>
 //   pnpm --filter @burrow/server cli set-email <name> <email>  login through Cloudflare Access
+//   pnpm --filter @burrow/server cli create-key <name> <key name> [rights]  default: every right but admin
 //   pnpm --filter @burrow/server cli list
 //   pnpm --filter @burrow/server cli generate-secret    value for BURROW_SECRET_KEY
 //   pnpm --filter @burrow/server cli seed-demo          invented household for development
 //   pnpm --filter @burrow/server cli backup <file>        consistent copy of the database
+import { right } from '@burrow/contracts';
 import {
   createKey,
   createPerson,
@@ -59,6 +61,33 @@ switch (command) {
       required(args[1], 'email'),
     );
     console.log(`${updated.name} logs in as ${updated.email}.`);
+    break;
+  }
+  case 'create-key': {
+    // For a new device, or when the init key is lost; revoke the old one in
+    // Hedwig afterwards.
+    const store = db();
+    const name = required(args[0], 'name');
+    const person = listPeople(store).find((p) => p.name === name);
+    if (!person) fail(`no person named ${name}`);
+    const rights = right
+      .array()
+      .safeParse(
+        (args[2] ?? 'read,organize,draft,send,tasks')
+          .split(',')
+          .map((r) => r.trim()),
+      );
+    if (!rights.success)
+      fail(`rights are a comma-separated list of: ${right.options.join(', ')}`);
+    const { token } = createKey(store, {
+      personId: person.id,
+      name: required(args[1], 'key name'),
+      rights: rights.data,
+      mailboxIds: null,
+    });
+    console.log(
+      `Key for ${person.name} [${rights.data.join(', ')}], shown once:\n\n  ${token}\n`,
+    );
     break;
   }
   case 'list': {
@@ -161,7 +190,7 @@ switch (command) {
     break;
   default:
     fail(
-      'usage: cli init <name> | add-person <name> | set-email <name> <email> | list | generate-secret | seed-demo | backup <file>',
+      'usage: cli init <name> | add-person <name> | set-email <name> <email> | create-key <name> <key name> [rights] | list | generate-secret | seed-demo | backup <file>',
     );
 }
 

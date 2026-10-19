@@ -20,7 +20,7 @@ install again. Every step is safe to repeat.
 | Agent CLIs | `~/.local/bin/claude` and `/usr/bin/codex`, logged in as the `dobby` user |
 
 Run the server CLI with the settings loaded through `infra/dobby/cli.sh`, e.g.
-`~/burrow/infra/dobby/cli.sh list`.
+`~/burrow/infra/dobby/cli.sh list`. A lost key cannot be recovered (only its hash is stored): make a new one with `cli.sh create-key <person> <key name> [rights]` and revoke the old one in Hedwig.
 
 ## How it is reached: Cloudflare Tunnel and Access
 
