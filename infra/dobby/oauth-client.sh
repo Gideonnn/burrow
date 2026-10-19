@@ -35,7 +35,7 @@ node -e '
   while (lines.length && lines.at(-1) === "") lines.pop();
   lines.push(p + "_CLIENT_ID=" + client.client_id, p + "_CLIENT_SECRET=" + client.client_secret, "");
   fs.writeFileSync("burrow.env", lines.join("\n"), { mode: 0o600 });
-  console.log(p + " client set (id ends in " + client.client_id.slice(-24) + ")");
+  console.log(p + " client set (id " + client.client_id.split("-")[0] + "-…)");
 '
 SH
 rm -f "$FILE"
