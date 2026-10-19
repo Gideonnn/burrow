@@ -18,6 +18,8 @@ install again. Every step is safe to repeat.
 | Logs | `~/.local/state/burrow/server.log` and `tunnel.log` (the user journal is not readable there) |
 | Units | `~/.config/systemd/user/burrow.service`, `burrow-backup.{service,timer}`, `burrow-tunnel.service` when a tunnel token exists; linger is on, so they run without a login |
 | Agent CLIs | `~/.local/bin/claude` and `/usr/bin/codex`, logged in as the `dobby` user |
+| ffmpeg, ffprobe | `~/.local/bin`, a static build installed by `install.sh` (checked against its SHA-256) |
+| Recordings | `~/.local/share/burrow/files/pensieve/<id>/audio.m4a` |
 
 Run the server CLI with the settings loaded through `infra/dobby/cli.sh`, e.g.
 `~/burrow/infra/dobby/cli.sh list`. A lost key cannot be recovered (only its hash is stored): make a new one with `cli.sh create-key <person> <key name> [rights]` and revoke the old one in Hedwig.
@@ -65,12 +67,21 @@ mail included. Accepted for the household.
 Deploying and the CLI use `ssh dobby`, over whatever private route the operator already
 has to the machine. The tunnel carries only Burrow's web traffic, not SSH.
 
+## Public pages
+
+`/about`, `/privacy` and `/terms` open without a login, for Google's OAuth branding. They
+need their own Access application, "Burrow public pages", with a Bypass policy for
+Everyone on exactly those three paths; the server lets only those exact paths through as
+well. `BURROW_CONTACT_EMAIL` in the settings fills in the contact on them.
+
 ## Remaining one-time steps
 
 1. **Google and Microsoft.** Put the client ids and secrets from the
    [providers topic](providers.md) in the settings file on Dobby and rerun the install.
    Their redirect URI is `<BURROW_PUBLIC_URL>/oauth/callback`.
-2. **Backups off the machine.** Put age public keys in `infra/dobby/backup-recipients.txt`
+2. **Transcription.** Put `OPENAI_API_KEY=` in the settings file and restart the
+   service; without it Pensieve stops recordings at "Transcriberen".
+3. **Backups off the machine.** Put age public keys in `infra/dobby/backup-recipients.txt`
    on Dobby (at least one whose private key is elsewhere); without it backups are plain
    copies in the data folder. Copy them off Dobby regularly.
 

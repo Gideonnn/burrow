@@ -31,23 +31,29 @@ markdown file. The user-facing app may add a plain alias (Raycast opens Hedwig a
 
 ## Project structure
 
-- `apps/server/`: the Burrow server (TypeScript, Hono). Hosts every module, API keys,
-  people, runners, routines, bots and the MCP endpoint. It runs on Dobby, the home
-  machine; the code does not carry the machine's name.
-- `bots/`: bot personas, one markdown file each (Kreacher is the first). A personal
-  directory on the server can add or override bots.
-- `apps/hedwig-mac/`: the native macOS mail client (SwiftUI, a Swift package bundled by
-  `scripts/bundle.sh`; see its README).
-- `modules/hedwig/`: mail on the server: provider clients, sync, triage.
+- `packages/platform/`: the kernel every module builds on: people, keys and access,
+  settings, shares, uploads, the task queue and workers, routines, agents, MCP.
+- `modules/hedwig/`: mail: provider clients, sync, triage, drafts, its routes and tools.
+- `modules/pensieve/`: recordings: compression, transcription, notes, sharing.
+- `apps/server/`: the Burrow server (TypeScript, Hono) composing the platform and the
+  modules, plus the device login, CLI and migrations. It runs on Dobby, the home machine;
+  the code does not carry the machine's name.
 - `packages/contracts/`: zod schemas shared by server and clients.
+- `packages/burrow-kit/`: the Swift package every Mac app uses (BurrowKit, BurrowUI and
+  `burrowctl`).
+- `apps/hedwig-mac/`, `apps/pensieve-mac/`: the native macOS apps (SwiftUI, Swift
+  packages bundled by `scripts/bundle.sh`; see their READMEs).
+- `bots/`: bot personas, one markdown file each (Kreacher sorts mail, Winky writes
+  notes). A personal directory on the server can add or override bots.
 - `skills/`: skills the bots use at runtime (for example the Sorting Hat triage), one
   folder with a `SKILL.md` each. Not to be confused with `.agents/skills/`, which help
   agents develop this repo.
-- `docs/design/`: clickable HTML designs, one file per iteration.
+- `docs/design/`: clickable HTML designs; `burrow-design-system.html` is the design
+  system. `docs/plans/`: plans for larger changes.
 - `infra/dobby/`: install, deploy, backup and CLI scripts for Dobby (a systemd user
   service, no Docker); see the [deploy topic](.agents/wiki/topics/deploy.md).
 
-See [architecture](.agents/wiki/topics/architecture.md) before adding a module.
+See [architecture](.agents/wiki/topics/architecture.md) and [adding a module](.agents/wiki/topics/modules.md) before adding a module.
 
 ## Open source hygiene
 
@@ -101,7 +107,8 @@ kebab-case.
 
 - Commit when a logical slice is complete and validated; state the message and files.
 - Conventional subject (`feat`, `fix`, `chore`, `refactor`, `docs`, `test`) with a scope
-  (`server`, `hedwig`, `contracts`, `bots`, `skills`, `agents`, `repo`), max 100 characters. Use the body
+  (`server`, `hedwig`, `pensieve`, `contracts`, `bots`, `skills`, `agents`, `infra`, `repo`),
+  max 100 characters. Use the body
   for *why* when it is not obvious.
 - Never add `Co-Authored-By` or any other trailer.
 - Work on `main` and push directly after each validated commit; no feature branches or

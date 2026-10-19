@@ -7,11 +7,14 @@ agents (Claude Code, Codex) can use.
 
 | Name | What it is | Status |
 |---|---|---|
-| Server | Runs on Dobby, a small machine at home: keys, people, bots, MCP | Skeleton |
-| Kreacher | The first bot: a house-elf who sorts the mail, defined in `bots/kreacher.md` | Draft |
-| Hedwig | Mail: Gmail, Microsoft and Fastmail, with an agent that triages | Started |
-| Sorting Hat | The triage skill agents use to sort mail | Draft |
-| Portkey | Routines: triggers that start a task | Planned |
+| Server | Runs on Dobby, a small machine at home: the platform, its modules, people, keys, bots, MCP | Running |
+| Hedwig | Mail: Gmail, Microsoft and Fastmail, with a bot that sorts it; a Mac app | Running |
+| Pensieve | Recorded conversations: transcripts and notes; a Mac app | Running |
+| Kreacher, Winky | Bots: a house-elf who sorts the mail, one who writes meeting notes | Running |
+| Portkey | Routines: triggers that start tasks for the bots | Running |
+| Patronus | A Telegram bot for both of us and the household group | Planned |
+
+The design system and screens are in `docs/design/burrow-design-system.html`.
 
 Burrow is not affiliated with or endorsed by Warner Bros. or J.K. Rowling; the names
 are a private theme.

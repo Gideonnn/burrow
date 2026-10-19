@@ -1,67 +1,71 @@
 # Architecture
 
-The Burrow server (`apps/server`), running on Dobby, a small Linux machine at home, owns everything that must keep running:
-mail sync, the agent triage, the task queue, people, API keys and the MCP endpoint.
-Clients (the Hedwig Mac app, Claude Code, Codex) are thin: they show what their API key
-allows and send actions back. The designs in `docs/design/` show the intended product;
-`index.html` is the latest iteration.
+Burrow is a small platform for one household: a server on Dobby (the home machine) that
+hosts **modules** (Hedwig for mail, Pensieve for recordings, more later), and a native
+Mac app per module built on one shared Swift package. Bots with personas do the work as
+**tasks** on a shared worker pool. The plan behind this shape is
+`docs/plans/2026-10-20-platform-and-pensieve.md`; the designs are in `docs/design/`
+(`burrow-design-system.html` is the design system, `index.html` the latest Hedwig
+iteration).
 
-## Server and modules
+## Layout and dependency direction
 
-- `apps/server` is one process that hosts every module. A module (for example
-  `modules/hedwig`) contributes routes, storage and task types; the server provides auth,
-  people, keys, runners, routines and skills.
-- Storage is SQLite on the server. Provider OAuth tokens are encrypted at rest; API keys are
-  stored only as hashes.
-- The server binds to localhost and is reached through a Cloudflare Tunnel with
-  Cloudflare Access in front, so no port on the home router is opened (see
-  [deploy](deploy.md)).
+```
+packages/contracts   zod schemas shared by server and clients
+packages/platform    @burrow/platform: the kernel
+modules/<name>       a module: its tables, routes, task kinds, subjects, MCP tools
+apps/server          composition root: config, wiring, login, CLI, migrations
+packages/burrow-kit  Swift: BurrowKit, BurrowUI and burrowctl for every Mac app
+apps/<name>-mac      one native app per module
+bots/, skills/       personas and skills (data)
+```
 
-## Hedwig (mail)
+contracts ← platform ← modules ← server. The platform never imports a module and
+modules never import each other; they meet through subjects, routines and events. How
+to add one: [modules](modules.md).
 
-- Providers are reached through their own APIs: the Gmail API, Microsoft Graph and
-  Fastmail JMAP. IMAP is not used: the APIs give push or delta sync, labels/categories
-  and scoped OAuth.
-- The triage agent acts **on the server side** of the provider: spam to the provider's
-  spam folder, noise archived, everything filtered marked read, "needs reply" flagged.
-  Phones using the native mail apps therefore stay calm. `serverOpsFor` in
-  `modules/hedwig` maps a triage decision to provider operations.
-- Filtered mail is reviewed in the client ("Gefilterd"); restoring a message undoes the
-  server operations and teaches a rule for that person.
-- Each mailbox has a **role** (`private`, `work`, `school`) and a name its owner sets
-  (`PATCH /api/mailboxes/:id`, right `organize`). Hedwig groups the sidebar by role and
-  offers each role's inboxes merged ("Alle werk"). A mailbox can carry its own bot
-  instructions, added to the person's in the triage prompt. The person's bot language
-  (`PATCH /api/me`) overrides `BURROW_LANGUAGE`. Everything else personal (instructions,
-  learned rules, routines, tasks) is per person, so a person's key is their profile on
-  any Mac.
+## The platform
 
-## People, keys and rights
+- **People and keys.** A person has a name, a login address (set by the operator only),
+  an `admin` flag and per-person settings. An API key belongs to one person, has rights
+  (read, organize, draft, send, tasks, admin) and per-module restrictions (Hedwig:
+  `mailboxes`). Keys are stored as hashes. See [login and household](login-and-household.md).
+- **Access.** Resolved once per request; modules extend it through `AccessExtensions`
+  declaration merging (Hedwig adds `mailboxIds`). Everything outside a key's scope
+  answers 404.
+- **Settings.** Modules declare them (boolean, choice, text; `feature: true` for whole
+  capabilities). Clients render them from `GET /api/settings/schema` without knowing
+  them.
+- **Shares.** `shares(module, itemId, personId)`: an owner shares one item.
+- **Files and uploads.** Large files live under `<data>/files/<module>/`; uploads arrive
+  in chunks of at most 32 MB (Cloudflare caps a request at 100 MB) and resume by offset.
+- **Workers.** See [routines and tasks](routines.md): task kinds, a server pool
+  (`BURROW_WORKERS`), client runners per kind, and at most `BURROW_AGENT_RUNS` agent CLI
+  runs at once across everything.
+- **Agents.** Claude Code and Codex CLIs logged in on Dobby (Codex with the ChatGPT
+  plan). A bot may prefer one (`agent:` in its front matter); the other is the fallback.
+  Agents run with a clean environment: no server secret reaches a process that reads
+  untrusted mail.
+- **Events.** One SSE stream at `/api/events`; each event decides per key whether it may
+  be seen.
+- **MCP.** One endpoint; platform and modules register tools per key. See [MCP](mcp.md).
 
-A person owns mailboxes, agent instructions and learned rules. An API key belongs to one
-person and is limited to a subset of that person's mailboxes and to rights: read,
-organize, draft, send, tasks, admin. A key never sees anything outside its mailboxes:
-not in lists, search, counts, the agent log or MCP.
+## Modules
 
-## Runners, routines and skills
-
-- A **task** sits in a queue on the server with a type, person, source and where it may run.
-- A **runner** executes tasks: the server itself (always on on Dobby) or a client app while it is open.
-  A runner uses the agent CLIs logged in on its own machine (`claude -p`, `codex exec`)
-  and only picks up tasks within its key.
-- A **routine** (Portkey) is a configurable trigger that creates tasks: a new mail with a
-  label, a time, later other events. Invoice processing will be a routine; it is not
-  built yet, but the model must allow routines to be added without code changes.
-- A **skill** (in `skills/`) is a folder with instructions and tool declarations that a
-  runner hands to the agent, like a Claude skill. Task types reference skills.
-- A **bot** is a persona in one markdown file (in `bots/`, plus a personal directory on
-  the server): front matter for name, model, skills and rights, the body for its
-  character, in the same shape as a Claude Code subagent. Kreacher is the first bot.
-  Bots are data, so the code never names a persona; `loadCatalog` in `apps/server`
-  validates bots and skills at startup and refuses a bot with `send` or `admin`.
+- **Hedwig** (`modules/hedwig`): providers (Gmail API, Microsoft Graph, Fastmail JMAP;
+  no IMAP), sync, the triage bot acting at the provider so phones stay calm, review of
+  filtered mail, drafts, reply suggestions. The `message` subject and trigger. Triage
+  keeps its own durable queue (the message records its progress). See [triage](triage.md)
+  and [mail providers](providers.md).
+- **Pensieve** (`modules/pensieve`): recordings uploaded by the Mac app, compressed with
+  ffmpeg, transcribed through OpenAI, notes written by the bot Winky. The `recording`
+  subject and trigger. See [Pensieve](pensieve.md).
 
 ## Clients
 
-- Hedwig for macOS is native SwiftUI. Raycast opens it through the alias `email`.
-- Clients connect with a server URL and an API key, and receive live updates over a
-  WebSocket.
+One native app per module (Hedwig.app, Pensieve.app), each logging in with its own
+device key through the browser. They share BurrowKit (API client, device login, uploads,
+events, the task runner, signed updates, the control socket) and BurrowUI (login,
+Settings › Huishouden and › Workers, the palette, AppServices). Agents on the Mac operate
+any running app with `burrowctl` or its MCP server: [operating the apps](agent-control.md).
+Updates: [app updates](app-updates.md).

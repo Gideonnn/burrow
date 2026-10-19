@@ -2,7 +2,7 @@
 
 Every new inbox message goes to the triage bot (Kreacher by default, `BURROW_TRIAGE_BOT`)
 once. The server runs the bot headless through the agent CLIs logged in on the server
-machine, applies the decision at the provider and records it. Code: `apps/server/src/triage/`.
+machine, applies the decision at the provider and records it. Code: `modules/hedwig/src/server/triage.ts`. A person can switch it off (`hedwig.triage`).
 
 ## One run
 

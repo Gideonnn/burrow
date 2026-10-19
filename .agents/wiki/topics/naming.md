@@ -10,15 +10,25 @@ states that Burrow is not affiliated with the rights holders.
 |---|---|---|
 | Burrow | The monorepo and platform | Active |
 | Dobby | The home machine that runs the Burrow server (`apps/server`) | Active |
-| Kreacher | First bot persona: the house-elf who sorts mail (`bots/kreacher.md`) | Active |
+| Kreacher | Bot persona: the house-elf who sorts mail (`bots/kreacher.md`) | Active |
+| Winky | Bot persona: the discreet house-elf who writes meeting notes (`bots/winky.md`) | Active |
 | Hedwig | Mail | Active |
+| Pensieve | Recorded conversations: transcripts and notes (was RecHoarder); later also the searchable archive of documents and notes | Active |
 | Sorting Hat | Triage skill: sorting mail and later documents | Draft |
 | Portkey | Routines: triggers that start tasks | Planned |
 | Remembrall | Tasks and reminders (Todoist replacement) | Idea |
 | Weasley Clock | Where everyone is, family calendar | Idea |
 | Gringotts | Money: invoices, subscriptions, budget | Idea |
-| Pensieve | Searchable archive of documents and notes | Idea |
 | Daily Prophet | Morning briefing | Idea |
 | Potions Book | Recipes, meal plan, shopping list | Idea |
 | Howler | Urgent notifications | Idea |
 | Accio | One search over everything, as a Raycast extension | Idea |
+| Patronus | The Telegram bot: private chats and a household group with the bots | Planned |
+| Unbreakable Vow | Contracts, warranties, insurance, notice periods | Idea |
+| Errol | Parcels from shipping mail | Idea |
+| Knight Bus | Trips: bookings from mail into one itinerary | Idea |
+| Marauder's Map | House and server status | Idea |
+
+Plain names, because they are mechanisms rather than applications: the platform
+(`packages/platform`), BurrowKit and BurrowUI (the shared Swift package), `burrowctl`,
+workers, tasks and routines.

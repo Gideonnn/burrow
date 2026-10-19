@@ -1,7 +1,7 @@
 # Mail providers
 
 How each provider is connected, and the one-time setup the operator does at the provider.
-The code lives in `modules/hedwig` (clients) and `apps/server/src/mail/accounts.ts`
+The code lives in `modules/hedwig` (clients) and `modules/hedwig/src/server/accounts.ts`
 (credentials, connecting). Credentials are sealed with `BURROW_SECRET_KEY`; losing that
 key means reconnecting every mailbox.
 
