@@ -60,14 +60,10 @@ Setup, in this order so the hostname is never open without a login:
 Cloudflare terminates TLS, so it can read the traffic that passes through the tunnel,
 mail included. Accepted for the household.
 
-## SSH through the tunnel
+## SSH
 
-Deploying needs SSH to Dobby from anywhere. Add a second public hostname to the same
-tunnel with service `ssh://127.0.0.1:22` and an Access application for it that admits
-only the operator. On the Mac, install `cloudflared` and point the `dobby` host in the
-SSH config at that hostname with
-`ProxyCommand cloudflared access ssh --hostname %h`; the first connection opens a
-browser login. `deploy.sh` keeps using `ssh dobby`.
+Deploying and the CLI use `ssh dobby`, over whatever private route the operator already
+has to the machine. The tunnel carries only Burrow's web traffic, not SSH.
 
 ## Remaining one-time steps
 

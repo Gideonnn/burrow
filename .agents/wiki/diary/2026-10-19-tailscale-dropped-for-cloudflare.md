@@ -25,3 +25,6 @@ Decisions and rejected alternatives:
   Mac), so deploying works from anywhere without Tailscale.
 - **Port 4717 stays, local only**, for the install's health check and debugging over
   SSH. Folding everything onto the tunnel port would put the health check behind Access.
+
+Correction the same day: SSH stays on the operator's existing private route, because it
+serves other work too. Only Burrow's web traffic moved to Cloudflare.

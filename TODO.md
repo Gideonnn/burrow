@@ -5,15 +5,14 @@ Issue-ready entries, roughly in build order. Delete an entry in the commit that 
 ## Finish Dobby (operator)
 
 **What:** set up Cloudflare as in the deploy topic (Access applications, `/api` bypass,
-rate limit, tunnel, SSH hostname), fill in the settings and tunnel token on Dobby, give
+rate limit, tunnel), fill in the settings and tunnel token on Dobby, give
 each person their login address with `cli.sh set-email`, put the Google and Microsoft
 client ids in the settings, add age recipients for backups, then rerun
-`pnpm server:deploy`. Point Hedwig at the public hostname. Remove Tailscale only once
-SSH through the tunnel works. The public hostname lives in the settings on Dobby, not
+`pnpm server:deploy`. Point Hedwig at the public hostname. The public hostname lives in the settings on Dobby, not
 in the repository.
 **Why:** the server runs on Dobby since 2026-10-19 with an admin key, but is reachable
 only over SSH and no real mailbox is connected yet.
-**Scope:** about an hour and a half; see the deploy topic.
+**Scope:** about an hour; see the deploy topic.
 
 ## Web interface
 
