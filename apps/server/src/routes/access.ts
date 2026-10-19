@@ -4,6 +4,7 @@ import {
   type MailboxSummary,
   type MeResponse,
   updateMailboxRequest,
+  updateMeRequest,
 } from '@burrow/contracts';
 import { zValidator } from '@hono/zod-validator';
 import { eq, inArray } from 'drizzle-orm';
@@ -29,13 +30,14 @@ const mailboxColumns = {
   address: mailboxes.address,
   name: mailboxes.name,
   role: mailboxes.role,
+  instructions: mailboxes.instructions,
 };
 
 export const accessRoutes = new Hono<AppEnv>()
   .get('/me', (c) => {
     const { db, access } = c.var;
-    const person = db
-      .select({ id: people.id, name: people.name })
+    const { language, ...person } = db
+      .select({ id: people.id, name: people.name, language: people.language })
       .from(people)
       .where(eq(people.id, access.personId))
       .get()!;
@@ -52,8 +54,23 @@ export const accessRoutes = new Hono<AppEnv>()
       key: { id: access.keyId, name: access.keyName },
       rights: [...access.rights],
       mailboxes: boxes,
+      language,
     });
   })
+  // The person's own settings; null language falls back to the server's.
+  .patch(
+    '/me',
+    requireRight('organize'),
+    zValidator('json', updateMeRequest),
+    (c) => {
+      c.var.db
+        .update(people)
+        .set({ language: c.req.valid('json').language })
+        .where(eq(people.id, c.var.access.personId))
+        .run();
+      return c.json({ language: c.req.valid('json').language });
+    },
+  )
   // The person renames a mailbox or says what it is for (private, work, school).
   .patch(
     '/mailboxes/:id',

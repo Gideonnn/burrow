@@ -36,6 +36,8 @@ export const people = sqliteTable('people', {
   name: text('name').notNull(),
   // Lower-cased; the address the person logs in with through Cloudflare Access.
   email: text('email').unique(),
+  // The language this person's bots write in; null falls back to the server's.
+  language: text('language'),
   createdAt: createdAt(),
 });
 
@@ -46,6 +48,8 @@ export const mailboxes = sqliteTable('mailboxes', {
     .references(() => people.id),
   provider: text('provider').$type<MailProvider>().notNull(),
   role: text('role').$type<MailboxRole>().notNull().default('private'),
+  // Extra bot instructions for mail in this mailbox, next to the person's own.
+  instructions: text('instructions').notNull().default(''),
   address: text('address').notNull(),
   name: text('name').notNull(),
   // Provider credentials (OAuth tokens or an API token), encrypted with

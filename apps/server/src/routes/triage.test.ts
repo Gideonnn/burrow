@@ -228,3 +228,54 @@ describe('review', () => {
     ).toBe(403);
   });
 });
+
+describe('profile settings in the triage prompt', () => {
+  it('writes in the language the person chose, and only for them', async () => {
+    const s = await setup();
+    const res = await s.call(s.token, '/api/me', {
+      method: 'PATCH',
+      body: JSON.stringify({ language: 'Dutch' }),
+    });
+    expect(res.status).toBe(200);
+    for (let i = 0; i < 2; i++)
+      s.decisions.push({
+        action: { kind: 'keep' },
+        reason: 'Ok.',
+        unsure: false,
+      });
+    await s.triage.enqueue([await arrive(s, s.home.id, 'Voor Gideon')]);
+    await s.triage.enqueue([await arrive(s, s.evas.id, 'For Eva')]);
+    expect(s.agentRequests[0]?.prompt).toContain(
+      'Write any text for people in Dutch.',
+    );
+    expect(s.agentRequests[1]?.prompt).toContain(
+      'Write any text for people in English.',
+    );
+  });
+
+  it('adds the instructions of the mailbox the message arrived in', async () => {
+    const s = await setup();
+    const work = s.mailbox(s.gideon.id, 'gideon@work.example');
+    const res = await s.call(s.token, `/api/mailboxes/${work.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        instructions: 'Never archive mail from customers.',
+      }),
+    });
+    expect(res.status).toBe(200);
+    for (let i = 0; i < 2; i++)
+      s.decisions.push({
+        action: { kind: 'keep' },
+        reason: 'Ok.',
+        unsure: false,
+      });
+    await s.triage.enqueue([await arrive(s, work.id, 'Order 12')]);
+    await s.triage.enqueue([await arrive(s, s.home.id, 'Private')]);
+    expect(s.agentRequests[0]?.prompt).toContain(
+      'Never archive mail from customers.',
+    );
+    expect(s.agentRequests[1]?.prompt).not.toContain(
+      'Never archive mail from customers.',
+    );
+  });
+});

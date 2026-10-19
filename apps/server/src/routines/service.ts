@@ -227,7 +227,7 @@ export class RoutineService {
         .where(eq(instructions.personId, owner.id))
         .get()?.text ?? '';
     const message = t.messageId ? mail.message(t.messageId) : undefined;
-    const language = this.o.language ?? 'English';
+    const language = owner.language ?? this.o.language ?? 'English';
     const prompt = message
       ? triagePrompt({
           ownerName: owner.name,

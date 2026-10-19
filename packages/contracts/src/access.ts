@@ -19,6 +19,8 @@ export const mailboxSummary = z.object({
   address: z.string(),
   name: z.string(),
   role: mailboxRole,
+  // Extra instructions for the bots, for mail in this mailbox only.
+  instructions: z.string(),
 });
 export type MailboxSummary = z.infer<typeof mailboxSummary>;
 
@@ -27,14 +29,21 @@ export const meResponse = z.object({
   key: z.object({ id: z.string(), name: z.string() }),
   rights: z.array(right),
   mailboxes: z.array(mailboxSummary),
+  // The language the person's bots write in; null means the server default.
+  language: z.string().nullable(),
 });
 export type MeResponse = z.infer<typeof meResponse>;
 
 export const updateMailboxRequest = z.object({
   name: z.string().trim().min(1).optional(),
   role: mailboxRole.optional(),
+  instructions: z.string().max(4000).optional(),
 });
 export type UpdateMailboxRequest = z.infer<typeof updateMailboxRequest>;
+
+export const updateMeRequest = z.object({
+  language: z.string().trim().min(1).max(40).nullable(),
+});
 
 export const createPersonRequest = z.object({ name: z.string().trim().min(1) });
 

@@ -16,6 +16,8 @@ export function systemPrompt(
 export type TriageContext = {
   ownerName: string;
   instructions: string;
+  // For the mailbox the message is in, such as "work: never archive customers".
+  mailboxInstructions?: string;
   rules: string[];
   mailbox: { address: string; provider: string };
   message: MessageRow;
@@ -40,7 +42,7 @@ export function triagePrompt(ctx: TriageContext): string {
 ## ${ctx.ownerName}'s instructions
 ${ctx.instructions.trim() || '(none)'}
 
-## Rules learned from ${ctx.ownerName}'s corrections
+${ctx.mailboxInstructions?.trim() ? `## Instructions for ${ctx.mailbox.address}\n${ctx.mailboxInstructions.trim()}\n\n` : ''}## Rules learned from ${ctx.ownerName}'s corrections
 ${ctx.rules.length ? ctx.rules.map((r) => `- ${r}`).join('\n') : '(none)'}
 
 ## Message facts (from the server, trustworthy)

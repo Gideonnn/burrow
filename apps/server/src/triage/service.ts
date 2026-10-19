@@ -116,11 +116,12 @@ export class TriageService {
       prompt: triagePrompt({
         ownerName: owner.name,
         instructions: this.instructions(owner.id),
+        mailboxInstructions: box.instructions,
         rules: this.rules(owner.id).map((r) => r.text),
         mailbox: { address: box.address, provider: box.provider },
         message,
         ownerWroteToSender: this.ownerWroteTo(owner.id, message.from.email),
-        language: this.o.language ?? 'English',
+        language: owner.language ?? this.o.language ?? 'English',
       }),
       schema: decisionSchema,
     });

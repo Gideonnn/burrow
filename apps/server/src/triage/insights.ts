@@ -92,11 +92,12 @@ export class InsightsService {
             .from(instructions)
             .where(eq(instructions.personId, owner.id))
             .get()?.text ?? '',
+        mailboxInstructions: box.instructions,
         rules: [],
         mailbox: { address: box.address, provider: box.provider },
         message,
         ownerWroteToSender: false,
-        language: this.o.language ?? 'English',
+        language: owner.language ?? this.o.language ?? 'English',
         task: 'Write a summary (when the message is long) and reply suggestions for',
       }),
       schema,
