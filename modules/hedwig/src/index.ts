@@ -1,4 +1,5 @@
 export * from './addresses';
+export * from './demo-provider';
 export * from './fake-provider';
 export * from './gmail';
 export * from './graph';

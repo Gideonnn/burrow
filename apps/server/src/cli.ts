@@ -5,6 +5,7 @@
 //   pnpm --filter @burrow/server cli add-person <name>
 //   pnpm --filter @burrow/server cli list
 //   pnpm --filter @burrow/server cli generate-secret    value for BURROW_SECRET_KEY
+//   pnpm --filter @burrow/server cli seed-demo          invented household for development
 import {
   createKey,
   createPerson,
@@ -14,6 +15,7 @@ import {
 import { loadConfig } from './config';
 import { SecretBox } from './crypto/secretBox';
 import { openDb } from './db/client';
+import { Accounts } from './mail/accounts';
 
 const [command, ...args] = process.argv.slice(2);
 const db = () => openDb(loadConfig().dbPath);
@@ -52,11 +54,75 @@ switch (command) {
     }
     break;
   }
+  case 'seed-demo': {
+    // An invented household with demo mailboxes, for developing the clients.
+    const config = loadConfig();
+    if (!config.secretKey)
+      fail('set BURROW_SECRET_KEY first (cli generate-secret)');
+    const store = db();
+    if (listPeople(store).length > 0)
+      fail('the database is not empty; use a fresh BURROW_DATA_DIR');
+    const accounts = new Accounts({
+      db: store,
+      box: new SecretBox(config.secretKey),
+      publicUrl: config.publicUrl,
+      apps: {},
+    });
+    const gideon = createPerson(store, 'Gideon');
+    const eva = createPerson(store, 'Eva');
+    for (const [owner, provider, address, seed] of [
+      [gideon, 'microsoft', 'gideon@werk.example', 'work'],
+      [gideon, 'gmail', 'gideon@example.com', 'personal'],
+      [gideon, 'fastmail', 'gideon@fastmail.example', 'invoices'],
+      [eva, 'gmail', 'eva@example.com', 'partner'],
+    ] as const) {
+      accounts.upsertMailbox({
+        ownerId: owner.id,
+        provider,
+        address,
+        credentials: { kind: 'demo', seed },
+      });
+    }
+    const all = [
+      'read',
+      'organize',
+      'draft',
+      'send',
+      'tasks',
+      'admin',
+    ] as const;
+    const keys = [
+      [
+        'MacBook Gideon',
+        createKey(store, {
+          personId: gideon.id,
+          name: 'MacBook Gideon',
+          rights: [...all],
+          mailboxIds: null,
+        }),
+      ],
+      [
+        'Mac Eva',
+        createKey(store, {
+          personId: eva.id,
+          name: 'Mac Eva',
+          rights: ['read', 'organize', 'draft', 'send', 'tasks'],
+          mailboxIds: null,
+        }),
+      ],
+    ] as const;
+    console.log('Demo household created. Keys, shown once:\n');
+    for (const [name, { token }] of keys)
+      console.log(`  ${name.padEnd(16)} ${token}`);
+    break;
+  }
   case 'generate-secret':
     console.log(SecretBox.generateKey());
     break;
   default:
-    fail('usage: cli init <name> | add-person <name> | list | generate-secret');
+    fail(
+      'usage: cli init <name> | add-person <name> | list | generate-secret | seed-demo',
+    );
 }
 
 function required(value: string | undefined, what: string): string {
