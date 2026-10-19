@@ -55,6 +55,9 @@ jobs:
       - name: Hedwig
         working-directory: apps/hedwig-mac
         run: swift build && swift test
+      - name: Pensieve
+        working-directory: apps/pensieve-mac
+        run: swift build && swift test
 
   image:
     runs-on: ubuntu-latest
