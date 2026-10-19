@@ -29,6 +29,9 @@ importers:
       '@burrow/contracts':
         specifier: workspace:^
         version: link:../../packages/contracts
+      '@burrow/hedwig':
+        specifier: workspace:^
+        version: link:../../modules/hedwig
       '@hono/node-server':
         specifier: ^2.1.5
         version: 2.1.5(hono@4.13.13)
