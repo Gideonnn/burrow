@@ -10,10 +10,9 @@
 #   1. checks Node 22+ and installs pnpm into ~/.local/bin if needed;
 #   2. installs dependencies and builds the server;
 #   3. writes ~/.config/burrow/burrow.env once (mode 600) with a fresh
-#      BURROW_SECRET_KEY and the Tailscale HTTPS name; later runs keep it;
+#      BURROW_SECRET_KEY; later runs keep it;
 #   4. installs and (re)starts the burrow.service and the nightly backup timer;
-#   5. publishes the server on the tailnet with `tailscale serve` when allowed;
-#   6. runs the Cloudflare Tunnel as burrow-tunnel.service once the tunnel
+#   5. runs the Cloudflare Tunnel as burrow-tunnel.service once the tunnel
 #      settings hold TUNNEL_TOKEN (installs cloudflared into ~/.local/bin
 #      when missing).
 #
@@ -69,18 +68,14 @@ pnpm --filter @burrow/server build >/dev/null
 if [ ! -f "$ENV_FILE" ]; then
   say "writing $ENV_FILE (first install)"
   mkdir -p "$CONFIG_DIR" "$DATA_DIR"
-  public_url="http://127.0.0.1:$PORT"
-  if command -v tailscale >/dev/null; then
-    name="$(tailscale status --self --json 2>/dev/null | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{process.stdout.write(JSON.parse(s).Self.DNSName.replace(/\.$/,""))}catch{}})')"
-    [ -n "$name" ] && public_url="https://$name"
-  fi
   umask 077
   cat > "$ENV_FILE" <<EOF
 # Burrow server settings. Keep this file private; it is not in git.
 BURROW_SECRET_KEY=$(node "$REPO/apps/server/dist/cli.js" generate-secret)
 BURROW_DATA_DIR=$DATA_DIR
 BURROW_PORT=$PORT
-BURROW_PUBLIC_URL=$public_url
+# The public hostname of the Cloudflare Tunnel, e.g. https://burrow.example.com
+BURROW_PUBLIC_URL=http://127.0.0.1:$PORT
 BURROW_LANGUAGE=Dutch
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
@@ -132,22 +127,6 @@ systemctl --user start burrow-backup.timer
 say "waiting for the server"
 for _ in $(seq 1 30); do health >/dev/null && break; sleep 1; done
 health >/dev/null || fail "the server did not start; see: tail -n 50 $LOG_DIR/server.log"
-
-if command -v tailscale >/dev/null; then
-  say "publishing on the tailnet with tailscale serve"
-  # When Serve is not enabled for the tailnet, the command prints a link and
-  # waits for it to be opened; a timeout keeps the install from hanging.
-  out="$(timeout 15 tailscale serve --bg --https=443 "http://127.0.0.1:$PORT" 2>&1 || true)"
-  if tailscale serve status 2>/dev/null | grep -q "127.0.0.1:$PORT"; then
-    echo "  published"
-  elif link="$(grep -o 'https://login.tailscale.com/[^ ]*' <<<"$out" | head -1)" && [ -n "$link" ]; then
-    echo "  Serve is not enabled for the tailnet yet. Open this link once, then rerun this script:"
-    echo "  $link"
-  else
-    echo "  not published: ${out:-no output}"
-    echo "  if this user may not configure Tailscale, run once: sudo tailscale set --operator=$USER"
-  fi
-fi
 
 if grep -q '^TUNNEL_TOKEN=..*' "$TUNNEL_ENV" 2>/dev/null; then
   say "running the Cloudflare Tunnel"
