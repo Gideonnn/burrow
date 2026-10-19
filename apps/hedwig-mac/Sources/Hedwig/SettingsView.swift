@@ -91,7 +91,7 @@ struct AccountSettings: View {
         Form {
             Section("Mailboxen van deze sleutel") {
                 ForEach(model.me?.mailboxes ?? []) { box in
-                    LabeledContent(box.address, value: box.provider.rawValue)
+                    MailboxSettingsRow(box: box)
                 }
             }
             if model.me?.can(.admin) == true {
@@ -157,5 +157,43 @@ struct ConnectionSettings: View {
             Button("Verbinding verbreken", role: .destructive) { model.disconnect() }
         }
         .formStyle(.grouped)
+    }
+}
+
+/// Name and role of one mailbox; saved when the name is submitted or the role changes.
+struct MailboxSettingsRow: View {
+    @Environment(AppModel.self) private var model
+    let box: MailboxSummary
+    @State private var name = ""
+    @State private var failure: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                TextField(box.address, text: $name, prompt: Text(providerName(box)))
+                    .onSubmit { save(name: name) }
+                Picker("", selection: Binding(get: { box.kind }, set: { save(role: $0) })) {
+                    ForEach(MailboxRole.allCases, id: \.self) { Text(roleTitle($0)).tag($0) }
+                }
+                .labelsHidden()
+                .fixedSize()
+            }
+            Text("\(box.address) · \(providerName(box))").font(.caption).foregroundStyle(.secondary)
+            if let failure { Text(failure).font(.caption).foregroundStyle(.red) }
+        }
+        .disabled(model.me?.can(.organize) != true)
+        .onAppear { name = box.name == box.address ? "" : box.name }
+    }
+
+    private func save(name: String? = nil, role: MailboxRole? = nil) {
+        Task {
+            do {
+                let trimmed = name?.trimmingCharacters(in: .whitespaces)
+                try await model.updateMailbox(box.id, name: trimmed.map { $0.isEmpty ? box.address : $0 }, role: role)
+                failure = nil
+            } catch {
+                failure = error.localizedDescription
+            }
+        }
     }
 }

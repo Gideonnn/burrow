@@ -9,7 +9,10 @@ extension AppModel {
             "connected": connection?.serverURL.host() ?? NSNull(),
             "selection": selectionName ?? NSNull(),
             "mailboxes": (me?.mailboxes ?? []).map {
-                ["id": $0.id, "address": $0.address, "provider": $0.provider.rawValue, "unread": unreadCounts[$0.id] ?? 0]
+                [
+                    "id": $0.id, "address": $0.address, "name": $0.name, "role": $0.kind.rawValue,
+                    "provider": $0.provider.rawValue, "unread": unreadCounts[$0.id] ?? 0,
+                ] as [String: Any]
             },
             "messages": messages.map { message in
                 [
@@ -39,6 +42,7 @@ extension AppModel {
     private var selectionName: String? {
         switch selection {
         case .inbox(let id): "inbox:\(mailbox(id)?.address ?? id)"
+        case .role(let role): role.rawValue
         case .filtered: "filtered"
         case .drafts: "drafts"
         case .tasks: "tasks"
@@ -47,8 +51,9 @@ extension AppModel {
         }
     }
 
-    /// `inbox` (the first mailbox), `inbox:<address>`, `filtered`, `drafts`,
-    /// `tasks`, `archive`, `sent` or `spam`.
+    /// `inbox` (the first mailbox), `inbox:<address>`, a role (`private`, `work`,
+    /// `school`: its inboxes merged), `filtered`, `drafts`, `tasks`, `archive`,
+    /// `sent` or `spam`.
     public func show(_ place: String) async throws {
         try select(place)
         await selectionLoad?.value
@@ -61,6 +66,7 @@ extension AppModel {
         case "drafts": selection = .drafts
         case "tasks": selection = .tasks
         case "archive", "sent", "spam": selection = .folder(MailFolder(rawValue: place)!)
+        case "private", "work", "school": selection = .role(MailboxRole(rawValue: place)!)
         default:
             guard place == "inbox" || place.hasPrefix("inbox:") else { throw ControlError("unknown place \(place)") }
             let wanted = place.dropFirst("inbox:".count)

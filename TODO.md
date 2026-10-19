@@ -11,6 +11,16 @@ after their client ids are in the settings on Dobby, redirect URI
 but no real mailbox is connected and backups are unencrypted copies on Dobby itself.
 **Scope:** under an hour; see the providers and deploy topics.
 
+## Household profiles: the rest
+
+**What:** per mailbox, Kreacher instructions and a signature; per person, the language
+the bots write in (now one `BURROW_LANGUAGE` for the server) and a default sender per
+role. Decide whether an admin may create keys for another person's mailboxes, or only
+with that person's consent.
+**Why:** Gideon and Angela each have private and work or school mail; work mail needs
+different sorting, and the admin can now technically read everyone's mail.
+**Scope:** server columns and routes plus Hedwig settings; a day.
+
 ## Web interface
 
 **What:** a web app served by the server for settings: people, mailboxes (connect and

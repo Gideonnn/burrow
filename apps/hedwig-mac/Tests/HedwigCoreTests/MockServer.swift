@@ -97,11 +97,24 @@ enum Fixture {
      "mailboxes":[{"id":"mb1","ownerId":"p1","provider":"gmail","address":"gideon@example.com","name":"gideon@example.com"}]}
     """
 
-    static func message(_ id: String, subject: String, folder: String = "inbox", unread: Bool = true, flagged: Bool = false) -> String {
+    /// One private mailbox and two for work.
+    static let household = """
+    {"person":{"id":"p1","name":"Gideon"},"key":{"id":"k1","name":"MacBook Gideon"},
+     "rights":["read","organize","draft","send"],
+     "mailboxes":[
+       {"id":"mb1","ownerId":"p1","provider":"gmail","address":"gideon@example.com","name":"gideon@example.com","role":"private"},
+       {"id":"w1","ownerId":"p1","provider":"gmail","address":"gideon@werk.example","name":"Werk","role":"work"},
+       {"id":"w2","ownerId":"p1","provider":"microsoft","address":"gideon@klant.example","name":"Klant","role":"work"}]}
+    """
+
+    static func message(
+        _ id: String, subject: String, folder: String = "inbox", unread: Bool = true, flagged: Bool = false,
+        mailbox: String = "mb1", at: String = "2026-10-19T09:41:00.000Z"
+    ) -> String {
         """
-        {"id":"\(id)","mailboxId":"mb1","threadId":"t-\(id)","from":{"name":"Marieke","email":"marieke@example.nl"},
+        {"id":"\(id)","mailboxId":"\(mailbox)","threadId":"t-\(id)","from":{"name":"Marieke","email":"marieke@example.nl"},
          "to":[{"email":"gideon@example.com"}],"cc":[],"subject":"\(subject)","snippet":"Zin in eten?",
-         "receivedAt":"2026-10-19T09:41:00.000Z","folder":"\(folder)","unread":\(unread),"flagged":\(flagged),
+         "receivedAt":"\(at)","folder":"\(folder)","unread":\(unread),"flagged":\(flagged),
          "labels":[],"hasAttachments":false,"bodyText":"Zin in eten?","bodyHtml":null}
         """
     }

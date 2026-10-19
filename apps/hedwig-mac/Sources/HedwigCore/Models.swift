@@ -46,12 +46,21 @@ public enum Right: String, Codable, Sendable, CaseIterable {
     case read, organize, draft, send, tasks, admin
 }
 
+/// What a mailbox is for; the sidebar groups by it and merges each group's inboxes.
+public enum MailboxRole: String, Codable, Sendable, CaseIterable {
+    case `private`, work, school
+}
+
 public struct MailboxSummary: Codable, Hashable, Identifiable, Sendable {
     public var id: String
     public var ownerId: String
     public var provider: MailProvider
     public var address: String
     public var name: String
+    // Optional so an older server without roles still decodes.
+    public var role: MailboxRole?
+
+    public var kind: MailboxRole { role ?? .private }
 }
 
 public struct Me: Codable, Sendable {

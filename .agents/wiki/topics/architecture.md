@@ -28,6 +28,11 @@ allows and send actions back. The designs in `docs/design/` show the intended pr
   `modules/hedwig` maps a triage decision to provider operations.
 - Filtered mail is reviewed in the client ("Gefilterd"); restoring a message undoes the
   server operations and teaches a rule for that person.
+- Each mailbox has a **role** (`private`, `work`, `school`) and a name its owner sets
+  (`PATCH /api/mailboxes/:id`, right `organize`). Hedwig groups the sidebar by role and
+  offers each role's inboxes merged ("Alle werk"). Everything else personal (bot
+  instructions, learned rules, routines, tasks) is already per person, so a person's
+  key is their profile on any Mac.
 
 ## People, keys and rights
 

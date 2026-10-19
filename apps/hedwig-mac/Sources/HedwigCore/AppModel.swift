@@ -3,6 +3,8 @@ import Observation
 
 public enum SidebarItem: Hashable, Sendable {
     case inbox(mailboxId: String)
+    /// The inboxes of every mailbox with this role, merged.
+    case role(MailboxRole)
     case filtered
     case drafts
     case tasks
@@ -134,6 +136,26 @@ public final class AppModel {
 
     public func mailbox(_ id: String) -> MailboxSummary? { me?.mailboxes.first { $0.id == id } }
 
+    public struct MailboxGroup: Identifiable, Sendable {
+        public let role: MailboxRole
+        public let mailboxes: [MailboxSummary]
+        public var id: MailboxRole { role }
+    }
+
+    /// The key's mailboxes by role, private first, in the server's order within a role.
+    public var mailboxGroups: [MailboxGroup] {
+        MailboxRole.allCases.compactMap { role in
+            let boxes = (me?.mailboxes ?? []).filter { $0.kind == role }
+            return boxes.isEmpty ? nil : MailboxGroup(role: role, mailboxes: boxes)
+        }
+    }
+
+    public func updateMailbox(_ id: String, name: String? = nil, role: MailboxRole? = nil) async throws {
+        guard let api else { return }
+        let updated = try await api.updateMailbox(id: id, name: name, role: role)
+        if let index = me?.mailboxes.firstIndex(where: { $0.id == id }) { me?.mailboxes[index] = updated }
+    }
+
     public func loadSelection(keepSelection: Bool = false) async {
         guard let api, let selection else { return }
         isLoading = true
@@ -142,6 +164,12 @@ public final class AppModel {
             switch selection {
             case .inbox(let id):
                 messages = try await api.messages(mailboxId: id, folder: .inbox)
+            case .role(let role):
+                var all: [MessageSummary] = []
+                for box in me?.mailboxes ?? [] where box.kind == role {
+                    all += try await api.messages(mailboxId: box.id, folder: .inbox, limit: 50)
+                }
+                messages = all.sorted { $0.receivedAt > $1.receivedAt }
             case .folder(let folder):
                 // "Overal" folders combine every mailbox, newest first.
                 var all: [MessageSummary] = []

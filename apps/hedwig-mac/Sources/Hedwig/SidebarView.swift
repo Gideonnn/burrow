@@ -7,21 +7,30 @@ struct SidebarView: View {
     var body: some View {
         @Bindable var model = model
         List(selection: $model.selection) {
-            Section("Inboxen") {
-                ForEach(model.me?.mailboxes ?? []) { box in
-                    NavigationLink(value: SidebarItem.inbox(mailboxId: box.id)) {
-                        Label {
-                            VStack(alignment: .leading, spacing: 1) {
-                                Text(providerName(box))
-                                Text(box.address).font(.caption).foregroundStyle(.secondary)
-                            }
-                        } icon: {
-                            Image(systemName: "tray")
+            ForEach(model.mailboxGroups) { group in
+                Section(roleTitle(group.role)) {
+                    if group.mailboxes.count > 1 {
+                        NavigationLink(value: SidebarItem.role(group.role)) {
+                            Label("Alle \(roleTitle(group.role).lowercased())", systemImage: "tray.2")
                         }
+                        .badge(group.mailboxes.reduce(0) { $0 + (model.unreadCounts[$1.id] ?? 0) })
+                        .tag(SidebarItem.role(group.role))
                     }
-                    .badge(model.unreadCounts[box.id] ?? 0)
-                    // ForEach tags rows with the mailbox id; the list selects SidebarItems.
-                    .tag(SidebarItem.inbox(mailboxId: box.id))
+                    ForEach(group.mailboxes) { box in
+                        NavigationLink(value: SidebarItem.inbox(mailboxId: box.id)) {
+                            Label {
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text(mailboxTitle(box))
+                                    Text(box.address).font(.caption).foregroundStyle(.secondary)
+                                }
+                            } icon: {
+                                Image(systemName: "tray")
+                            }
+                        }
+                        .badge(model.unreadCounts[box.id] ?? 0)
+                        // ForEach tags rows with the mailbox id; the list selects SidebarItems.
+                        .tag(SidebarItem.inbox(mailboxId: box.id))
+                    }
                 }
             }
             Section("Overal") {
@@ -96,6 +105,19 @@ struct ConnectionBadge: View {
         .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 9))
         .padding(8)
     }
+}
+
+func roleTitle(_ role: MailboxRole) -> String {
+    switch role {
+    case .private: "Privé"
+    case .work: "Werk"
+    case .school: "School"
+    }
+}
+
+/// The name the person gave the mailbox, or the provider while it is still the address.
+func mailboxTitle(_ box: MailboxSummary) -> String {
+    box.name == box.address ? providerName(box) : box.name
 }
 
 func providerName(_ box: MailboxSummary) -> String {

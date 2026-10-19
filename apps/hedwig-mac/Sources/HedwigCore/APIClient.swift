@@ -91,6 +91,11 @@ public struct APIClient: Sendable {
         return try await call("GET", "api/mailboxes/\(mailboxId)/messages", query: query)
     }
 
+    public func updateMailbox(id: String, name: String?, role: MailboxRole?) async throws -> MailboxSummary {
+        struct Body: Encodable { var name: String?; var role: MailboxRole? }
+        return try await call("PATCH", "api/mailboxes/\(id)", body: Body(name: name, role: role))
+    }
+
     public func sync(mailboxId: String) async throws {
         let _: Empty = try await call("POST", "api/mailboxes/\(mailboxId)/sync")
     }
