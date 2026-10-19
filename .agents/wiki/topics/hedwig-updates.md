@@ -35,5 +35,10 @@ lost: ask the person, then pass `--force` only with their consent.
   operator, who then commits `ReleaseKey.swift`. Without a public key, and in
   development runs outside an `.app`, updates are off.
 - The first version with the updater has to be installed by hand on each Mac.
-- Builds are signed ad hoc, so macOS may ask once after each update to allow Keychain
-  access, where Hedwig keeps its API key. A stable signing certificate would end that.
+- Hedwig keeps its API key in the keychain, whose access rule names the app's signature.
+  An ad hoc signature changes with every build, so macOS asks for the login password
+  after every update, and Hedwig hangs at launch until someone answers. The fix is a
+  fixed self-signed identity: `apps/hedwig-mac/scripts/signing-identity.sh` (operator,
+  once) puts "Burrow Hedwig" in the login keychain and `bundle.sh` signs with it from
+  then on. The keychain rule then names that certificate, so "Sta altijd toe" holds
+  across updates. Releases must be built on the Mac that holds the identity.

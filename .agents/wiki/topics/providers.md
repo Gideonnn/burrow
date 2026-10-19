@@ -33,7 +33,9 @@ Cloudflare Tunnel, behind an Access login, so a person logs in at Cloudflare fir
 4. Create an OAuth client of type **Web application** with the redirect URIs
    `http://127.0.0.1:4717/oauth/callback` (local) and
    `https://<public hostname>/oauth/callback`.
-5. Put the client id and secret in `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`.
+5. Download the client as JSON and run `./infra/dobby/oauth-client.sh google <file>`:
+   it sets `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` on Dobby without printing the
+   secret, deletes the file on both sides and restarts the server.
 
 Sync uses `users.history.list` from a history id; an expired id (older than about a week)
 triggers a full resync of the last 100 inbox messages. Drafts are skipped. Server
