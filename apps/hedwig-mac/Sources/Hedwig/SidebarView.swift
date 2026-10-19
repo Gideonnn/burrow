@@ -20,6 +20,8 @@ struct SidebarView: View {
                         }
                     }
                     .badge(model.unreadCounts[box.id] ?? 0)
+                    // ForEach tags rows with the mailbox id; the list selects SidebarItems.
+                    .tag(SidebarItem.inbox(mailboxId: box.id))
                 }
             }
             Section("Overal") {
