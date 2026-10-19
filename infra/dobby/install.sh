@@ -14,7 +14,9 @@
 #   4. installs and (re)starts the burrow.service and the nightly backup timer;
 #   5. runs the Cloudflare Tunnel as burrow-tunnel.service once the tunnel
 #      settings hold TUNNEL_TOKEN (installs cloudflared into ~/.local/bin
-#      when missing).
+#      when missing);
+#   6. installs ffmpeg and ffprobe into ~/.local/bin when missing, for
+#      Pensieve (a static build, checked against its published SHA-256).
 #
 # Secrets stay on this machine: the env file is never printed or copied.
 set -euo pipefail
@@ -60,6 +62,23 @@ if ! command -v pnpm >/dev/null; then
   corepack enable --install-directory "$HOME/.local/bin" pnpm
 fi
 
+if ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null; then
+  [ "$(uname -m)" = x86_64 ] || fail "install ffmpeg yourself on $(uname -m), then rerun"
+  say "installing ffmpeg into ~/.local/bin (for Pensieve)"
+  base="https://github.com/BtbN/FFmpeg-Builds/releases/download/latest"
+  work="$(mktemp -d)"
+  curl -fsSL -o "$work/checksums.sha256" "$base/checksums.sha256"
+  # The newest release branch, not the daily master build.
+  file="$(grep -oE 'ffmpeg-n[0-9.]+-latest-linux64-gpl-[0-9.]+\.tar\.xz$' "$work/checksums.sha256" | sort -V | tail -1)"
+  [ -n "$file" ] || fail "no ffmpeg build found in the checksums"
+  curl -fsSL -o "$work/$file" "$base/$file"
+  (cd "$work" && grep " $file\$" checksums.sha256 | sha256sum -c --quiet -) || fail "the ffmpeg download does not match its checksum"
+  tar -xJf "$work/$file" -C "$work"
+  mkdir -p "$HOME/.local/bin"
+  install -m 755 "$work"/ffmpeg-*/bin/ffmpeg "$work"/ffmpeg-*/bin/ffprobe "$HOME/.local/bin/"
+  rm -rf "$work"
+fi
+
 say "installing dependencies and building"
 cd "$REPO"
 pnpm install --frozen-lockfile --filter @burrow/server... >/dev/null
@@ -83,6 +102,8 @@ MICROSOFT_CLIENT_ID=
 MICROSOFT_CLIENT_SECRET=
 CLOUDFLARE_ACCESS_TEAM=
 CLOUDFLARE_ACCESS_AUD=
+# Pensieve transcribes recordings through OpenAI.
+OPENAI_API_KEY=
 EOF
   umask 022
 fi
