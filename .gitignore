@@ -1,0 +1,25 @@
+node_modules/
+dist/
+.turbo/
+coverage/
+*.log
+.DS_Store
+
+# Secrets and local state never enter git; see AGENTS.md "Open source hygiene".
+.env
+.env.*
+!.env.example
+.data/
+*.sqlite
+*.sqlite-*
+*.db
+
+# Agent worktrees and local agent settings
+.claude/worktrees/
+.claude/settings.local.json
+
+# Swift / Xcode
+.build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
