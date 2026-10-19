@@ -15,6 +15,13 @@
       "when": 1792408048463,
       "tag": "0001_worthless_the_enforcers",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1792408876958,
+      "tag": "0002_jittery_rocket_racer",
+      "breakpoints": true
     }
   ]
 }

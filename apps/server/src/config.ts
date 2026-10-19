@@ -13,6 +13,14 @@ const env = z.object({
   GOOGLE_CLIENT_SECRET: z.string().optional(),
   MICROSOFT_CLIENT_ID: z.string().optional(),
   MICROSOFT_CLIENT_SECRET: z.string().optional(),
+  // Colon-separated; later directories override earlier ones by name.
+  BURROW_BOTS_DIRS: z.string().optional(),
+  BURROW_SKILLS_DIRS: z.string().optional(),
+  BURROW_TRIAGE_BOT: z.string().default('kreacher'),
+  // Agent CLIs to try in order for headless runs.
+  BURROW_AGENTS: z.string().default('claude,codex'),
+  BURROW_CLAUDE_COMMAND: z.string().default('claude'),
+  BURROW_CODEX_COMMAND: z.string().default('codex'),
 });
 
 export type OAuthAppConfig = { clientId: string; clientSecret?: string };
@@ -26,6 +34,10 @@ export type Config = {
   secretKey: string | undefined;
   google: OAuthAppConfig | undefined;
   microsoft: OAuthAppConfig | undefined;
+  botsDirs: string[];
+  skillsDirs: string[];
+  triageBot: string;
+  agents: { name: 'claude' | 'codex'; command: string }[];
 };
 
 export function loadConfig(source: NodeJS.ProcessEnv = process.env): Config {
@@ -46,6 +58,19 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): Config {
           clientSecret: parsed.GOOGLE_CLIENT_SECRET,
         }
       : undefined,
+    botsDirs: dirs(parsed.BURROW_BOTS_DIRS, 'bots', dataDir),
+    skillsDirs: dirs(parsed.BURROW_SKILLS_DIRS, 'skills', dataDir),
+    triageBot: parsed.BURROW_TRIAGE_BOT,
+    agents: parsed.BURROW_AGENTS.split(',')
+      .map((a) => a.trim())
+      .filter((a): a is 'claude' | 'codex' => a === 'claude' || a === 'codex')
+      .map((name) => ({
+        name,
+        command:
+          name === 'claude'
+            ? parsed.BURROW_CLAUDE_COMMAND
+            : parsed.BURROW_CODEX_COMMAND,
+      })),
     microsoft: parsed.MICROSOFT_CLIENT_ID
       ? {
           clientId: parsed.MICROSOFT_CLIENT_ID,
@@ -53,4 +78,21 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): Config {
         }
       : undefined,
   };
+}
+
+// The repository's own bots/ and skills/ (three levels up from src/ or dist/),
+// then the personal ones in the data directory.
+const repoRoot = resolve(import.meta.dirname, '../../..');
+
+function dirs(
+  value: string | undefined,
+  name: string,
+  dataDir: string,
+): string[] {
+  if (value)
+    return value
+      .split(':')
+      .filter(Boolean)
+      .map((d) => resolve(d));
+  return [resolve(repoRoot, name), resolve(dataDir, name)];
 }

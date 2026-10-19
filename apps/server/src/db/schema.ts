@@ -3,6 +3,9 @@ import type {
   MailFolder,
   MailProvider,
   Right,
+  ServerOp,
+  TriageAction,
+  TriageStatus,
 } from '@burrow/contracts';
 import type { ProviderMessage } from '@burrow/hedwig';
 import { sql } from 'drizzle-orm';
@@ -90,6 +93,7 @@ export const messages = sqliteTable(
     // Set once triage has looked at the message, so a restart never
     // triages the same mail twice.
     triagedAt: integer('triaged_at', { mode: 'timestamp_ms' }),
+    triageAttempts: integer('triage_attempts').notNull().default(0),
     createdAt: createdAt(),
   },
   (t) => [
@@ -101,3 +105,41 @@ export const messages = sqliteTable(
     ),
   ],
 );
+
+export const triageLog = sqliteTable(
+  'triage_log',
+  {
+    id: id(),
+    messageId: text('message_id')
+      .notNull()
+      .references(() => messages.id, { onDelete: 'cascade' }),
+    personId: text('person_id')
+      .notNull()
+      .references(() => people.id),
+    bot: text('bot').notNull(),
+    action: text('action', { mode: 'json' }).$type<TriageAction>().notNull(),
+    reason: text('reason').notNull(),
+    unsure: integer('unsure', { mode: 'boolean' }).notNull(),
+    ops: text('ops', { mode: 'json' }).$type<ServerOp[]>().notNull(),
+    status: text('status').$type<TriageStatus>().notNull(),
+    reviewedAt: integer('reviewed_at', { mode: 'timestamp_ms' }),
+    createdAt: createdAt(),
+  },
+  (t) => [index('triage_log_person_status').on(t.personId, t.status)],
+);
+
+export const instructions = sqliteTable('instructions', {
+  personId: text('person_id')
+    .primaryKey()
+    .references(() => people.id),
+  text: text('text').notNull(),
+});
+
+export const learnedRules = sqliteTable('learned_rules', {
+  id: id(),
+  personId: text('person_id')
+    .notNull()
+    .references(() => people.id),
+  text: text('text').notNull(),
+  createdAt: createdAt(),
+});
