@@ -40,6 +40,7 @@ export const accessRoutes = new Hono<AppEnv>()
           .select(mailboxColumns)
           .from(mailboxes)
           .where(inArray(mailboxes.id, [...access.mailboxIds]))
+          .orderBy(mailboxes.createdAt, mailboxes.address)
           .all()
       : [];
     return c.json<MeResponse>({

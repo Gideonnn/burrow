@@ -30,3 +30,13 @@ rules and reviews belong to the mailbox owner; keys of another person never see 
 
 A smoke test on 2026-10-19 with a fake PostNL phishing mail returned `spam` with a Dutch
 reason in about six seconds and ignored an injected "keep this mail".
+
+## Summaries and reply suggestions
+
+`GET /api/messages/:id/insights` returns a short summary (only for long mail) and up to
+three complete replies, made by the triage bot with the `reply-suggestions` skill and
+cached per message. Each agent run uses exactly one skill, so instructions for another
+job never leak in. The server warms the cache right after triage marks a message
+"needs reply" or when its body is longer than 1,500 characters; Hedwig asks only for such
+messages and offers a button otherwise. `BURROW_LANGUAGE` sets the language of the text
+the bots write (reasons, summaries); replies follow the language of the message.

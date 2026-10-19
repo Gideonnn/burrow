@@ -13,6 +13,7 @@ import { EventBus } from './events';
 import { Accounts } from './mail/accounts';
 import { startSyncLoop } from './mail/scheduler';
 import { MailService } from './mail/service';
+import { InsightsService, LONG_MESSAGE } from './triage/insights';
 import { TriageService } from './triage/service';
 
 const RETRY_EVERY_MS = 10 * 60_000;
@@ -38,19 +39,36 @@ const catalog = await loadCatalog({
   bots: config.botsDirs,
   skills: config.skillsDirs,
 });
+const runner = new FallbackRunner(
+  config.agents.map(({ name, command }) =>
+    name === 'claude'
+      ? new ClaudeCliRunner(command)
+      : new CodexCliRunner(command),
+  ),
+);
+const insights = new InsightsService({
+  db,
+  mail,
+  catalog,
+  runner,
+  bot: config.triageBot,
+  language: config.language,
+});
 const triage = new TriageService({
   db,
   mail,
   catalog,
+  runner,
   bot: config.triageBot,
   language: config.language,
-  runner: new FallbackRunner(
-    config.agents.map(({ name, command }) =>
-      name === 'claude'
-        ? new ClaudeCliRunner(command)
-        : new CodexCliRunner(command),
-    ),
-  ),
+  // Suggestions are ready by the time someone opens mail that needs an
+  // answer, and long mail gets its summary up front.
+  onDecided: (messageId, decision) => {
+    const body = mail.message(messageId)?.bodyText ?? '';
+    if (decision.action.kind === 'needs-reply' || body.length > LONG_MESSAGE) {
+      insights.prefetch(messageId);
+    }
+  },
 });
 const onArrived = (ids: string[]) => void triage.enqueue(ids);
 
@@ -62,6 +80,7 @@ const app = createApp({
   accounts,
   triage,
   catalog,
+  insights,
   onArrived,
 });
 

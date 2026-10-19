@@ -218,3 +218,13 @@ public struct SendRequest: Codable, Sendable {
     public var body: String
     public var inReplyTo: String?
 }
+
+public struct MessageInsights: Codable, Hashable, Sendable {
+    public struct Reply: Codable, Hashable, Sendable {
+        public var label: String
+        public var body: String
+    }
+
+    public var summary: String?
+    public var replies: [Reply]
+}

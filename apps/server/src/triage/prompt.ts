@@ -21,6 +21,8 @@ export type TriageContext = {
   message: MessageRow;
   ownerWroteToSender: boolean;
   language: string;
+  // The opening line; triage sorts, other skills ask for something else.
+  task?: string;
 };
 
 // Everything the server knows for certain goes above the line; the sender's
@@ -33,7 +35,7 @@ export function triagePrompt(ctx: TriageContext): string {
     .replaceAll('</untrusted_message>', '</untrusted_message_>');
   const addr = (a: { name?: string; email: string }) =>
     a.name ? `${a.name} <${a.email}>` : a.email;
-  return `Sort this message for ${ctx.ownerName}.
+  return `${ctx.task ?? 'Sort this message for'} ${ctx.ownerName}.
 
 ## ${ctx.ownerName}'s instructions
 ${ctx.instructions.trim() || '(none)'}
@@ -58,5 +60,5 @@ ${ctx.rules.length ? ctx.rules.map((r) => `- ${r}`).join('\n') : '(none)'}
 ${body}
 </untrusted_message>
 
-Answer with JSON only, matching the schema. Write the reason in ${ctx.language}.`;
+Answer with JSON only, matching the schema. Write any text for people in ${ctx.language}.`;
 }
