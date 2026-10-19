@@ -22,6 +22,7 @@ CONFIG_DIR="$HOME/.config/burrow"
 ENV_FILE="$CONFIG_DIR/burrow.env"
 DATA_DIR="$HOME/.local/share/burrow"
 UNIT_DIR="$HOME/.config/systemd/user"
+LOG_DIR="$HOME/.local/state/burrow"
 PORT=4717
 export PATH="$HOME/.local/bin:$PATH"
 
@@ -37,7 +38,7 @@ status() {
   echo "Next steps:"
   echo "  first person and admin key:  node $REPO/apps/server/dist/cli.js init <name>"
   echo "     (run with the env loaded: set -a; . $ENV_FILE; set +a)"
-  echo "  logs:                         journalctl --user -u burrow -f"
+  echo "  logs:                         tail -f $LOG_DIR/server.log"
   echo "  Google/Microsoft accounts:    add the client ids to $ENV_FILE, then rerun this script"
 }
 
@@ -84,7 +85,7 @@ EOF
 fi
 
 say "installing the systemd user units"
-mkdir -p "$UNIT_DIR"
+mkdir -p "$UNIT_DIR" "$LOG_DIR"
 cat > "$UNIT_DIR/burrow.service" <<EOF
 [Unit]
 Description=Burrow server
@@ -96,6 +97,9 @@ EnvironmentFile=$ENV_FILE
 # The triage runs the agent CLIs installed for this user.
 Environment=PATH=$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin
 ExecStart=$(command -v node) dist/main.js
+# The user journal is not readable on every machine, so the log is a file too.
+StandardOutput=append:$LOG_DIR/server.log
+StandardError=append:$LOG_DIR/server.log
 Restart=always
 RestartSec=5
 
@@ -119,7 +123,7 @@ systemctl --user start burrow-backup.timer
 
 say "waiting for the server"
 for _ in $(seq 1 30); do health >/dev/null && break; sleep 1; done
-health >/dev/null || fail "the server did not start; see: journalctl --user -u burrow -n 50"
+health >/dev/null || fail "the server did not start; see: tail -n 50 $LOG_DIR/server.log"
 
 if command -v tailscale >/dev/null; then
   say "publishing on the tailnet with tailscale serve"
