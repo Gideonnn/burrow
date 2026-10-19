@@ -13,6 +13,7 @@ import { openDb } from './db/client';
 import { mailboxes } from './db/schema';
 import { EventBus } from './events';
 import { MailService } from './mail/service';
+import { RoutineService } from './routines/service';
 import { InsightsService } from './triage/insights';
 import { TriageService } from './triage/service';
 
@@ -33,7 +34,7 @@ export function testHousehold() {
     events,
   );
   // The bot's answers, consumed in order; an Error makes that run fail.
-  const decisions: (TriageDecision | MessageInsights | Error)[] = [];
+  const decisions: (TriageDecision | MessageInsights | object | Error)[] = [];
   const agentRequests: AgentRequest[] = [];
   const catalog: Catalog = {
     bots: new Map([
@@ -79,12 +80,14 @@ export function testHousehold() {
       return next;
     },
   };
+  const routines = new RoutineService({ db, mail, catalog, runner });
   const triage = new TriageService({
     db,
     mail,
     bot: 'kreacher',
     catalog,
     runner,
+    onDecided: (id, decision) => routines.onTriaged(id, decision),
   });
   const insights = new InsightsService({
     db,
@@ -101,6 +104,7 @@ export function testHousehold() {
     events,
     triage,
     insights,
+    routines,
     onArrived: (ids) => arrived.push(...ids),
   });
 
@@ -146,6 +150,7 @@ export function testHousehold() {
     arrived,
     triage,
     insights,
+    routines,
     decisions,
     agentRequests,
     person,

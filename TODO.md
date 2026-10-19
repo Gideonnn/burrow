@@ -11,11 +11,21 @@ container, `cli init`, and the backup timer with its age recipients.
 create the secrets and change Dobby.
 **Scope:** about an hour, following `.agents/wiki/topics/deploy.md`.
 
-## Routines, task queue and runners on clients
+## Runner and Taken view in Hedwig
 
-**What:** Portkey routines as data (trigger plus task type plus skill), the task queue, and
-runners in client apps. Invoice processing is the first routine. **Why:** household
-automation beyond mail. **Scope:** design note first.
+**What:** a "Taken" list in Hedwig with approve and reject, and a runner in the app that
+claims client tasks while it is open and runs them with the local `claude` (absolute
+path, since GUI apps do not inherit the shell PATH).
+**Why:** the server side exists; clients cannot run or review tasks yet.
+**Scope:** one PR in `apps/hedwig-mac`.
+
+## Invoice routine
+
+**What:** a skill that reads an invoice (fields, PDF attachment), files it and proposes a
+line for the bookkeeping, run as a client routine with a server fallback. Needs
+attachment download in the providers and a decision about the bookkeeping package.
+**Why:** chosen by Gideon as the first household routine; deferred on purpose.
+**Scope:** design note first.
 
 ## Open-source readiness
 

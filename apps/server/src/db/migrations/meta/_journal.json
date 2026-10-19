@@ -36,6 +36,13 @@
       "when": 1792410368782,
       "tag": "0004_red_frank_castle",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1792410750615,
+      "tag": "0005_complete_anita_blake",
+      "breakpoints": true
     }
   ]
 }

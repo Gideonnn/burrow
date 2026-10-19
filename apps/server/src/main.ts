@@ -13,6 +13,7 @@ import { EventBus } from './events';
 import { Accounts } from './mail/accounts';
 import { startSyncLoop } from './mail/scheduler';
 import { MailService } from './mail/service';
+import { RoutineService } from './routines/service';
 import { InsightsService, LONG_MESSAGE } from './triage/insights';
 import { TriageService } from './triage/service';
 
@@ -54,6 +55,13 @@ const insights = new InsightsService({
   bot: config.triageBot,
   language: config.language,
 });
+const routines = new RoutineService({
+  db,
+  mail,
+  catalog,
+  runner,
+  language: config.language,
+});
 const triage = new TriageService({
   db,
   mail,
@@ -68,6 +76,7 @@ const triage = new TriageService({
     if (decision.action.kind === 'needs-reply' || body.length > LONG_MESSAGE) {
       insights.prefetch(messageId);
     }
+    routines.onTriaged(messageId, decision);
   },
 });
 const onArrived = (ids: string[]) => void triage.enqueue(ids);
@@ -81,12 +90,14 @@ const app = createApp({
   triage,
   catalog,
   insights,
+  routines,
   onArrived,
 });
 
 startSyncLoop(mail, onArrived);
 void triage.retryUntriaged();
 setInterval(() => void triage.retryUntriaged(), RETRY_EVERY_MS).unref();
+setInterval(() => routines.tick(), 60_000).unref();
 
 serve(
   { fetch: app.fetch, port: config.port, hostname: config.host },

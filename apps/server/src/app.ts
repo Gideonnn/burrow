@@ -15,7 +15,9 @@ import { draftRoutes } from './routes/drafts';
 import { insightsRoutes } from './routes/insights';
 import { mailRoutes } from './routes/mail';
 import { mcpRoutes } from './routes/mcp';
+import { routineRoutes } from './routes/routines';
 import { triageRoutes } from './routes/triage';
+import type { RoutineService } from './routines/service';
 import type { InsightsService } from './triage/insights';
 import type { TriageService } from './triage/service';
 
@@ -30,6 +32,7 @@ export type AppOptions = {
   triage?: TriageService;
   catalog?: Catalog;
   insights?: InsightsService;
+  routines?: RoutineService;
 };
 
 export function createApp({
@@ -42,6 +45,7 @@ export function createApp({
   triage,
   catalog,
   insights,
+  routines,
 }: AppOptions) {
   const app = new Hono<AppEnv>();
 
@@ -66,6 +70,7 @@ export function createApp({
   if (triage) api.route('/', triageRoutes(triage));
   if (catalog) api.route('/', catalogRoutes(catalog));
   if (insights) api.route('/', insightsRoutes(insights));
+  if (routines) api.route('/', routineRoutes(routines));
   if (accounts) {
     const connect = connectRoutes(accounts);
     api.route('/', connect.api);
