@@ -160,3 +160,15 @@ export const drafts = sqliteTable('drafts', {
   body: text('body').notNull(),
   createdAt: createdAt(),
 });
+
+export const messageInsights = sqliteTable('message_insights', {
+  messageId: text('message_id')
+    .primaryKey()
+    .references(() => messages.id, { onDelete: 'cascade' }),
+  bot: text('bot').notNull(),
+  summary: text('summary'),
+  replies: text('replies', { mode: 'json' })
+    .$type<{ label: string; body: string }[]>()
+    .notNull(),
+  createdAt: createdAt(),
+});

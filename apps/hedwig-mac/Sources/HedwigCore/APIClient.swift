@@ -105,6 +105,11 @@ public struct APIClient: Sendable {
         let _: Empty = try await call("POST", "api/send", body: request)
     }
 
+    /// Summary and reply suggestions; the server asks the bot once and caches it.
+    public func insights(messageId: String) async throws -> MessageInsights {
+        try await call("GET", "api/messages/\(messageId)/insights")
+    }
+
     public func filtered() async throws -> [FilteredEntry] { try await call("GET", "api/filtered") }
 
     public func confirm(_ ids: [String]) async throws {

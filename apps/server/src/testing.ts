@@ -1,12 +1,19 @@
-import type { MailProvider, Right, TriageDecision } from '@burrow/contracts';
+import type {
+  MailProvider,
+  MessageInsights,
+  Right,
+  TriageDecision,
+} from '@burrow/contracts';
 import { FakeProvider } from '@burrow/hedwig';
 import { createKey, createPerson } from './access/service';
-import type { AgentRequest } from './agents/runner';
+import type { AgentRequest, AgentRunner } from './agents/runner';
 import { createApp } from './app';
+import type { Catalog } from './catalog/loadCatalog';
 import { openDb } from './db/client';
 import { mailboxes } from './db/schema';
 import { EventBus } from './events';
 import { MailService } from './mail/service';
+import { InsightsService } from './triage/insights';
 import { TriageService } from './triage/service';
 
 // A fresh in-memory household for one test: an app, a database, a fake
@@ -26,48 +33,65 @@ export function testHousehold() {
     events,
   );
   // The bot's answers, consumed in order; an Error makes that run fail.
-  const decisions: (TriageDecision | Error)[] = [];
+  const decisions: (TriageDecision | MessageInsights | Error)[] = [];
   const agentRequests: AgentRequest[] = [];
+  const catalog: Catalog = {
+    bots: new Map([
+      [
+        'kreacher',
+        {
+          name: 'kreacher',
+          displayName: 'Kreacher',
+          description: 'Sorts mail.',
+          model: 'haiku',
+          skills: ['sorting-hat', 'reply-suggestions'],
+          rights: ['read', 'organize', 'draft'],
+          persona: 'You are Kreacher.',
+        },
+      ],
+    ]),
+    skills: new Map([
+      [
+        'sorting-hat',
+        {
+          name: 'sorting-hat',
+          description: 'Sorts.',
+          instructions: 'Sort it.',
+        },
+      ],
+      [
+        'reply-suggestions',
+        {
+          name: 'reply-suggestions',
+          description: 'Suggests.',
+          instructions: 'Suggest replies.',
+        },
+      ],
+    ]),
+  };
+  const runner: AgentRunner = {
+    name: 'fake',
+    run: async (request) => {
+      agentRequests.push(request);
+      const next = decisions.shift();
+      if (!next || next instanceof Error)
+        throw next ?? new Error('no decision queued');
+      return next;
+    },
+  };
   const triage = new TriageService({
     db,
     mail,
     bot: 'kreacher',
-    catalog: {
-      bots: new Map([
-        [
-          'kreacher',
-          {
-            name: 'kreacher',
-            displayName: 'Kreacher',
-            description: 'Sorts mail.',
-            model: 'haiku',
-            skills: ['sorting-hat'],
-            rights: ['read', 'organize', 'draft'],
-            persona: 'You are Kreacher.',
-          },
-        ],
-      ]),
-      skills: new Map([
-        [
-          'sorting-hat',
-          {
-            name: 'sorting-hat',
-            description: 'Sorts.',
-            instructions: 'Sort it.',
-          },
-        ],
-      ]),
-    },
-    runner: {
-      name: 'fake',
-      run: async (request) => {
-        agentRequests.push(request);
-        const next = decisions.shift();
-        if (!next || next instanceof Error)
-          throw next ?? new Error('no decision queued');
-        return next;
-      },
-    },
+    catalog,
+    runner,
+  });
+  const insights = new InsightsService({
+    db,
+    mail,
+    bot: 'kreacher',
+    catalog,
+    runner,
   });
   const arrived: string[] = [];
   const app = createApp({
@@ -76,6 +100,7 @@ export function testHousehold() {
     mail,
     events,
     triage,
+    insights,
     onArrived: (ids) => arrived.push(...ids),
   });
 
@@ -120,6 +145,7 @@ export function testHousehold() {
     events,
     arrived,
     triage,
+    insights,
     decisions,
     agentRequests,
     person,

@@ -23,6 +23,8 @@ public final class AppModel {
         didSet { if oldValue != selectedMessageId { Task { await openSelected() } } }
     }
     public private(set) var detail: MessageDetail?
+    public private(set) var insights: MessageInsights?
+    public private(set) var insightsLoading = false
     public private(set) var filtered: [FilteredEntry] = []
     public var selectedFilteredId: String?
     public private(set) var drafts: [Draft] = []
@@ -92,6 +94,7 @@ public final class AppModel {
         case "filtered": selection = .filtered
         case "drafts": selection = .drafts
         case "archive": selection = .folder(.archive)
+        case let address?: if let box = me?.mailboxes.first(where: { $0.address == address }) { selection = .inbox(mailboxId: box.id) }
         default: break
         }
         await refreshCounts()
@@ -194,7 +197,13 @@ public final class AppModel {
                 message = try await api.apply([.markRead], to: id)
                 replace(message.summary)
             }
-            if selectedMessageId == id { detail = message }
+            if selectedMessageId == id {
+                detail = message
+                insights = nil
+                // The bot only gets asked when it is likely to help: mail that
+                // needs an answer, or long mail worth a summary.
+                if message.flagged || (message.bodyText?.count ?? 0) > 1_500 { await loadInsights() }
+            }
         } catch {
             self.error = error.localizedDescription
         }
@@ -346,5 +355,20 @@ public final class AppModel {
         let text = message.bodyText ?? message.snippet
         let quoted = text.split(separator: "\n", omittingEmptySubsequences: false).map { "> \($0)" }.joined(separator: "\n")
         return "Op \(date) schreef \(message.from.display):\n\(quoted)"
+    }
+}
+
+extension AppModel {
+    public func loadInsights() async {
+        guard let api, let id = detail?.id else { return }
+        insightsLoading = true
+        defer { insightsLoading = false }
+        if let result = try? await api.insights(messageId: id), detail?.id == id { insights = result }
+    }
+
+    public func compose(reply: MessageInsights.Reply) -> ComposeDraft? {
+        guard var draft = self.reply() else { return nil }
+        draft.body = reply.body + draft.body
+        return draft
     }
 }

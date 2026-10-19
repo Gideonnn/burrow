@@ -24,6 +24,7 @@ import { type MailService, toSummary } from '../mail/service';
 import { systemPrompt, triagePrompt } from './prompt';
 
 const MAX_ATTEMPTS = 3;
+const TRIAGE_SKILL = 'sorting-hat';
 const decisionSchema = z.toJSONSchema(triageDecision, { target: 'draft-7' });
 
 export class TriageError extends Error {}
@@ -35,6 +36,8 @@ export type TriageOptions = {
   catalog: Catalog;
   bot: string;
   language?: string;
+  // Called after a decision was applied and recorded.
+  onDecided?: (messageId: string, decision: TriageDecision) => void;
 };
 
 export class TriageService {
@@ -43,6 +46,14 @@ export class TriageService {
   constructor(private readonly o: TriageOptions) {
     const bot = o.catalog.bots.get(o.bot);
     if (!bot) throw new TriageError(`unknown triage bot "${o.bot}"`);
+    if (
+      !bot.skills.includes(TRIAGE_SKILL) ||
+      !o.catalog.skills.has(TRIAGE_SKILL)
+    ) {
+      throw new TriageError(
+        `bot "${o.bot}" needs the ${TRIAGE_SKILL} skill to triage`,
+      );
+    }
     if (!bot.rights.includes('organize')) {
       throw new TriageError(
         `bot "${o.bot}" lacks the organize right it needs to triage`,
@@ -100,10 +111,8 @@ export class TriageService {
 
     const raw = await runner.run({
       model: bot.model,
-      system: systemPrompt(
-        bot,
-        bot.skills.map((s) => catalog.skills.get(s)!),
-      ),
+      // One skill per run, so instructions for other jobs cannot leak in.
+      system: systemPrompt(bot, [catalog.skills.get(TRIAGE_SKILL)!]),
       prompt: triagePrompt({
         ownerName: owner.name,
         instructions: this.instructions(owner.id),
@@ -137,6 +146,7 @@ export class TriageService {
         .where(eq(messages.id, message.id))
         .run();
     });
+    this.o.onDecided?.(message.id, decision);
   }
 
   // Filtered mail waiting for review, unsure ones first, limited to the

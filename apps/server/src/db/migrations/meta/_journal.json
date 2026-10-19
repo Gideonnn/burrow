@@ -29,6 +29,13 @@
       "when": 1792409150916,
       "tag": "0003_magical_wild_child",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1792410368782,
+      "tag": "0004_red_frank_castle",
+      "breakpoints": true
     }
   ]
 }

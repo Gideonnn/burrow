@@ -12,6 +12,14 @@ struct MessageDetailView: View {
                 MessageHeader(message: message)
                     .padding(.horizontal, 24)
                     .padding(.vertical, 16)
+                if let summary = model.insights?.summary {
+                    Label(summary, systemImage: "sparkles")
+                        .padding(12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 10))
+                        .padding(.horizontal, 24)
+                        .padding(.bottom, 12)
+                }
                 Divider()
                 if let html = message.bodyHtml {
                     HTMLView(html: html)
@@ -24,6 +32,7 @@ struct MessageDetailView: View {
                     }
                 }
             }
+            .safeAreaInset(edge: .bottom) { SuggestionBar() }
         } else {
             ContentUnavailableView("Geen bericht geselecteerd", systemImage: "envelope")
         }
@@ -141,6 +150,43 @@ struct HTMLView: NSViewRepresentable {
             } else {
                 decisionHandler(.allow)
             }
+        }
+    }
+}
+
+/// Reply suggestions from the bot: each chip opens a ready reply to edit and
+/// send. Hidden when there is nothing to suggest.
+struct SuggestionBar: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some View {
+        let replies = model.insights?.replies ?? []
+        if model.me?.can(.send) == true, model.insightsLoading || !replies.isEmpty || model.insights == nil {
+            HStack(spacing: 8) {
+                Image(systemName: "sparkles").foregroundStyle(.secondary)
+                if model.insightsLoading {
+                    Text("Antwoorden bedenken…").foregroundStyle(.secondary)
+                    ProgressView().controlSize(.small)
+                } else if replies.isEmpty {
+                    Button("Stel antwoorden voor") { Task { await model.loadInsights() } }
+                        .buttonStyle(.borderless)
+                } else {
+                    ForEach(replies, id: \.self) { reply in
+                        Button(reply.label) {
+                            if let draft = model.compose(reply: reply) { openWindow(value: draft) }
+                        }
+                        .buttonStyle(.bordered)
+                        .clipShape(Capsule())
+                        .fixedSize()
+                    }
+                }
+                Spacer()
+            }
+            .font(.callout)
+            .padding(.horizontal, 24)
+            .padding(.vertical, 12)
+            .background(.bar)
         }
     }
 }

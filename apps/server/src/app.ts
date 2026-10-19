@@ -12,9 +12,11 @@ import { accessRoutes } from './routes/access';
 import { catalogRoutes } from './routes/catalog';
 import { connectRoutes } from './routes/connect';
 import { draftRoutes } from './routes/drafts';
+import { insightsRoutes } from './routes/insights';
 import { mailRoutes } from './routes/mail';
 import { mcpRoutes } from './routes/mcp';
 import { triageRoutes } from './routes/triage';
+import type { InsightsService } from './triage/insights';
 import type { TriageService } from './triage/service';
 
 export type AppOptions = {
@@ -27,6 +29,7 @@ export type AppOptions = {
   accounts?: Accounts;
   triage?: TriageService;
   catalog?: Catalog;
+  insights?: InsightsService;
 };
 
 export function createApp({
@@ -38,6 +41,7 @@ export function createApp({
   accounts,
   triage,
   catalog,
+  insights,
 }: AppOptions) {
   const app = new Hono<AppEnv>();
 
@@ -61,6 +65,7 @@ export function createApp({
     .route('/', mcpRoutes(version));
   if (triage) api.route('/', triageRoutes(triage));
   if (catalog) api.route('/', catalogRoutes(catalog));
+  if (insights) api.route('/', insightsRoutes(insights));
   if (accounts) {
     const connect = connectRoutes(accounts);
     api.route('/', connect.api);

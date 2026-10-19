@@ -40,3 +40,15 @@ export const learnedRule = z.object({
   createdAt: z.iso.datetime(),
 });
 export type LearnedRule = z.infer<typeof learnedRule>;
+
+// What the bot offers next to a message: a short summary for long mail, and
+// complete replies the owner can send after reading them.
+export const messageInsights = z.object({
+  summary: z.string().nullable(),
+  replies: z
+    .array(
+      z.object({ label: z.string().min(1).max(40), body: z.string().min(1) }),
+    )
+    .max(3),
+});
+export type MessageInsights = z.infer<typeof messageInsights>;
