@@ -1,0 +1,28 @@
+{
+  "name": "burrow",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "dev:server": "turbo run dev --filter=@burrow/server",
+    "test": "turbo run test",
+    "typecheck": "turbo run typecheck",
+    "lint": "oxlint .",
+    "lint:fix": "oxlint . --fix",
+    "format": "oxfmt .",
+    "format:check": "oxfmt --check ."
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "oxfmt": "^0.73.0",
+    "oxlint": "^1.88.0",
+    "turbo": "^2.11.9",
+    "typescript": "^7.0.2"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@9.15.0"
+}

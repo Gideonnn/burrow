@@ -1,0 +1,2822 @@
+<!doctype html>
+<html lang="nl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mail · ontwerp v2</title>
+    <style>
+      :root {
+        --font:
+          -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue',
+          sans-serif;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: var(--font);
+        background: #f2f2f4;
+        color: #1d1d1f;
+        -webkit-font-smoothing: antialiased;
+      }
+      button {
+        font: inherit;
+        color: inherit;
+      }
+
+      .doc {
+        max-width: 1320px;
+        margin: 0 auto;
+        padding: 32px 24px 80px;
+      }
+      .doc h1 {
+        font-size: 28px;
+        margin: 0 0 6px;
+        letter-spacing: -0.02em;
+      }
+      .doc .lead {
+        color: #5b5b61;
+        margin: 0 0 20px;
+        max-width: 880px;
+        line-height: 1.5;
+      }
+      .tabs {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin-bottom: 18px;
+      }
+      .tab {
+        border: 1px solid #d6d6db;
+        background: #fff;
+        border-radius: 999px;
+        padding: 6px 14px;
+        cursor: pointer;
+        font-size: 13px;
+      }
+      .tab.active {
+        background: #1d1d1f;
+        color: #fff;
+        border-color: #1d1d1f;
+      }
+      .stage {
+        overflow-x: auto;
+        padding: 8px 4px 28px;
+      }
+      .note {
+        background: #fff;
+        border: 1px solid #e2e2e6;
+        border-radius: 12px;
+        padding: 16px 20px;
+        line-height: 1.55;
+        font-size: 14px;
+        max-width: 1280px;
+        margin: 0 auto;
+      }
+      .note h3 {
+        margin: 0 0 6px;
+        font-size: 15px;
+      }
+      .note ul {
+        margin: 6px 0 0;
+        padding-left: 20px;
+      }
+      section.block {
+        margin: 36px auto 0;
+        max-width: 1280px;
+      }
+      section.block h2 {
+        font-size: 20px;
+        margin: 0 0 4px;
+      }
+      section.block > p {
+        color: #5b5b61;
+        margin: 0 0 14px;
+        line-height: 1.5;
+      }
+      .cols {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+      .card {
+        background: #fff;
+        border: 1px solid #e2e2e6;
+        border-radius: 12px;
+        padding: 16px 20px;
+        font-size: 14px;
+        line-height: 1.5;
+      }
+      .card h3 {
+        margin: 0 0 8px;
+        font-size: 15px;
+      }
+      .card ul {
+        margin: 0;
+        padding-left: 18px;
+      }
+      table.map {
+        width: 100%;
+        border-collapse: collapse;
+        background: #fff;
+        border: 1px solid #e2e2e6;
+        border-radius: 12px;
+        overflow: hidden;
+        font-size: 13.5px;
+      }
+      table.map th,
+      table.map td {
+        text-align: left;
+        padding: 9px 14px;
+        border-bottom: 1px solid #ececef;
+        vertical-align: top;
+        line-height: 1.45;
+      }
+      table.map th {
+        background: #f7f7f9;
+        font-weight: 600;
+      }
+      .decision {
+        background: #fff;
+        border: 1px solid #e2e2e6;
+        border-radius: 12px;
+        padding: 14px 18px;
+        margin-bottom: 10px;
+        font-size: 14px;
+      }
+      .decision h3 {
+        margin: 0 0 2px;
+        font-size: 15px;
+      }
+      .decision .why {
+        color: #6e6e73;
+        margin: 0 0 8px;
+        line-height: 1.45;
+      }
+      .decision label {
+        display: flex;
+        gap: 8px;
+        padding: 4px 0;
+        cursor: pointer;
+        line-height: 1.4;
+      }
+      .decision label input {
+        margin-top: 3px;
+      }
+      .rec {
+        color: #0a64d8;
+        font-weight: 600;
+      }
+      textarea.remarks {
+        width: 100%;
+        min-height: 90px;
+        border: 1px solid #d6d6db;
+        border-radius: 10px;
+        padding: 10px 12px;
+        font: inherit;
+        font-size: 14px;
+      }
+      .copy {
+        margin-top: 10px;
+        background: #0a64d8;
+        color: #fff;
+        border: 0;
+        border-radius: 8px;
+        padding: 9px 16px;
+        cursor: pointer;
+        font-weight: 600;
+      }
+      .diagram {
+        font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+        font-size: 12.5px;
+        background: #1c1c1e;
+        color: #e8e8ea;
+        border-radius: 12px;
+        padding: 18px 20px;
+        line-height: 1.5;
+        white-space: pre;
+        overflow-x: auto;
+      }
+
+      .window {
+        --side: #2b2b2e;
+        --list: #1f1f21;
+        --reader: #1c1c1e;
+        --line: #343438;
+        --text: #f2f2f4;
+        --muted: #9b9ba1;
+        --faint: #6c6c72;
+        --sel: #3a3a3e;
+        --sel-active: #0a64d8;
+        --pill: #2c2c2f;
+        --pill-line: #3d3d41;
+        --accent: #3b8cff;
+        --chip: #2a2a2d;
+        --card: #242427;
+        --warn: #ffb340;
+        --ok: #30d158;
+        --shadow:
+          0 30px 80px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.08);
+        width: 1280px;
+        height: 800px;
+        border-radius: 14px;
+        overflow: hidden;
+        position: relative;
+        display: grid;
+        grid-template-columns: 240px 380px 1fr;
+        background: var(--reader);
+        color: var(--text);
+        box-shadow: var(--shadow);
+        font-size: 13px;
+        margin: 0 auto;
+      }
+      .window.light {
+        --side: #e9e8ec;
+        --list: #ffffff;
+        --reader: #ffffff;
+        --line: #e4e4e7;
+        --text: #1d1d1f;
+        --muted: #6e6e73;
+        --faint: #a1a1a6;
+        --sel: #dcdce1;
+        --pill: #f4f4f6;
+        --pill-line: #dcdce0;
+        --accent: #0a64d8;
+        --chip: #f1f1f4;
+        --card: #f6f6f8;
+        --warn: #c27400;
+        --ok: #1f9d45;
+        --shadow: 0 30px 80px rgba(0, 0, 0, 0.18), 0 0 0 1px rgba(0, 0, 0, 0.1);
+      }
+      svg.i {
+        width: 18px;
+        height: 18px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.6;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        flex: none;
+      }
+      svg.i.sm {
+        width: 15px;
+        height: 15px;
+      }
+
+      .side {
+        background: var(--side);
+        padding: 14px 10px 12px;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+      }
+      .side-top {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 2px 6px 10px;
+      }
+      .light-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+      }
+      .side-top .grow {
+        flex: 1;
+      }
+      .side-label {
+        color: var(--faint);
+        font-size: 11px;
+        font-weight: 600;
+        padding: 10px 8px 4px;
+      }
+      .side-item {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 6px 8px;
+        border-radius: 7px;
+        cursor: pointer;
+        font-size: 13.5px;
+      }
+      .side-item:hover {
+        background: rgba(127, 127, 127, 0.12);
+      }
+      .side-item.active {
+        background: var(--sel);
+      }
+      .side-item .count {
+        margin-left: auto;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .side-item .count.badge {
+        background: var(--warn);
+        color: #1d1d1f;
+        border-radius: 999px;
+        padding: 0 7px;
+        font-weight: 600;
+      }
+      .side-item .ic {
+        color: var(--accent);
+        display: flex;
+      }
+      .side-item small {
+        color: var(--muted);
+        font-size: 11px;
+        display: block;
+        margin-top: 1px;
+      }
+      .adot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        flex: none;
+        display: inline-block;
+      }
+      .side-foot {
+        margin-top: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .agent-status {
+        background: rgba(127, 127, 127, 0.1);
+        border-radius: 10px;
+        padding: 9px 10px;
+        font-size: 12px;
+        color: var(--muted);
+        line-height: 1.4;
+      }
+      .agent-status b {
+        color: var(--text);
+        font-weight: 600;
+      }
+      .pulse {
+        display: inline-block;
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--ok);
+        margin-right: 6px;
+        flex: none;
+      }
+      .side-actions {
+        display: flex;
+        gap: 4px;
+      }
+      .side-actions button {
+        flex: 1;
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        justify-content: center;
+        background: transparent;
+        border: 0;
+        padding: 6px;
+        border-radius: 7px;
+        cursor: pointer;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .side-actions button:hover {
+        background: rgba(127, 127, 127, 0.12);
+        color: var(--text);
+      }
+
+      .list {
+        background: var(--list);
+        border-right: 1px solid var(--line);
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+      }
+      .list-head {
+        display: flex;
+        align-items: center;
+        padding: 12px 12px 10px 18px;
+        gap: 8px;
+        border-bottom: 1px solid var(--line);
+        min-height: 58px;
+      }
+      .list-head .t {
+        font-weight: 700;
+        font-size: 14.5px;
+      }
+      .list-head .s {
+        color: var(--muted);
+        font-size: 12px;
+        margin-top: 1px;
+      }
+      .list-head .grow {
+        flex: 1;
+      }
+      .pill {
+        display: flex;
+        align-items: center;
+        background: var(--pill);
+        border: 1px solid var(--pill-line);
+        border-radius: 999px;
+        height: 32px;
+        padding: 0 4px;
+      }
+      .pill button { white-space: nowrap;
+        background: transparent;
+        border: 0;
+        height: 28px;
+        min-width: 32px;
+        padding: 0 8px;
+        border-radius: 999px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        cursor: pointer;
+        color: var(--muted);
+        font-size: 12.5px;
+      }
+      .pill button:hover {
+        color: var(--text);
+        background: rgba(127, 127, 127, 0.15);
+      }
+      .pill button.on {
+        color: var(--accent);
+      }
+      .pill button.go {
+        color: var(--ok);
+        font-weight: 600;
+      }
+      .pill .sep {
+        width: 1px;
+        height: 16px;
+        background: var(--pill-line);
+      }
+      .rows {
+        overflow-y: auto;
+        flex: 1;
+      }
+      .row {
+        position: relative;
+        padding: 10px 14px 11px 28px;
+        cursor: pointer;
+      }
+      .row::after {
+        content: '';
+        position: absolute;
+        left: 28px;
+        right: 14px;
+        bottom: 0;
+        height: 1px;
+        background: var(--line);
+      }
+      .row.sel {
+        background: var(--sel-active);
+        color: #fff;
+        border-radius: 8px;
+        margin: 0 6px;
+        padding-left: 22px;
+        padding-right: 8px;
+      }
+      .row.sel::after {
+        display: none;
+      }
+      .row .udot {
+        position: absolute;
+        left: 11px;
+        top: 15px;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--accent);
+      }
+      .row.sel .udot {
+        left: 6px;
+        background: #fff;
+      }
+      .r1 {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+      }
+      .r1 .from {
+        font-weight: 700;
+        font-size: 14px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .r1 .time {
+        margin-left: auto;
+        color: var(--muted);
+        font-size: 12px;
+        white-space: nowrap;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .row.sel .time,
+      .row.sel .prev,
+      .row.sel .why-line {
+        color: rgba(255, 255, 255, 0.82);
+      }
+      .subj {
+        font-size: 13px;
+        margin-top: 2px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .prev {
+        color: var(--muted);
+        font-size: 12.5px;
+        margin-top: 2px;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        line-height: 1.38;
+      }
+      .tags {
+        display: flex;
+        gap: 5px;
+        margin-top: 6px;
+      }
+      .tag {
+        font-size: 11px;
+        padding: 1px 7px;
+        border-radius: 999px;
+        background: var(--chip);
+        color: var(--muted);
+        border: 1px solid var(--line);
+        white-space: nowrap;
+      }
+      .tag.reply,
+      .tag.unsure,
+      .tag.due {
+        color: var(--warn);
+        border-color: color-mix(in srgb, var(--warn) 40%, transparent);
+        background: color-mix(in srgb, var(--warn) 10%, transparent);
+      }
+      .tag.agent {
+        color: var(--accent);
+        border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+        background: color-mix(in srgb, var(--accent) 10%, transparent);
+      }
+      .row.sel .tag {
+        color: #fff;
+        border-color: rgba(255, 255, 255, 0.4);
+        background: rgba(255, 255, 255, 0.12);
+      }
+      .why-line {
+        font-size: 12px;
+        color: var(--muted);
+        margin-top: 4px;
+        display: flex;
+        gap: 5px;
+        align-items: flex-start;
+      }
+      .rv {
+        display: flex;
+        gap: 6px;
+        margin-top: 8px;
+        align-items: center;
+      }
+      .rv button {
+        border: 1px solid var(--pill-line);
+        background: var(--pill);
+        border-radius: 999px;
+        padding: 3px 10px;
+        font-size: 12px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .rv button.okb {
+        color: var(--ok);
+      }
+      .row.sel .rv button {
+        background: rgba(255, 255, 255, 0.15);
+        border-color: rgba(255, 255, 255, 0.35);
+        color: #fff;
+      }
+      .done-note {
+        padding: 40px 24px;
+        text-align: center;
+        color: var(--muted);
+        line-height: 1.5;
+      }
+      .done-note b {
+        display: block;
+        color: var(--text);
+        font-size: 15px;
+        margin-bottom: 4px;
+      }
+
+      .reader {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        position: relative;
+      }
+      .toolbar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 14px 10px;
+        min-height: 58px;
+      }
+      .toolbar .grow {
+        flex: 1;
+      }
+      .search {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        height: 32px;
+        border-radius: 999px;
+        background: var(--pill);
+        border: 1px solid var(--pill-line);
+        padding: 0 12px;
+        width: 300px;
+        color: var(--muted);
+      }
+      .search input {
+        background: transparent;
+        border: 0;
+        outline: none;
+        color: var(--text);
+        font: inherit;
+        width: 100%;
+      }
+      .content {
+        overflow-y: auto;
+        flex: 1;
+        padding: 6px 40px 40px;
+      }
+      .empty {
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--faint);
+        font-size: 26px;
+        font-weight: 300;
+      }
+      .mhead {
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+        padding: 8px 0 14px;
+        border-bottom: 1px solid var(--line);
+      }
+      .avatar {
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        color: #fff;
+        flex: none;
+        font-size: 14px;
+      }
+      .mhead .who {
+        font-weight: 700;
+        font-size: 14px;
+      }
+      .mhead .meta {
+        color: var(--muted);
+        font-size: 12px;
+        margin-top: 2px;
+      }
+      .mhead .date {
+        margin-left: auto;
+        color: var(--muted);
+        font-size: 12px;
+        text-align: right;
+      }
+      .msubj {
+        font-size: 19px;
+        font-weight: 700;
+        margin: 16px 0 12px;
+        letter-spacing: -0.01em;
+      }
+      .ai-card {
+        border: 1px solid var(--line);
+        background: var(--card);
+        border-radius: 10px;
+        padding: 10px 14px;
+        margin: 0 0 16px;
+        line-height: 1.5;
+        max-width: 720px;
+      }
+      .ai-card .lbl {
+        color: var(--accent);
+        font-size: 11.5px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        margin-bottom: 3px;
+      }
+      .ai-card.warn .lbl {
+        color: var(--warn);
+      }
+      .ai-card .acts {
+        display: flex;
+        gap: 8px;
+        margin-top: 10px;
+        flex-wrap: wrap;
+      }
+      .ai-card .server {
+        margin-top: 8px;
+        font-size: 12px;
+        color: var(--muted);
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .ai-card .server span {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+      }
+      .body {
+        line-height: 1.6;
+        font-size: 14px;
+        max-width: 720px;
+      }
+      .body p {
+        margin: 0 0 12px;
+      }
+      .attach {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 8px 12px;
+        margin: 4px 0 16px;
+        background: var(--card);
+        font-size: 12.5px;
+      }
+      .suggest {
+        margin-top: 22px;
+        padding-top: 16px;
+        border-top: 1px solid var(--line);
+        max-width: 720px;
+      }
+      .suggest .lbl {
+        color: var(--muted);
+        font-size: 12px;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        margin-bottom: 8px;
+      }
+      .chips {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .chip {
+        border: 1px solid var(--pill-line);
+        background: var(--pill);
+        border-radius: 999px;
+        padding: 7px 14px;
+        cursor: pointer;
+        font-size: 13px;
+      }
+      .chip:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+      .chip.ghost {
+        background: transparent;
+        color: var(--muted);
+      }
+      .btn {
+        border: 1px solid var(--pill-line);
+        background: var(--pill);
+        border-radius: 8px;
+        padding: 6px 12px;
+        cursor: pointer;
+        font-size: 12.5px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        white-space: nowrap;
+      }
+      .btn.sm {
+        padding: 4px 9px;
+        font-size: 12px;
+      }
+      .btn.primary {
+        background: var(--sel-active);
+        border-color: var(--sel-active);
+        color: #fff;
+        font-weight: 600;
+      }
+      .btn.good {
+        color: var(--ok);
+      }
+      .btn:hover {
+        filter: brightness(1.1);
+      }
+      kbd {
+        font-family: inherit;
+        font-size: 11px;
+        border: 1px solid var(--pill-line);
+        border-bottom-width: 2px;
+        border-radius: 4px;
+        padding: 0 4px;
+        color: var(--muted);
+      }
+
+      /* Overzicht */
+      .home {
+        grid-column: 2 / span 2;
+        overflow-y: auto;
+        padding: 22px 32px 40px;
+        background: var(--reader);
+      }
+      .home-head {
+        display: flex;
+        align-items: flex-end;
+        gap: 12px;
+      }
+      .home-head h1 {
+        margin: 0;
+        font-size: 24px;
+        letter-spacing: -0.02em;
+      }
+      .home-head .grow {
+        flex: 1;
+      }
+      .home .lead2 {
+        color: var(--muted);
+        margin: 4px 0 0;
+        font-size: 13.5px;
+      }
+      .home .lead2 b {
+        color: var(--text);
+      }
+      .mb-cards {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10px;
+        margin: 18px 0 24px;
+      }
+      .mb {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 12px 14px;
+        cursor: pointer;
+      }
+      .mb:hover {
+        border-color: var(--pill-line);
+        filter: brightness(1.08);
+      }
+      .mb .nm {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        font-weight: 600;
+        font-size: 13.5px;
+      }
+      .mb .nm .work {
+        margin-left: auto;
+        font-size: 10.5px;
+        font-weight: 600;
+        color: var(--muted);
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 0 6px;
+      }
+      .mb .ad {
+        color: var(--muted);
+        font-size: 11.5px;
+        margin-top: 1px;
+      }
+      .mb .nums {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        margin-top: 10px;
+      }
+      .mb .nums b {
+        display: block;
+        font-size: 18px;
+        font-weight: 650;
+      }
+      .mb .nums b.todo-n {
+        color: var(--warn);
+      }
+      .mb .nums span {
+        font-size: 11px;
+        color: var(--muted);
+      }
+      .mb .bar {
+        height: 5px;
+        border-radius: 3px;
+        background: var(--line);
+        margin-top: 10px;
+        overflow: hidden;
+        display: flex;
+      }
+      .mb .bar i {
+        display: block;
+        height: 100%;
+      }
+      .mb .ruis {
+        font-size: 11px;
+        color: var(--muted);
+        margin-top: 5px;
+      }
+      .home-grid > div { min-width: 0; }
+      .home-grid {
+        display: grid;
+        grid-template-columns: 1.55fr 1fr;
+        gap: 24px;
+        align-items: start;
+      }
+      .sec-h {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        margin: 0 0 8px;
+      }
+      .sec-h h3 {
+        margin: 0;
+        font-size: 11.5px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--faint);
+      }
+      .sec-h .n {
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .sec-h .grow {
+        flex: 1;
+      }
+      .todo {
+        display: flex;
+        gap: 10px;
+        padding: 10px 12px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--card);
+        margin-bottom: 6px;
+        cursor: pointer;
+        align-items: center;
+      }
+      .todo:hover {
+        border-color: var(--pill-line);
+      }
+      .todo .main {
+        flex: 1;
+        min-width: 0;
+      }
+      .todo .l1 { white-space: nowrap; overflow: hidden;
+        display: flex;
+        gap: 7px;
+        align-items: center;
+        font-weight: 600;
+        font-size: 13.5px;
+      }
+      .todo .l1 .s {
+        font-weight: 400;
+        color: var(--muted);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .todo .l2 {
+        font-size: 12.5px;
+        color: var(--muted);
+        margin-top: 3px;
+        display: flex;
+        gap: 6px;
+        align-items: center;
+      }
+      .todo .acts {
+        display: flex;
+        gap: 6px;
+        flex: none;
+      }
+      .side-card {
+        border: 1px solid var(--line);
+        background: var(--card);
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-bottom: 14px;
+        line-height: 1.5;
+      }
+      .side-card .big {
+        font-size: 26px;
+        font-weight: 650;
+        letter-spacing: -0.02em;
+      }
+      .side-card .rowx {
+        display: flex;
+        justify-content: space-between;
+        font-size: 12.5px;
+        color: var(--muted);
+        padding: 2px 0;
+      }
+      .side-card .rowx b {
+        color: var(--text);
+        font-weight: 500;
+      }
+      .side-card ul {
+        margin: 4px 0 0;
+        padding-left: 16px;
+        font-size: 12.5px;
+      }
+      .side-card li {
+        margin-bottom: 4px;
+      }
+      .side-card .acct {
+        font-size: 12px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 8px;
+      }
+
+      .composer {
+        position: absolute;
+        right: 48px;
+        bottom: 34px;
+        width: 640px;
+        background: var(--reader);
+        border-radius: 12px;
+        box-shadow:
+          0 24px 70px rgba(0, 0, 0, 0.5),
+          0 0 0 1px var(--pill-line);
+        display: flex;
+        flex-direction: column;
+        z-index: 5;
+      }
+      .c-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 14px;
+        border-bottom: 1px solid var(--line);
+        font-weight: 600;
+      }
+      .c-head .grow {
+        flex: 1;
+      }
+      .c-field {
+        display: flex;
+        gap: 8px;
+        padding: 8px 16px;
+        border-bottom: 1px solid var(--line);
+        color: var(--muted);
+        align-items: center;
+      }
+      .c-field span.v {
+        color: var(--text);
+      }
+      .c-field select {
+        background: transparent;
+        color: var(--text);
+        border: 0;
+        font: inherit;
+      }
+      .c-body {
+        padding: 14px 16px;
+        min-height: 210px;
+        outline: none;
+        line-height: 1.6;
+        font-size: 14px;
+        white-space: pre-wrap;
+      }
+      .c-foot {
+        display: flex;
+        gap: 8px;
+        padding: 10px 14px;
+        border-top: 1px solid var(--line);
+        align-items: center;
+      }
+      .c-foot .grow {
+        flex: 1;
+      }
+      .c-note {
+        font-size: 11.5px;
+        color: var(--muted);
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+
+      .overlay {
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.35);
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+        z-index: 6;
+        padding-top: 70px;
+      }
+      .sheet {
+        width: 480px;
+        background: var(--reader);
+        border-radius: 14px;
+        box-shadow:
+          0 24px 70px rgba(0, 0, 0, 0.5),
+          0 0 0 1px var(--pill-line);
+        padding: 22px 24px;
+      }
+      .sheet h3 {
+        margin: 0 0 4px;
+        font-size: 16px;
+      }
+      .sheet p {
+        color: var(--muted);
+        margin: 0 0 16px;
+        line-height: 1.45;
+      }
+      .providers {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 10px;
+      }
+      .provider {
+        border: 1px solid var(--pill-line);
+        background: var(--card);
+        border-radius: 12px;
+        padding: 14px 10px;
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        align-items: center;
+        font-size: 14px;
+        font-weight: 600;
+      }
+      .provider:hover {
+        border-color: var(--accent);
+      }
+      .provider .logo {
+        width: 34px;
+        height: 34px;
+        border-radius: 9px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-weight: 800;
+        font-size: 15px;
+      }
+      .provider small {
+        display: block;
+        font-weight: 400;
+        color: var(--muted);
+        font-size: 11.5px;
+        text-align: center;
+      }
+      .sheet .foot {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        margin-top: 18px;
+      }
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        margin-bottom: 12px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .field input {
+        background: var(--card);
+        border: 1px solid var(--pill-line);
+        border-radius: 8px;
+        padding: 8px 10px;
+        color: var(--text);
+        font: inherit;
+        font-size: 13px;
+      }
+      .spinner {
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        border: 2.5px solid var(--pill-line);
+        border-top-color: var(--accent);
+        animation: spin 0.9s linear infinite;
+        margin: 8px auto 14px;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .settings {
+        grid-column: 2 / span 2;
+        display: grid;
+        grid-template-columns: 200px 1fr;
+        min-height: 0;
+        background: var(--reader);
+      }
+      .s-nav {
+        border-right: 1px solid var(--line);
+        padding: 18px 10px;
+        background: var(--list);
+      }
+      .s-main {
+        overflow-y: auto;
+        padding: 22px 36px 40px;
+      }
+      .s-main h2 {
+        margin: 0 0 4px;
+        font-size: 20px;
+      }
+      .s-main .sub {
+        color: var(--muted);
+        margin: 0 0 18px;
+        line-height: 1.45;
+        max-width: 640px;
+      }
+      .s-sec {
+        margin-bottom: 24px;
+        max-width: 700px;
+      }
+      .s-sec h4 {
+        margin: 0 0 8px;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--faint);
+        display: flex;
+        gap: 6px;
+        align-items: center;
+      }
+      .instr {
+        width: 100%;
+        min-height: 150px;
+        background: var(--card);
+        border: 1px solid var(--pill-line);
+        border-radius: 10px;
+        padding: 12px 14px;
+        color: var(--text);
+        font: inherit;
+        line-height: 1.55;
+        font-size: 13.5px;
+        resize: vertical;
+      }
+      .lrow {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 9px 12px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        margin-bottom: 6px;
+        background: var(--card);
+      }
+      .lrow .grow {
+        flex: 1;
+        line-height: 1.4;
+      }
+      .lrow small {
+        color: var(--muted);
+        display: block;
+        font-size: 11.5px;
+      }
+      .x {
+        background: transparent;
+        border: 0;
+        color: var(--muted);
+        cursor: pointer;
+        font-size: 15px;
+      }
+      .switch {
+        width: 34px;
+        height: 20px;
+        border-radius: 999px;
+        background: #34c759;
+        position: relative;
+        flex: none;
+        cursor: pointer;
+        border: 0;
+      }
+      .switch::after {
+        content: '';
+        position: absolute;
+        top: 2px;
+        left: 16px;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: #fff;
+        transition: left 0.15s;
+      }
+      .switch.off {
+        background: var(--pill-line);
+      }
+      .switch.off::after {
+        left: 2px;
+      }
+      .seg {
+        display: inline-flex;
+        border: 1px solid var(--pill-line);
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      .seg button {
+        border: 0;
+        background: var(--card);
+        padding: 5px 10px;
+        cursor: pointer;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .seg button.on {
+        background: var(--sel-active);
+        color: #fff;
+      }
+      .meter {
+        display: flex;
+        gap: 18px;
+        color: var(--muted);
+        font-size: 12.5px;
+      }
+      .meter b {
+        color: var(--text);
+        display: block;
+        font-size: 16px;
+      }
+      .code {
+        font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+        font-size: 12px;
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 8px 10px;
+        margin-top: 6px;
+        color: var(--text);
+      }
+      .toast {
+        position: absolute;
+        left: 50%;
+        bottom: 22px;
+        transform: translateX(-50%);
+        background: rgba(40, 40, 44, 0.96);
+        color: #fff;
+        padding: 9px 16px;
+        border-radius: 10px;
+        font-size: 12.5px;
+        z-index: 9;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="doc">
+      <h1>Mail · ontwerp v2</h1>
+      <p class="lead">
+        Verwerkt: een overzicht als hoofdscherm, Werk als werkaccount, per
+        account een eigen inbox, de eigen API per provider, geen T3 en meteen
+        native SwiftUI. De agent doet zijn werk op de server: wat hij filtert,
+        is ook op je telefoon gelezen en weg uit de inbox. In de app controleer
+        je daarna kort wat hij filterde. Het venster is klikbaar; v1 staat nog
+        in <code>v1.html</code>.
+      </p>
+
+      <div class="tabs" id="tabs"></div>
+      <div class="stage"><div class="window" id="win"></div></div>
+      <div class="note" id="note"></div>
+
+      <section class="block">
+        <h2>Wat de agent op de server doet</h2>
+        <p>
+          Alles gebeurt bij de provider zelf, dus je telefoon ziet hetzelfde als
+          de app. Terugzetten draait elke stap om.
+        </p>
+        <table class="map">
+          <tr>
+            <th>Agent besluit</th>
+            <th>Gmail (Gmail API)</th>
+            <th>Outlook en Werk (Microsoft Graph)</th>
+            <th>Fastmail (JMAP)</th>
+            <th>Op je telefoon</th>
+          </tr>
+          <tr>
+            <td>Spam, phishing, acquisitie</td>
+            <td>Label SPAM, gelezen</td>
+            <td>Naar Ongewenste e-mail, gelezen</td>
+            <td>Naar Junk, <code>$seen</code></td>
+            <td>Weg uit de inbox. De spamfilter van de provider leert mee.</td>
+          </tr>
+          <tr>
+            <td>Ruis: nieuwsbrief, melding, CC zonder vraag</td>
+            <td>INBOX-label eraf, gelezen</td>
+            <td>Naar Archief, gelezen</td>
+            <td>Naar Archive, <code>$seen</code></td>
+            <td>
+              Weg uit de inbox. De kern komt in "Ter info" in het overzicht.
+            </td>
+          </tr>
+          <tr>
+            <td>Antwoord nodig</td>
+            <td>Ster</td>
+            <td>Vlag</td>
+            <td><code>$flagged</code></td>
+            <td>Vlag of ster in iOS Mail en Gmail</td>
+          </tr>
+          <tr>
+            <td>Bon, factuur, bezorging</td>
+            <td>Label "Bon" enzovoort</td>
+            <td>Categorie</td>
+            <td>Keyword</td>
+            <td>Blijft in de inbox (zie keuze 3)</td>
+          </tr>
+          <tr>
+            <td>Terugzetten</td>
+            <td colspan="3">
+              Vorige map of labels terug, weer ongelezen, en een geleerde regel
+              voor die afzender
+            </td>
+            <td>Staat weer in de inbox</td>
+          </tr>
+        </table>
+      </section>
+
+      <section class="block">
+        <h2>Hoe het in elkaar zit</h2>
+        <p>
+          Eén SwiftUI-app plus een kleine achtergrondhelper (een login item,
+          start mee met de Mac). De helper werkt ook met het venster dicht,
+          zodat je telefoon rustig blijft.
+        </p>
+        <div class="diagram">
+          Gmail API ───── Pub/Sub-pull of history-polling ──┐ Microsoft Graph
+          delta-polling elke 30 s ─────────┼──▶ Mail-helper (login item, Swift)
+          (Outlook + Werk) │ · sync naar SQLite Fastmail JMAP ── push via
+          EventSource ────────────┘ · triage: claude -p --model haiku (Codex als
+          uitwijk) · acties terug naar de provider (gelezen, spam, archief,
+          vlag) · volgt verstuurde mail: wacht er nog iemand op een antwoord? ·
+          MCP-server op localhost:4717 ◀── Claude Code en Codex │ Mail.app
+          (SwiftUI) ◀──────────┘ leest dezelfde database Microsoft-webhooks
+          hebben een publiek adres nodig; daarom polling. Gmail Pub/Sub-pull
+          werkt zonder publiek adres.
+        </div>
+      </section>
+
+      <section class="block">
+        <h2>Wat erin zit en wat niet</h2>
+        <div class="cols">
+          <div class="card">
+            <h3>Wel</h3>
+            <ul>
+              <li>
+                Overzicht als startscherm: wat moet ik doen, waar wacht ik op,
+                wat is er weggefilterd
+              </li>
+              <li>
+                Per account een eigen inbox (Gmail, Outlook, Fastmail,
+                Werk)
+              </li>
+              <li>
+                Lezen, beantwoorden, doorsturen, archiveren, verwijderen,
+                concepten, bijlagen
+              </li>
+              <li>
+                Opvolgen: de agent ziet welke van jouw vragen onbeantwoord
+                blijven en stelt een herinnering op
+              </li>
+              <li>
+                Gefilterd als controlelijst: per mail klopt of terugzetten, of
+                alles in één keer
+              </li>
+              <li>Zoeken in gewone taal, ook via je agents</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>Niet</h3>
+            <ul>
+              <li>T3-koppeling: alleen MCP</li>
+              <li>Gezamenlijke inbox (het overzicht vervangt die)</li>
+              <li>
+                Regels bouwen, vlaggen en mappen in de app (de vlag op de server
+                is van de agent)
+              </li>
+              <li>
+                Snoozen, opmaakbalk, agenda, contacten, sjablonen, gepland
+                versturen, plug-ins
+              </li>
+              <li>Agent die verwijdert of verstuurt</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="block">
+        <h2>Nog vier keuzes</h2>
+        <p>
+          Mijn advies staat voorgevinkt. Kopieer je keuzes en plak ze in de
+          chat.
+        </p>
+        <div id="decisions"></div>
+        <textarea
+          class="remarks"
+          id="remarks"
+          placeholder="Opmerkingen over v2"
+        ></textarea>
+        <button class="copy" id="copy">Kopieer mijn keuzes</button>
+      </section>
+    </div>
+
+    <script>
+      const ICONS = {
+        compose:
+          '<path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/>',
+        reply: '<path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 6 6v3"/>',
+        replyAll:
+          '<path d="M8 14L3 9l5-5"/><path d="M12 14L7 9l5-5"/><path d="M7 9h7a6 6 0 0 1 6 6v3"/>',
+        forward:
+          '<path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 0 0-6 6v3"/>',
+        archive:
+          '<path d="M3 4h18v4H3z"/><path d="M5 8v12h14V8"/><path d="M10 12h4"/>',
+        trash:
+          '<path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/>',
+        shield:
+          '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/>',
+        inbox:
+          '<path d="M3 13l3-8h12l3 8v6H3z"/><path d="M3 13h5l1 3h6l1-3h5"/>',
+        home: '<path d="M4 11l8-7 8 7v9H4z"/><path d="M10 20v-5h4v5"/>',
+        send: '<path d="M4 12l16-8-6 16-3-7z"/><path d="M11 13l9-9"/>',
+        doc: '<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5"/>',
+        search: '<circle cx="11" cy="11" r="7"/><path d="M21 21l-5-5"/>',
+        sidebar:
+          '<rect x="3" y="5" width="18" height="14" rx="3"/><path d="M9 5v14"/>',
+        plus: '<path d="M12 5v14M5 12h14"/>',
+        filter: '<path d="M4 6h16M7 12h10M10 18h4"/>',
+        sparkle:
+          '<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 16l.7 1.8 1.8.7-1.8.7L19 21l-.7-1.8-1.8-.7 1.8-.7z"/>',
+        undo: '<path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/>',
+        check: '<path d="M5 12l5 5L20 7"/>',
+        clock: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
+        sliders:
+          '<path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/>',
+        clip: '<path d="M20 11l-8.5 8.5a5 5 0 0 1-7-7L13 4a3.5 3.5 0 0 1 5 5l-8.5 8.5a2 2 0 0 1-3-3L14 7"/>',
+        plug: '<path d="M9 3v5M15 3v5"/><path d="M6 8h12v3a6 6 0 0 1-12 0z"/><path d="M12 17v4"/>',
+        sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+        phone:
+          '<rect x="7" y="2" width="10" height="20" rx="2.5"/><path d="M11 18h2"/>',
+      };
+      const icon = (n, cls = '') =>
+        `<svg class="i ${cls}" viewBox="0 0 24 24">${ICONS[n]}</svg>`;
+      const esc = (s) =>
+        String(s).replace(
+          /[&<>"]/g,
+          (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c],
+        );
+
+      const ACCOUNTS = {
+        werk: {
+          name: 'Werk',
+          addr: 'jij@werk.example',
+          color: '#a78bfa',
+          spam: 'Ongewenste e-mail',
+          archive: 'Archief',
+          work: true,
+          stats: { fresh: 23, spam: 2, ruis: 14 },
+        },
+        gmail: {
+          name: 'Gmail',
+          addr: 'jij@gmail.com',
+          color: '#ff6b5e',
+          spam: 'Spam',
+          archive: 'Alle e-mail',
+          stats: { fresh: 31, spam: 19, ruis: 9 },
+        },
+        outlook: {
+          name: 'Outlook',
+          addr: 'jij@outlook.com',
+          color: '#ffb340',
+          spam: 'Ongewenste e-mail',
+          archive: 'Archief',
+          stats: { fresh: 6, spam: 3, ruis: 1 },
+        },
+        fastmail: {
+          name: 'Fastmail',
+          addr: 'jij@fastmail.com',
+          color: '#5ac8fa',
+          spam: 'Junk',
+          archive: 'Archive',
+          stats: { fresh: 3, spam: 0, ruis: 1 },
+        },
+      };
+
+      const MESSAGES = [
+        {
+          id: 'g1',
+          folder: 'inbox',
+          acct: 'werk',
+          from: 'Sanne Bakker',
+          email: 'sanne.bakker@werk.example',
+          color: '#a78bfa',
+          time: '08:52',
+          date: 'Vandaag 08:52',
+          unread: true,
+          reply: true,
+          due: 'wo 21 okt',
+          rank: 1,
+          ask: 'Vraagt of je vóór woensdag de 312 adressen in Breda-Noord vrijgeeft voor de planning',
+          subject: 'Planning aansluitingen Breda-Noord week 45',
+          summary:
+            'Sanne heeft de planning voor week 45 klaar, maar kan pas inplannen als jij de 312 adressen in Breda-Noord vrijgeeft. Graag vóór woensdag; daarna schuift de aannemer naar week 47.',
+          body: [
+            'Hoi Gideon,',
+            'De planning voor week 45 staat klaar. Voordat ik de aannemer kan inplannen heb ik jouw vrijgave nodig voor de 312 adressen in Breda-Noord (lijst in de bijlage).',
+            'Lukt het om dat vóór woensdag te doen? Anders verschuift de aannemer naar week 47.',
+            'Groet,\nSanne',
+          ],
+          attach: 'Adressen-Breda-Noord.xlsx · 88 kB',
+          replies: [
+            [
+              'Vrijgegeven',
+              'Hoi Sanne,\n\nDe 312 adressen in Breda-Noord zijn vrijgegeven; je kunt de aannemer voor week 45 inplannen.\n\nGroet,\nGideon',
+            ],
+            [
+              'Morgen uitsluitsel',
+              'Hoi Sanne,\n\nDank je. Ik loop de lijst vandaag door en geef je morgen uitsluitsel, ruim voor woensdag.\n\nGroet,\nGideon',
+            ],
+            [
+              'Eerst een vraag',
+              'Hoi Sanne,\n\nVoordat ik vrijgeef: zitten de adressen aan de Haagweg er ook in? Daar loopt nog een vergunning.\n\nGroet,\nGideon',
+            ],
+          ],
+        },
+        {
+          id: 'g2',
+          folder: 'inbox',
+          acct: 'werk',
+          from: 'Mark de Groot',
+          email: 'mark@degrootinfra.nl',
+          color: '#64d2ff',
+          time: 'do',
+          date: 'Donderdag 16:10',
+          unread: false,
+          reply: true,
+          age: '4 dagen oud',
+          rank: 4,
+          ask: 'Vraagt of de graafvergunning voor Etten-Leur al binnen is',
+          subject: 'Re: Schouw Etten-Leur: graafvergunning',
+          body: [
+            'Hoi Gideon,',
+            'De schouw is afgerond. Is de graafvergunning al binnen? Dan kunnen we de ploeg voor volgende week inplannen.',
+            'Groet, Mark',
+          ],
+          replies: [
+            [
+              'Nog niet binnen',
+              'Hoi Mark,\n\nDe vergunning is nog niet binnen. Ik heb de gemeente gevraagd naar de status en laat het je weten zodra ik iets hoor.\n\nGroet,\nGideon',
+            ],
+            [
+              'Ik zoek het uit',
+              'Hoi Mark,\n\nIk zoek het vandaag uit en kom er morgen bij je op terug.\n\nGroet,\nGideon',
+            ],
+          ],
+        },
+        {
+          id: 'g3',
+          folder: 'inbox',
+          acct: 'werk',
+          from: 'ServiceNow',
+          email: 'servicenow@werk.example',
+          color: '#62d84e',
+          time: '07:15',
+          date: 'Vandaag 07:15',
+          unread: true,
+          kind: 'Melding',
+          subject: 'INC0042188 aan jou toegewezen: storing ODF Breda',
+          body: [
+            'Incident INC0042188 is aan jou toegewezen.',
+            'Korte omschrijving: storing ODF Breda-Noord, 14 aansluitingen zonder signaal.',
+          ],
+        },
+        {
+          id: 'm1',
+          folder: 'inbox',
+          acct: 'fastmail',
+          from: 'Marieke de Vries',
+          email: 'marieke@example.nl',
+          color: '#bf5af2',
+          time: '09:41',
+          date: 'Vandaag 09:41',
+          unread: true,
+          reply: true,
+          due: 'za',
+          rank: 5,
+          ask: 'Vraagt of je zaterdag om 18:30 komt eten en het toetje meeneemt',
+          subject: 'Etentje zaterdag?',
+          body: [
+            'Hoi!',
+            'Zin om zaterdag bij ons te komen eten? Rond 18:30, niks bijzonders, gewoon gezellig.',
+            'Neem jij het toetje mee? Laat even weten of het lukt!',
+            'Groetjes, Marieke',
+          ],
+          replies: [
+            [
+              'Ja, gezellig!',
+              'Hoi Marieke,\n\nGezellig, ik ben er zaterdag om 18:30. Ik neem het toetje mee.\n\nTot zaterdag!\nGideon',
+            ],
+            [
+              'Lukt helaas niet',
+              'Hoi Marieke,\n\nWat leuk dat je het vraagt, maar zaterdag lukt het me helaas niet. Zullen we een andere avond prikken?\n\nGroet,\nGideon',
+            ],
+            [
+              'Iets later?',
+              'Hoi Marieke,\n\nGraag! Zou 19:00 ook kunnen? Dan neem ik het toetje mee.\n\nGroet,\nGideon',
+            ],
+          ],
+        },
+        {
+          id: 'm7',
+          folder: 'inbox',
+          acct: 'fastmail',
+          from: 'Fastmail',
+          email: 'billing@fastmail.com',
+          color: '#5ac8fa',
+          time: 'vr',
+          date: 'Vrijdag 10:03',
+          unread: false,
+          kind: 'Factuur',
+          attach: 'invoice-oct-2026.pdf · 48 kB',
+          subject: 'Je factuur voor oktober',
+          body: [
+            'Hi Gideon,',
+            'Your invoice for October is attached. Amount: $5.00.',
+            'Thanks for using Fastmail.',
+          ],
+        },
+        {
+          id: 'm2',
+          folder: 'inbox',
+          acct: 'outlook',
+          from: 'Joris van Dijk',
+          email: 'joris@hekwerkbrabant.nl',
+          color: '#0a84ff',
+          time: '08:15',
+          date: 'Vandaag 08:15',
+          unread: true,
+          reply: true,
+          due: 'vr 23 okt',
+          rank: 2,
+          attach: 'Offerte-2026-118.pdf · 214 kB',
+          ask: 'Wil akkoord op de offerte van € 4.280 vóór vrijdag',
+          subject: 'Offerte poortautomatisering locatie Tilburg',
+          summary:
+            'Offerte van € 4.280 excl. btw voor twee schuifpoorten met besturing. Joris wil vóór vrijdag akkoord; anders schuift de installatie naar half november.',
+          draftBy: 'Claude Code',
+          body: [
+            'Goedemorgen Gideon,',
+            'Zoals besproken stuur ik je hierbij de offerte voor de automatisering van de twee schuifpoorten op de locatie in Tilburg. Inbegrepen zijn de aandrijvingen, de besturingskasten, het aansluiten op jullie module en de inbedrijfstelling.',
+            'Onze monteurs hebben in week 44 nog ruimte. Als ik vóór vrijdag je akkoord heb, kan ik die week voor jullie vastzetten. Daarna wordt het waarschijnlijk half november.',
+            'Laat gerust weten als je vragen hebt of iets anders wilt zien in de offerte.',
+            'Met vriendelijke groet,\nJoris van Dijk\nHekwerk Brabant BV',
+          ],
+          replies: [
+            [
+              'Akkoord, plan week 44',
+              'Hoi Joris,\n\nDank voor de offerte. Akkoord, zet week 44 maar voor ons vast. Stuur je de bevestiging met de definitieve datum?\n\nGroet,\nGideon',
+            ],
+            [
+              'Eerst even bellen',
+              'Hoi Joris,\n\nDank voor de offerte. Ik wil nog een paar punten doorlopen voordat ik akkoord geef. Kun je morgen tussen 10:00 en 12:00 even bellen?\n\nGroet,\nGideon',
+            ],
+            [
+              'Ik kom er donderdag op terug',
+              'Hoi Joris,\n\nDank je wel. Ik kijk er deze week naar en laat je donderdag weten of we week 44 vastzetten.\n\nGroet,\nGideon',
+            ],
+          ],
+        },
+        {
+          id: 'm3',
+          folder: 'inbox',
+          acct: 'outlook',
+          from: 'Tandartspraktijk Centrum',
+          email: 'afspraken@tandartscentrum.nl',
+          color: '#30d158',
+          time: '07:30',
+          date: 'Vandaag 07:30',
+          unread: true,
+          reply: true,
+          due: 'di 21 okt',
+          rank: 3,
+          ask: 'Vraagt je de afspraak van dinsdag 10:30 te bevestigen',
+          subject: 'Herinnering: afspraak dinsdag 21 oktober om 10:30',
+          body: [
+            'Beste heer Jansen,',
+            'Dit is een herinnering aan uw controleafspraak op dinsdag 21 oktober om 10:30.',
+            'Wilt u de afspraak bevestigen door op deze mail te antwoorden? Verzetten kan tot 24 uur van tevoren.',
+            'Met vriendelijke groet,\nTandartspraktijk Centrum',
+          ],
+          replies: [
+            [
+              'Bevestigen',
+              'Beste praktijk,\n\nBij deze bevestig ik mijn afspraak op dinsdag 21 oktober om 10:30.\n\nMet vriendelijke groet,\nGideon Jansen',
+            ],
+            [
+              'Verzetten',
+              'Beste praktijk,\n\nHelaas kan ik dinsdag 21 oktober niet. Is er later die week nog een plek vrij?\n\nMet vriendelijke groet,\nGideon Jansen',
+            ],
+          ],
+        },
+        {
+          id: 'm4',
+          folder: 'inbox',
+          acct: 'gmail',
+          from: 'Coolblue',
+          email: 'noreply@coolblue.nl',
+          color: '#0090e3',
+          time: '07:02',
+          date: 'Vandaag 07:02',
+          unread: true,
+          kind: 'Bezorging',
+          subject: 'Je bestelling komt vandaag tussen 14:00 en 16:00',
+          body: [
+            'Hoi Gideon,',
+            'Goed nieuws: je bestelling wordt vandaag bezorgd tussen 14:00 en 16:00.',
+            'Volg je pakket in de app of op onze site.',
+          ],
+        },
+        {
+          id: 'm5',
+          folder: 'inbox',
+          acct: 'gmail',
+          from: 'Bas Janssen',
+          email: 'bas@example.nl',
+          color: '#ff9f0a',
+          time: 'Gisteren',
+          date: 'Gisteren 21:12',
+          unread: false,
+          subject: "Foto's van het weekend",
+          attach: "12 foto's · 38 MB",
+          body: [
+            'Hé Gideon,',
+            "Hierbij de foto's van zaterdag. Die van de vuurtoren is echt goed gelukt.",
+            'Groet, Bas',
+          ],
+        },
+        {
+          id: 'm6',
+          folder: 'inbox',
+          acct: 'gmail',
+          from: 'Amazon Prime Video',
+          email: 'digital-no-reply@amazon.nl',
+          color: '#232f3e',
+          time: 'Gisteren',
+          date: 'Gisteren 18:40',
+          unread: false,
+          kind: 'Bon',
+          subject: 'Bestelbevestiging: Spider-Man',
+          body: [
+            'Bedankt voor je bestelling.',
+            'Bestelnummer D01-6209991. Totaal: € 3,99.',
+          ],
+        },
+
+        {
+          id: 'f1',
+          folder: 'filtered',
+          acct: 'gmail',
+          from: 'PostNL Service',
+          email: 'info@pnl-bezorging.xyz',
+          color: '#ff9500',
+          time: '06:12',
+          date: 'Vandaag 06:12',
+          kind: 'Spam',
+          action: 'spam',
+          subject: 'Uw pakket kon niet worden bezorgd',
+          why: 'Phishing: noemt zich PostNL maar mailt vanaf pnl-bezorging.xyz. DKIM-handtekening ontbreekt en de link gaat naar een betaalpagina.',
+          body: [
+            'Geachte klant,',
+            'Uw pakket kon niet worden bezorgd wegens onvoldoende verzendkosten (€ 1,99). Betaal binnen 24 uur via onderstaande link, anders wordt het pakket geretourneerd.',
+          ],
+        },
+        {
+          id: 'f8',
+          folder: 'filtered',
+          acct: 'werk',
+          from: 'Peter Smits',
+          email: 'peter.smits@werk.example',
+          color: '#8e8e93',
+          time: '08:30',
+          date: 'Vandaag 08:30',
+          kind: 'CC',
+          action: 'archive',
+          unsure: true,
+          subject: 'Re: Re: Re: Wekelijkse planning Zuid',
+          why: 'Twijfel: je staat in CC en niemand spreekt je aan, maar in de laatste mail wordt jouw regio genoemd.',
+          body: [
+            'Allen,',
+            'Kleine wijziging: de ploeg van Breda-Noord schuift een dag op. Verder blijft alles gelijk.',
+            'Peter',
+          ],
+        },
+        {
+          id: 'f6',
+          folder: 'filtered',
+          acct: 'gmail',
+          from: 'Vereniging Eigen Huis',
+          email: 'nieuws@eigenhuis.nl',
+          color: '#e3007d',
+          time: '05:40',
+          date: 'Vandaag 05:40',
+          kind: 'Nieuwsbrief',
+          action: 'archive',
+          unsure: true,
+          subject: 'Uw WOZ-waarde: zo maakt u bezwaar',
+          why: 'Twijfel: lijkt een nieuwsbrief, maar je bent lid en het gaat over een termijn die voor jou kan gelden.',
+          body: [
+            'Beste lid,',
+            'De nieuwe WOZ-beschikkingen komen eraan. Lees hoe u binnen zes weken bezwaar maakt.',
+          ],
+        },
+        {
+          id: 'f7',
+          folder: 'filtered',
+          acct: 'werk',
+          from: 'Microsoft Teams',
+          email: 'noreply@email.teams.microsoft.com',
+          color: '#5b5fc7',
+          time: '07:58',
+          date: 'Vandaag 07:58',
+          kind: 'Melding',
+          action: 'archive',
+          subject: 'Je hebt 4 gemiste berichten in Uitrol Zuid',
+          why: 'Teams-melding; de berichten staan al in Teams. Volgt je instructie: Teams-meldingen archiveren.',
+          body: ['Je hebt 4 gemiste berichten in het kanaal Uitrol Zuid.'],
+        },
+        {
+          id: 'f2',
+          folder: 'filtered',
+          acct: 'gmail',
+          from: 'Lucky Rewards',
+          email: 'winner@lucky-rewards.top',
+          color: '#ff375f',
+          time: '03:47',
+          date: 'Vandaag 03:47',
+          kind: 'Spam',
+          action: 'spam',
+          subject: 'Gefeliciteerd! U heeft een iPhone 17 gewonnen',
+          why: 'Prijsvraagspam: onbekende afzender, domein van gisteren, je hebt nooit met deze afzender gemaild.',
+          body: [
+            'U bent geselecteerd als winnaar! Claim uw prijs binnen 48 uur.',
+          ],
+        },
+        {
+          id: 'f3',
+          folder: 'filtered',
+          acct: 'outlook',
+          from: 'Sophie | GrowthLab',
+          email: 'sophie@growthlab-agency.io',
+          color: '#64d2ff',
+          time: 'Gisteren',
+          date: 'Gisteren 15:22',
+          kind: 'Acquisitie',
+          action: 'spam',
+          subject: 'Quick question about colloport.dev',
+          why: 'Koude acquisitie: sjabloontekst, onbekende afzender, derde mail in een reeks waar je nooit op reageerde.',
+          body: [
+            'Hi Gideon,',
+            'Just following up on my previous email. Would you be open to a quick 15-minute call about growing your organic traffic?',
+          ],
+        },
+        {
+          id: 'f4',
+          folder: 'filtered',
+          acct: 'gmail',
+          from: 'Milk Road',
+          email: 'newsletter@milkroad.com',
+          color: '#ffd60a',
+          time: 'Gisteren',
+          date: 'Gisteren 13:00',
+          kind: 'Nieuwsbrief',
+          action: 'archive',
+          subject: "'BTC to $400k'",
+          why: 'Nieuwsbrief die je de laatste 12 keer niet opende. Volgt je regel: ongelezen nieuwsbrieven archiveren.',
+          body: ['Spicy Take Sunday. October 18, 2026.'],
+        },
+      ];
+
+      const WAITING = [
+        {
+          acct: 'werk',
+          to: 'Ilse Vermeer (KPN Wholesale)',
+          subject: 'Opleverdatum POP Oosterhout?',
+          days: 6,
+          draft:
+            'Hoi Ilse,\n\nIk kom even terug op mijn vraag van vorige week: is er al een opleverdatum voor de POP in Oosterhout? Onze planning voor november hangt ervan af.\n\nGroet,\nGideon',
+        },
+        {
+          acct: 'werk',
+          to: 'Gemeente Breda, Vergunningen',
+          subject: 'Status graafvergunning Etten-Leur',
+          days: 4,
+          draft:
+            'Beste heer, mevrouw,\n\nOp 15 oktober vroeg ik naar de status van de graafvergunning voor Etten-Leur. Kunt u aangeven wanneer we een besluit kunnen verwachten?\n\nMet vriendelijke groet,\nGideon Jansen',
+        },
+        {
+          acct: 'gmail',
+          to: 'Verhuurbeheer Bakker',
+          subject: 'Lekkage badkamer',
+          days: 3,
+          draft:
+            'Beste Verhuurbeheer Bakker,\n\nVorige week meldde ik een lekkage in de badkamer. Wanneer kan er iemand langskomen?\n\nMet vriendelijke groet,\nGideon Jansen',
+        },
+      ];
+
+      const DIGEST = {
+        werk: [
+          'ServiceNow: INC0042188 aan jou toegewezen (storing ODF Breda-Noord, 14 aansluitingen); 3 andere incidenten opgelost.',
+          'Intern: nieuwe huisstijl per 1 november, geen actie.',
+          '6 CC-threads over de weekplanning Zuid; niemand vraagt jou iets.',
+        ],
+        gmail: [
+          'Coolblue bezorgt vandaag tussen 14:00 en 16:00.',
+          'Amazon-bon van € 3,99.',
+        ],
+        fastmail: ['Factuur oktober: $5,00.'],
+      };
+
+      const LEARNED = [
+        [
+          'Milk Road: altijd archiveren',
+          'Geleerd op 18 okt: je keurde er vier achter elkaar goed',
+        ],
+        [
+          'Hekwerk Brabant: altijd "Antwoord nodig"',
+          'Geleerd op 14 okt: je haalde er een terug uit Archief',
+        ],
+        [
+          'Werk, CC van Peter Smits over planning: in de inbox houden',
+          'Geleerd op 12 okt: je zette er een terug uit Gefilterd',
+        ],
+      ];
+
+      const state = {
+        screen: 'home',
+        folder: 'home',
+        acct: null,
+        sel: null,
+        composer: null,
+        modal: null,
+        light: false,
+        settingsTab: 'agent',
+        toast: null,
+        unreadOnly: false,
+        reviewed: new Set(),
+        restored: new Set(),
+        done: new Set(),
+        nudged: new Set(),
+      };
+
+      const SCREENS = [
+        {
+          id: 'home',
+          label: '1 · Overzicht',
+          set: {
+            folder: 'home',
+            acct: null,
+            sel: null,
+            composer: null,
+            modal: null,
+          },
+          note: `<h3>Overzicht</h3>Het startscherm over alle mailboxen heen:<ul><li><b>Mailboxkaarten</b>: per account wat je moet doen, hoeveel er sinds gisteren binnenkwam en hoeveel daarvan ruis was. Klik een kaart om die inbox te openen.</li><li><b>Te doen</b>: alle mail met "Antwoord nodig", op deadline gesorteerd, met in één zin wat er van je gevraagd wordt. "Klaar" haalt de vlag ook op de server weg.</li><li><b>Wacht op antwoord</b>: jouw vragen die onbeantwoord blijven. Voor Werk is dit het opvolgen. "Herinnering" opent een concept.</li><li><b>Gefilterd</b> en <b>Ter info</b>: hoeveel ruis er weg is en de kern ervan in een paar regels, zodat je het niet hoeft te openen.</li></ul>`,
+        },
+        {
+          id: 'inbox',
+          label: '2 · Inbox Werk',
+          set: {
+            folder: 'inbox',
+            acct: 'werk',
+            sel: 'g1',
+            composer: null,
+            modal: null,
+          },
+          note: `<h3>Inbox per account</h3>Elk account heeft een eigen inbox in de zijbalk, met het adres eronder. De labels zijn dezelfde: oranje <b>Antwoord nodig</b> (op de server een vlag, dus ook zichtbaar in iOS Mail) en een grijs soortlabel. Bij werkmail staat de samenvatting bovenaan, omdat die vaak lang is.`,
+        },
+        {
+          id: 'read',
+          label: '3 · Lezen en antwoorden',
+          set: {
+            folder: 'inbox',
+            acct: 'outlook',
+            sel: 'm2',
+            composer: null,
+            modal: null,
+          },
+          note: `<h3>Lezen en antwoorden</h3>Bovenaan staat een samenvatting bij lange mails, onderaan drie antwoordvoorstellen. De blauwe kaart is een concept dat Claude Code via MCP heeft klaargezet; versturen doe jij.`,
+        },
+        {
+          id: 'compose',
+          label: '4 · Opstellen',
+          set: {
+            folder: 'inbox',
+            acct: 'werk',
+            sel: 'g1',
+            modal: null,
+            composer: {
+              to: 'Sanne Bakker',
+              subject: 'Re: Planning aansluitingen Breda-Noord week 45',
+              body: MESSAGES[0].replies[0][1],
+              from: 'werk',
+              ai: true,
+            },
+          },
+          note: `<h3>Opstellen</h3>Zwevend venster, platte tekst. Het afzenderaccount volgt de mail waarop je antwoordt. Het concept kun je laten herschrijven: korter, formeler, opnieuw of met een eigen instructie.`,
+        },
+        {
+          id: 'filtered',
+          label: '5 · Gefilterd controleren',
+          set: {
+            folder: 'filtered',
+            acct: null,
+            sel: 'f8',
+            composer: null,
+            modal: null,
+          },
+          note: `<h3>Gefilterd controleren</h3>De agent heeft deze mails al op de server afgehandeld (zie de tabel onder het venster): je telefoon heeft ze niet meer in de inbox en ziet ze als gelezen. Hier loop je ze na:<ul><li><b>Klopt</b> (<kbd>↵</kbd>) haalt de mail uit de lijst. <b>Terug</b> (<kbd>u</kbd>) zet hem op de server terug in de inbox, weer ongelezen, en leert een regel.</li><li>Twijfelgevallen staan bovenaan met een oranje label.</li><li><b>Alles klopt</b> rondt de rest in één klik af.</li></ul>`,
+        },
+        {
+          id: 'account',
+          label: '6 · Account toevoegen',
+          set: {
+            folder: 'home',
+            acct: null,
+            sel: null,
+            composer: null,
+            modal: 'pick',
+          },
+          note: `<h3>Account toevoegen</h3>Drie providers, elk via de eigen API. Google en Microsoft (ook Werk, als dat Microsoft 365 is) loggen in via hun eigen pagina (OAuth: inloggen bij de provider zelf). Fastmail laat alleen aangemelde apps via OAuth toe, dus daar plak je een API-token. Bij een werkaccount kan Microsoft om goedkeuring van de IT-beheerder vragen; zie keuze 4.`,
+        },
+        {
+          id: 'settings',
+          label: '7 · Agent',
+          set: {
+            folder: 'settings',
+            settingsTab: 'agent',
+            composer: null,
+            modal: null,
+          },
+          note: `<h3>Agent</h3>Instructies in gewone taal, nu ook voor werkruis, en de regels die de agent leerde van je controles. Het blok "Op je telefoon" bepaalt wat de agent op de server mag doen.`,
+        },
+        {
+          id: 'agents',
+          label: '8 · Agents (MCP)',
+          set: {
+            folder: 'settings',
+            settingsTab: 'connect',
+            composer: null,
+            modal: null,
+          },
+          note: `<h3>Agents (MCP)</h3>De helper draait een MCP-server (het protocol waarmee Claude Code en Codex tools aanroepen) op localhost. Per tool zet je aan wat mag. De triage zelf draait via Claude Code met Haiku, met Codex als uitwijk.`,
+        },
+      ];
+
+      function setScreen(id) {
+        const s = SCREENS.find((x) => x.id === id);
+        Object.assign(state, { screen: id }, structuredClone(s.set));
+        render();
+      }
+
+      const isOpen = (m) => m.reply && !state.done.has(m.id);
+      const todos = () =>
+        MESSAGES.filter((m) => m.folder === 'inbox' && isOpen(m)).sort(
+          (a, b) => a.rank - b.rank,
+        );
+      const toReview = () =>
+        MESSAGES.filter(
+          (m) =>
+            m.folder === 'filtered' &&
+            !state.reviewed.has(m.id) &&
+            !state.restored.has(m.id),
+        ).sort((a, b) => (b.unsure ? 1 : 0) - (a.unsure ? 1 : 0));
+
+      function list() {
+        if (state.folder === 'filtered') return toReview();
+        if (state.folder !== 'inbox') return [];
+        return MESSAGES.filter(
+          (m) =>
+            (m.folder === 'inbox' || state.restored.has(m.id)) &&
+            m.acct === state.acct,
+        ).filter((m) => !state.unreadOnly || m.unread);
+      }
+
+      function renderSidebar() {
+        const todoN = (a) => todos().filter((m) => m.acct === a).length;
+        const unread = (a) =>
+          MESSAGES.filter(
+            (m) => m.folder === 'inbox' && m.unread && m.acct === a,
+          ).length || '';
+        const n = toReview().length;
+        const item = (key, ic, label, count, cls = '') =>
+          `<div class="side-item ${state.folder === key ? 'active' : ''}" data-folder="${key}"><span class="ic">${icon(ic)}</span>${label}<span class="count ${cls}">${count}</span></div>`;
+        return `<div class="side">
+    <div class="side-top"><span class="light-dot" style="background:#ff5f57"></span><span class="light-dot" style="background:#febc2e"></span><span class="light-dot" style="background:#28c840"></span><span class="grow"></span><span style="color:var(--muted)">${icon('sidebar')}</span></div>
+    ${item('home', 'home', 'Overzicht', todos().length || '', todos().length ? 'badge' : '')}
+    <div class="side-label">Inboxen</div>
+    ${Object.entries(ACCOUNTS)
+      .map(
+        ([k, a]) =>
+          `<div class="side-item ${state.folder === 'inbox' && state.acct === k ? 'active' : ''}" data-acct="${k}"><span class="ic">${icon('inbox')}</span><span>${a.name}<small>${a.addr}</small></span><span class="count">${unread(k)}</span></div>`,
+      )
+      .join('')}
+    <div class="side-label">Overal</div>
+    ${item('filtered', 'shield', 'Gefilterd', n || '', n ? 'badge' : '')}
+    ${item('drafts', 'doc', 'Concepten', 1)}
+    ${item('sent', 'send', 'Verstuurd', '')}
+    ${item('archive', 'archive', 'Archief', '')}
+    <div class="side-foot">
+      <div class="agent-status"><span class="pulse"></span><b>Agent</b> · 2 min geleden<br>Op de server: 1 naar spam, 2 gearchiveerd, alle drie gelezen</div>
+      <div class="side-actions">
+        <button data-act="add">${icon('plus', 'sm')}Account</button>
+        <button data-act="settings">${icon('sliders', 'sm')}Instellingen</button>
+        <button data-act="theme" title="Licht of donker" style="flex: 0 0 34px">${icon('sun', 'sm')}</button>
+      </div>
+    </div>
+  </div>`;
+      }
+
+      function renderHome() {
+        const t = todos();
+        const waiting = WAITING.filter((w, i) => !state.nudged.has(i));
+        const filteredTotal = Object.values(ACCOUNTS).reduce(
+          (s, a) => s + a.stats.spam + a.stats.ruis,
+          0,
+        );
+        const freshTotal = Object.values(ACCOUNTS).reduce(
+          (s, a) => s + a.stats.fresh,
+          0,
+        );
+        const cards = Object.entries(ACCOUNTS)
+          .map(([k, a]) => {
+            const s = a.stats,
+              kept = s.fresh - s.spam - s.ruis;
+            const pct = (v) => ((v / s.fresh) * 100).toFixed(1) + '%';
+            return `<div class="mb" data-acct="${k}">
+      <div class="nm"><span class="adot" style="background:${a.color}"></span>${a.name}${a.work ? '<span class="work">Werk</span>' : ''}</div>
+      <div class="ad">${a.addr}</div>
+      <div class="nums"><div><b class="${t.some((m) => m.acct === k) ? 'todo-n' : ''}">${t.filter((m) => m.acct === k).length}</b><span>te doen</span></div><div><b>${s.fresh}</b><span>nieuw</span></div><div><b>${s.spam + s.ruis}</b><span>gefilterd</span></div></div>
+      <div class="bar"><i style="width:${pct(kept)};background:${a.color}"></i><i style="width:${pct(s.ruis)};background:var(--faint)"></i><i style="width:${pct(s.spam)};background:var(--line)"></i></div>
+      <div class="ruis">${Math.round(((s.spam + s.ruis) / s.fresh) * 100)}% ruis · ${kept} in de inbox</div>
+    </div>`;
+          })
+          .join('');
+        const todoRows = t.length
+          ? t
+              .map((m) => {
+                const a = ACCOUNTS[m.acct];
+                return `<div class="todo" data-open="${m.id}">
+      <div class="main"><div class="l1"><span class="adot" style="background:${a.color}"></span>${esc(m.from)}<span class="s">${esc(m.subject)}</span></div>
+      <div class="l2">${icon('sparkle', 'sm')}${esc(m.ask)}</div></div>
+      ${m.due ? `<span class="tag due">vóór ${m.due}</span>` : `<span class="tag">${m.age}</span>`}
+      <div class="acts"><button class="btn sm" data-open="${m.id}">Antwoorden</button><button class="btn sm good" data-done="${m.id}">${icon('check', 'sm')}Klaar</button></div>
+    </div>`;
+              })
+              .join('')
+          : '<div class="done-note"><b>Niets te doen</b>Alles met "Antwoord nodig" is afgehandeld.</div>';
+        const waitRows = waiting.length
+          ? WAITING.map((w, i) =>
+              state.nudged.has(i)
+                ? ''
+                : `<div class="todo">
+      <div class="main"><div class="l1"><span class="adot" style="background:${ACCOUNTS[w.acct].color}"></span>${esc(w.to)}</div>
+      <div class="l2">${icon('clock', 'sm')}"${esc(w.subject)}" · ${w.days} dagen geen antwoord</div></div>
+      <div class="acts"><button class="btn sm" data-nudge="${i}">Herinnering</button><button class="btn sm" data-act="toast" data-msg="Uit de lijst; de agent volgt dit niet meer">Laat los</button></div>
+    </div>`,
+            ).join('')
+          : '<div class="done-note">Je wacht nergens meer op.</div>';
+        const digest = Object.entries(DIGEST)
+          .map(
+            ([k, items]) =>
+              `<div class="acct"><span class="adot" style="background:${ACCOUNTS[k].color}"></span>${ACCOUNTS[k].name}</div><ul>${items.map((i) => `<li>${esc(i)}</li>`).join('')}</ul>`,
+          )
+          .join('');
+        return `<div class="home">
+    <div class="home-head"><div><h1>Goedemorgen</h1><p class="lead2">Maandag 19 oktober · <b>${t.length} mails</b> vragen iets van je, <b>${waiting.length}</b> keer wacht je op antwoord, <b>${filteredTotal} van ${freshTotal}</b> nieuwe mails waren ruis.</p></div><span class="grow"></span>
+      <div class="search">${icon('search', 'sm')}<input placeholder="Zoek in alle mailboxen, of vraag iets"></div></div>
+    <div class="mb-cards">${cards}</div>
+    <div class="home-grid">
+      <div>
+        <div class="sec-h"><h3>Te doen</h3><span class="n">${t.length}</span></div>${todoRows}
+        <div class="sec-h" style="margin-top:20px"><h3>Wacht op antwoord</h3><span class="n">${waiting.length}</span></div>${waitRows}
+      </div>
+      <div>
+        <div class="sec-h"><h3>Gefilterd sinds gisteren</h3></div>
+        <div class="side-card"><div class="big">${filteredTotal}</div>
+          ${Object.values(ACCOUNTS)
+            .map(
+              (a) =>
+                `<div class="rowx"><span><span class="adot" style="background:${a.color};margin-right:6px"></span>${a.name}</span><b>${a.stats.spam} spam · ${a.stats.ruis} ruis</b></div>`,
+            )
+            .join('')}
+          <div style="margin-top:10px;display:flex;gap:8px;align-items:center"><button class="btn sm primary" data-folder="filtered">Controleren (${toReview().length})</button><span style="color:var(--muted);font-size:12px">${toReview().filter((m) => m.unsure).length} twijfelgevallen</span></div></div>
+        <div class="sec-h"><h3>Ter info</h3><span class="n">de kern van de ruis</span></div>
+        <div class="side-card">${digest}</div>
+      </div>
+    </div>
+  </div>`;
+      }
+
+      function renderRow(m) {
+        const a = ACCOUNTS[m.acct];
+        const isF = state.folder === 'filtered';
+        const tags = [
+          isOpen(m) ? '<span class="tag reply">Antwoord nodig</span>' : '',
+          m.kind && m.folder === 'inbox'
+            ? `<span class="tag">${m.kind}</span>`
+            : '',
+          m.draftBy ? '<span class="tag agent">Concept klaar</span>' : '',
+        ].join('');
+        return `<div class="row ${state.sel === m.id ? 'sel' : ''}" data-msg="${m.id}">
+    ${m.unread && !isF ? '<span class="udot"></span>' : ''}
+    <div class="r1"><span class="from">${esc(m.from)}</span><span class="time">${m.attach ? icon('clip', 'sm') : ''}${isF ? `<span class="adot" style="background:${a.color}"></span>` : ''}${m.time}</span></div>
+    <div class="subj">${esc(m.subject)}</div>
+    ${
+      isF
+        ? `<div class="why-line">${icon('sparkle', 'sm')}<span>${esc(m.why)}</span></div>
+      <div class="rv"><span class="tag ${m.unsure ? 'unsure' : ''}">${m.unsure ? 'Twijfel · ' : ''}${m.action === 'spam' ? 'Naar ' + a.spam : 'Gearchiveerd'}</span><span style="flex:1"></span>
+      <button class="okb" data-review="${m.id}">${icon('check', 'sm')}Klopt</button><button data-restore="${m.id}">${icon('undo', 'sm')}Terug</button></div>`
+        : `<div class="prev">${esc(m.body.join(' '))}</div>${tags.trim() ? `<div class="tags">${tags}</div>` : ''}`
+    }
+  </div>`;
+      }
+
+      function renderList() {
+        const titles = {
+          filtered: 'Gefilterd',
+          drafts: 'Concepten',
+          sent: 'Verstuurd',
+          archive: 'Archief',
+        };
+        const msgs = list();
+        const title =
+          state.folder === 'inbox'
+            ? `Inbox · ${ACCOUNTS[state.acct].name}`
+            : titles[state.folder];
+        const unread = msgs.filter((m) => m.unread).length;
+        let sub = `${msgs.length} berichten${unread ? `, ${unread} ongelezen` : ''}`;
+        let head = `<div class="pill"><button data-act="unread" class="${state.unreadOnly ? 'on' : ''}" title="Alleen ongelezen">${icon('filter')}</button></div>`;
+        if (state.folder === 'filtered') {
+          sub = msgs.length
+            ? `${msgs.length} te controleren`
+            : 'Alles gecontroleerd';
+          head = msgs.length
+            ? `<div class="pill"><button class="go" data-act="all-ok">${icon('check', 'sm')}Alles klopt</button></div>`
+            : '';
+        }
+        let rows = msgs.map(renderRow).join('');
+        if (!msgs.length)
+          rows =
+            state.folder === 'filtered'
+              ? `<div class="done-note"><b>Alles gecontroleerd</b>${state.restored.size ? `${state.restored.size} teruggezet in de inbox. ` : ''}De agent heeft van je keuzes geleerd. Gefilterde mail blijft 30 dagen in de spammap of het archief van de provider.</div>`
+              : `<div class="empty" style="font-size:15px">Niets hier in het ontwerp</div>`;
+        return `<div class="list">
+    <div class="list-head"><div><div class="t">${title}</div><div class="s">${sub}</div></div><span class="grow"></span>${head}</div>
+    <div class="rows">${rows}</div>
+  </div>`;
+      }
+
+      function renderToolbar() {
+        return `<div class="toolbar">
+    <div class="pill"><button data-act="compose" title="Nieuw bericht">${icon('compose')}</button></div>
+    <div class="pill"><button data-act="reply" title="Antwoord">${icon('reply')}</button><span class="sep"></span><button data-act="toast" data-msg="Allen antwoorden" title="Allen antwoorden">${icon('replyAll')}</button><span class="sep"></span><button data-act="toast" data-msg="Doorsturen" title="Doorsturen">${icon('forward')}</button></div>
+    <div class="pill"><button data-act="toast" data-msg="Gearchiveerd (e)" title="Archiveer">${icon('archive')}</button><span class="sep"></span><button data-act="toast" data-msg="Naar prullenbak" title="Verwijder">${icon('trash')}</button><span class="sep"></span><button data-act="toast" data-msg="Naar spam op de server; de agent leert van deze afzender" title="Spam">${icon('shield')}</button></div>
+    <span class="grow"></span>
+    <div class="search">${icon('search', 'sm')}<input placeholder="Zoek, of vraag: facturen van dit jaar"></div>
+  </div>`;
+      }
+
+      function renderMessage(m) {
+        const a = ACCOUNTS[m.acct];
+        const initials = m.from
+          .split(/\s+/)
+          .filter((w) => /^[A-Z]/.test(w))
+          .slice(0, 2)
+          .map((w) => w[0])
+          .join('');
+        let top = '';
+        if (m.folder === 'filtered' && !state.restored.has(m.id)) {
+          const where =
+            m.action === 'spam'
+              ? `verplaatst naar ${a.spam}`
+              : `gearchiveerd naar ${a.archive}`;
+          top = `<div class="ai-card warn"><div class="lbl">${icon('shield', 'sm')} ${m.unsure ? 'Twijfelgeval · ' : ''}Gefilterd als ${m.kind.toLowerCase()}</div>${esc(m.why)}
+      <div class="server"><span>${icon('check', 'sm')} Op de server: ${where} in ${a.name}, gemarkeerd als gelezen</span><span>${icon('phone', 'sm')} Op je telefoon: niet in de inbox, geen badge</span></div>
+      <div class="acts"><button class="btn good" data-review="${m.id}">${icon('check', 'sm')}Klopt <kbd>↵</kbd></button><button class="btn" data-restore="${m.id}">${icon('undo', 'sm')}Terugzetten in de inbox <kbd>u</kbd></button><button class="btn" data-act="toast" data-msg="Afzender toegestaan">Afzender altijd toestaan</button></div></div>`;
+        } else {
+          if (m.draftBy)
+            top += `<div class="ai-card"><div class="lbl">${icon('plug', 'sm')} Concept klaargezet door ${esc(m.draftBy)} via MCP</div>"Akkoord, zet week 44 vast; graag de bevestiging met de definitieve datum." Wacht op jouw controle.
+      <div class="acts"><button class="btn primary" data-act="draft">Concept openen</button><button class="btn" data-act="toast" data-msg="Concept verwijderd">Weggooien</button></div></div>`;
+          if (m.summary)
+            top += `<div class="ai-card"><div class="lbl">${icon('sparkle', 'sm')} Samenvatting${m.due ? ` · vóór ${m.due}` : ''}</div>${esc(m.summary)}</div>`;
+        }
+        const replies =
+          m.replies && isOpen(m)
+            ? `<div class="suggest"><div class="lbl">${icon('sparkle', 'sm')} Antwoordvoorstellen</div><div class="chips">
+      ${m.replies.map((r, i) => `<button class="chip" data-reply="${i}">${esc(r[0])}</button>`).join('')}
+      <button class="chip ghost" data-act="reply">Zelf schrijven</button>
+      <button class="chip ghost" data-done="${m.id}">${icon('check', 'sm')} Klaar zonder antwoord</button></div></div>`
+            : '';
+        return `<div class="content">
+    <div class="mhead"><div class="avatar" style="background:${m.color}">${initials || m.from[0]}</div>
+      <div><div class="who">${esc(m.from)} <span style="font-weight:400;color:var(--muted)">&lt;${esc(m.email)}&gt;</span></div><div class="meta">Aan: ${a.addr}</div></div>
+      <div class="date">${m.date}</div></div>
+    <div class="msubj">${esc(m.subject)}</div>
+    ${top}
+    ${m.attach ? `<div class="attach">${icon('clip', 'sm')}${esc(m.attach)}</div>` : ''}
+    <div class="body">${m.body.map((p) => `<p>${esc(p).replace(/\n/g, '<br>')}</p>`).join('')}</div>
+    ${replies}
+  </div>`;
+      }
+
+      function renderComposer() {
+        const c = state.composer;
+        if (!c) return '';
+        return `<div class="composer">
+    <div class="c-head">${icon('compose', 'sm')}${esc(c.subject || 'Nieuw bericht')}<span class="grow"></span><button class="x" data-act="close-composer">✕</button></div>
+    <div class="c-field">Aan: <span class="v">${esc(c.to || '')}</span></div>
+    <div class="c-field">Onderwerp: <span class="v">${esc(c.subject || '')}</span></div>
+    <div class="c-field">Van: <select>${Object.entries(ACCOUNTS)
+      .map(
+        ([k, a]) =>
+          `<option ${k === c.from ? 'selected' : ''}>${a.addr}</option>`,
+      )
+      .join('')}</select></div>
+    <div class="c-body" contenteditable="true">${esc(c.body || '')}</div>
+    <div class="c-foot">
+      ${
+        c.ai
+          ? `<span class="c-note">${icon('sparkle', 'sm')} Agentconcept</span>
+      <button class="btn" data-act="toast" data-msg="Haiku herschrijft het concept korter">Korter</button>
+      <button class="btn" data-act="toast" data-msg="Haiku herschrijft het concept formeler">Formeler</button>
+      <button class="btn" data-act="toast" data-msg="Nieuw concept">Opnieuw</button>
+      <button class="btn" data-act="toast" data-msg="Typ een instructie, bijvoorbeeld: noem ook de bijlage">${icon('sparkle', 'sm')} Instructie…</button>`
+          : `<button class="btn">${icon('clip', 'sm')} Bijlage</button>`
+      }
+      <span class="grow"></span>
+      <button class="btn primary" data-act="send">${icon('send', 'sm')} Verstuur</button>
+    </div>
+  </div>`;
+      }
+
+      function renderModal() {
+        if (!state.modal) return '';
+        let inner = '';
+        if (state.modal === 'pick')
+          inner = `<h3>Account toevoegen</h3><p>Kies je mailprovider.</p>
+    <div class="providers">
+      <button class="provider" data-provider="google"><span class="logo" style="background:#ea4335">G</span>Google<small>Gmail en Workspace</small></button>
+      <button class="provider" data-provider="microsoft"><span class="logo" style="background:#0078d4">M</span>Microsoft<small>Outlook en Microsoft 365</small></button>
+      <button class="provider" data-provider="fastmail"><span class="logo" style="background:#2f6fd6">F</span>Fastmail<small>Met API-token</small></button>
+    </div><div class="foot"><button class="btn" data-act="close-modal">Annuleer</button></div>`;
+        if (state.modal === 'google' || state.modal === 'microsoft')
+          inner = `<h3>Inloggen bij ${state.modal === 'google' ? 'Google' : 'Microsoft'}</h3>
+    <div class="spinner"></div><p style="text-align:center">Er is een inlogvenster van ${state.modal === 'google' ? 'Google' : 'Microsoft'} geopend. Log daar in en geef Mail toegang; daarna kom je vanzelf hier terug.${state.modal === 'microsoft' ? '<br><br>Bij een werkaccount kan Microsoft melden dat je beheerder eerst toestemming moet geven.' : ''}</p>
+    <div class="foot"><button class="btn" data-act="close-modal">Annuleer</button><button class="btn primary" data-act="added">Doe alsof het lukte</button></div>`;
+        if (state.modal === 'fastmail')
+          inner = `<h3>Fastmail</h3>
+    <p>Maak in Fastmail een API-token: Instellingen › Privacy en beveiliging › API-tokens. Kies toegang tot Mail en Verzenden, zonder alleen-lezen.</p>
+    <div class="field">E-mailadres<input value="jij@fastmail.com"></div>
+    <div class="field">API-token<input type="password" value="fmu1-xxxxxxxxxxxxxxxx"></div>
+    <div class="foot"><button class="btn" data-act="close-modal">Annuleer</button><button class="btn primary" data-act="added">Koppelen</button></div>`;
+        return `<div class="overlay"><div class="sheet">${inner}</div></div>`;
+      }
+
+      function renderSettings() {
+        const nav = [
+          ['agent', 'sparkle', 'Agent'],
+          ['connect', 'plug', 'Agents (MCP)'],
+          ['accounts', 'inbox', 'Accounts'],
+        ];
+        const sw = (label, sub = '', off = false, dis = false) =>
+          `<div class="lrow"><span class="grow">${label}${sub ? `<small>${sub}</small>` : ''}</span><button class="switch ${off ? 'off' : ''}" ${dis ? 'disabled' : ''}></button></div>`;
+        let main = '';
+        if (state.settingsTab === 'agent')
+          main = `<h2>Agent</h2><p class="sub">De agent leest elke nieuwe mail en doet wat hieronder staat. Schrijf het zoals je het tegen een assistent zou zeggen.</p>
+    <div class="s-sec"><h4>Instructies</h4><textarea class="instr">Spam en phishing direct naar de spammap.
+Nieuwsbrieven die ik drie keer niet open: archiveren.
+LinkedIn- en Teams-meldingen archiveren.
+Werk: CC-mail waarin niemand mij iets vraagt archiveren, met de kern in "Ter info".
+Werk: mail van Sanne, aannemers en gemeenten is altijd "Antwoord nodig" als er een vraag in staat.
+Mijn vragen aan KPN en gemeenten opvolgen na 3 werkdagen.
+Antwoorden in de taal van de afzender, kort, met "Groet, Gideon".</textarea></div>
+    <div class="s-sec"><h4>${icon('phone', 'sm')} Op je telefoon</h4>
+      ${sw('Gefilterde mail als gelezen markeren', 'Geen badge op je telefoon voor spam en ruis')}
+      ${sw('Spam naar de spammap van de provider', 'Gmail Spam, Outlook Ongewenste e-mail, Fastmail Junk; hun filter leert mee')}
+      ${sw('Ruis archiveren', 'Nieuwsbrieven, meldingen en CC zonder vraag; eerst een voorstel per afzender, daarna automatisch')}
+      ${sw('"Antwoord nodig" als vlag of ster op de server', 'Zichtbaar in iOS Mail en de Gmail-app')}</div>
+    <div class="s-sec"><h4>Controle</h4>
+      ${sw('Gefilterde mail eerst door mij laten controleren', 'Alles komt in de controlelijst; uitzetten zodra je de agent vertrouwt')}
+      ${sw('Alleen twijfelgevallen controleren', 'De agent zet alleen mail waarover hij twijfelt in de lijst', true)}</div>
+    <div class="s-sec"><h4>Geleerd van jouw controles</h4>${LEARNED.map(([t, s]) => `<div class="lrow"><span class="grow">${t}<small>${s}</small></span><button class="x" data-act="toast" data-msg="Regel verwijderd">✕</button></div>`).join('')}</div>
+    <div class="s-sec"><h4>Deze maand</h4><div class="meter"><span><b>1.904</b>mails beoordeeld</span><span><b>1.127</b>gefilterd</span><span><b>9</b>keer teruggezet</span><span><b>€ 0</b>via je abonnement</span></div></div>`;
+        if (state.settingsTab === 'connect')
+          main = `<h2>Agents (MCP)</h2><p class="sub">Je eigen agents kunnen bij je mail, en de triage draait op je eigen agents.</p>
+    <div class="s-sec"><h4>Triage draait op</h4><div class="seg"><button class="on">Claude Code · Haiku</button><button>Codex (uitwijk)</button></div>
+      <div class="code">claude -p --model haiku --mcp-config triage.json</div>
+      <div class="lrow" style="margin-top:8px"><span class="pulse"></span><span class="grow">Laatste run 2 min geleden, 3 mails in 4,1 s<small>Valt Claude Code weg, dan neemt Codex het over en zie je hier een melding</small></span></div></div>
+    <div class="s-sec"><h4>MCP-server</h4>
+      <div class="lrow"><span class="pulse"></span><span class="grow">Actief op localhost:4717<small>Verbonden: Claude Code (2 sessies), Codex (1 sessie)</small></span><button class="btn" data-act="toast" data-msg="Commando's gekopieerd">Kopieer installatie</button></div>
+      <div class="code">claude mcp add --transport http mail http://localhost:4717/mcp<br>codex mcp add mail --url http://localhost:4717/mcp</div></div>
+    <div class="s-sec"><h4>Wat agents mogen</h4>
+      ${sw('Zoeken en lezen')}
+      ${sw('Labelen, archiveren, naar spam, gelezen markeren')}
+      ${sw('Concepten klaarzetten', 'Verschijnen als blauwe kaart bij de mail')}
+      ${sw('Versturen', 'Alleen na jouw klik op een melding', true)}</div>`;
+        if (state.settingsTab === 'accounts')
+          main = `<h2>Accounts</h2><p class="sub">Per account één handtekening; verder niets in te stellen.</p>
+    ${Object.values(ACCOUNTS)
+      .map(
+        (a) =>
+          `<div class="lrow"><span class="adot" style="background:${a.color}"></span><span class="grow">${a.name}${a.work ? ' (werk)' : ''}<small>${a.addr}</small></span><button class="btn">Handtekening</button><button class="x">✕</button></div>`,
+      )
+      .join('')}
+    <button class="btn" data-act="add" style="margin-top:6px">${icon('plus', 'sm')} Account toevoegen</button>`;
+        return `<div class="settings"><div class="s-nav">${nav.map(([k, ic, l]) => `<div class="side-item ${state.settingsTab === k ? 'active' : ''}" data-stab="${k}"><span class="ic">${icon(ic)}</span>${l}</div>`).join('')}</div><div class="s-main">${main}</div></div>`;
+      }
+
+      function render() {
+        const win = document.getElementById('win');
+        win.className = 'window' + (state.light ? ' light' : '');
+        const m = MESSAGES.find((x) => x.id === state.sel);
+        const showMsg = m && list().includes(m);
+        let main;
+        if (state.folder === 'settings') main = renderSettings();
+        else if (state.folder === 'home') main = renderHome();
+        else
+          main =
+            renderList() +
+            `<div class="reader">${renderToolbar()}${showMsg ? renderMessage(m) : '<div class="empty">Geen bericht geselecteerd</div>'}</div>`;
+        win.innerHTML =
+          renderSidebar() +
+          main +
+          renderComposer() +
+          renderModal() +
+          (state.toast ? `<div class="toast">${esc(state.toast)}</div>` : '');
+        document.getElementById('tabs').innerHTML = SCREENS.map(
+          (s) =>
+            `<button class="tab ${state.screen === s.id ? 'active' : ''}" data-screen="${s.id}">${s.label}</button>`,
+        ).join('');
+        document.getElementById('note').innerHTML = SCREENS.find(
+          (s) => s.id === state.screen,
+        ).note;
+      }
+
+      let toastTimer;
+      function toast(msg) {
+        state.toast = msg;
+        render();
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => {
+          state.toast = null;
+          render();
+        }, 2400);
+      }
+
+      function review(id, restore) {
+        (restore ? state.restored : state.reviewed).add(id);
+        const m = MESSAGES.find((x) => x.id === id);
+        if (restore) m.unread = true;
+        state.sel = toReview()[0]?.id;
+        if (restore)
+          toast(
+            `Terug in de inbox van ${ACCOUNTS[m.acct].name}, ongelezen. Nieuwe regel: ${m.from} niet meer filteren`,
+          );
+        else render();
+      }
+
+      document.addEventListener('click', (e) => {
+        const t = e.target.closest(
+          '[data-screen],[data-folder],[data-acct],[data-msg],[data-act],[data-reply],[data-provider],[data-stab],[data-review],[data-restore],[data-done],[data-open],[data-nudge]',
+        );
+        if (!t) return;
+        const d = t.dataset;
+        const cur = MESSAGES.find((x) => x.id === state.sel);
+        if (d.screen) return setScreen(d.screen);
+        if (d.review) return review(d.review, false);
+        if (d.restore) return review(d.restore, true);
+        if (d.done) {
+          state.done.add(d.done);
+          return toast('Klaar; de vlag is ook op de server weg');
+        }
+        if (d.nudge !== undefined) {
+          const w = WAITING[+d.nudge];
+          state.nudged.add(+d.nudge);
+          state.composer = {
+            to: w.to,
+            subject: 'Re: ' + w.subject,
+            body: w.draft,
+            from: w.acct,
+            ai: true,
+          };
+          return render();
+        }
+        if (d.open) {
+          const m = MESSAGES.find((x) => x.id === d.open);
+          state.folder = 'inbox';
+          state.acct = m.acct;
+          state.sel = m.id;
+          m.unread = false;
+          return render();
+        }
+        if (d.stab) {
+          state.settingsTab = d.stab;
+          return render();
+        }
+        if (d.provider) {
+          state.modal = d.provider;
+          return render();
+        }
+        if (d.folder) {
+          state.folder = d.folder;
+          state.acct = null;
+          state.sel = list()[0]?.id;
+          return render();
+        }
+        if (d.acct) {
+          state.folder = 'inbox';
+          state.acct = d.acct;
+          state.sel = list()[0]?.id;
+          return render();
+        }
+        if (d.reply !== undefined && cur) {
+          const r = cur.replies[+d.reply];
+          state.composer = {
+            to: cur.from,
+            subject: 'Re: ' + cur.subject,
+            body: r[1],
+            from: cur.acct,
+            ai: true,
+          };
+          return render();
+        }
+        if (d.act) {
+          switch (d.act) {
+            case 'theme':
+              state.light = !state.light;
+              return render();
+            case 'unread':
+              state.unreadOnly = !state.unreadOnly;
+              return render();
+            case 'all-ok':
+              toReview().forEach((m) => state.reviewed.add(m.id));
+              state.sel = null;
+              return render();
+            case 'add':
+              state.modal = 'pick';
+              if (state.folder === 'settings') state.folder = 'home';
+              return render();
+            case 'settings':
+              state.folder = 'settings';
+              state.settingsTab = 'agent';
+              return render();
+            case 'close-modal':
+              state.modal = null;
+              return render();
+            case 'added':
+              state.modal = null;
+              return toast(
+                'Account toegevoegd; de eerste sync loopt op de achtergrond',
+              );
+            case 'compose':
+              state.composer = {
+                to: '',
+                subject: '',
+                body: '',
+                from: state.acct || 'werk',
+                ai: false,
+              };
+              return render();
+            case 'reply':
+              if (cur)
+                state.composer = {
+                  to: cur.from,
+                  subject: 'Re: ' + cur.subject,
+                  body: '',
+                  from: cur.acct,
+                  ai: false,
+                };
+              return render();
+            case 'draft':
+              state.composer = {
+                to: cur.from,
+                subject: 'Re: ' + cur.subject,
+                body: cur.replies[0][1],
+                from: cur.acct,
+                ai: true,
+              };
+              return render();
+            case 'close-composer':
+              state.composer = null;
+              return render();
+            case 'send':
+              state.composer = null;
+              return toast('Verstuurd · 5 seconden om te annuleren');
+            case 'toast':
+              return toast(d.msg);
+          }
+        }
+        if (d.msg) {
+          state.sel = d.msg;
+          const mm = MESSAGES.find((x) => x.id === d.msg);
+          if (mm && mm.folder === 'inbox') mm.unread = false;
+          return render();
+        }
+      });
+
+      document.addEventListener('keydown', (e) => {
+        if (
+          state.folder !== 'filtered' ||
+          !state.sel ||
+          e.target.closest('input,textarea,[contenteditable]')
+        )
+          return;
+        if (e.key === 'Enter') review(state.sel, false);
+        if (e.key === 'u') review(state.sel, true);
+      });
+
+      const DECISIONS = [
+        {
+          id: 'werk',
+          title: '1. Werk-mail en de agent',
+          why: 'De triage stuurt de inhoud van elke mail naar Anthropic (via Claude Code) of OpenAI (via Codex). Voor werkmail kan dat tegen het beleid van Werk ingaan, en Microsoft 365 kan voor een externe app eerst toestemming van IT vragen.',
+          options: [
+            'Eerst bij Werk navragen; tot dan zit Werk in de app, maar zonder agent',
+            'Agent alleen op afzender, onderwerp en headers, zonder de inhoud',
+            'Gewoon volledig meenemen',
+          ],
+        },
+        {
+          id: 'where',
+          title: '2. Waar de agent draait',
+          why: 'Je telefoon blijft alleen rustig als de agent draait wanneer de mail binnenkomt. Slaapt je Mac, dan ziet je telefoon spam tot de Mac wakker wordt en alles inhaalt. Ook met de Mac aan kan je telefoon heel even pingen voordat de agent filtert (enkele seconden).',
+          options: [
+            'Eerst op de Mac als login item; na een paar weken kijken hoe vaak je telefoon nog ruis ziet',
+            'Meteen op een altijd-aan machine thuis (Mac mini of Raspberry Pi) met Claude Code daarop',
+            'Op een kleine cloudserver (los van Colloport)',
+          ],
+        },
+        {
+          id: 'review',
+          title: '3. Hoeveel je controleert',
+          why: 'Alles controleren kost een paar minuten per dag, maar zo leer je de agent snel kennen.',
+          options: [
+            'Eerst alles controleren; later in Instellingen omzetten naar alleen twijfelgevallen',
+            'Vanaf het begin alleen twijfelgevallen',
+            'Niets controleren; Gefilterd is alleen een logboek',
+          ],
+        },
+        {
+          id: 'followup',
+          title: '4. Opvolgen',
+          why: 'De agent leest je verstuurde mail om te zien welke vragen nog openstaan. Zonder grens wordt "Wacht op antwoord" snel lang.',
+          options: [
+            'Alleen mail waarin je echt iets vraagt, na 3 werkdagen zonder antwoord; per afzender aan te passen',
+            'Alle verstuurde mail zonder antwoord na 3 werkdagen',
+            'Alleen als ik een mail zelf markeer als "opvolgen"',
+          ],
+        },
+      ];
+
+      document.getElementById('decisions').innerHTML = DECISIONS.map(
+        (
+          d,
+        ) => `<div class="decision"><h3>${d.title}</h3><p class="why">${d.why}</p>
+  ${d.options.map((o, i) => `<label><input type="radio" name="${d.id}" value="${i}" ${i === 0 ? 'checked' : ''}><span>${i === 0 ? '<span class="rec">Advies:</span> ' : ''}${o}</span></label>`).join('')}</div>`,
+      ).join('');
+
+      document.getElementById('copy').addEventListener('click', async (e) => {
+        const lines = DECISIONS.map((d) => {
+          const v = +document.querySelector(`input[name="${d.id}"]:checked`)
+            .value;
+          return `${d.title}: ${d.options[v]}${v === 0 ? ' (advies)' : ''}`;
+        });
+        const rem = document.getElementById('remarks').value.trim();
+        await navigator.clipboard.writeText(
+          `Keuzes mail-ontwerp v2\n${lines.join('\n')}${rem ? `\n\nOpmerkingen:\n${rem}` : ''}`,
+        );
+        e.target.textContent = 'Gekopieerd';
+        setTimeout(() => (e.target.textContent = 'Kopieer mijn keuzes'), 1800);
+      });
+
+      render();
+    </script>
+  </body>
+</html>
