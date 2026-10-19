@@ -58,9 +58,11 @@ struct AccessSettings: View {
                 NSPasteboard.general.clearContents()
                 NSPasteboard.general.setString(created?.token ?? "", forType: .string)
             }
+            .accessibilityIdentifier("hedwig.secret.copy")
             Button("Klaar", role: .cancel) {}
         } message: {
             Text("Je ziet hem maar één keer; de server bewaart alleen een hash.\n\n\(created?.token ?? "")")
+                .accessibilityIdentifier("hedwig.secret.token")
         }
     }
 

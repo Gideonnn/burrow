@@ -36,3 +36,24 @@ and optionally `HEDWIG_OPEN=filtered|drafts|archive`.
   every window closed) it claims tasks meant for this Mac and runs them with the local
   `claude`; switch it off or set the path under Settings › Agent.
 - Settings: the bot instructions and learned rules, adding accounts (admin keys).
+
+## Letting an agent operate Hedwig
+
+While Hedwig runs, `hedwigctl` (installed in `~/.local/bin`) reads and operates it
+through a socket only your user can open:
+
+```bash
+hedwigctl state                 # mailboxes, the message list and the open message, as JSON
+hedwigctl show inbox:you@example.com
+hedwigctl open <messageId>
+hedwigctl tree                  # every window, button, field and menu item, with ids
+hedwigctl find Archiveer        # elements by label; then:
+hedwigctl press <id>
+hedwigctl type <id> "text"
+hedwigctl select <id>           # a row in a list
+```
+
+Password and key fields cannot be read or typed into, and a key shown after creating
+it stays hidden. Pressing Verstuur or Verwijder opens a dialog in Hedwig: nothing is
+sent or deleted until you allow it, and the agent cannot see or press that dialog.
+

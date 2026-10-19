@@ -37,6 +37,7 @@ struct ComposeView: View {
                     if sending { ProgressView().controlSize(.small) } else { Label("Verstuur", systemImage: "paperplane") }
                 }
                 .buttonStyle(.borderedProminent)
+                .accessibilityIdentifier("hedwig.send")
                 .keyboardShortcut(.return, modifiers: .command)
                 .disabled(Address.parseList(draft.to).isEmpty || sending || model.me?.can(.send) != true)
             }

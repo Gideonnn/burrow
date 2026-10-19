@@ -90,12 +90,35 @@ struct HedwigCommands: Commands {
 /// runner and live updates keep going with every window closed.
 final class AppDelegate: NSObject, NSApplicationDelegate {
     @MainActor let model = AppModel()
+    private var control: ControlSocketServer?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         Task { @MainActor in
             if model.connection != nil { await model.start() }
         }
+        Task { @MainActor in startControl() }
     }
+
+    /// Lets agents on this Mac operate Hedwig with `hedwigctl`.
+    @MainActor private func startControl() {
+        let model = model
+        let service = ControlService(surface: AccessibilitySurface(), state: { model.controlState() }, approve: approveControlAction)
+        service.register("show") { request in
+            try await model.show(request["text"] as? String ?? "inbox")
+            return model.controlState()
+        }
+        service.register("open") { request in
+            try await model.open(messageId: request["id"] as? String ?? "")
+            return model.controlState()
+        }
+        do {
+            control = try ControlSocketServer { request in await service.handle(request) }
+        } catch {
+            NSLog("Hedwig control socket unavailable: \(error.localizedDescription)")
+        }
+    }
+
+    func applicationWillTerminate(_ notification: Notification) { control?.stop() }
 
     // Closing the last window keeps Hedwig (and its runner) running, like Mail.
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }

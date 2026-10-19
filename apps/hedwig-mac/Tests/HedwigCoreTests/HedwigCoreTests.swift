@@ -96,6 +96,26 @@ import Testing
         #expect(reply.body.contains("> Zin in eten?"))
     }
 
+    @Test func controlStateDescribesTheScreenAndOpensMessages() async throws {
+        let server = server()
+        server.on("POST", "/api/messages/m2/actions", json: Fixture.message("m2", subject: "Tweede", unread: false))
+        let model = model(server)
+        await model.start()
+        try await model.show("inbox")
+        let subjects = (model.controlState()["messages"] as? [[String: Any]])?.compactMap { $0["subject"] as? String }
+        #expect(subjects == ["Eerste", "Tweede"])
+
+        try await model.open(messageId: "m2")
+        let message = try #require(model.controlState()["message"] as? [String: Any])
+        #expect(message["subject"] as? String == "Tweede")
+        #expect((message["body"] as? String)?.contains("Zin in eten?") == true)
+
+        try await model.show("archive")
+        #expect(model.selection == .folder(.archive))
+        await #expect(throws: ControlError.self) { try await model.show("nergens") }
+        await #expect(throws: ControlError.self) { try await model.open(messageId: "m404") }
+    }
+
     @Test func aRevokedKeyDisconnects() async throws {
         let server = MockServer()
         server.on("GET", "/api/me", status: 401, json: #"{"error":"missing or invalid API key"}"#)

@@ -17,11 +17,11 @@ public final class AppModel {
     public private(set) var connection: Connection?
     public private(set) var me: Me?
     public var selection: SidebarItem? {
-        didSet { if oldValue != selection { Task { await loadSelection() } } }
+        didSet { if oldValue != selection { selectionLoad = Task { await loadSelection() } } }
     }
     public private(set) var messages: [MessageSummary] = []
     public var selectedMessageId: String? {
-        didSet { if oldValue != selectedMessageId { Task { await openSelected() } } }
+        didSet { if oldValue != selectedMessageId { messageLoad = Task { await openSelected() } } }
     }
     public private(set) var detail: MessageDetail?
     public private(set) var insights: MessageInsights?
@@ -39,6 +39,9 @@ public final class AppModel {
     private let store: ConnectionStore
     private let makeClient: @Sendable (Connection) -> APIClient
     private var eventsTask: Task<Void, Never>?
+    // The loads the two selections start, so a caller can wait for them.
+    var selectionLoad: Task<Void, Never>?
+    var messageLoad: Task<Void, Never>?
 
     public init(
         store: ConnectionStore = ConnectionStore(),

@@ -1,0 +1,86 @@
+import Foundation
+
+/// What an agent controlling Hedwig reads as `state`, and the app-level
+/// commands that are easier than finding the right row in the tree.
+extension AppModel {
+    public func controlState() -> [String: Any] {
+        let iso = ISO8601DateFormatter()
+        var state: [String: Any] = [
+            "connected": connection?.serverURL.host() ?? NSNull(),
+            "selection": selectionName ?? NSNull(),
+            "mailboxes": (me?.mailboxes ?? []).map {
+                ["id": $0.id, "address": $0.address, "provider": $0.provider.rawValue, "unread": unreadCounts[$0.id] ?? 0]
+            },
+            "messages": messages.map { message in
+                [
+                    "id": message.id, "mailboxId": message.mailboxId, "from": message.from.formatted,
+                    "subject": message.subject, "snippet": message.snippet,
+                    "receivedAt": iso.string(from: message.receivedAt), "unread": message.unread,
+                    "flagged": message.flagged, "folder": message.folder.rawValue,
+                ] as [String: Any]
+            },
+            "selectedMessageId": selectedMessageId ?? NSNull(),
+            "drafts": drafts.count,
+            "filtered": filtered.count,
+            "tasksAwaitingReview": tasksAwaitingReview,
+        ]
+        if let detail {
+            state["message"] = [
+                "id": detail.id, "from": detail.from.formatted, "to": Address.format(detail.to),
+                "cc": Address.format(detail.cc), "subject": detail.subject,
+                "receivedAt": iso.string(from: detail.receivedAt), "labels": detail.labels,
+                "body": detail.bodyText ?? "",
+            ] as [String: Any]
+        }
+        if let error { state["error"] = error }
+        return state
+    }
+
+    private var selectionName: String? {
+        switch selection {
+        case .inbox(let id): "inbox:\(mailbox(id)?.address ?? id)"
+        case .filtered: "filtered"
+        case .drafts: "drafts"
+        case .tasks: "tasks"
+        case .folder(let folder): folder.rawValue
+        case nil: nil
+        }
+    }
+
+    /// `inbox` (the first mailbox), `inbox:<address>`, `filtered`, `drafts`,
+    /// `tasks`, `archive`, `sent` or `spam`.
+    public func show(_ place: String) async throws {
+        try select(place)
+        await selectionLoad?.value
+        await messageLoad?.value
+    }
+
+    func select(_ place: String) throws {
+        switch place {
+        case "filtered": selection = .filtered
+        case "drafts": selection = .drafts
+        case "tasks": selection = .tasks
+        case "archive", "sent", "spam": selection = .folder(MailFolder(rawValue: place)!)
+        default:
+            guard place == "inbox" || place.hasPrefix("inbox:") else { throw ControlError("unknown place \(place)") }
+            let wanted = place.dropFirst("inbox:".count)
+            guard let box = me?.mailboxes.first(where: { wanted.isEmpty || $0.address == wanted || $0.id == wanted }) else {
+                throw ControlError("no mailbox \(wanted)")
+            }
+            selection = .inbox(mailboxId: box.id)
+        }
+    }
+
+    /// Opens a message from the current list.
+    public func open(messageId: String) async throws {
+        guard messages.contains(where: { $0.id == messageId }) else {
+            throw ControlError("message \(messageId) is not in the current list; show its mailbox first")
+        }
+        selectedMessageId = messageId
+        await messageLoad?.value
+    }
+}
+
+extension Address {
+    var formatted: String { Address.format([self]) }
+}

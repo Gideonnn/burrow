@@ -72,6 +72,7 @@ struct MainToolbar: ToolbarContent {
                 Button { Task { await model.perform([.trash]) } } label: {
                     Label("Verwijder", systemImage: "trash")
                 }
+                .accessibilityIdentifier("hedwig.trash")
                 Button { Task { await model.perform([.moveToSpam, .markRead]) } } label: {
                     Label("Spam", systemImage: "xmark.bin")
                 }
