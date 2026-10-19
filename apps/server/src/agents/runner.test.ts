@@ -110,3 +110,13 @@ describe('parseJsonAnswer', () => {
     expect(parseJsonAnswer('```\n{"a":1}\n```')).toEqual({ a: 1 });
   });
 });
+
+describe('FallbackRunner without runners', () => {
+  it('fails with an error instead of throwing undefined', async () => {
+    const error = await new FallbackRunner([])
+      .run({} as never)
+      .catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toContain('no agent CLI configured');
+  });
+});

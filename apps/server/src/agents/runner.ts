@@ -105,7 +105,9 @@ export class FallbackRunner implements AgentRunner {
   }
 
   async run(request: AgentRequest): Promise<unknown> {
-    let lastError: unknown;
+    let lastError: unknown = new Error(
+      'no agent CLI configured (BURROW_AGENTS)',
+    );
     for (const runner of this.runners) {
       try {
         return await runner.run(request);
