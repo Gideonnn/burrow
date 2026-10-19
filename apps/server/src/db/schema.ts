@@ -143,3 +143,20 @@ export const learnedRules = sqliteTable('learned_rules', {
   text: text('text').notNull(),
   createdAt: createdAt(),
 });
+
+export const drafts = sqliteTable('drafts', {
+  id: id(),
+  mailboxId: text('mailbox_id')
+    .notNull()
+    .references(() => mailboxes.id, { onDelete: 'cascade' }),
+  // Name of the key (or bot) that prepared it, shown in the client.
+  createdBy: text('created_by').notNull(),
+  inReplyTo: text('in_reply_to').references(() => messages.id, {
+    onDelete: 'set null',
+  }),
+  to: text('to', { mode: 'json' }).$type<Address[]>().notNull(),
+  cc: text('cc', { mode: 'json' }).$type<Address[]>().notNull(),
+  subject: text('subject').notNull(),
+  body: text('body').notNull(),
+  createdAt: createdAt(),
+});

@@ -78,3 +78,28 @@ export const triageAction = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('label'), label: z.string().min(1) }),
 ]);
 export type TriageAction = z.infer<typeof triageAction>;
+
+// A reply or new message prepared by a bot or an outside agent (through MCP).
+// Only a person sends it, from the client.
+export const draft = z.object({
+  id: z.string(),
+  mailboxId: z.string(),
+  createdBy: z.string(),
+  inReplyTo: z.string().nullable(),
+  to: z.array(address),
+  cc: z.array(address),
+  subject: z.string(),
+  body: z.string(),
+  createdAt: z.iso.datetime(),
+});
+export type Draft = z.infer<typeof draft>;
+
+export const createDraftRequest = z.object({
+  mailboxId: z.string(),
+  to: z.array(address).min(1),
+  cc: z.array(address).default([]),
+  subject: z.string(),
+  body: z.string().min(1),
+  inReplyTo: z.string().optional(),
+});
+export type CreateDraftRequest = z.infer<typeof createDraftRequest>;
