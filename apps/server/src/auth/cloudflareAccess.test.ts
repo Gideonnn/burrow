@@ -110,3 +110,14 @@ describe('the tunnel behind Cloudflare Access', () => {
     }
   });
 });
+
+describe('the public pages Google asks for', () => {
+  it('open without an Access login, and nothing else does', async () => {
+    const h = await household();
+    for (const path of ['/about', '/privacy', '/terms']) {
+      expect((await h.visit(path)).status).toBe(200);
+    }
+    expect((await h.visit('/privacy/../login/device')).status).toBe(403);
+    expect((await h.visit('/about/x')).status).toBe(403);
+  });
+});

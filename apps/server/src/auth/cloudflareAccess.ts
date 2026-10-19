@@ -3,6 +3,7 @@ import { Hono } from 'hono';
 import { createMiddleware } from 'hono/factory';
 import { createRemoteJWKSet, jwtVerify, type JWTVerifyGetKey } from 'jose';
 import type { App } from '../app';
+import { PUBLIC_PATHS } from '../publicPages';
 
 export type CloudflareAccessOptions = {
   db: Db;
@@ -28,6 +29,7 @@ export function behindCloudflareAccess(
 ) {
   const requireLogin = createMiddleware<PlatformEnv>(async (c, next) => {
     if (c.req.path.startsWith('/api/')) return next();
+    if ((PUBLIC_PATHS as readonly string[]).includes(c.req.path)) return next();
     const token = c.req.header('cf-access-jwt-assertion');
     const email = token
       ? await jwtVerify(token, keys, {

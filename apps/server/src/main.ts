@@ -81,6 +81,7 @@ const app = createApp({
   platform,
   clientsDir: resolve(config.dataDir, 'clients'),
   devLoginAs: config.devLoginAs,
+  contact: config.contact,
 });
 
 platform.start();

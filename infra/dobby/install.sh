@@ -104,6 +104,8 @@ CLOUDFLARE_ACCESS_TEAM=
 CLOUDFLARE_ACCESS_AUD=
 # Pensieve transcribes recordings through OpenAI.
 OPENAI_API_KEY=
+# Shown on the public /privacy and /terms pages.
+BURROW_CONTACT_EMAIL=
 EOF
   umask 022
 fi

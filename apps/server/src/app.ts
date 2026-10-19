@@ -3,6 +3,7 @@ import { type Platform, type PlatformEnv, platformApi } from '@burrow/platform';
 import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import { deviceLogin } from './auth/deviceLogin';
+import { publicPages } from './publicPages';
 
 export type AppOptions = {
   version: string;
@@ -11,6 +12,8 @@ export type AppOptions = {
   clientsDir?: string;
   // Development only: who the device login assumes without Cloudflare Access.
   devLoginAs?: string;
+  // Shown on the public privacy and terms pages.
+  contact?: string;
 };
 
 // The whole HTTP surface: health, the device login, every module's browser
@@ -20,6 +23,7 @@ export function createApp({
   platform,
   clientsDir,
   devLoginAs,
+  contact,
 }: AppOptions) {
   const app = new Hono<PlatformEnv>();
 
@@ -34,6 +38,7 @@ export function createApp({
     c.json<HealthResponse>({ status: 'ok', service: 'burrow-server', version }),
   );
 
+  app.route('/', publicPages({ contact }));
   app.route(
     '/',
     deviceLogin({ publicUrl: platform.publicUrl, devPersonName: devLoginAs }),
