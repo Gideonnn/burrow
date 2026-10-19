@@ -9,7 +9,7 @@ auth key for provisioning).
 
 The first install on Dobby generates `BURROW_SECRET_KEY` there and keeps every server
 secret in the settings file under `~/.config/burrow/` (mode 600), next to the OAuth client
-credentials the operator adds. Nothing is in git. SOPS below is only needed if secrets
+credentials the operator adds. The Cloudflare Tunnel token has its own file there, so the server and the agents it runs never see it. Nothing is in git. SOPS below is only needed if secrets
 ever move into the repository.
 
 ## SOPS in a public repository

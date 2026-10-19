@@ -9,7 +9,28 @@ Microsoft client ids in the settings on Dobby, and add age recipients for backup
 rerun `pnpm server:deploy`.
 **Why:** the server runs on Dobby since 2026-10-19 and has an admin key, but the Mac
 reaches it only through an SSH tunnel and no real mailbox is connected yet.
-**Scope:** about half an hour; see the deploy topic.
+**Scope:** about half an hour; see the deploy topic. Serve stays the route for Hedwig and
+agents; register the OAuth redirect URIs on the public hostname from the next entry.
+
+## Public access through Cloudflare (operator)
+
+**What:** create the Access application and the tunnel, fill in the Cloudflare settings
+and the tunnel token on Dobby, give each person their login address with
+`cli.sh set-email`, and rerun the install. The public hostname lives in the settings on
+Dobby, not in the repository.
+**Why:** a household member without Tailscale must be able to log in from a browser and
+connect a mailbox. The server side (tunnel port 4718, Access check) is built.
+**Scope:** about an hour; see "Public access" in the deploy topic.
+
+## Web interface
+
+**What:** a web app served by the server for settings: people, mailboxes (connect and
+remove), API keys, bots and routines. Logged in through Access: the tunnel check in
+`auth/cloudflareAccess.ts` already resolves the person and can pass them on to the
+routes. Give it a name from the naming topic.
+**Why:** settings now need the CLI or the Mac app; a browser works for everyone in the
+household on any device.
+**Scope:** clickable design in `docs/design/` first, then build.
 
 ## Invoice routine
 
