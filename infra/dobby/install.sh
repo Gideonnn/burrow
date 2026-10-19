@@ -12,7 +12,10 @@
 #   3. writes ~/.config/burrow/burrow.env once (mode 600) with a fresh
 #      BURROW_SECRET_KEY and the Tailscale HTTPS name; later runs keep it;
 #   4. installs and (re)starts the burrow.service and the nightly backup timer;
-#   5. publishes the server on the tailnet with `tailscale serve` when allowed.
+#   5. publishes the server on the tailnet with `tailscale serve` when allowed;
+#   6. runs the Cloudflare Tunnel as burrow-tunnel.service once the tunnel
+#      settings hold TUNNEL_TOKEN (installs cloudflared into ~/.local/bin
+#      when missing).
 #
 # Secrets stay on this machine: the env file is never printed or copied.
 set -euo pipefail
@@ -20,10 +23,13 @@ set -euo pipefail
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 CONFIG_DIR="$HOME/.config/burrow"
 ENV_FILE="$CONFIG_DIR/burrow.env"
+# Apart from the server settings, so the server and its agents never see it.
+TUNNEL_ENV="$CONFIG_DIR/tunnel.env"
 DATA_DIR="$HOME/.local/share/burrow"
 UNIT_DIR="$HOME/.config/systemd/user"
 LOG_DIR="$HOME/.local/state/burrow"
 PORT=4717
+TUNNEL_PORT=4718
 export PATH="$HOME/.local/bin:$PATH"
 
 say() { printf '\033[1m→ %s\033[0m\n' "$*"; }
@@ -39,6 +45,7 @@ status() {
   echo "  first person and admin key:  $REPO/infra/dobby/cli.sh init <name>"
   echo "  logs:                         tail -f $LOG_DIR/server.log"
   echo "  Google/Microsoft accounts:    add the client ids to $ENV_FILE, then rerun this script"
+  echo "  public access:                see the deploy topic (Cloudflare Tunnel and Access)"
 }
 
 if [ "${1:-}" = "--status" ]; then status; exit 0; fi
@@ -79,6 +86,8 @@ GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
 MICROSOFT_CLIENT_ID=
 MICROSOFT_CLIENT_SECRET=
+CLOUDFLARE_ACCESS_TEAM=
+CLOUDFLARE_ACCESS_AUD=
 EOF
   umask 022
 fi
@@ -138,6 +147,43 @@ if command -v tailscale >/dev/null; then
     echo "  not published: ${out:-no output}"
     echo "  if this user may not configure Tailscale, run once: sudo tailscale set --operator=$USER"
   fi
+fi
+
+if grep -q '^TUNNEL_TOKEN=..*' "$TUNNEL_ENV" 2>/dev/null; then
+  say "running the Cloudflare Tunnel"
+  if ! command -v cloudflared >/dev/null; then
+    case "$(uname -m)" in
+      x86_64) arch=amd64 ;;
+      aarch64 | arm64) arch=arm64 ;;
+      *) fail "no cloudflared build for $(uname -m)" ;;
+    esac
+    mkdir -p "$HOME/.local/bin"
+    curl -fsSL -o "$HOME/.local/bin/cloudflared" \
+      "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-$arch"
+    chmod +x "$HOME/.local/bin/cloudflared"
+  fi
+  grep -q '^CLOUDFLARE_ACCESS_AUD=..*' "$ENV_FILE" ||
+    echo "  CLOUDFLARE_ACCESS_TEAM and _AUD are empty in $ENV_FILE: nothing listens on $TUNNEL_PORT yet"
+  cat > "$UNIT_DIR/burrow-tunnel.service" <<EOF
+[Unit]
+Description=Cloudflare Tunnel to the Burrow server
+After=network-online.target burrow.service
+
+[Service]
+EnvironmentFile=$TUNNEL_ENV
+ExecStart=$(command -v cloudflared) tunnel --no-autoupdate run
+StandardOutput=append:$LOG_DIR/tunnel.log
+StandardError=append:$LOG_DIR/tunnel.log
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target
+EOF
+  systemctl --user daemon-reload
+  systemctl --user enable burrow-tunnel.service >/dev/null 2>&1
+  systemctl --user restart burrow-tunnel.service
+  echo "  started; log: $LOG_DIR/tunnel.log"
 fi
 
 echo
