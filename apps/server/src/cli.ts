@@ -6,6 +6,7 @@
 //   pnpm --filter @burrow/server cli list
 //   pnpm --filter @burrow/server cli generate-secret    value for BURROW_SECRET_KEY
 //   pnpm --filter @burrow/server cli seed-demo          invented household for development
+//   pnpm --filter @burrow/server cli backup <file>        consistent copy of the database
 import {
   createKey,
   createPerson,
@@ -114,6 +115,13 @@ switch (command) {
     console.log('Demo household created. Keys, shown once:\n');
     for (const [name, { token }] of keys)
       console.log(`  ${name.padEnd(16)} ${token}`);
+    break;
+  }
+  case 'backup': {
+    // A consistent copy of the live database, safe while the server runs.
+    const target = required(args[0], 'target file');
+    await db().$client.backup(target);
+    console.log(`backed up to ${target}`);
     break;
   }
   case 'generate-secret':

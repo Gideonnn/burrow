@@ -8,8 +8,13 @@ coverage/
 # Secrets and local state never enter git; see AGENTS.md "Open source hygiene".
 .env
 .env.*
+*.env
 !.env.example
+!*.env.example
 .data/
+infra/dobby/backups/
+infra/dobby/backup-recipients.txt
+.sops.yaml
 *.sqlite
 *.sqlite-*
 *.db
