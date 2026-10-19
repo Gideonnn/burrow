@@ -1,5 +1,6 @@
 import type { MailFolder, ServerOp } from '@burrow/contracts';
 import { parseAddress, parseAddressList } from './addresses';
+import { decodeEntities, htmlToText } from './html';
 import { buildMime } from './mime';
 import { bearerJson, type Fetch, HttpError, type OAuthSession } from './oauth';
 import type {
@@ -246,7 +247,7 @@ export function parseGmailMessage(
       return name ? [name] : [];
     }),
     hasAttachments: body.attachments,
-    bodyText: body.text,
+    bodyText: body.text ?? (body.html ? htmlToText(body.html) : null),
     bodyHtml: body.html,
     headers: {
       messageId: header('Message-ID') ?? header('Message-Id'),
@@ -281,14 +282,4 @@ function walkParts(
     out.html = Buffer.from(data, 'base64url').toString('utf8');
   }
   for (const p of part.parts ?? []) walkParts(p, out);
-}
-
-// Gmail snippets arrive HTML-escaped.
-function decodeEntities(text: string): string {
-  return text
-    .replace(/&#39;/g, "'")
-    .replace(/&quot;/g, '"')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&amp;/g, '&');
 }
