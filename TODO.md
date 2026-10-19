@@ -4,15 +4,12 @@ Issue-ready entries, roughly in build order. Delete an entry in the commit that 
 
 ## Finish Dobby (operator)
 
-**What:** set up Cloudflare as in the deploy topic (Access applications, `/api` bypass,
-rate limit, tunnel), fill in the settings and tunnel token on Dobby, give
-each person their login address with `cli.sh set-email`, put the Google and Microsoft
-client ids in the settings, add age recipients for backups, then rerun
-`pnpm server:deploy`. Point Hedwig at the public hostname. The public hostname lives in the settings on Dobby, not
-in the repository.
-**Why:** the server runs on Dobby since 2026-10-19 with an admin key, but is reachable
-only over SSH and no real mailbox is connected yet.
-**Scope:** about an hour; see the deploy topic.
+**What:** connect the real mailboxes (Fastmail with an API token; Gmail and Microsoft
+after their client ids are in the settings on Dobby, redirect URI
+`<BURROW_PUBLIC_URL>/oauth/callback`), and add age recipients for backups.
+**Why:** Burrow is reachable through Cloudflare since 2026-10-19 and Hedwig connects,
+but no real mailbox is connected and backups are unencrypted copies on Dobby itself.
+**Scope:** under an hour; see the providers and deploy topics.
 
 ## Web interface
 
