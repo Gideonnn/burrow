@@ -43,6 +43,7 @@ const triage = new TriageService({
   mail,
   catalog,
   bot: config.triageBot,
+  language: config.language,
   runner: new FallbackRunner(
     config.agents.map(({ name, command }) =>
       name === 'claude'

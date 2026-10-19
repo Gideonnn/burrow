@@ -36,7 +36,8 @@ markdown file. The user-facing app may add a plain alias (Raycast opens Hedwig a
   machine; the code does not carry the machine's name.
 - `bots/`: bot personas, one markdown file each (Kreacher is the first). A personal
   directory on the server can add or override bots.
-- `apps/hedwig-mac/`: the native macOS mail client (SwiftUI). Not created yet.
+- `apps/hedwig-mac/`: the native macOS mail client (SwiftUI, a Swift package bundled by
+  `scripts/bundle.sh`; see its README).
 - `modules/hedwig/`: mail on the server: provider clients, sync, triage.
 - `packages/contracts/`: zod schemas shared by server and clients.
 - `skills/`: skills the bots use at runtime (for example the Sorting Hat triage), one

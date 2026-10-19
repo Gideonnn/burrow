@@ -23,3 +23,6 @@ coverage/
 DerivedData/
 *.xcuserstate
 xcuserdata/
+
+# Mac app bundle output
+apps/hedwig-mac/build/

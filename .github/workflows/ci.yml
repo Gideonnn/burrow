@@ -38,3 +38,13 @@ jobs:
       - uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  mac:
+    runs-on: macos-15
+    defaults:
+      run:
+        working-directory: apps/hedwig-mac
+    steps:
+      - uses: actions/checkout@v4
+      - run: swift build
+      - run: swift test

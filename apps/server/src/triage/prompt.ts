@@ -20,6 +20,7 @@ export type TriageContext = {
   mailbox: { address: string; provider: string };
   message: MessageRow;
   ownerWroteToSender: boolean;
+  language: string;
 };
 
 // Everything the server knows for certain goes above the line; the sender's
@@ -57,5 +58,5 @@ ${ctx.rules.length ? ctx.rules.map((r) => `- ${r}`).join('\n') : '(none)'}
 ${body}
 </untrusted_message>
 
-Answer with JSON only, matching the schema.`;
+Answer with JSON only, matching the schema. Write the reason in ${ctx.language}.`;
 }

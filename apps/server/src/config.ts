@@ -17,6 +17,8 @@ const env = z.object({
   BURROW_BOTS_DIRS: z.string().optional(),
   BURROW_SKILLS_DIRS: z.string().optional(),
   BURROW_TRIAGE_BOT: z.string().default('kreacher'),
+  // Language for reasons and other text the bots write, e.g. Dutch.
+  BURROW_LANGUAGE: z.string().default('English'),
   // Agent CLIs to try in order for headless runs.
   BURROW_AGENTS: z.string().default('claude,codex'),
   BURROW_CLAUDE_COMMAND: z.string().default('claude'),
@@ -37,6 +39,7 @@ export type Config = {
   botsDirs: string[];
   skillsDirs: string[];
   triageBot: string;
+  language: string;
   agents: { name: 'claude' | 'codex'; command: string }[];
 };
 
@@ -61,6 +64,7 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): Config {
     botsDirs: dirs(parsed.BURROW_BOTS_DIRS, 'bots', dataDir),
     skillsDirs: dirs(parsed.BURROW_SKILLS_DIRS, 'skills', dataDir),
     triageBot: parsed.BURROW_TRIAGE_BOT,
+    language: parsed.BURROW_LANGUAGE,
     agents: parsed.BURROW_AGENTS.split(',')
       .map((a) => a.trim())
       .filter((a): a is 'claude' | 'codex' => a === 'claude' || a === 'codex')
