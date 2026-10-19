@@ -2,14 +2,6 @@
 
 Issue-ready entries, roughly in build order. Delete an entry in the commit that finishes it.
 
-## Triage with bots and skills
-
-**What:** a runner on the server that hands a new message, the owner's instructions and a
-bot's skills to `claude -p --model <bot.model>` and validates the JSON against
-`triageAction`; applies `serverOpsFor` at the provider; keeps a log for the "Gefilterd"
-review with restore. **Why:** the core of Hedwig. **Scope:** runner, log, restore, tests
-with a fake agent CLI.
-
 ## MCP endpoint
 
 **What:** `/mcp` on the server (streamable HTTP), authenticated with an API key and scoped
