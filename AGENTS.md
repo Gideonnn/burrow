@@ -44,8 +44,8 @@ markdown file. The user-facing app may add a plain alias (Raycast opens Hedwig a
   folder with a `SKILL.md` each. Not to be confused with `.agents/skills/`, which help
   agents develop this repo.
 - `docs/design/`: clickable HTML designs, one file per iteration.
-- `infra/dobby/`: Docker Compose, the deploy script and backups for Dobby; see the
-  [deploy topic](.agents/wiki/topics/deploy.md).
+- `infra/dobby/`: install, deploy, backup and CLI scripts for Dobby (a systemd user
+  service, no Docker); see the [deploy topic](.agents/wiki/topics/deploy.md).
 
 See [architecture](.agents/wiki/topics/architecture.md) before adding a module.
 

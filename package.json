@@ -12,7 +12,9 @@
     "lint": "oxlint .",
     "lint:fix": "oxlint . --fix",
     "format": "oxfmt .",
-    "format:check": "oxfmt --check ."
+    "format:check": "oxfmt --check .",
+    "hedwig:install": "./apps/hedwig-mac/scripts/install.sh",
+    "server:deploy": "./infra/dobby/deploy.sh"
   },
   "devDependencies": {
     "@types/node": "^22.20.5",

@@ -1,6 +1,0 @@
-# Copy to .sops.yaml and put the age public keys (age1...) of the people who
-# may decrypt. Public keys are safe to commit; private keys never are.
-creation_rules:
-  - path_regex: infra/dobby/.*\.env\.enc$
-    age: >-
-      age1replace-with-gideons-mac-public-key

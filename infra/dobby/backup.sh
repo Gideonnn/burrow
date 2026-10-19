@@ -1,14 +1,21 @@
 #!/usr/bin/env bash
-# Nightly backup on Dobby: a consistent copy of the database, encrypted with
-# age to the recipients in backup-recipients.txt, keeping the last 30.
-# Installed as a systemd timer by the deploy topic's first setup.
+# Nightly backup: a consistent copy of the database, encrypted with age when
+# backup-recipients.txt exists next to this script (one age public key per
+# line), keeping the last 30. Runs from the burrow-backup timer that
+# install.sh sets up, with the server's environment loaded.
 set -euo pipefail
-cd "$(dirname "$0")"
+here="$(cd "$(dirname "$0")" && pwd)"
+dir="${BURROW_DATA_DIR:?}/backups"
+mkdir -p "$dir"
 
 stamp="$(date +%Y-%m-%d-%H%M)"
-docker compose exec -T server node dist/cli.js backup "/backups/burrow-$stamp.sqlite" >/dev/null
-age --encrypt --recipients-file backup-recipients.txt \
-  --output "backups/burrow-$stamp.sqlite.age" "backups/burrow-$stamp.sqlite"
-rm -f "backups/burrow-$stamp.sqlite"
-ls -1t backups/burrow-*.sqlite.age | tail -n +31 | xargs -r rm -f
-echo "backups/burrow-$stamp.sqlite.age"
+copy="$dir/burrow-$stamp.sqlite"
+node "$here/../../apps/server/dist/cli.js" backup "$copy" >/dev/null
+
+if [ -s "$here/backup-recipients.txt" ] && command -v age >/dev/null; then
+  age --encrypt --recipients-file "$here/backup-recipients.txt" --output "$copy.age" "$copy"
+  rm -f "$copy"
+  copy="$copy.age"
+fi
+ls -1t "$dir"/burrow-*.sqlite* | tail -n +31 | xargs -r rm -f
+echo "$copy"

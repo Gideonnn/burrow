@@ -6,7 +6,7 @@ API key and shows only that key's mailboxes.
 ```bash
 swift build && swift test            # from this folder
 ./scripts/bundle.sh                  # build/Hedwig.app
-./scripts/bundle.sh --install        # also copy to ~/Applications
+./scripts/install.sh                  # install in /Applications for Spotlight and Raycast
 ./scripts/make-icon.sh               # after changing Resources/AppIcon.svg
 ```
 
