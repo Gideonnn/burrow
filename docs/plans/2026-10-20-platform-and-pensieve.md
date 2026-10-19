@@ -136,23 +136,23 @@ tasks for a bot; approvals arrive as inline buttons. Not built in this round.
 
 ## Checklist (everything Gideon asked for on 2026-10-20)
 
-- [ ] Platform with modules, so more AI-assisted apps plug in (office suite for the household)
-- [ ] Workers: bots with personas run tasks on Dobby or a Mac, several in parallel
-- [ ] Workers on Dobby use Claude and/or Codex (Codex on the ChatGPT plan); per bot preference
-- [ ] Hedwig keeps working: filtering noise, automating part of the mail
-- [ ] Pensieve adopts RecHoarder on the same worker system
-- [ ] Profiles for Gideon and Angela; both admins; manage each other's settings and features, never content
-- [ ] Feature flags and settings per person, rendered generically in every app
-- [ ] Easy and secure login (browser approval through Cloudflare Access, device keys, revocable)
-- [ ] Separate apps (Hedwig.app, Pensieve.app) sharing BurrowKit
-- [ ] Audio on Dobby, compressed with ffmpeg; mirrored to each person's iCloud (shared to both)
-- [ ] Every app fully operable by local agents (CLI and MCP), own settings included, nothing sensitive
-- [ ] Deploy to Dobby when green (allowed)
-- [ ] Design document with Fable (colours, type, components, screens), then iterate
-- [ ] Brainstorm of further apps, Telegram bot (Patronus) in the design and the plan
-- [ ] Sign in with ChatGPT noted as the later per-person billing option
-- [ ] Public home, privacy and terms pages for publishing the Google app (Gideon's step tomorrow)
-- [ ] Wiki, diary and TODO updated; morning summary for Gideon
+- [x] Platform with modules, so more AI-assisted apps plug in (office suite for the household)
+- [x] Workers: bots with personas run tasks on Dobby or a Mac, several in parallel
+- [x] Workers on Dobby use Claude and/or Codex (Codex on the ChatGPT plan); per bot preference
+- [x] Hedwig keeps working: filtering noise, automating part of the mail
+- [x] Pensieve adopts RecHoarder on the same worker system
+- [x] Profiles for Gideon and Angela; both admins; manage each other's settings and features, never content
+- [x] Feature flags and settings per person, rendered generically in every app
+- [x] Easy and secure login (browser approval through Cloudflare Access, device keys, revocable)
+- [x] Separate apps (Hedwig.app, Pensieve.app) sharing BurrowKit
+- [x] Audio on Dobby, compressed with ffmpeg; mirrored to each person's iCloud (shared to both)
+- [x] Every app fully operable by local agents (CLI and MCP), own settings included, nothing sensitive
+- [x] Deploy to Dobby when green (allowed)
+- [x] Design document with Fable (colours, type, components, screens), then iterate
+- [x] Brainstorm of further apps, Telegram bot (Patronus) in the design and the plan
+- [x] Sign in with ChatGPT noted as the later per-person billing option
+- [x] Public home, privacy and terms pages for publishing the Google app (Gideon's step tomorrow)
+- [x] Wiki, diary and TODO updated; morning summary for Gideon
 
 ## Order of work
 
