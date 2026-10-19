@@ -184,14 +184,3 @@ public final class AppServices {
         }
     }
 }
-
-/// The server address every Burrow app on this Mac last used, so the second
-/// app does not ask for it again. Not a secret; each app keeps its own key.
-public enum SharedServer {
-    nonisolated(unsafe) static let defaults = UserDefaults(suiteName: "app.burrow.shared")
-
-    public static var last: URL? {
-        get { defaults?.string(forKey: "serverURL").flatMap(URL.init(string:)) }
-        set { defaults?.set(newValue?.absoluteString, forKey: "serverURL") }
-    }
-}

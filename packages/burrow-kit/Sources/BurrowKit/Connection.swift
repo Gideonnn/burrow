@@ -39,6 +39,7 @@ public struct ConnectionStore: Sendable {
 
     public func save(_ connection: Connection) throws {
         UserDefaults.standard.set(connection.serverURL.absoluteString, forKey: defaultsKey)
+        SharedServer.last = connection.serverURL
         SecItemDelete(baseQuery() as CFDictionary)
         var query = baseQuery()
         query[kSecValueData as String] = Data(connection.token.utf8)
@@ -56,5 +57,27 @@ public struct ConnectionStore: Sendable {
 
     private func baseQuery() -> [String: Any] {
         [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service, kSecAttrAccount as String: account]
+    }
+}
+
+/// The server address every Burrow app on this Mac last used, so the second
+/// app does not ask for it again. Not a secret; each app keeps its own key.
+public enum SharedServer {
+    nonisolated(unsafe) static let defaults = UserDefaults(suiteName: "app.burrow.shared")
+    static let apps = ["hedwig", "pensieve"]
+
+    public static var last: URL? {
+        get {
+            if let url = defaults?.string(forKey: "serverURL").flatMap(URL.init(string:)) { return url }
+            // Apps from before the shared address kept it only in their own defaults.
+            for app in apps {
+                let domain = "app.burrow.\(app)"
+                if let text = UserDefaults(suiteName: domain)?.string(forKey: "\(domain).serverURL"), let url = URL(string: text) {
+                    return url
+                }
+            }
+            return nil
+        }
+        set { defaults?.set(newValue?.absoluteString, forKey: "serverURL") }
     }
 }
