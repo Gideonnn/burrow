@@ -30,6 +30,16 @@ import Testing
         #expect(model.mailboxGroups.last?.mailboxes.map(\.name) == ["Werk", "Klant"])
     }
 
+    @Test func draggingAMailboxReordersItsRoleAndSavesEveryMailbox() async throws {
+        let server = server()
+        server.on("PUT", "/api/mailboxes/order", status: 204, json: "")
+        let model = model(server)
+        await model.start()
+        await model.moveMailboxes(in: .work, from: [1], to: 0)
+        #expect(model.mailboxGroups.last?.mailboxes.map(\.name) == ["Klant", "Werk"])
+        #expect(server.requests("PUT", "/api/mailboxes/order").first == #"{"ids":["mb1","w2","w1"]}"#)
+    }
+
     @Test func aRoleMergesTheInboxesOfItsMailboxesNewestFirst() async throws {
         let model = model(server())
         await model.start()

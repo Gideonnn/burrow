@@ -3,6 +3,8 @@ import SwiftUI
 
 struct SidebarView: View {
     @Environment(AppModel.self) private var model
+    @State private var renaming: MailboxSummary?
+    @State private var newName = ""
 
     var body: some View {
         @Bindable var model = model
@@ -26,11 +28,27 @@ struct SidebarView: View {
                             } icon: {
                                 Image(systemName: "tray")
                             }
+                            .labelStyle(CenteredIconLabelStyle())
                         }
                         .badge(model.unreadCounts[box.id] ?? 0)
+                        .contextMenu {
+                            let index = group.mailboxes.firstIndex(of: box) ?? 0
+                            Button("Wijzig naam…") {
+                                newName = mailboxTitle(box)
+                                renaming = box
+                            }
+                            .disabled(!canOrganize)
+                            Button("Omhoog") { move(group.role, index, to: index - 1) }
+                                .disabled(!canOrganize || index == 0)
+                            Button("Omlaag") { move(group.role, index, to: index + 2) }
+                                .disabled(!canOrganize || index == group.mailboxes.count - 1)
+                        }
                         // ForEach tags rows with the mailbox id; the list selects SidebarItems.
                         .tag(SidebarItem.inbox(mailboxId: box.id))
                     }
+                    .onMove(perform: canOrganize ? { source, destination in
+                        Task { await model.moveMailboxes(in: group.role, from: source, to: destination) }
+                    } : nil)
                 }
             }
             Section("Overal") {
@@ -58,6 +76,13 @@ struct SidebarView: View {
             }
         }
         .listStyle(.sidebar)
+        .alert("Naam van de mailbox", isPresented: Binding(get: { renaming != nil }, set: { if !$0 { renaming = nil } })) {
+            TextField("Naam", text: $newName)
+            Button("Bewaar") { if let box = renaming { rename(box) } }
+            Button("Annuleer", role: .cancel) {}
+        } message: {
+            Text(renaming.map { "\($0.address). Laat leeg om de naam van de provider te tonen." } ?? "")
+        }
         .safeAreaInset(edge: .bottom) {
             VStack(spacing: 0) {
                 UpdateBanner()
@@ -66,6 +91,36 @@ struct SidebarView: View {
         }
     }
 
+    private var canOrganize: Bool { model.me?.can(.organize) == true }
+
+    private func move(_ role: MailboxRole, _ index: Int, to destination: Int) {
+        Task { await model.moveMailboxes(in: role, from: [index], to: destination) }
+    }
+
+    private func rename(_ box: MailboxSummary) {
+        let name = newName.trimmingCharacters(in: .whitespaces)
+        // The address as name means "no name of its own": the sidebar then shows the provider.
+        Task {
+            do {
+                try await model.updateMailbox(box.id, name: name.isEmpty ? box.address : name)
+            } catch {
+                model.error = error.localizedDescription
+            }
+        }
+    }
+}
+
+/// The sidebar's label with the icon centred on a two-line title (name and address)
+/// instead of on its first line.
+struct CenteredIconLabelStyle: LabelStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        HStack(alignment: .center, spacing: 6) {
+            configuration.icon
+                .foregroundStyle(.tint)
+                .frame(width: 20)
+            configuration.title
+        }
+    }
 }
 
 struct UpdateBanner: View {

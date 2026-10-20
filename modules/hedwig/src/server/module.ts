@@ -129,7 +129,7 @@ export function hedwigModule(platform: Platform, options: HedwigOptions) {
             .select(mailboxColumns)
             .from(mailboxes)
             .where(inArray(mailboxes.id, [...access.mailboxIds]))
-            .orderBy(mailboxes.createdAt, mailboxes.address)
+            .orderBy(mailboxes.position, mailboxes.createdAt, mailboxes.address)
             .all()
         : [],
     }),

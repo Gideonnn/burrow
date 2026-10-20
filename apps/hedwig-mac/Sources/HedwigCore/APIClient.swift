@@ -22,6 +22,11 @@ extension APIClient {
         try await call("POST", "api/search/ai", body: ["question": question])
     }
 
+    /// Every mailbox this key sees, in the order the person wants them.
+    public func orderMailboxes(_ ids: [String]) async throws {
+        let _: Empty = try await call("PUT", "api/mailboxes/order", body: ["ids": ids])
+    }
+
     public func updateMailbox(id: String, name: String?, role: MailboxRole?, instructions: String? = nil) async throws -> MailboxSummary {
         struct Body: Encodable { var name: String?; var role: MailboxRole?; var instructions: String? }
         return try await call("PATCH", "api/mailboxes/\(id)", body: Body(name: name, role: role, instructions: instructions))

@@ -165,3 +165,42 @@ describe('mailbox name and role', () => {
     ).toBe(400);
   });
 });
+
+describe('mailbox order', () => {
+  const order = (
+    h: ReturnType<typeof household>,
+    token: string,
+    ids: string[],
+  ) =>
+    h.call(token, '/api/mailboxes/order', {
+      method: 'PUT',
+      body: JSON.stringify({ ids }),
+    });
+  const addresses = async (h: ReturnType<typeof household>, token: string) =>
+    meResponse
+      .parse(await (await h.call(token, '/api/me')).json())
+      .mailboxes.map((m) => m.address);
+
+  it('keeps the order the person chose', async () => {
+    const h = household();
+    const token = h.key(h.gideon.id, ['read', 'organize']);
+    expect((await order(h, token, [h.work.id, h.home.id])).status).toBe(204);
+    expect(await addresses(h, token)).toEqual([
+      'gideon@work.example',
+      'gideon@example.com',
+    ]);
+    expect((await order(h, token, [h.home.id, h.work.id])).status).toBe(204);
+    expect(await addresses(h, token)).toEqual([
+      'gideon@example.com',
+      'gideon@work.example',
+    ]);
+  });
+
+  it('refuses mailboxes the key does not see, and keys that may not organize', async () => {
+    const h = household();
+    const token = h.key(h.gideon.id, ['read', 'organize']);
+    expect((await order(h, token, [h.evas.id, h.home.id])).status).toBe(404);
+    const reader = h.key(h.gideon.id, ['read']);
+    expect((await order(h, reader, [h.home.id, h.work.id])).status).toBe(403);
+  });
+});

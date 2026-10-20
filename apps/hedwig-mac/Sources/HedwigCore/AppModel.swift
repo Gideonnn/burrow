@@ -178,6 +178,22 @@ public final class AppModel {
         if let index = me?.mailboxes.firstIndex(where: { $0.id == id }) { me?.mailboxes[index] = updated }
     }
 
+    /// Moves mailboxes within their role, as dragged in the sidebar, and saves the order.
+    public func moveMailboxes(in role: MailboxRole, from source: IndexSet, to destination: Int) async {
+        guard let api, let all = me?.mailboxes else { return }
+        let group = all.filter { $0.kind == role }
+        var rest = group.enumerated().filter { !source.contains($0.offset) }.map(\.element)
+        rest.insert(contentsOf: source.map { group[$0] }, at: destination - source.filter { $0 < destination }.count)
+        let ordered = MailboxRole.allCases.flatMap { r in r == role ? rest : all.filter { $0.kind == r } }
+        me?.mailboxes = ordered
+        do {
+            try await api.orderMailboxes(ordered.map(\.id))
+        } catch {
+            me?.mailboxes = all
+            self.error = error.localizedDescription
+        }
+    }
+
     public func setLanguage(_ language: String?) async throws {
         guard let api else { return }
         let trimmed = language?.trimmingCharacters(in: .whitespaces)

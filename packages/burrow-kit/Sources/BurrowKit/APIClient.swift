@@ -70,6 +70,8 @@ public struct APIClient: Sendable {
     public func send<T: Decodable>(_ request: URLRequest) async throws -> T {
         let (bytes, response) = try await session.data(for: request)
         try Self.check(response, bytes)
+        // A 204 has no body at all.
+        if bytes.isEmpty, let empty = Empty() as? T { return empty }
         return try Self.decoder.decode(T.self, from: bytes)
     }
 
@@ -89,7 +91,9 @@ public struct APIClient: Sendable {
             ?? String(data: data, encoding: .utf8) ?? ""
     }
 
-    public struct Empty: Decodable {}
+    public struct Empty: Decodable {
+        public init() {}
+    }
 
     // MARK: The person and the household
 

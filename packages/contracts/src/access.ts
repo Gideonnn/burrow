@@ -43,6 +43,11 @@ export const updateMailboxRequest = z.object({
 });
 export type UpdateMailboxRequest = z.infer<typeof updateMailboxRequest>;
 
+// Every mailbox the key sees, in the order the person wants them.
+export const mailboxOrderRequest = z.object({
+  ids: z.array(z.string()).min(1).max(100),
+});
+
 export const updateMeRequest = z.object({
   language: z.string().trim().min(1).max(40).nullable(),
 });

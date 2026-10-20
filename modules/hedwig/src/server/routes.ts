@@ -2,6 +2,7 @@ import {
   aiSearchRequest,
   createDraftRequest,
   mailFolder,
+  mailboxOrderRequest,
   type MailboxSummary,
   messageActionsRequest,
   type SearchResponse,
@@ -69,6 +70,27 @@ export function hedwigRoutes({
 }: HedwigRouteDeps) {
   return (
     new Hono<PlatformEnv>()
+      // The person orders their mailboxes in the sidebar.
+      .put(
+        '/mailboxes/order',
+        requireRight('organize'),
+        zValidator('json', mailboxOrderRequest),
+        (c) => {
+          const { ids } = c.req.valid('json');
+          if (!ids.every((id) => canSeeMailbox(c.var.access, id)))
+            throw notFound();
+          c.var.db.transaction((tx) => {
+            ids.forEach((id, position) =>
+              tx
+                .update(mailboxes)
+                .set({ position })
+                .where(eq(mailboxes.id, id))
+                .run(),
+            );
+          });
+          return c.body(null, 204);
+        },
+      )
       // The person renames a mailbox, says what it is for, or gives the bots
       // instructions for it.
       .patch(

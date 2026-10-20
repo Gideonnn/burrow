@@ -28,6 +28,8 @@ export const mailboxes = sqliteTable('mailboxes', {
   instructions: text('instructions').notNull().default(''),
   address: text('address').notNull(),
   name: text('name').notNull(),
+  // Where the person put it in the sidebar, lowest first.
+  position: integer('position').notNull().default(0),
   // Provider credentials (OAuth tokens or an API token), encrypted with
   // BURROW_SECRET_KEY. Never returned by any route.
   credentials: text('credentials').notNull(),
