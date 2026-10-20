@@ -43,22 +43,22 @@ struct MainToolbar: ToolbarContent {
         }
     }
 
-    // Three glass capsules like Apple Mail: compose on its own, then the reply
+    // Three glass capsules like Apple Mail, at Mail's size: compose on its own, then the reply
     // trio, then archive, delete and spam. macOS 26 merges neighbouring toolbar
     // items into one glass, also across ToolbarSpacer here, so each item hides
     // the shared background and draws its own. Flagging is in the menu (⇧⌘L).
     var body: some ToolbarContent {
         if #available(macOS 26, *) {
             ToolbarItem(placement: .primaryAction) {
-                compose.frame(width: 40, height: 40).glassEffect(.regular.interactive(), in: .circle)
+                compose.frame(width: 36, height: 36).glassEffect(.regular.interactive(), in: .circle)
             }
             .sharedBackgroundVisibility(.hidden)
             ToolbarItem(placement: .primaryAction) {
-                replies.frame(height: 40).glassEffect(.regular.interactive(), in: .capsule)
+                replies.frame(height: 36).glassEffect(.regular.interactive(), in: .capsule)
             }
             .sharedBackgroundVisibility(.hidden)
             ToolbarItem(placement: .primaryAction) {
-                organizing.frame(height: 40).glassEffect(.regular.interactive(), in: .capsule)
+                organizing.frame(height: 36).glassEffect(.regular.interactive(), in: .capsule)
             }
             .sharedBackgroundVisibility(.hidden)
         } else {
@@ -128,11 +128,11 @@ private struct ToolbarCapsule<Content: View>: View {
     @ViewBuilder var content: Content
 
     var body: some View {
-        HStack(spacing: 12) { content }
+        HStack(spacing: 8) { content }
             .labelStyle(.iconOnly)
             .buttonStyle(.borderless)
             .imageScale(.large)
             .fixedSize()
-            .padding(.horizontal, 14)
+            .padding(.horizontal, 10)
     }
 }
