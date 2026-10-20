@@ -100,6 +100,12 @@ extension APIClient {
         return url
     }
 
+    /// The providers this server can connect; OAuth ones only once their app is configured.
+    public func connectableProviders() async throws -> [MailProvider] {
+        let r: [String: [String]] = try await call("GET", "api/admin/accounts/providers")
+        return (r["providers"] ?? []).compactMap(MailProvider.init(rawValue:))
+    }
+
     public func addFastmail(personId: String, token: String) async throws {
         let _: Empty = try await call("POST", "api/admin/accounts/fastmail", body: ["personId": personId, "token": token])
     }

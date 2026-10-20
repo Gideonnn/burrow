@@ -53,6 +53,16 @@ export function connectRoutes(
   };
 
   const api = new Hono<PlatformEnv>()
+    .get('/admin/accounts/providers', requireRight('admin'), (c) =>
+      c.json({
+        providers: [
+          ...(['gmail', 'microsoft'] as const).filter((p) =>
+            accounts.isConfigured(p),
+          ),
+          'fastmail' as const,
+        ],
+      }),
+    )
     .post(
       '/admin/accounts/connect',
       requireRight('admin'),

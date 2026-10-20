@@ -107,6 +107,7 @@ struct AccountSettings: View {
     @State private var people: [Person] = []
     @State private var personId = ""
     @State private var fastmailToken = ""
+    @State private var providers: [MailProvider] = []
     @State private var message: String?
 
     var body: some View {
@@ -121,13 +122,15 @@ struct AccountSettings: View {
                     Picker("Voor", selection: $personId) {
                         ForEach(people) { Text($0.name).tag($0.id) }
                     }
-                    HStack {
-                        Button("Google") { Task { await connect(.gmail) } }
-                        Button("Microsoft") { Task { await connect(.microsoft) } }
+                    if providers.contains(.gmail) || providers.contains(.microsoft) {
+                        HStack {
+                            if providers.contains(.gmail) { Button("Google") { Task { await connect(.gmail) } } }
+                            if providers.contains(.microsoft) { Button("Microsoft") { Task { await connect(.microsoft) } } }
+                        }
+                        Text("Je browser opent het inlogscherm van de provider. Je wachtwoord komt nooit bij Burrow.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
-                    Text("Je browser opent het inlogscherm van Google of Microsoft. Je wachtwoord komt nooit bij Burrow.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
                     HStack {
                         SecureField("Fastmail API-token", text: $fastmailToken)
                         Button("Koppel Fastmail") { Task { await addFastmail() } }
@@ -141,6 +144,7 @@ struct AccountSettings: View {
         .task {
             guard model.me?.can(.admin) == true else { return }
             people = (try? await model.api?.people()) ?? []
+            providers = (try? await model.api?.connectableProviders()) ?? []
             personId = model.me?.person.id ?? people.first?.id ?? ""
         }
     }
@@ -149,9 +153,28 @@ struct AccountSettings: View {
         do {
             guard let url = try await model.api?.connectLink(personId: personId, provider: provider) else { return }
             NSWorkspace.shared.open(url)
-            message = "Rond het inloggen af in je browser; de mailbox verschijnt daarna vanzelf."
         } catch {
             message = error.localizedDescription
+            return
+        }
+        // This key only sees its own person's mailboxes; one connected for the
+        // other person shows up in their apps.
+        guard personId == model.me?.person.id else {
+            let name = people.first { $0.id == personId }?.name ?? "de ander"
+            message = "Rond het inloggen af in de browser; de mailbox verschijnt bij \(name)."
+            return
+        }
+        message = "Rond het inloggen af in je browser; de mailbox verschijnt hier vanzelf."
+        let known = Set(model.me?.mailboxes.map(\.id) ?? [])
+        // The browser finishes the login, so poll until the new mailbox exists (at most ten minutes).
+        for _ in 0..<200 {
+            try? await Task.sleep(for: .seconds(3))
+            guard let me = try? await model.api?.me() else { continue }
+            if let added = me.mailboxes.first(where: { !known.contains($0.id) }) {
+                await model.start()
+                message = "\(added.address) is gekoppeld."
+                return
+            }
         }
     }
 

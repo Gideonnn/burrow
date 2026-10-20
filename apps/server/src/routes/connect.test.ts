@@ -143,6 +143,25 @@ describe('connecting a Gmail account', () => {
   });
 });
 
+describe('listing the providers an admin can connect', () => {
+  const get = (s: ReturnType<typeof setup>, key: string) =>
+    s.app.request('/api/admin/accounts/providers', {
+      headers: { authorization: `Bearer ${key}` },
+    });
+
+  it('names only the OAuth providers configured on the server, plus Fastmail', async () => {
+    const s = setup();
+    const res = await get(s, s.admin);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ providers: ['gmail', 'fastmail'] });
+  });
+
+  it('needs the admin right', async () => {
+    const s = setup();
+    expect((await get(s, s.reader)).status).toBe(403);
+  });
+});
+
 describe('connecting a Fastmail account', () => {
   const add = (s: ReturnType<typeof setup>, token: string, key = s.admin) =>
     s.app.request('/api/admin/accounts/fastmail', {
