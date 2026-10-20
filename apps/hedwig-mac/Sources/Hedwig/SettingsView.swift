@@ -104,6 +104,7 @@ struct AgentSettings: View {
 
 struct AccountSettings: View {
     @Environment(AppModel.self) private var model
+    @AppStorage(remoteImagesKey) private var loadRemoteImages = false
     @State private var people: [Person] = []
     @State private var personId = ""
     @State private var fastmailToken = ""
@@ -112,6 +113,12 @@ struct AccountSettings: View {
 
     var body: some View {
         Form {
+            Section("Weergave") {
+                Toggle("Laad externe afbeeldingen altijd", isOn: $loadRemoteImages)
+                Text("Afbeeldingen van internet laten de afzender zien wanneer je de mail opent. Uit: per bericht kiezen.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
             Section("Mailboxen van deze sleutel") {
                 ForEach(model.me?.mailboxes ?? []) { box in
                     MailboxSettingsRow(box: box)

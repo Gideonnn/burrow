@@ -5,6 +5,9 @@ import WebKit
 struct MessageDetailView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.openWindow) private var openWindow
+    @AppStorage(remoteImagesKey) private var loadRemoteImages = false
+    // The one message whose images the person chose to load.
+    @State private var allowedMessageId: String?
 
     var body: some View {
         if let message = model.detail {
@@ -22,7 +25,8 @@ struct MessageDetailView: View {
                 }
                 Divider()
                 if let html = message.bodyHtml {
-                    HTMLView(html: html)
+                    RemoteImagesBar(html: html, messageId: message.id, allowed: $allowedMessageId, always: loadRemoteImages)
+                    HTMLView(html: html, allowRemote: loadRemoteImages || allowedMessageId == message.id)
                 } else {
                     ScrollView {
                         Text(message.bodyText ?? message.snippet)
@@ -98,11 +102,45 @@ struct Avatar: View {
     }
 }
 
-/// Renders mail HTML without JavaScript and without loading anything from the
-/// network, so trackers and remote images stay blocked. Links open in the
-/// default browser.
+let remoteImagesKey = "loadRemoteImages"
+
+/// Remote images tell the sender when and where mail was opened, so they load
+/// only when the person asks: for this message, or always (Instellingen).
+struct RemoteImagesBar: View {
+    let html: String
+    let messageId: String
+    @Binding var allowed: String?
+    let always: Bool
+    @AppStorage(remoteImagesKey) private var loadAlways = false
+
+    var body: some View {
+        if !always, allowed != messageId, HTMLView.hasRemoteContent(html) {
+            HStack(spacing: 8) {
+                Image(systemName: "photo").foregroundStyle(.secondary)
+                Text("Externe afbeeldingen zijn niet geladen.").foregroundStyle(.secondary)
+                Spacer()
+                Button("Laad afbeeldingen") { allowed = messageId }
+                Button("Altijd") { loadAlways = true }
+            }
+            .font(.callout)
+            .controlSize(.small)
+            .padding(.horizontal, 24)
+            .padding(.vertical, 8)
+            .background(.quaternary.opacity(0.4))
+        }
+    }
+}
+
+/// Renders mail HTML without JavaScript. Unless `allowRemote`, nothing loads
+/// from the network, so trackers and remote images stay blocked. Links open in
+/// the default browser.
 struct HTMLView: NSViewRepresentable {
     let html: String
+    var allowRemote = false
+
+    static func hasRemoteContent(_ html: String) -> Bool {
+        html.range(of: #"(src|background)\s*=\s*["']?\s*https?://|url\(\s*["']?https?://"#, options: [.regularExpression, .caseInsensitive]) != nil
+    }
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
@@ -116,17 +154,26 @@ struct HTMLView: NSViewRepresentable {
             forIdentifier: "block-remote",
             encodedContentRuleList: #"[{"trigger":{"url-filter":"^https?://"},"action":{"type":"block"}}]"#
         ) { list, _ in
-            if let list { view.configuration.userContentController.add(list) }
-            view.loadHTMLString(Self.wrap(html), baseURL: nil)
+            context.coordinator.blockList = list
+            load(view, context.coordinator)
         }
         return view
     }
 
     func updateNSView(_ view: WKWebView, context: Context) {
-        if context.coordinator.loaded != html {
-            context.coordinator.loaded = html
-            view.loadHTMLString(Self.wrap(html), baseURL: nil)
-        }
+        let coordinator = context.coordinator
+        // Before the block list is compiled, makeNSView's completion does the first load.
+        guard coordinator.blockList != nil else { return }
+        if coordinator.loaded != html || coordinator.remote != allowRemote { load(view, coordinator) }
+    }
+
+    private func load(_ view: WKWebView, _ coordinator: Coordinator) {
+        let controller = view.configuration.userContentController
+        controller.removeAllContentRuleLists()
+        if !allowRemote, let list = coordinator.blockList { controller.add(list) }
+        coordinator.loaded = html
+        coordinator.remote = allowRemote
+        view.loadHTMLString(Self.wrap(html), baseURL: nil)
     }
 
     static func wrap(_ html: String) -> String {
@@ -139,6 +186,8 @@ struct HTMLView: NSViewRepresentable {
 
     final class Coordinator: NSObject, WKNavigationDelegate {
         var loaded: String?
+        var remote = false
+        var blockList: WKContentRuleList?
 
         func webView(
             _ webView: WKWebView, decidePolicyFor action: WKNavigationAction,

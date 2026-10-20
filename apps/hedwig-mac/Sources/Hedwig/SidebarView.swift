@@ -20,16 +20,9 @@ struct SidebarView: View {
                     }
                     ForEach(group.mailboxes) { box in
                         NavigationLink(value: SidebarItem.inbox(mailboxId: box.id)) {
-                            Label {
-                                VStack(alignment: .leading, spacing: 1) {
-                                    Text(mailboxTitle(box))
-                                    Text(box.address).font(.caption).foregroundStyle(.secondary)
-                                }
-                            } icon: {
-                                Image(systemName: "tray")
-                            }
-                            .labelStyle(CenteredIconLabelStyle())
+                            Label(mailboxTitle(box), systemImage: "tray")
                         }
+                        .help(box.address)
                         .badge(model.unreadCounts[box.id] ?? 0)
                         .contextMenu {
                             let index = group.mailboxes.firstIndex(of: box) ?? 0
@@ -106,19 +99,6 @@ struct SidebarView: View {
             } catch {
                 model.error = error.localizedDescription
             }
-        }
-    }
-}
-
-/// The sidebar's label with the icon centred on a two-line title (name and address)
-/// instead of on its first line.
-struct CenteredIconLabelStyle: LabelStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        HStack(alignment: .center, spacing: 6) {
-            configuration.icon
-                .foregroundStyle(.tint)
-                .frame(width: 20)
-            configuration.title
         }
     }
 }

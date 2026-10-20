@@ -34,7 +34,7 @@ struct MessageListView: View {
     private var title: String {
         if model.isSearching { return "Zoeken in alle mailboxen" }
         return switch model.selection {
-        case .inbox(let id): "Inbox · \(model.mailbox(id).map(mailboxTitle) ?? "")"
+        case .inbox(let id): model.mailbox(id).map(mailboxTitle) ?? "Inbox"
         case .role(let role): "\(roleTitle(role)) · alle inboxen"
         case .folder(.sent): "Verstuurd"
         case .folder(.archive): "Archief"
@@ -47,7 +47,6 @@ struct MessageListView: View {
         if model.isSearching { return model.messages.count == 1 ? "1 resultaat" : "\(model.messages.count) resultaten" }
         let unread = model.messages.filter(\.unread).count
         let count = unread > 0 ? "\(model.messages.count) berichten, \(unread) ongelezen" : "\(model.messages.count) berichten"
-        if case .inbox(let id) = model.selection, let box = model.mailbox(id) { return "\(box.address) · \(count)" }
         return count
     }
 }
