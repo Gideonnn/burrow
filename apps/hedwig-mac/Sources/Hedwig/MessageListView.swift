@@ -7,14 +7,17 @@ struct MessageListView: View {
     var body: some View {
         @Bindable var model = model
         List(selection: $model.selectedMessageId) {
+            if model.isSearching { SearchHeader() }
             ForEach(model.messages) { message in
-                MessageRow(message: message, showMailbox: !isInbox)
+                MessageRow(message: message, showMailbox: model.isSearching || !isInbox)
                     .tag(message.id)
             }
         }
         .listStyle(.inset)
         .overlay {
-            if model.messages.isEmpty && !model.isLoading {
+            if model.isSearching {
+                if model.messages.isEmpty && !model.aiSearching { ContentUnavailableView.search(text: model.searchText) }
+            } else if model.messages.isEmpty && !model.isLoading {
                 ContentUnavailableView("Geen berichten", systemImage: "tray")
             }
         }
@@ -29,7 +32,8 @@ struct MessageListView: View {
     }
 
     private var title: String {
-        switch model.selection {
+        if model.isSearching { return "Zoeken in alle mailboxen" }
+        return switch model.selection {
         case .inbox(let id): "Inbox · \(model.mailbox(id).map(mailboxTitle) ?? "")"
         case .role(let role): "\(roleTitle(role)) · alle inboxen"
         case .folder(.sent): "Verstuurd"
@@ -40,10 +44,35 @@ struct MessageListView: View {
     }
 
     private var subtitle: String {
+        if model.isSearching { return model.messages.count == 1 ? "1 resultaat" : "\(model.messages.count) resultaten" }
         let unread = model.messages.filter(\.unread).count
         let count = unread > 0 ? "\(model.messages.count) berichten, \(unread) ongelezen" : "\(model.messages.count) berichten"
         if case .inbox(let id) = model.selection, let box = model.mailbox(id) { return "\(box.address) · \(count)" }
         return count
+    }
+}
+
+/// Above search results: what the bot searched for, or how to ask it.
+private struct SearchHeader: View {
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        HStack(spacing: 6) {
+            if model.aiSearching {
+                ProgressView().controlSize(.small)
+                Text("Hedwig zoekt op betekenis…")
+            } else if let explanation = model.searchExplanation {
+                Image(systemName: "sparkles")
+                Text(explanation)
+            } else {
+                Image(systemName: "sparkles")
+                Text("Druk op ↩ om op betekenis te zoeken")
+            }
+        }
+        .font(.callout)
+        .foregroundStyle(.secondary)
+        .padding(.vertical, 2)
+        .selectionDisabled()
     }
 }
 

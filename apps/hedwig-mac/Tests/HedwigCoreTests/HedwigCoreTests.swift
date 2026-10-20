@@ -73,6 +73,29 @@ import Testing
         #expect(server.requests("POST", "/api/messages/m1/actions").first?.contains(#""op":"archive""#) == true)
     }
 
+    @Test func searchShowsResultsFromEveryMailboxAndEndsWhenPickingAPlace() async throws {
+        let server = server()
+        server.on("GET", "/api/search", json: #"{"explanation":null,"results":[\#(Fixture.message("m9", subject: "Factuur maart"))]}"#)
+        server.on("POST", "/api/search/ai", json: #"{"explanation":"Facturen van de tandarts","results":[\#(Fixture.message("m8", subject: "Uw nota"))]}"#)
+        let model = model(server)
+        model.selection = .inbox(mailboxId: "mb1")
+        await model.loadSelection()
+
+        model.searchText = "factuur"
+        await model.searchLoad?.value
+        #expect(model.messages.map(\.subject) == ["Factuur maart"])
+        #expect(model.selectedMessageId == "m9")
+
+        await model.searchWithAI()
+        #expect(model.searchExplanation == "Facturen van de tandarts")
+        #expect(model.messages.map(\.subject) == ["Uw nota"])
+        #expect(server.requests("POST", "/api/search/ai").first?.contains(#""question":"factuur""#) == true)
+
+        model.selection = .folder(.archive)
+        #expect(model.searchText.isEmpty)
+        #expect(model.searchExplanation == nil || !model.isSearching)
+    }
+
     @Test func openingAnUnreadMessageMarksItReadAtTheServer() async throws {
         let server = server()
         server.on("POST", "/api/messages/m1/actions", json: Fixture.message("m1", subject: "Eerste", unread: false))

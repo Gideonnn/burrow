@@ -3,6 +3,9 @@ import { z } from 'zod';
 export const mailProvider = z.enum(['gmail', 'microsoft', 'fastmail']);
 export type MailProvider = z.infer<typeof mailProvider>;
 
+export const mailboxRole = z.enum(['private', 'work', 'school']);
+export type MailboxRole = z.infer<typeof mailboxRole>;
+
 export const mailFolder = z.enum(['inbox', 'archive', 'spam', 'trash', 'sent']);
 export type MailFolder = z.infer<typeof mailFolder>;
 
@@ -103,3 +106,30 @@ export const createDraftRequest = z.object({
   inReplyTo: z.string().optional(),
 });
 export type CreateDraftRequest = z.infer<typeof createDraftRequest>;
+
+// What the bot makes of a question like "de factuur van de tandarts in maart":
+// groups of alternative words (a message matches a group when it contains any
+// of them), plus filters. The bot never sees mail, only the question.
+export const searchPlan = z.object({
+  groups: z.array(z.array(z.string().min(1)).min(1)).max(6),
+  from: z.string().nullable(),
+  after: z.iso.date().nullable(),
+  before: z.iso.date().nullable(),
+  folder: mailFolder.nullable(),
+  roles: z.array(mailboxRole).nullable(),
+  unreadOnly: z.boolean(),
+  hasAttachments: z.boolean(),
+  explanation: z.string(),
+});
+export type SearchPlan = z.infer<typeof searchPlan>;
+
+export const aiSearchRequest = z.object({
+  question: z.string().trim().min(1).max(500),
+});
+
+export const searchResponse = z.object({
+  // What the bot searched for, in the person's language; null for word search.
+  explanation: z.string().nullable(),
+  results: z.array(messageSummary),
+});
+export type SearchResponse = z.infer<typeof searchResponse>;

@@ -1,8 +1,10 @@
 import {
+  aiSearchRequest,
   createDraftRequest,
   mailFolder,
   type MailboxSummary,
   messageActionsRequest,
+  type SearchResponse,
   sendRequest,
   updateMailboxRequest,
 } from '@burrow/contracts';
@@ -22,12 +24,17 @@ import {
   toSummary,
 } from './mail-service';
 import { mailboxes, messages } from './schema';
+import { type SearchService, searchMessages, words } from './search';
 import type { TriageService } from './triage';
 
 const listQuery = z.object({
   folder: mailFolder.default('inbox'),
   limit: z.coerce.number().int().min(1).max(200).default(50),
   before: z.iso.datetime().optional(),
+});
+const searchQuery = z.object({
+  q: z.string().trim().min(1).max(500),
+  limit: z.coerce.number().int().min(1).max(200).default(50),
 });
 const confirmRequest = z.object({ ids: z.array(z.string()).min(1) });
 
@@ -45,6 +52,7 @@ export type HedwigRouteDeps = {
   mail: MailService;
   triage: TriageService;
   insights: InsightsService;
+  search: SearchService;
   // Called with the ids of messages that just arrived in an inbox.
   onArrived: (messageIds: string[]) => void;
 };
@@ -56,6 +64,7 @@ export function hedwigRoutes({
   mail,
   triage,
   insights,
+  search,
   onArrived,
 }: HedwigRouteDeps) {
   return (
@@ -104,6 +113,44 @@ export function hedwigRoutes({
             .limit(limit)
             .all();
           return c.json(rows.map(toSummary));
+        },
+      )
+      // Word search over every mailbox the key sees, as you type.
+      .get(
+        '/search',
+        requireRight('read'),
+        zValidator('query', searchQuery),
+        (c) => {
+          const { q, limit } = c.req.valid('query');
+          return c.json<SearchResponse>({
+            explanation: null,
+            results: searchMessages(c.var.db, c.var.access.mailboxIds, {
+              groups: words(q),
+              matchAll: true,
+              limit,
+            }),
+          });
+        },
+      )
+      // Search by meaning: the bot reads the question, never the mail.
+      .post(
+        '/search/ai',
+        requireRight('read'),
+        zValidator('json', aiSearchRequest),
+        async (c) => {
+          if (!search.available) {
+            throw new HTTPException(503, {
+              message: 'zoeken met AI is niet beschikbaar op deze server',
+            });
+          }
+          const { question } = c.req.valid('json');
+          return c.json<SearchResponse>(
+            await search.ask(
+              c.var.access.personId,
+              c.var.access.mailboxIds,
+              question,
+            ),
+          );
         },
       )
       .post('/mailboxes/:mailboxId/sync', requireRight('read'), async (c) => {

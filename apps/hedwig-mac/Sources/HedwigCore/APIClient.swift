@@ -12,6 +12,16 @@ extension APIClient {
         return try await call("GET", "api/mailboxes/\(mailboxId)/messages", query: query)
     }
 
+    /// Every word must appear; searches all mailboxes the key sees.
+    public func search(_ query: String, limit: Int = 100) async throws -> SearchResponse {
+        try await call("GET", "api/search", query: [URLQueryItem(name: "q", value: query), URLQueryItem(name: "limit", value: String(limit))])
+    }
+
+    /// The bot turns the question into a search; it never reads the mail.
+    public func aiSearch(_ question: String) async throws -> SearchResponse {
+        try await call("POST", "api/search/ai", body: ["question": question])
+    }
+
     public func updateMailbox(id: String, name: String?, role: MailboxRole?, instructions: String? = nil) async throws -> MailboxSummary {
         struct Body: Encodable { var name: String?; var role: MailboxRole?; var instructions: String? }
         return try await call("PATCH", "api/mailboxes/\(id)", body: Body(name: name, role: role, instructions: instructions))

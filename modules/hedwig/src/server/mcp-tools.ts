@@ -6,11 +6,12 @@ import {
   mcpText as text,
 } from '@burrow/platform';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { and, desc, eq, inArray, like, or } from 'drizzle-orm';
+import { inArray } from 'drizzle-orm';
 import { z } from 'zod';
 import { createDraft, DraftError } from './drafts';
 import { type MailService, toDetail, toSummary } from './mail-service';
-import { mailboxes, messages } from './schema';
+import { mailboxes } from './schema';
+import { searchMessages, words } from './search';
 
 // Operations an outside agent may perform. Trash and sending are left out on
 // purpose: an agent prepares, a person decides.
@@ -61,7 +62,7 @@ export function registerHedwigTools(
       'search_messages',
       {
         description:
-          'Search mail by words in the subject, sender or body, newest first. Returns summaries; use get_message for the full text.',
+          'Search mail, newest first: every word must appear in the subject, sender, recipients or body (quotes keep a phrase). Returns summaries; use get_message for the full text.',
         inputSchema: {
           query: z.string().optional().describe('Words to look for'),
           mailboxId: z.string().optional(),
@@ -74,30 +75,15 @@ export function registerHedwigTools(
       },
       async ({ query, mailboxId, folder, unreadOnly, limit }) => {
         if (mailboxId && !visible(mailboxId)) return refusal('unknown mailbox');
-        const scope = mailboxId ? [mailboxId] : [...access.mailboxIds];
-        if (!scope.length) return text([]);
-        const pattern = query ? `%${query.replace(/[%_]/g, '')}%` : undefined;
-        const rows = db
-          .select()
-          .from(messages)
-          .where(
-            and(
-              inArray(messages.mailboxId, scope),
-              folder ? eq(messages.folder, folder) : undefined,
-              unreadOnly ? eq(messages.unread, true) : undefined,
-              pattern
-                ? or(
-                    like(messages.subject, pattern),
-                    like(messages.from, pattern),
-                    like(messages.bodyText, pattern),
-                  )
-                : undefined,
-            ),
-          )
-          .orderBy(desc(messages.receivedAt))
-          .limit(limit ?? 20)
-          .all();
-        return text(rows.map(toSummary));
+        return text(
+          searchMessages(db, mailboxId ? [mailboxId] : access.mailboxIds, {
+            groups: words(query ?? ''),
+            matchAll: true,
+            folder,
+            unreadOnly,
+            limit: limit ?? 20,
+          }),
+        );
       },
     );
 

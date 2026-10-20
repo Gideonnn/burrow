@@ -51,7 +51,7 @@ export function testHousehold({
           description: 'Sorts mail.',
           model: 'haiku',
           agent: 'claude',
-          skills: ['sorting-hat', 'reply-suggestions'],
+          skills: ['sorting-hat', 'reply-suggestions', 'mail-search'],
           rights: ['read', 'organize', 'draft'],
           persona: 'You are Kreacher.',
         },
@@ -85,6 +85,14 @@ export function testHousehold({
           name: 'reply-suggestions',
           description: 'Suggests.',
           instructions: 'Suggest replies.',
+        },
+      ],
+      [
+        'mail-search',
+        {
+          name: 'mail-search',
+          description: 'Plans a search.',
+          instructions: 'Plan the search.',
         },
       ],
       [

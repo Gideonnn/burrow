@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { right } from './catalog';
-import { mailProvider } from './mail';
+import { mailboxRole, mailProvider } from './mail';
 import { settingsValues } from './settings';
 
 export const person = z.object({
@@ -10,8 +10,6 @@ export const person = z.object({
 export type Person = z.infer<typeof person>;
 
 // What a mailbox is for; clients group and merge inboxes by it.
-export const mailboxRole = z.enum(['private', 'work', 'school']);
-export type MailboxRole = z.infer<typeof mailboxRole>;
 
 export const mailboxSummary = z.object({
   id: z.string(),

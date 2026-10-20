@@ -12,23 +12,50 @@ struct MainView: View {
                 .navigationSplitViewColumnWidth(min: 200, ideal: 230, max: 300)
         } content: {
             Group {
-                switch model.selection {
-                case .filtered: FilteredListView()
-                case .drafts: DraftListView()
-                case .tasks: TaskListView()
-                default: MessageListView()
+                if model.isSearching {
+                    MessageListView()
+                } else {
+                    switch model.selection {
+                    case .filtered: FilteredListView()
+                    case .drafts: DraftListView()
+                    case .tasks: TaskListView()
+                    default: MessageListView()
+                    }
                 }
             }
             .navigationSplitViewColumnWidth(min: 300, ideal: 360, max: 480)
         } detail: {
-            switch model.selection {
-            case .filtered: FilteredDetailView()
-            case .drafts: DraftDetailView()
-            case .tasks: TaskDetailView()
-            default: MessageDetailView()
+            if model.isSearching {
+                MessageDetailView()
+            } else {
+                switch model.selection {
+                case .filtered: FilteredDetailView()
+                case .drafts: DraftDetailView()
+                case .tasks: TaskDetailView()
+                default: MessageDetailView()
+                }
             }
         }
         .toolbar { MainToolbar() }
+        .searchable(text: $model.searchText, placement: .toolbar, prompt: "Zoek")
+        .onSubmit(of: .search) { Task { await model.searchWithAI() } }
+        .modifier(SearchFocus(request: model.searchFocusRequest))
+    }
+}
+
+/// ⌘F puts the cursor in the search field.
+private struct SearchFocus: ViewModifier {
+    let request: Int
+    @FocusState private var focused: Bool
+
+    func body(content: Content) -> some View {
+        if #available(macOS 15, *) {
+            content
+                .searchFocused($focused)
+                .onChange(of: request) { focused = true }
+        } else {
+            content
+        }
     }
 }
 
@@ -37,7 +64,8 @@ struct MainToolbar: ToolbarContent {
     @Environment(\.openWindow) private var openWindow
 
     private var showsMail: Bool {
-        switch model.selection {
+        if model.isSearching { return true }
+        return switch model.selection {
         case .filtered, .drafts, .tasks: false
         default: true
         }

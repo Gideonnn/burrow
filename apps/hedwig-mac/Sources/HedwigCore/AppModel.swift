@@ -19,8 +19,27 @@ public final class AppModel {
     public private(set) var connection: Connection?
     public private(set) var me: Me?
     public var selection: SidebarItem? {
-        didSet { if oldValue != selection { selectionLoad = Task { await loadSelection() } } }
+        didSet {
+            guard oldValue != selection else { return }
+            // Picking a place in the sidebar ends a search, like Mail.
+            if isSearching { searchText = "" }
+            selectionLoad = Task { await loadSelection() }
+        }
     }
+    /// Searches every mailbox while not empty; the list then shows the results.
+    public var searchText = "" {
+        didSet {
+            guard oldValue != searchText else { return }
+            searchLoad?.cancel()
+            searchLoad = Task { await searchWords() }
+        }
+    }
+    /// What the bot searched for after an AI search.
+    public private(set) var searchExplanation: String?
+    public private(set) var aiSearching = false
+    /// Bumped by ⌘F; the window moves focus to the search field.
+    public var searchFocusRequest = 0
+    public var isSearching: Bool { !searchQuery.isEmpty }
     public private(set) var messages: [MessageSummary] = []
     public var selectedMessageId: String? {
         didSet { if oldValue != selectedMessageId { messageLoad = Task { await openSelected() } } }
@@ -47,6 +66,7 @@ public final class AppModel {
     // The loads the two selections start, so a caller can wait for them.
     var selectionLoad: Task<Void, Never>?
     var messageLoad: Task<Void, Never>?
+    var searchLoad: Task<Void, Never>?
 
     public init(
         store: ConnectionStore = ConnectionStore(app: "hedwig"),
@@ -125,6 +145,7 @@ public final class AppModel {
     func handle(_ event: ServerEvent) async {
         await refreshCounts()
         await refreshFiltered()
+        if isSearching { return }
         if case .inbox(let id) = selection, event.mailboxId == id {
             await loadSelection(keepSelection: true)
         } else if case .folder = selection {
@@ -294,11 +315,58 @@ public final class AppModel {
     }
 
     private func stillBelongs(_ message: MessageSummary) -> Bool {
-        switch selection {
+        if isSearching { return true }
+        return switch selection {
         case .inbox(let id): message.mailboxId == id && message.folder == .inbox
         case .folder(let folder): message.folder == folder
         default: true
         }
+    }
+
+    // MARK: Search
+
+    private var searchQuery: String { searchText.trimmingCharacters(in: .whitespacesAndNewlines) }
+
+    /// Word search as you type, after a short pause; an empty field brings the list back.
+    func searchWords() async {
+        let query = searchQuery
+        searchExplanation = nil
+        aiSearching = false
+        guard !query.isEmpty else {
+            await loadSelection(keepSelection: true)
+            return
+        }
+        try? await Task.sleep(for: .milliseconds(200))
+        guard !Task.isCancelled, let api else { return }
+        do {
+            let response = try await api.search(query)
+            guard !Task.isCancelled, query == searchQuery else { return }
+            showResults(response.results)
+        } catch {
+            if !Task.isCancelled { self.error = error.localizedDescription }
+        }
+    }
+
+    /// Search by meaning (Enter in the search field): the bot plans the search on the server.
+    public func searchWithAI() async {
+        let question = searchQuery
+        guard !question.isEmpty, let api else { return }
+        searchLoad?.cancel()
+        aiSearching = true
+        defer { if question == searchQuery { aiSearching = false } }
+        do {
+            let response = try await api.aiSearch(question)
+            guard question == searchQuery else { return }
+            searchExplanation = response.explanation
+            showResults(response.results)
+        } catch {
+            if question == searchQuery { self.error = error.localizedDescription }
+        }
+    }
+
+    private func showResults(_ results: [MessageSummary]) {
+        messages = results
+        if !results.contains(where: { $0.id == selectedMessageId }) { selectedMessageId = results.first?.id }
     }
 
     private func replace(_ message: MessageSummary) {

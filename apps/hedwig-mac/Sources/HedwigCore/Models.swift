@@ -197,6 +197,12 @@ public struct SendRequest: Codable, Sendable {
     public var inReplyTo: String?
 }
 
+public struct SearchResponse: Codable, Hashable, Sendable {
+    /// What the bot searched for; nil for word search.
+    public var explanation: String?
+    public var results: [MessageSummary]
+}
+
 public struct MessageInsights: Codable, Hashable, Sendable {
     public struct Reply: Codable, Hashable, Sendable {
         public var label: String

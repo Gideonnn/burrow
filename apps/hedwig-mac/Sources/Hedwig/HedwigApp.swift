@@ -84,6 +84,8 @@ struct HedwigCommands: Commands {
             Button("Markeer met vlag") { Task { await model.toggleFlag() } }
                 .keyboardShortcut("l", modifiers: [.command, .shift])
             Divider()
+            Button("Zoek") { model.searchFocusRequest += 1 }
+                .keyboardShortcut("f")
             Button("Vernieuw") { Task { await model.refresh() } }
                 .keyboardShortcut("n", modifiers: [.command, .shift])
         }

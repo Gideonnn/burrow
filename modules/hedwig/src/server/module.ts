@@ -16,6 +16,7 @@ import { mailboxColumns, hedwigRoutes } from './routes';
 import { connectRoutes } from './routes-connect';
 import { startSyncLoop } from './scheduler';
 import { mailboxes } from './schema';
+import { SearchService } from './search';
 import { TriageService } from './triage';
 
 const RETRY_EVERY_MS = 10 * 60_000;
@@ -73,6 +74,7 @@ export function hedwigModule(platform: Platform, options: HedwigOptions) {
   const { db } = platform;
   const mail = new MailService(db, options.clientFor, platform.events);
   const insights = new InsightsService({ platform, mail, bot: options.bot });
+  const search = new SearchService({ platform, bot: options.bot });
   const triage = new TriageService({
     platform,
     mail,
@@ -104,7 +106,13 @@ export function hedwigModule(platform: Platform, options: HedwigOptions) {
     ? connectRoutes(options.accounts, mail, onArrived)
     : undefined;
 
-  const api = hedwigRoutes({ mail, triage, insights, onArrived });
+  const api = hedwigRoutes({
+    mail,
+    triage,
+    insights,
+    search,
+    onArrived,
+  });
   if (connect) api.route('/', connect.api);
 
   const module: Module = {
