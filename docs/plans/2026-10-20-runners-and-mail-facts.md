@@ -47,8 +47,11 @@ kinds, hard-wired: the server's pool and the Hedwig app's `LocalRunner` (which r
   once. It sends a heartbeat with each claim; a runner silent for five minutes shows as
   offline. The server's pool registers itself the same way at startup, as the runner
   `dobby` on the cloud queue.
-- **Who it works for.** A runner with a device key works for that key's person only. The
-  server's runner works for everyone, as now.
+- **Who it works for.** Local work: only the person of the runner's key. Cloud work: also
+  the other people of the household who allow it **(agreed)**. Each person has the
+  setting "Mijn cloudtaken mogen ook op andere Macs in huis draaien", off by default and
+  only changeable by that person (not by an admin), because their redacted mail then
+  passes through someone else's Mac. The server's runner works for everyone, as now.
 - **Pausing.** A runner can be paused, from the runner itself or from the server's list.
   A paused runner claims nothing and finishes what it holds.
 - **Visible.** Instellingen › Runners lists every runner of the household: online, paused,
@@ -64,6 +67,10 @@ A task kind declares its queue; a task inherits it.
 | `cloud` | Content with secrets and personal numbers redacted | Any runner on the cloud queue that works for the task's person, Dobby included |
 
 - A local task never falls back to the cloud. If no local runner is around, it waits.
+- A runner with a local model also takes cloud tasks when they wait **(agreed)**: an
+  unpinned cloud task of a kind that allows a small model (`localModelOk`), queued for
+  more than ten minutes. Local is always at least as private, so this only trades
+  quality for speed, and the kind decides whether that trade is acceptable.
 - Agent work about a sensitive message (a summary, reply suggestions) moves to the local
   queue if a local runner is registered, else it runs in the cloud on the redacted body.
 - The existing `where: server | client` and `fallbackAfterHours` become "cloud queue,
@@ -227,8 +234,8 @@ message is retried once.
 - The local queue is enforced on the server: a claim for a local task needs a device key
   of the task's person and a runner registered with a local model. A runner can lie about
   being local, but only with that person's own key, on mail that person can read anyway.
-- Content stays private: a runner only gets work of its key's person. Angela's mail never
-  reaches Gideon's Mac, and vice versa.
+- Content stays private: local work only ever reaches the person's own runner, and cloud
+  work (redacted) reaches another person's Mac only after the owner allowed it.
 - Secret values are never stored outside the message itself, and never logged.
 
 ## Phases
@@ -259,7 +266,4 @@ message is retried once.
 
 ## Open questions
 
-- May the Mac's runner also take cloud work for Angela? Today a runner works only for its
-  key's person; serving both would need a household runner key.
-- Should a local runner also take cloud tasks when the cloud queue waits, or stick to its
-  own queue?
+None at the moment.
