@@ -23,7 +23,7 @@ states that Burrow is not affiliated with the rights holders.
 | Potions Book | Recipes, meal plan, shopping list | Idea |
 | Howler | Urgent notifications | Idea |
 | Accio | One search over everything, as a Raycast extension | Idea |
-| Patronus | The Telegram bot: private chats and a household group with the bots | Planned |
+| Patronus | The Telegram bot: one channel through which every persona speaks ("Kreacher: …"), in private chats and a household group. Winky never sends content through it, only a pointer to the app | Planned |
 | Unbreakable Vow | Contracts, warranties, insurance, notice periods | Idea |
 | Errol | Parcels from shipping mail | Idea |
 | Knight Bus | Trips: bookings from mail into one itinerary | Idea |

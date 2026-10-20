@@ -41,6 +41,11 @@ task approvals arrive as inline buttons; a morning briefing per person. Design i
 `docs/design/burrow-design-system.html` (Patronus screens).
 **Why:** Gideon asked for talking to the household's bots from the phone, alone and
 together.
+One Telegram bot for every persona, not one per persona: Patronus is the channel, each
+message says who speaks ("Kreacher: drie mails voor je klaargezet"), so there is one
+token, one chat and one group. Telegram is a third party that stores what passes through
+it, so Winky never sends content there, at most "er ligt iets gevoeligs voor je klaar in
+Hedwig".
 **Scope:** design note first (webhook through the tunnel or long polling from Dobby,
 linking, which tools a chat may use), then a module; a day.
 
