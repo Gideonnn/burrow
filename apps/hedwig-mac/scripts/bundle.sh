@@ -4,8 +4,8 @@
 #   ./apps/hedwig-mac/scripts/bundle.sh            release build in apps/hedwig-mac/build/
 #
 # The icon comes from Resources/AppIcon.icns (regenerate it with make-icon.sh).
-# Signed with the "Burrow Hedwig" identity when it exists, otherwise ad hoc;
-# ad hoc makes macOS ask for Keychain access again after every rebuild.
+# Signed by packages/burrow-kit/scripts/sign-app.sh, which picks an identity with an
+# Apple team ID when there is one, so the keychain keeps trusting new builds.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -47,12 +47,5 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 </plist>
 PLIST
 
-# A fixed identity (packages/burrow-kit/scripts/signing-identity.sh) keeps the keychain from asking
-# again after every update; without it the app is signed ad hoc.
-IDENTITY="${HEDWIG_SIGN_IDENTITY:-Burrow Hedwig}"
-if security find-certificate -c "$IDENTITY" >/dev/null 2>&1; then
-  codesign --force --sign "$IDENTITY" "$APP" >/dev/null
-else
-  codesign --force --sign - "$APP" >/dev/null
-fi
+APP_SIGN_IDENTITY="${HEDWIG_SIGN_IDENTITY:-${APP_SIGN_IDENTITY:-}}" ../../packages/burrow-kit/scripts/sign-app.sh "$APP"
 echo "built $(pwd)/$APP"

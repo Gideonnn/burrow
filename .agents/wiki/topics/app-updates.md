@@ -37,12 +37,15 @@ Pensieve is recording: ask the person, then pass `--force` only with their conse
   operator, who then commits `ReleaseKey.swift`. Without a public key, and in
   development runs outside an `.app`, updates are off.
 - The first version with the updater has to be installed by hand on each Mac.
-- Hedwig keeps its API key in the keychain, whose access rule names the app's signature.
-  An ad hoc signature changes with every build, so macOS asks for the login password
-  after every update, and Hedwig hangs at launch until someone answers. The fix is a
-  fixed self-signed identity: `packages/burrow-kit/scripts/signing-identity.sh` (operator,
-  once) puts "Burrow Hedwig" in the login keychain and `bundle.sh` signs with it from
-  then on; Pensieve uses the same identity, which also keeps its microphone and system
-  audio grants across updates. The keychain rule then names that certificate, so "Sta
-  altijd toe" holds across updates. Releases must be built on the Mac that holds the
-  identity. A keychain item made by an earlier, differently signed build asks once more.
+- The apps keep their API key in the keychain. Besides its access rule, a keychain item
+  has a *partition list*: for an app with an Apple team ID that is `teamid:<id>`, for
+  any other signature (ad hoc or self-signed) it is `cdhash:<hash>` of that one build.
+  "Sta altijd toe" only adds the current build, so without a team ID every update asks
+  for the login password again, and the app hangs at launch until someone answers.
+  `packages/burrow-kit/scripts/sign-app.sh` (used by both `bundle.sh` scripts) therefore
+  signs with a Developer ID or Apple Development certificate when the Mac has one (a free
+  Apple ID in Xcode gives the latter), else the self-signed "Burrow Hedwig"
+  (`signing-identity.sh`), else ad hoc. A steady signature also keeps Pensieve's
+  microphone and system audio grants. Releases must be built on the Mac that holds the
+  identity. The first build with a team ID asks once more; check the item's partition
+  list with `security dump-keychain -a` (attributes only) for `teamid:`.

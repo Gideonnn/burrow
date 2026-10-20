@@ -4,11 +4,11 @@
 #
 #   ./packages/burrow-kit/scripts/signing-identity.sh
 #
-# Why: an ad hoc signature changes with every build, so macOS asks for the
-# login password before each new Hedwig may read its API key from the
-# keychain. With a fixed certificate the keychain recognises every build, and
-# "Sta altijd toe" holds across updates, also on Angela's Mac. The first build
-# signed this way asks once more. The first codesign run may ask whether
+# Only a fallback for sign-app.sh: macOS keeps permissions such as the
+# microphone across builds with a fixed certificate, but the keychain still
+# asks after every update, because without an Apple team ID it trusts one build
+# (cdhash) at a time. An Apple Development certificate (free Apple ID in Xcode)
+# fixes that; sign-app.sh prefers it. The first codesign run may ask whether
 # codesign may use the key: choose "Sta altijd toe".
 set -euo pipefail
 

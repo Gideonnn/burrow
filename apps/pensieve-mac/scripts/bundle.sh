@@ -4,10 +4,9 @@
 #   ./apps/pensieve-mac/scripts/bundle.sh          release build in apps/pensieve-mac/build/
 #
 # The icon comes from Resources/AppIcon.icns (regenerate it with make-icon.sh).
-# Signed with the "Burrow Hedwig" identity when it exists, otherwise ad hoc.
-# The fixed identity matters twice here: the keychain keeps trusting new
-# builds with the key, and macOS keeps the microphone and system audio grants
-# across updates instead of asking again.
+# Signed by packages/burrow-kit/scripts/sign-app.sh, which picks an identity with an
+# Apple team ID when there is one, so the keychain keeps trusting new builds.
+# A steady identity also keeps the microphone and system audio grants across updates.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -51,10 +50,5 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 </plist>
 PLIST
 
-IDENTITY="${APP_SIGN_IDENTITY:-Burrow Hedwig}"
-if security find-certificate -c "$IDENTITY" >/dev/null 2>&1; then
-  codesign --force --sign "$IDENTITY" "$APP" >/dev/null
-else
-  codesign --force --sign - "$APP" >/dev/null
-fi
+../../packages/burrow-kit/scripts/sign-app.sh "$APP"
 echo "built $(pwd)/$APP"
