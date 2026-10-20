@@ -277,6 +277,37 @@ message is retried once.
    local model, for search by meaning without a bot call; attachments (PDF text); other
    cloud runners (a VPS, a second Mac).
 
+## Phase 0 results (2026-10-20)
+
+Measured on Gideon's MacBook (M2 Max, 96 GB) with the Ollama app, over the 97 messages of
+one Gmail mailbox that Opus 5.5 labelled as the answer key. The archive was not on Dobby
+yet, so this is inbox mail only.
+
+| Model | Seconds per message | Category = Opus | Priority = Opus | Codes low | IBAN flagged |
+|---|---|---|---|---|---|
+| gemma4:26b-a4b | 5.1 | 82% | 80% | 3/3 | yes |
+| gemma4:12b | 10.0 | 78% | 79% | 1/3 | no |
+| qwen3.6:35b-a3b | 4.7 | 77% | 81% | 3/3 | no |
+| qwen3.5:9b | 7.4 | 76% | 79% | 1/3 | no |
+| qwen3.8:27b | 20.2 | 72% | 78% | 2/3 | no |
+| gemma4:e4b | 3.9 | 71% | 77% | 1/3 | no |
+
+- **Winky runs gemma4:26b-a4b.** Best categories, the only one to flag the IBAN, every
+  summary in Dutch. Most disagreements with Opus are borderline (promotion or newsletter,
+  other or personal). It flags a few more messages as sensitive than the rules do, which
+  only keeps them local.
+- **Four requests at a time barely help** (about 15%): the MLX runner works mostly one
+  request at a time. Plan on 5 seconds per message: about 12,000 messages a night.
+- **Templates on sender plus subject cover less than hoped:** 69% of the mail is
+  automated, but only 19% falls into such templates, while 54% comes from senders with
+  three or more messages. Newsletters change their subject every time. Group by sender
+  for category and priority, and keep per-message facts for the summary and keywords.
+- **Haiku on templates:** 5 templates in one call took 15 seconds for $0.004.
+- **The rules** found 1 IBAN, 4 codes and 3 account messages in 198 messages. A forwarded
+  conversation passed the "automated" test, so `Fwd:` is excluded from templates.
+- Traps (Homebrew's Ollama without structured output, the schema not shown to the model)
+  are in the diary of 2026-10-20.
+
 ## Open questions
 
 None at the moment. Meeting notes stay in the cloud, written by Kreacher on Opus
