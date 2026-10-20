@@ -10,11 +10,11 @@ states that Burrow is not affiliated with the rights holders.
 |---|---|---|
 | Burrow | The monorepo and platform | Active |
 | Dobby | The home machine that runs the Burrow server (`apps/server`) | Active |
-| Kreacher | Bot persona: the house-elf who sorts mail (`bots/kreacher.md`) | Active |
-| Winky | Bot persona: the discreet house-elf who writes meeting notes (`bots/winky.md`) | Active |
+| Kreacher | Bot persona: the house-elf for everyday chores that may use a cloud AI: sorting mail, suggestions, search plans (`bots/kreacher.md`) | Active |
+| Winky | Bot persona: the discreet house-elf for sensitive chores; writes meeting notes, and will run the local model on the local queue (`bots/winky.md`) | Active |
 | Hedwig | Mail | Active |
 | Pensieve | Recorded conversations: transcripts and notes (was RecHoarder); later also the searchable archive of documents and notes | Active |
-| Sorting Hat | Triage skill: sorting mail and later documents | Draft |
+| Sorting Hat | Decisions between fixed options (category, priority, sensitive, triage action): the triage skill today, later a small local decision model in the style of Jev | Draft |
 | Portkey | Routines: triggers that start tasks | Planned |
 | Remembrall | Tasks and reminders (Todoist replacement) | Idea |
 | Weasley Clock | Where everyone is, family calendar | Idea |

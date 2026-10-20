@@ -15,6 +15,19 @@ grouped into templates that Haiku indexes once per template; a model on Gideon's
 reads the rest at night. Claude and Codex then search and read the facts instead of the
 mail.
 
+## Names **(agreed)**
+
+- **Dobby** is the host: the home machine running the server and the cloud runner.
+- **Kreacher** does the chores that may use a cloud AI (Claude, Codex, Haiku templates).
+- **Winky** does the sensitive chores: the bot on the local queue, run by the local model
+  on the owner's Mac. Mail facts are her first work.
+- **Sorting Hat** answers questions with fixed options (category, priority, sensitive, the
+  triage action). Today it is Kreacher's triage skill; a small local decision model in
+  the style of Jev (a model that picks between given options with a probability instead
+  of writing text) can take it over. Jev itself is hosted by TypeSafe and would send mail
+  to a new third party, so only local models of that kind (Laya, Strands Decider) qualify.
+- The runner and the queues are mechanisms and keep plain names.
+
 ## Goals
 
 - Search finds mail by meaning ("tv" finds "televisie", "de bestelling bij HelloTV").
@@ -266,4 +279,5 @@ message is retried once.
 
 ## Open questions
 
-None at the moment.
+- Winky writes meeting notes with Sonnet in the cloud today. Do the notes move to the local
+  queue once a local model writes them well enough, or stay in the cloud?
