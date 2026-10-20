@@ -32,3 +32,40 @@ export function startSyncLoop(
     clearTimeout(timer);
   };
 }
+
+// Brings in each mailbox's older mail, a page at a time with a pause, until
+// every archive is in. A failing mailbox waits a while; the others go on.
+// Mailboxes connected later are picked up on the next idle round.
+export function startBackfillLoop(
+  mail: Pick<MailService, 'allMailboxes' | 'backfill'>,
+  { pauseMs = 2_000, idleMs = 10 * 60_000 } = {},
+): () => void {
+  let stopped = false;
+  let timer: NodeJS.Timeout | undefined;
+  const failedAt = new Map<string, number>();
+
+  const round = async () => {
+    let more = false;
+    for (const box of mail.allMailboxes()) {
+      if (stopped) return;
+      if (box.backfilledAt) continue;
+      if (Date.now() - (failedAt.get(box.id) ?? -Infinity) < idleMs) continue;
+      try {
+        if (await mail.backfill(box.id)) more = true;
+        failedAt.delete(box.id);
+      } catch (error) {
+        failedAt.set(box.id, Date.now());
+        console.error(
+          `backfill ${box.address} failed: ${(error as Error).message}`,
+        );
+      }
+    }
+    if (!stopped) timer = setTimeout(round, more ? pauseMs : idleMs);
+  };
+  void round();
+
+  return () => {
+    stopped = true;
+    clearTimeout(timer);
+  };
+}

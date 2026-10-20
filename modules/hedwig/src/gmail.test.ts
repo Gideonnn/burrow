@@ -81,10 +81,19 @@ function fakeGmail() {
       });
     if (path === '/messages' && method === 'GET') {
       const label = url.searchParams.get('labelIds');
+      // Newest first; without a label Gmail leaves out spam and trash.
+      const matching = [...messages.values()]
+        .reverse()
+        .filter((m) =>
+          label
+            ? m.labelIds?.includes(label)
+            : !m.labelIds?.some((l) => l === 'SPAM' || l === 'TRASH'),
+        );
+      const start = Number(url.searchParams.get('pageToken') ?? 0);
+      const end = start + Number(url.searchParams.get('maxResults') ?? 100);
       return json({
-        messages: [...messages.values()]
-          .filter((m) => m.labelIds?.includes(label!))
-          .map((m) => ({ id: m.id })),
+        messages: matching.slice(start, end).map((m) => ({ id: m.id })),
+        ...(end < matching.length ? { nextPageToken: String(end) } : {}),
       });
     }
     const one = /^\/messages\/([^/]+)$/.exec(path);
@@ -235,6 +244,25 @@ describe('GmailClient', () => {
     expect(
       (await new GmailClient(api.session, api.fetchFn).sync(null)).upserts,
     ).toEqual([]);
+  });
+
+  it('backfills every folder but spam and trash, newest first, page by page', async () => {
+    const api = fakeGmail();
+    const client = new GmailClient(api.session, api.fetchFn, 2);
+    api.deliver(message('old', []));
+    api.deliver(message('sent', ['SENT']));
+    api.deliver(message('junk', ['SPAM']));
+    api.deliver(message('draft', ['DRAFT']));
+    api.deliver(message('new', ['INBOX']));
+
+    const first = await client.backfill(null);
+    expect(first.messages.map((m) => m.providerId)).toEqual(['new']);
+    const second = await client.backfill(first.next);
+    expect(second.messages.map((m) => [m.providerId, m.folder])).toEqual([
+      ['sent', 'sent'],
+      ['old', 'archive'],
+    ]);
+    expect(second.next).toBeNull();
   });
 
   it('turns server operations into one label change, creating missing labels', async () => {

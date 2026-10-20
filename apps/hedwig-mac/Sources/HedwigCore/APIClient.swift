@@ -12,14 +12,23 @@ extension APIClient {
         return try await call("GET", "api/mailboxes/\(mailboxId)/messages", query: query)
     }
 
-    /// Every word must appear; searches all mailboxes the key sees.
-    public func search(_ query: String, limit: Int = 100) async throws -> SearchResponse {
-        try await call("GET", "api/search", query: [URLQueryItem(name: "q", value: query), URLQueryItem(name: "limit", value: String(limit))])
+    /// Every word must appear.
+    public func search(_ query: String, in scope: SearchScope = .everywhere, limit: Int = 100) async throws -> SearchResponse {
+        let items = [URLQueryItem(name: "q", value: query), URLQueryItem(name: "limit", value: String(limit))] + scope.queryItems
+        return try await call("GET", "api/search", query: items)
     }
 
     /// The bot turns the question into a search; it never reads the mail.
-    public func aiSearch(_ question: String) async throws -> SearchResponse {
-        try await call("POST", "api/search/ai", body: ["question": question])
+    public func aiSearch(_ question: String, in scope: SearchScope = .everywhere) async throws -> SearchResponse {
+        struct Body: Encodable {
+            var question: String
+            var mailboxId: String?
+            var role: MailboxRole?
+            var folder: MailFolder?
+        }
+        return try await call(
+            "POST", "api/search/ai",
+            body: Body(question: question, mailboxId: scope.mailboxId, role: scope.role, folder: scope.folder))
     }
 
     /// Every mailbox this key sees, in the order the person wants them.

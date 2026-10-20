@@ -34,6 +34,9 @@ export const mailboxes = sqliteTable('mailboxes', {
   // BURROW_SECRET_KEY. Never returned by any route.
   credentials: text('credentials').notNull(),
   syncCursor: text('sync_cursor'),
+  // Where bringing in older mail continues, and when it finished.
+  backfillCursor: text('backfill_cursor'),
+  backfilledAt: integer('backfilled_at', { mode: 'timestamp_ms' }),
   createdAt: createdAt(),
 });
 

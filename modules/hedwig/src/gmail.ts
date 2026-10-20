@@ -4,6 +4,7 @@ import { decodeEntities, htmlToText } from './html';
 import { buildMime } from './mime';
 import { bearerJson, type Fetch, HttpError, type OAuthSession } from './oauth';
 import type {
+  BackfillPage,
   MailProviderClient,
   OutgoingMessage,
   ProviderMessage,
@@ -12,6 +13,7 @@ import type {
 
 const API = 'https://gmail.googleapis.com/gmail/v1/users/me';
 const INITIAL_MESSAGES = 100;
+const BACKFILL_PAGE = 100;
 
 type GmailPart = {
   mimeType?: string;
@@ -45,6 +47,7 @@ export class GmailClient implements MailProviderClient {
   constructor(
     private readonly session: Pick<OAuthSession, 'accessToken'>,
     private readonly fetchFn: Fetch = fetch,
+    private readonly pageSize = BACKFILL_PAGE,
   ) {}
 
   private api<T>(path: string, init?: RequestInit) {
@@ -71,6 +74,20 @@ export class GmailClient implements MailProviderClient {
     const ids = (list.messages ?? []).map((m) => m.id);
     const { upserts, removed } = await this.fetchMessages(ids);
     return { upserts, removed, cursor: historyId };
+  }
+
+  // Without labelIds the list holds every message except spam and trash.
+  async backfill(page: string | null): Promise<BackfillPage> {
+    const list = await this.api<{
+      messages?: { id: string }[];
+      nextPageToken?: string;
+    }>(
+      `/messages?maxResults=${this.pageSize}${page ? `&pageToken=${page}` : ''}`,
+    );
+    const { upserts } = await this.fetchMessages(
+      (list.messages ?? []).map((m) => m.id),
+    );
+    return { messages: upserts, next: list.nextPageToken ?? null };
   }
 
   private async incremental(cursor: string): Promise<SyncResult> {

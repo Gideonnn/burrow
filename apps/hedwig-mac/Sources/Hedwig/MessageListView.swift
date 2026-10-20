@@ -7,9 +7,9 @@ struct MessageListView: View {
     var body: some View {
         @Bindable var model = model
         List(selection: $model.selectedMessageId) {
-            if model.isSearching { SearchHeader() }
+            if model.isSearching { SearchHeader(place: placeTitle) }
             ForEach(model.messages) { message in
-                MessageRow(message: message, showMailbox: model.isSearching || !isInbox)
+                MessageRow(message: message, showMailbox: model.isSearching ? model.searchScope.mailboxId == nil : !isInbox)
                     .tag(message.id)
             }
         }
@@ -32,8 +32,14 @@ struct MessageListView: View {
     }
 
     private var title: String {
-        if model.isSearching { return "Zoeken in alle mailboxen" }
-        return switch model.selection {
+        if model.isSearching {
+            return model.searchEverywhere || model.placeScope == .everywhere ? "Zoeken in alle mailboxen" : "Zoeken in \(placeTitle)"
+        }
+        return placeTitle
+    }
+
+    private var placeTitle: String {
+        switch model.selection {
         case .inbox(let id): model.mailbox(id).map(mailboxTitle) ?? "Inbox"
         case .role(let role): "\(roleTitle(role)) · alle inboxen"
         case .folder(.sent): "Verstuurd"
@@ -51,25 +57,37 @@ struct MessageListView: View {
     }
 }
 
-/// Above search results: what the bot searched for, or how to ask it.
+/// Above search results: where it looks, and what the bot searched for or how to ask it.
 private struct SearchHeader: View {
     @Environment(AppModel.self) private var model
+    let place: String
 
     var body: some View {
-        HStack(spacing: 6) {
-            if model.aiSearching {
-                ProgressView().controlSize(.small)
-                Text("Hedwig zoekt op betekenis…")
-            } else if let explanation = model.searchExplanation {
-                Image(systemName: "sparkles")
-                Text(explanation)
-            } else {
-                Image(systemName: "sparkles")
-                Text("Druk op ↩ om op betekenis te zoeken")
+        @Bindable var model = model
+        VStack(alignment: .leading, spacing: 6) {
+            if model.placeScope != .everywhere {
+                Picker("Zoek in", selection: $model.searchEverywhere) {
+                    Text(place).tag(false)
+                    Text("Alle mailboxen").tag(true)
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
             }
+            HStack(spacing: 6) {
+                if model.aiSearching {
+                    ProgressView().controlSize(.small)
+                    Text("Hedwig zoekt op betekenis…")
+                } else if let explanation = model.searchExplanation {
+                    Image(systemName: "sparkles")
+                    Text(explanation)
+                } else {
+                    Image(systemName: "sparkles")
+                    Text("Druk op ↩ om op betekenis te zoeken")
+                }
+            }
+            .font(.callout)
+            .foregroundStyle(.secondary)
         }
-        .font(.callout)
-        .foregroundStyle(.secondary)
         .padding(.vertical, 2)
         .selectionDisabled()
     }

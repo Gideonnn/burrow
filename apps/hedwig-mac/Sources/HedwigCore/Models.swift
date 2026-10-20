@@ -197,6 +197,20 @@ public struct SendRequest: Codable, Sendable {
     public var inReplyTo: String?
 }
 
+/// Where a search looks; empty means every mailbox the key sees.
+public struct SearchScope: Encodable, Hashable, Sendable {
+    public var mailboxId: String?
+    public var role: MailboxRole?
+    public var folder: MailFolder?
+
+    public static let everywhere = SearchScope()
+
+    public var queryItems: [URLQueryItem] {
+        [("mailboxId", mailboxId), ("role", role?.rawValue), ("folder", folder?.rawValue)]
+            .compactMap { name, value in value.map { URLQueryItem(name: name, value: $0) } }
+    }
+}
+
 public struct SearchResponse: Codable, Hashable, Sendable {
     /// What the bot searched for; nil for word search.
     public var explanation: String?

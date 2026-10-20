@@ -14,7 +14,7 @@ import { registerHedwigTools } from './mcp-tools';
 import { triagePrompt } from './prompt';
 import { mailboxColumns, hedwigRoutes } from './routes';
 import { connectRoutes } from './routes-connect';
-import { startSyncLoop } from './scheduler';
+import { startBackfillLoop, startSyncLoop } from './scheduler';
 import { mailboxes } from './schema';
 import { SearchService } from './search';
 import { TriageService } from './triage';
@@ -194,6 +194,7 @@ export function hedwigModule(platform: Platform, options: HedwigOptions) {
     start: () => {
       if (options.sync === false) return;
       const stopSync = startSyncLoop(mail, onArrived);
+      const stopBackfill = startBackfillLoop(mail);
       void triage.retryUntriaged();
       const retry = setInterval(
         () => void triage.retryUntriaged(),
@@ -202,6 +203,7 @@ export function hedwigModule(platform: Platform, options: HedwigOptions) {
       retry.unref();
       return () => {
         stopSync();
+        stopBackfill();
         clearInterval(retry);
       };
     },

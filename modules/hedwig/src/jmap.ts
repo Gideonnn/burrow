@@ -2,6 +2,7 @@ import type { Address, MailFolder, ServerOp } from '@burrow/contracts';
 import { htmlToText } from './html';
 import type { Fetch } from './oauth';
 import type {
+  BackfillPage,
   MailProviderClient,
   OutgoingMessage,
   ProviderMessage,
@@ -15,6 +16,7 @@ const USING = [
   'urn:ietf:params:jmap:submission',
 ];
 const INITIAL_MESSAGES = 100;
+const BACKFILL_PAGE = 100;
 
 const PROPERTIES = [
   'id',
@@ -81,6 +83,7 @@ export class JmapClient implements MailProviderClient {
     private readonly token: string,
     private readonly fetchFn: Fetch = fetch,
     private readonly sessionUrl = FASTMAIL_SESSION_URL,
+    private readonly pageSize = BACKFILL_PAGE,
   ) {}
 
   private async getSession(): Promise<Session> {
@@ -207,6 +210,41 @@ export class JmapClient implements MailProviderClient {
       upserts: await this.parseAll(get.list),
       removed: [],
       cursor: get.state,
+    };
+  }
+
+  // The page is a position in the newest-first list; mail deleted meanwhile
+  // can shift a few messages past us, which a later search misses.
+  async backfill(page: string | null): Promise<BackfillPage> {
+    const roles = await this.mailboxRoles();
+    const skipped = ['junk', 'trash', 'drafts'].flatMap(
+      (role) => roles.get(role) ?? [],
+    );
+    const position = Number(page ?? 0);
+    const r = await this.call([
+      [
+        'Email/query',
+        {
+          filter: { inMailboxOtherThan: skipped },
+          sort: [{ property: 'receivedAt', isAscending: false }],
+          position,
+          limit: this.pageSize,
+        },
+        'q',
+      ],
+      [
+        'Email/get',
+        {
+          '#ids': { resultOf: 'q', name: 'Email/query', path: '/ids' },
+          ...this.getArgs(),
+        },
+        'g',
+      ],
+    ]);
+    const ids: string[] = r.get('q')!.ids;
+    return {
+      messages: await this.parseAll(r.get('g')!.list),
+      next: ids.length < this.pageSize ? null : String(position + ids.length),
     };
   }
 

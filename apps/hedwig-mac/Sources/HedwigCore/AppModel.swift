@@ -21,18 +21,31 @@ public final class AppModel {
     public var selection: SidebarItem? {
         didSet {
             guard oldValue != selection else { return }
-            // Picking a place in the sidebar ends a search, like Mail.
-            if isSearching { searchText = "" }
+            if isSearching {
+                // A search follows the sidebar to the next place with mail, like
+                // Mail; the other places end it.
+                guard placeScope != nil else {
+                    searchText = ""
+                    return
+                }
+                searchEverywhere = false
+                rerunSearch()
+                return
+            }
             selectionLoad = Task { await loadSelection() }
         }
     }
-    /// Searches every mailbox while not empty; the list then shows the results.
+    /// Searches the open place while not empty; the list then shows the results.
     public var searchText = "" {
         didSet {
             guard oldValue != searchText else { return }
             searchLoad?.cancel()
             searchLoad = Task { await searchWords() }
         }
+    }
+    /// Widens the search from the open place to every mailbox.
+    public var searchEverywhere = false {
+        didSet { if oldValue != searchEverywhere, isSearching { rerunSearch() } }
     }
     /// What the bot searched for after an AI search.
     public private(set) var searchExplanation: String?
@@ -342,21 +355,44 @@ public final class AppModel {
     // MARK: Search
 
     private var searchQuery: String { searchText.trimmingCharacters(in: .whitespacesAndNewlines) }
+    // The last search asked the bot, so a new place asks it again.
+    private var searchedByMeaning = false
+
+    /// The place in the sidebar as a search scope; nil for places without mail.
+    public var placeScope: SearchScope? {
+        switch selection {
+        case .inbox(let id): SearchScope(mailboxId: id, folder: .inbox)
+        case .role(let role): SearchScope(role: role, folder: .inbox)
+        case .folder(let folder): SearchScope(folder: folder)
+        case nil: .everywhere
+        default: nil
+        }
+    }
+
+    public var searchScope: SearchScope { searchEverywhere ? .everywhere : placeScope ?? .everywhere }
+
+    private func rerunSearch() {
+        searchLoad?.cancel()
+        searchLoad = Task { searchedByMeaning ? await askBot() : await searchWords() }
+    }
 
     /// Word search as you type, after a short pause; an empty field brings the list back.
     func searchWords() async {
         let query = searchQuery
         searchExplanation = nil
         aiSearching = false
+        searchedByMeaning = false
         guard !query.isEmpty else {
+            searchEverywhere = false
             await loadSelection(keepSelection: true)
             return
         }
         try? await Task.sleep(for: .milliseconds(200))
         guard !Task.isCancelled, let api else { return }
         do {
-            let response = try await api.search(query)
-            guard !Task.isCancelled, query == searchQuery else { return }
+            let scope = searchScope
+            let response = try await api.search(query, in: scope)
+            guard !Task.isCancelled, query == searchQuery, scope == searchScope else { return }
             showResults(response.results)
         } catch {
             if !Task.isCancelled { self.error = error.localizedDescription }
@@ -365,18 +401,24 @@ public final class AppModel {
 
     /// Search by meaning (Enter in the search field): the bot plans the search on the server.
     public func searchWithAI() async {
+        searchLoad?.cancel()
+        await askBot()
+    }
+
+    private func askBot() async {
         let question = searchQuery
         guard !question.isEmpty, let api else { return }
-        searchLoad?.cancel()
+        let scope = searchScope
+        searchedByMeaning = true
         aiSearching = true
-        defer { if question == searchQuery { aiSearching = false } }
+        defer { if question == searchQuery, scope == searchScope { aiSearching = false } }
         do {
-            let response = try await api.aiSearch(question)
-            guard question == searchQuery else { return }
+            let response = try await api.aiSearch(question, in: scope)
+            guard question == searchQuery, scope == searchScope else { return }
             searchExplanation = response.explanation
             showResults(response.results)
         } catch {
-            if question == searchQuery { self.error = error.localizedDescription }
+            if question == searchQuery, scope == searchScope { self.error = error.localizedDescription }
         }
     }
 

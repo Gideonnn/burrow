@@ -61,12 +61,21 @@ function fakeJmap() {
     switch (name) {
       case 'Mailbox/get':
         return { list: MAILBOXES };
-      case 'Email/query':
-        return {
-          ids: [...emails.values()]
-            .filter((e) => e.mailboxIds[args.filter.inMailbox])
-            .map((e) => e.id),
-        };
+      case 'Email/query': {
+        const { inMailbox, inMailboxOtherThan } = args.filter ?? {};
+        const ids = [...emails.values()]
+          .filter((e) =>
+            inMailbox
+              ? e.mailboxIds[inMailbox]
+              : Object.keys(e.mailboxIds).some(
+                  (m) => !inMailboxOtherThan?.includes(m),
+                ),
+          )
+          .sort((a, b) => b.receivedAt.localeCompare(a.receivedAt))
+          .map((e) => e.id);
+        const position = args.position ?? 0;
+        return { ids: ids.slice(position, position + (args.limit ?? 100)) };
+      }
       case 'Email/get': {
         const ids: string[] =
           args.ids ?? results.get(args['#ids'].resultOf).ids;
@@ -211,6 +220,42 @@ describe('JmapClient', () => {
     api.update('a', { mailboxIds: { 'mb-inbox': true } });
     const reset = await c.sync(next.cursor);
     expect(reset.upserts.map((m) => m.providerId)).toEqual(['a']);
+  });
+
+  it('backfills every mailbox but junk, trash and drafts, newest first, page by page', async () => {
+    const api = fakeJmap();
+    const c = new JmapClient(
+      'fmu1-token',
+      api.fetchFn,
+      'https://jmap.example/session',
+      2,
+    );
+    const at = (day: number) => ({ receivedAt: `2025-01-0${day}T08:00:00Z` });
+    api.deliver(email('custom', 'mb-custom', at(1)));
+    api.deliver(email('sent', 'mb-sent', at(2)));
+    api.deliver(email('junk', 'mb-junk', at(3)));
+    api.deliver(email('draft', 'mb-drafts', at(4)));
+    api.deliver(email('old', 'mb-archive', at(5)));
+    api.deliver(email('new', 'mb-inbox', at(6)));
+
+    const pages: [string, string][][] = [];
+    let page: string | null = null;
+    do {
+      const result = await c.backfill(page);
+      pages.push(result.messages.map((m) => [m.providerId, m.folder]));
+      page = result.next;
+    } while (page);
+    expect(pages).toEqual([
+      [
+        ['new', 'inbox'],
+        ['old', 'archive'],
+      ],
+      [
+        ['sent', 'sent'],
+        ['custom', 'archive'],
+      ],
+      [],
+    ]);
   });
 
   it('applies operations as one Email/set with keyword and mailbox patches', async () => {

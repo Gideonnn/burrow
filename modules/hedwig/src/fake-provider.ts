@@ -1,5 +1,6 @@
 import type { ServerOp } from '@burrow/contracts';
 import type {
+  BackfillPage,
   MailProviderClient,
   OutgoingMessage,
   ProviderMessage,
@@ -8,7 +9,8 @@ import type {
 import { applyOps } from './server-ops';
 
 // An in-memory provider for tests: deliver() puts a message in its inbox, the
-// next sync() returns what changed since the cursor.
+// next sync() returns what changed since the cursor. keep() adds mail that was
+// there before, which only backfill() returns.
 export class FakeProvider implements MailProviderClient {
   readonly messages = new Map<string, ProviderMessage>();
   readonly applied: { providerId: string; ops: ServerOp[] }[] = [];
@@ -16,8 +18,18 @@ export class FakeProvider implements MailProviderClient {
   private changes: { version: number; id: string }[] = [];
   private version = 0;
   failNextApply = false;
+  pageSize = 100;
+  backfillCalls = 0;
 
   deliver(
+    partial: Partial<ProviderMessage> & { subject: string },
+  ): ProviderMessage {
+    const message = this.keep(partial);
+    this.changes.push({ version: ++this.version, id: message.providerId });
+    return message;
+  }
+
+  keep(
     partial: Partial<ProviderMessage> & { subject: string },
   ): ProviderMessage {
     const message: ProviderMessage = {
@@ -39,7 +51,6 @@ export class FakeProvider implements MailProviderClient {
       ...partial,
     };
     this.messages.set(message.providerId, message);
-    this.changes.push({ version: ++this.version, id: message.providerId });
     return message;
   }
 
@@ -59,6 +70,19 @@ export class FakeProvider implements MailProviderClient {
       }),
       removed: [...ids].filter((id) => !this.messages.has(id)),
       cursor: String(this.version),
+    };
+  }
+
+  async backfill(page: string | null): Promise<BackfillPage> {
+    this.backfillCalls++;
+    const start = Number(page ?? 0);
+    const all = [...this.messages.values()]
+      .filter((m) => m.folder !== 'spam' && m.folder !== 'trash')
+      .sort((a, b) => b.receivedAt.getTime() - a.receivedAt.getTime());
+    const end = start + this.pageSize;
+    return {
+      messages: all.slice(start, end),
+      next: end < all.length ? String(end) : null,
     };
   }
 

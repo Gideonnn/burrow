@@ -6,10 +6,17 @@ import {
   type MailboxSummary,
   messageActionsRequest,
   type SearchResponse,
+  type SearchScope,
+  searchScope,
   sendRequest,
   updateMailboxRequest,
 } from '@burrow/contracts';
-import { notFound, type PlatformEnv, requireRight } from '@burrow/platform';
+import {
+  type Access,
+  notFound,
+  type PlatformEnv,
+  requireRight,
+} from '@burrow/platform';
 import { zValidator } from '@hono/zod-validator';
 import { and, desc, eq, lt } from 'drizzle-orm';
 import { Hono } from 'hono';
@@ -25,7 +32,7 @@ import {
   toSummary,
 } from './mail-service';
 import { mailboxes, messages } from './schema';
-import { type SearchService, searchMessages, words } from './search';
+import { inScope, type SearchService, searchMessages, words } from './search';
 import type { TriageService } from './triage';
 
 const listQuery = z.object({
@@ -33,10 +40,16 @@ const listQuery = z.object({
   limit: z.coerce.number().int().min(1).max(200).default(50),
   before: z.iso.datetime().optional(),
 });
-const searchQuery = z.object({
+const searchQuery = searchScope.extend({
   q: z.string().trim().min(1).max(500),
   limit: z.coerce.number().int().min(1).max(200).default(50),
 });
+
+const searchedMailboxes = (access: Access, scope: SearchScope) => {
+  if (!scope.mailboxId) return access.mailboxIds;
+  if (!canSeeMailbox(access, scope.mailboxId)) throw notFound();
+  return [scope.mailboxId];
+};
 const confirmRequest = z.object({ ids: z.array(z.string()).min(1) });
 
 export const mailboxColumns = {
@@ -137,20 +150,20 @@ export function hedwigRoutes({
           return c.json(rows.map(toSummary));
         },
       )
-      // Word search over every mailbox the key sees, as you type.
+      // Word search as you type, in the open place or every mailbox the key sees.
       .get(
         '/search',
         requireRight('read'),
         zValidator('query', searchQuery),
         (c) => {
-          const { q, limit } = c.req.valid('query');
+          const { q, limit, ...scope } = c.req.valid('query');
           return c.json<SearchResponse>({
             explanation: null,
-            results: searchMessages(c.var.db, c.var.access.mailboxIds, {
-              groups: words(q),
-              matchAll: true,
-              limit,
-            }),
+            results: searchMessages(
+              c.var.db,
+              searchedMailboxes(c.var.access, scope),
+              inScope({ groups: words(q), matchAll: true, limit }, scope),
+            ),
           });
         },
       )
@@ -165,12 +178,13 @@ export function hedwigRoutes({
               message: 'zoeken met AI is niet beschikbaar op deze server',
             });
           }
-          const { question } = c.req.valid('json');
+          const { question, ...scope } = c.req.valid('json');
           return c.json<SearchResponse>(
             await search.ask(
               c.var.access.personId,
-              c.var.access.mailboxIds,
+              searchedMailboxes(c.var.access, scope),
               question,
+              scope,
             ),
           );
         },

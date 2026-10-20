@@ -5,6 +5,17 @@ The code lives in `modules/hedwig` (clients) and `modules/hedwig/src/server/acco
 (credentials, connecting). Credentials are sealed with `BURROW_SECRET_KEY`; losing that
 key means reconnecting every mailbox.
 
+## Sync and the archive
+
+Sync keeps the recent inbox current (per provider below). Next to it a backfill loop
+(`startBackfillLoop`) brings in every older message, newest first, one page every two
+seconds per mailbox, until `mailboxes.backfilled_at` is set; `backfill_cursor` holds where
+it continues. Backfilled mail skips spam, trash and drafts, is marked triaged so the bot
+never sorts it, sends no events, and never overwrites what sync stored. Sync and backfill
+take turns per mailbox (`MailService.busy`), so two clients never refresh one OAuth token
+at once. Search covers whatever is on the server, so the archive is searchable as soon as
+its pages are in.
+
 ## Connecting an account
 
 OAuth providers (Gmail, Microsoft) connect in three steps, so neither the password nor
@@ -38,7 +49,8 @@ Cloudflare Tunnel, behind an Access login, so a person logs in at Cloudflare fir
    secret, deletes the file on both sides and restarts the server.
 
 Sync uses `users.history.list` from a history id; an expired id (older than about a week)
-triggers a full resync of the last 100 inbox messages. Drafts are skipped. Server
+triggers a full resync of the last 100 inbox messages. Drafts are skipped. Backfill pages
+through `messages.list` without a label, which leaves out spam and trash. Server
 operations become one `messages.modify` call per message; missing user labels are
 created on first use.
 
@@ -60,6 +72,10 @@ Sync tracks the Inbox and Junk Email folders with delta queries, starting with t
 30 days. All calls ask for immutable ids, so a message keeps its id when it moves; a
 message that leaves a tracked folder is fetched to see whether it moved (archive, trash)
 or was deleted. Replies go through the `reply` endpoint to keep the conversation.
+Backfill lists `/me/messages` across all folders by date and drops junk and deleted items
+itself (the list cannot filter on folder next to that ordering); old mail has no headers,
+which only come per message. Mail in other folders than Inbox and Junk is not tracked
+after it is in, so a later change there does not reach Hedwig.
 
 ## Fastmail (JMAP)
 
@@ -70,6 +86,7 @@ Settings › Privacy & Security › Integrations › API tokens, with access to 
 storing it sealed.
 
 Sync queries the inbox once (last 100 messages), then follows `Email/changes` from the
-state, starting over when the server answers `cannotCalculateChanges`. Labels are JMAP
+state, starting over when the server answers `cannotCalculateChanges`. Backfill pages by
+position through every mailbox but junk, trash and drafts (`inMailboxOtherThan`). Labels are JMAP
 keywords (non-`$`); moves replace `mailboxIds` with the target role's mailbox. Sending
 creates a draft and an `EmailSubmission` that files it under Sent on success.

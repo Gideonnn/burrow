@@ -2,6 +2,7 @@ import type { Address, MailFolder, ServerOp } from '@burrow/contracts';
 import { htmlToText } from './html';
 import { bearerJson, type Fetch, HttpError, type OAuthSession } from './oauth';
 import type {
+  BackfillPage,
   MailProviderClient,
   OutgoingMessage,
   ProviderMessage,
@@ -10,6 +11,7 @@ import type {
 
 const API = 'https://graph.microsoft.com/v1.0/me';
 const INITIAL_DAYS = 30;
+const BACKFILL_PAGE = 50;
 const TRACKED = ['inbox', 'junkemail'] as const;
 const FOLDERS: Record<string, MailFolder> = {
   inbox: 'inbox',
@@ -75,6 +77,7 @@ export class GraphClient implements MailProviderClient {
     private readonly session: Pick<OAuthSession, 'accessToken'>,
     private readonly fetchFn: Fetch = fetch,
     private readonly now: () => Date = () => new Date(),
+    private readonly pageSize = BACKFILL_PAGE,
   ) {}
 
   private api<T>(pathOrUrl: string, init: RequestInit = {}) {
@@ -136,6 +139,27 @@ export class GraphClient implements MailProviderClient {
       }
     }
     return { upserts, removed, cursor: JSON.stringify(links) };
+  }
+
+  // Every folder at once, with bodies; the page is a next link. The list
+  // cannot leave folders out next to the ordering, so junk and trash are
+  // dropped here. Headers only come per message, so old mail goes without.
+  async backfill(page: string | null): Promise<BackfillPage> {
+    const result = await this.api<{
+      value: GraphMessage[];
+      '@odata.nextLink'?: string;
+    }>(
+      page ??
+        `/messages?$select=${SELECT},body&$orderby=receivedDateTime+desc&$top=${this.pageSize}`,
+    );
+    const messages: ProviderMessage[] = [];
+    for (const m of result.value) {
+      if (m.isDraft) continue;
+      const parsed = await this.parse(m);
+      if (parsed.folder !== 'spam' && parsed.folder !== 'trash')
+        messages.push(parsed);
+    }
+    return { messages, next: result['@odata.nextLink'] ?? null };
   }
 
   private since() {

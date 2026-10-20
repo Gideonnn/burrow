@@ -123,7 +123,16 @@ export const searchPlan = z.object({
 });
 export type SearchPlan = z.infer<typeof searchPlan>;
 
-export const aiSearchRequest = z.object({
+// Where the person searches: the mailbox, role or folder they have open.
+// Left out, a search covers every mailbox the key sees.
+export const searchScope = z.object({
+  mailboxId: z.string().optional(),
+  role: mailboxRole.optional(),
+  folder: mailFolder.optional(),
+});
+export type SearchScope = z.infer<typeof searchScope>;
+
+export const aiSearchRequest = searchScope.extend({
   question: z.string().trim().min(1).max(500),
 });
 

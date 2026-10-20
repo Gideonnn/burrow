@@ -73,7 +73,7 @@ import Testing
         #expect(server.requests("POST", "/api/messages/m1/actions").first?.contains(#""op":"archive""#) == true)
     }
 
-    @Test func searchShowsResultsFromEveryMailboxAndEndsWhenPickingAPlace() async throws {
+    @Test func searchShowsResultsAndAsksTheBotOnEnter() async throws {
         let server = server()
         server.on("GET", "/api/search", json: #"{"explanation":null,"results":[\#(Fixture.message("m9", subject: "Factuur maart"))]}"#)
         server.on("POST", "/api/search/ai", json: #"{"explanation":"Facturen van de tandarts","results":[\#(Fixture.message("m8", subject: "Uw nota"))]}"#)
@@ -90,10 +90,38 @@ import Testing
         #expect(model.searchExplanation == "Facturen van de tandarts")
         #expect(model.messages.map(\.subject) == ["Uw nota"])
         #expect(server.requests("POST", "/api/search/ai").first?.contains(#""question":"factuur""#) == true)
+    }
+
+    @Test func searchLooksInTheOpenPlaceAndFollowsTheSidebar() async throws {
+        let server = server()
+        server.on("GET", "/api/search", json: #"{"explanation":null,"results":[\#(Fixture.message("m9", subject: "Factuur maart"))]}"#)
+        server.on("POST", "/api/search/ai", json: #"{"explanation":"Facturen","results":[]}"#)
+        let model = model(server)
+        model.selection = .inbox(mailboxId: "mb1")
+        model.searchText = "factuur"
+        await model.searchLoad?.value
+        #expect(server.queries("GET", "/api/search").last?.contains("mailboxId=mb1&folder=inbox") == true)
 
         model.selection = .folder(.archive)
+        await model.searchLoad?.value
+        #expect(model.searchText == "factuur")
+        #expect(model.messages.map(\.subject) == ["Factuur maart"])
+        #expect(server.queries("GET", "/api/search").last?.contains("folder=archive") == true)
+        #expect(server.queries("GET", "/api/search").last?.contains("mailboxId") == false)
+
+        model.searchEverywhere = true
+        await model.searchLoad?.value
+        #expect(server.queries("GET", "/api/search").last?.contains("folder") == false)
+
+        // After Enter, a new place asks the bot again, there.
+        await model.searchWithAI()
+        model.selection = .inbox(mailboxId: "mb1")
+        await model.searchLoad?.value
+        #expect(!model.searchEverywhere)
+        #expect(server.requests("POST", "/api/search/ai").last?.contains(#""mailboxId":"mb1""#) == true)
+
+        model.selection = .tasks
         #expect(model.searchText.isEmpty)
-        #expect(model.searchExplanation == nil || !model.isSearching)
     }
 
     @Test func openingAnUnreadMessageMarksItReadAtTheServer() async throws {

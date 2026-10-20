@@ -95,3 +95,12 @@ pointer to Pensieve.
 forks open) and add `LICENSE`.
 **Why:** without one, nobody may legally reuse the code, which defeats publishing it.
 **Scope:** one file; Gideon decides.
+
+## Full-text index for mail search
+
+**What:** an FTS5 table over subject, sender, recipients and body, kept in step with
+`messages`, used by word search and the bot's plans instead of `LIKE`.
+**Why:** with the whole archive on Dobby every search scans every body; about 300 ms for
+50,000 messages on a MacBook, slower on Dobby and per keystroke.
+**Scope:** a migration with triggers, the search query and ranking; half a day. Only once
+search feels slow.

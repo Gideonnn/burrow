@@ -34,7 +34,7 @@ async function setup() {
   });
   h.provider(evas.id).deliver({ subject: 'Factuur tandarts Eva' });
   for (const box of [home, work, evas]) await h.mail.sync(box.id);
-  return { ...h, token: h.key(gideon.id, ['read']) };
+  return { ...h, home, evas, token: h.key(gideon.id, ['read']) };
 }
 
 const subjects = async (res: Response) =>
@@ -120,5 +120,56 @@ describe('search by meaning', () => {
     expect(prompt).toContain('gideon@studio.example (work');
     expect(prompt).not.toContain('Etentje');
     expect(prompt).not.toContain('eva@example.com');
+  });
+});
+
+describe('search in the open place', () => {
+  it('searches only the mailbox, role or folder the person has open', async () => {
+    const s = await setup();
+    const search = async (query: string) =>
+      subjects(await s.call(s.token, `/api/search?q=factuur&${query}`));
+    expect(await search(`mailboxId=${s.home.id}&folder=inbox`)).toEqual([
+      'Etentje zaterdag?',
+    ]);
+    expect(await search('role=work&folder=inbox')).toEqual([
+      'Factuur 2026-031',
+    ]);
+    expect(await search('folder=archive')).toEqual([]);
+  });
+
+  it('answers 404 for a mailbox outside the key', async () => {
+    const s = await setup();
+    const res = await s.call(
+      s.token,
+      `/api/search?q=factuur&mailboxId=${s.evas.id}`,
+    );
+    expect(res.status).toBe(404);
+  });
+
+  it('keeps a search by meaning in the open place, whatever the plan says', async () => {
+    const s = await setup();
+    s.decisions.push({
+      groups: [['factuur']],
+      from: null,
+      after: null,
+      before: null,
+      folder: 'archive',
+      roles: ['work'],
+      unreadOnly: false,
+      hasAttachments: false,
+      explanation: 'Facturen',
+    });
+    const res = await s.call(s.token, '/api/search/ai', {
+      method: 'POST',
+      body: JSON.stringify({
+        question: 'facturen',
+        mailboxId: s.home.id,
+        folder: 'inbox',
+      }),
+    });
+    expect(await subjects(res)).toEqual(['Etentje zaterdag?']);
+    const prompt = s.agentRequests[0]!.prompt;
+    expect(prompt).toContain('gideon@example.com');
+    expect(prompt).not.toContain('gideon@studio.example');
   });
 });

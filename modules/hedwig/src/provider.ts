@@ -38,6 +38,12 @@ export type SyncResult = {
   cursor: string;
 };
 
+export type BackfillPage = {
+  messages: ProviderMessage[];
+  // Where the next, older page starts; null once the archive is in.
+  next: string | null;
+};
+
 export type OutgoingMessage = Omit<SendRequest, 'mailboxId' | 'inReplyTo'> & {
   from: Address;
   replyTo?: Pick<ProviderMessage, 'providerId' | 'threadId' | 'headers'>;
@@ -50,6 +56,9 @@ export interface MailProviderClient {
   address(): Promise<string>;
   // Without a cursor: the recent inbox, plus a cursor for the next call.
   sync(cursor: string | null): Promise<SyncResult>;
+  // Older mail in every folder but spam and trash where the provider allows,
+  // newest first, one page per call; null asks for the first page.
+  backfill(page: string | null): Promise<BackfillPage>;
   apply(providerId: string, ops: ServerOp[]): Promise<void>;
   send(message: OutgoingMessage): Promise<void>;
 }

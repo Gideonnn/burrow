@@ -9,7 +9,7 @@ final class MockServer: @unchecked Sendable {
     private let lock = NSLock()
     private var routes: [String: Handler] = [:]
     private var dataRoutes: [String: Data] = [:]
-    private(set) var log: [(method: String, path: String, body: String)] = []
+    private(set) var log: [(method: String, path: String, query: String, body: String)] = []
 
     func on(_ method: String, _ path: String, status: Int = 200, json: String) {
         on(method, path) { _ in (status, json) }
@@ -28,12 +28,18 @@ final class MockServer: @unchecked Sendable {
         lock.withLock { log.filter { $0.method == method && $0.path == path }.map(\.body) }
     }
 
+    /// The query strings sent to a path, decoded.
+    func queries(_ method: String, _ path: String) -> [String] {
+        lock.withLock { log.filter { $0.method == method && $0.path == path }.map(\.query) }
+    }
+
     fileprivate func respond(to request: URLRequest) -> (Int, Data) {
         let method = request.httpMethod ?? "GET"
         let path = request.url?.path() ?? ""
+        let query = request.url?.query()?.removingPercentEncoding ?? ""
         let body = request.httpBodyStream.map(readAll) ?? request.httpBody.map { String(decoding: $0, as: UTF8.self) } ?? ""
         let (handler, data) = lock.withLock {
-            log.append((method, path, body))
+            log.append((method, path, query, body))
             return (routes["\(method) \(path)"], dataRoutes["\(method) \(path)"])
         }
         if let data { return (200, data) }

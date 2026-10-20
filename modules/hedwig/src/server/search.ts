@@ -4,6 +4,7 @@ import {
   type MessageSummary,
   type SearchPlan,
   type SearchResponse,
+  type SearchScope,
   searchPlan,
 } from '@burrow/contracts';
 import { type Db, type Platform, systemPrompt } from '@burrow/platform';
@@ -128,6 +129,15 @@ function score(row: MessageRow, groups: string[][]) {
   return total;
 }
 
+// The place the person has open wins over the bot's plan.
+export function inScope(query: SearchQuery, scope: SearchScope): SearchQuery {
+  return {
+    ...query,
+    folder: scope.folder ?? query.folder,
+    roles: scope.role ? [scope.role] : scope.mailboxId ? null : query.roles,
+  };
+}
+
 // Splits typed words; quotes keep a phrase together.
 export function words(q: string): string[][] {
   return [...q.matchAll(/"([^"]+)"|(\S+)/g)]
@@ -154,6 +164,7 @@ export class SearchService {
     personId: string,
     mailboxIds: readonly string[],
     question: string,
+    scope: SearchScope = {},
   ): Promise<SearchResponse> {
     const { platform } = this.o;
     const { catalog, runner, db } = platform;
@@ -167,7 +178,12 @@ export class SearchService {
             role: mailboxes.role,
           })
           .from(mailboxes)
-          .where(inArray(mailboxes.id, [...mailboxIds]))
+          .where(
+            and(
+              inArray(mailboxes.id, [...mailboxIds]),
+              scope.role ? eq(mailboxes.role, scope.role) : undefined,
+            ),
+          )
           .all()
       : [];
     const raw = await runner.run({
@@ -187,11 +203,11 @@ export class SearchService {
     const plan: SearchPlan = searchPlan.parse(raw);
     return {
       explanation: plan.explanation,
-      results: searchMessages(db, mailboxIds, {
-        ...plan,
-        matchAll: false,
-        limit: 50,
-      }),
+      results: searchMessages(
+        db,
+        mailboxIds,
+        inScope({ ...plan, matchAll: false, limit: 50 }, scope),
+      ),
     };
   }
 }

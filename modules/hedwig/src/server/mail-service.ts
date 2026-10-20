@@ -23,7 +23,9 @@ export type MailEvent = {
 };
 
 export class MailService {
-  private readonly syncing = new Set<string>();
+  // Mailboxes a sync or backfill is busy with; one at a time per mailbox, so
+  // two clients never refresh the same OAuth tokens at once.
+  private readonly busy = new Set<string>();
 
   constructor(
     private readonly db: Db,
@@ -46,8 +48,8 @@ export class MailService {
   // Pulls changes from the provider into the local store. Returns the ids of
   // messages that arrived in the inbox, for triage.
   async sync(mailboxId: string): Promise<string[]> {
-    if (this.syncing.has(mailboxId)) return [];
-    this.syncing.add(mailboxId);
+    if (this.busy.has(mailboxId)) return [];
+    this.busy.add(mailboxId);
     try {
       const box = this.mailbox(mailboxId);
       if (!box) throw new MailError('unknown mailbox');
@@ -123,7 +125,45 @@ export class MailService {
       for (const event of pending) this.emit(event);
       return arrived;
     } finally {
-      this.syncing.delete(mailboxId);
+      this.busy.delete(mailboxId);
+    }
+  }
+
+  // Brings in one page of older mail, so search covers the whole mailbox.
+  // True while there is more. Old mail is never sorted and announces nothing;
+  // what sync already stored stays as it is.
+  async backfill(mailboxId: string): Promise<boolean> {
+    const box = this.mailbox(mailboxId);
+    if (!box || box.backfilledAt) return false;
+    if (this.busy.has(mailboxId)) return true;
+    this.busy.add(mailboxId);
+    try {
+      const page = await this.clientFor(box).backfill(box.backfillCursor);
+      const now = new Date();
+      this.db.transaction((tx) => {
+        for (const m of page.messages) {
+          tx.insert(messages)
+            .values({
+              mailboxId: box.id,
+              providerId: m.providerId,
+              ...columnsFrom(m),
+              triagedAt: now,
+            })
+            .onConflictDoNothing()
+            .run();
+        }
+        tx.update(mailboxes)
+          .set(
+            page.next
+              ? { backfillCursor: page.next }
+              : { backfillCursor: null, backfilledAt: now },
+          )
+          .where(eq(mailboxes.id, box.id))
+          .run();
+      });
+      return page.next !== null;
+    } finally {
+      this.busy.delete(mailboxId);
     }
   }
 

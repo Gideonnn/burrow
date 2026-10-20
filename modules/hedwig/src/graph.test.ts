@@ -100,6 +100,19 @@ function fakeGraph() {
         '@odata.deltaLink': `https://graph.microsoft.com/v1.0/me/mailFolders/${delta[1]}/messages/delta?since=${seq}`,
       });
     }
+    if (path === '/messages' && method === 'GET') {
+      const all = [...messages.values()].sort((a, b) =>
+        b.receivedDateTime.localeCompare(a.receivedDateTime),
+      );
+      const skip = Number(url.searchParams.get('$skip') ?? 0);
+      const top = Number(url.searchParams.get('$top'));
+      const next = new URL(url);
+      next.searchParams.set('$skip', String(skip + top));
+      return json({
+        value: all.slice(skip, skip + top),
+        ...(skip + top < all.length ? { '@odata.nextLink': String(next) } : {}),
+      });
+    }
     const one = /^\/messages\/([^/]+)$/.exec(path);
     if (one && method === 'GET') {
       const m = messages.get(one[1]!);
@@ -179,6 +192,34 @@ describe('GraphClient', () => {
         authenticationResults: 'dkim=pass',
       },
     });
+  });
+
+  it('backfills every folder but junk and trash, newest first, page by page', async () => {
+    const api = fakeGraph();
+    const client = new GraphClient(api.session, api.fetchFn, undefined, 2);
+    const at = (day: number) => ({
+      receivedDateTime: `2025-01-0${day}T08:00:00Z`,
+    });
+    api.deliver(graphMessage('old', 'archive', at(1)));
+    api.deliver(graphMessage('sent', 'sentitems', at(2)));
+    api.deliver(graphMessage('junk', 'junkemail', at(3)));
+    api.deliver(graphMessage('draft', 'inbox', { ...at(4), isDraft: true }));
+    api.deliver(graphMessage('new', 'inbox', at(5)));
+
+    const pages: [string, string][][] = [];
+    let page: string | null = null;
+    do {
+      const result = await client.backfill(page);
+      pages.push(result.messages.map((m) => [m.providerId, m.folder]));
+      page = result.next;
+    } while (page);
+    expect(pages).toEqual([
+      [['new', 'inbox']],
+      [['sent', 'sent']],
+      [['old', 'archive']],
+    ]);
+    const list = api.calls.find((c) => c.path === '/messages');
+    expect(list?.prefer).toContain('IdType="ImmutableId"');
   });
 
   it('asks for immutable ids so moved mail keeps its id', async () => {
