@@ -279,5 +279,5 @@ message is retried once.
 
 ## Open questions
 
-- Winky writes meeting notes with Sonnet in the cloud today. Do the notes move to the local
-  queue once a local model writes them well enough, or stay in the cloud?
+None at the moment. Meeting notes stay in the cloud, written by Kreacher on Opus
+**(agreed)**.

@@ -8,7 +8,7 @@ import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Catalog } from '../catalog/loadCatalog';
 import type { Db } from '../db';
-import { systemPrompt } from '../prompt';
+import { botRequest } from '../prompt';
 import { routines } from '../schema';
 import type { Subjects } from './subjects';
 import type { TaskRow, Workers } from './tasks';
@@ -222,9 +222,7 @@ export class Routines {
         : `${task} ${owner.name} on ${new Date().toISOString().slice(0, 10)}.\n\n## ${owner.name}'s instructions\n${owner.instructions || '(none)'}\n\nAnswer with JSON only, matching the schema. Write any text for people in ${owner.language}.`;
     if (!prompt) throw new RoutineError('the subject of this task is gone');
     return {
-      model: bot.model,
-      agent: bot.agent,
-      system: systemPrompt(bot, [skill]),
+      ...botRequest(bot, [skill]),
       prompt,
       schema: resultSchema,
     };

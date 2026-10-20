@@ -13,7 +13,7 @@ import {
   type Access,
   listPeople,
   type Platform,
-  systemPrompt,
+  botRequest,
   type TaskKind,
   type TaskRow,
   untrusted,
@@ -340,10 +340,8 @@ export class Recordings {
       : 'unknown';
     const transcript = (row.transcript ?? '').slice(0, MAX_TRANSCRIPT);
     return {
-      model: bot.model,
-      agent: bot.agent,
+      ...botRequest(bot, [catalog.skills.get(NOTES_SKILL)!]),
       timeoutMs: 15 * 60_000,
-      system: systemPrompt(bot, [catalog.skills.get(NOTES_SKILL)!]),
       prompt: `Write the notes of this recording for ${owner.name}.
 
 ## ${owner.name}'s instructions

@@ -18,7 +18,7 @@ capture code lives on in `apps/pensieve-mac/Sources/PensieveCapture`.
    1400 s and 25 MB), `gpt-4o-transcribe` (or the diarizing model with speaker labels
    when `pensieve.speakers` is on), language from `pensieve.language`. Needs
    `OPENAI_API_KEY` on the server; without it the recording stops here with that reason.
-5. **Notes** (`pensieve.notes`, agent task): the bot Winky with the skill `meeting-notes`
+5. **Notes** (`pensieve.notes`, agent task): the bot Kreacher with the skill `meeting-notes` (on Opus)
    returns summary, decisions, actions (owner, due) and open questions as JSON; the
    server renders the Markdown in the owner's language. Skipped when `pensieve.notes` is
    off. Then routines with the `recording` trigger fire.

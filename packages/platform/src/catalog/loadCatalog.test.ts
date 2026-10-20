@@ -38,6 +38,34 @@ describe('loadCatalog', () => {
     );
   });
 
+  it('gives writing skills Opus, keeps the rest on Haiku and Winky local', async () => {
+    const catalog = await loadCatalog({
+      bots: [join(repo, 'bots')],
+      skills: [join(repo, 'skills')],
+    });
+    expect(catalog.bots.get('kreacher')?.skills).toContain('meeting-notes');
+    expect(catalog.skills.get('meeting-notes')?.model).toBe('opus');
+    expect(catalog.skills.get('reply-suggestions')?.model).toBe('opus');
+    expect(catalog.skills.get('sorting-hat')?.model).toBeUndefined();
+    expect(catalog.bots.get('winky')).toMatchObject({ agent: 'local' });
+    expect(catalog.bots.get('winky')?.model).toMatch(/^ollama:/);
+  });
+
+  it('keeps local bots on local models and cloud bots off them', async () => {
+    await writeFile(
+      join(tmp, 'bots/winky.md'),
+      bot('name: winky\ndisplayName: Winky\ndescription: Helps.\nagent: local'),
+    );
+    await expect(loadCatalog(dirs())).rejects.toThrow(/local model/);
+    await writeFile(
+      join(tmp, 'bots/winky.md'),
+      bot(
+        'name: winky\ndisplayName: Winky\ndescription: Helps.\nmodel: ollama:gemma4',
+      ),
+    );
+    await expect(loadCatalog(dirs())).rejects.toThrow(/local model/);
+  });
+
   it('applies defaults and keeps the body as the persona', async () => {
     await writeFile(
       join(tmp, 'bots/winky.md'),

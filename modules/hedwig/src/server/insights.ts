@@ -1,5 +1,5 @@
 import { type MessageInsights, messageInsights } from '@burrow/contracts';
-import { type Platform, systemPrompt } from '@burrow/platform';
+import { type Platform, botRequest } from '@burrow/platform';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import type { MailService } from './mail-service';
@@ -70,9 +70,7 @@ export class InsightsService {
     const owner = platform.owner(box.ownerId);
     const bot = catalog.bots.get(this.o.bot)!;
     const raw = await runner.run({
-      model: bot.model,
-      agent: bot.agent,
-      system: systemPrompt(bot, [catalog.skills.get(SKILL)!]),
+      ...botRequest(bot, [catalog.skills.get(SKILL)!]),
       prompt: triagePrompt({
         ownerName: owner.name,
         instructions: owner.instructions,

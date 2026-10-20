@@ -44,6 +44,11 @@ to add one: [modules](modules.md).
   runs at once across everything.
 - **Agents.** Claude Code and Codex CLIs logged in on Dobby (Codex with the ChatGPT
   plan). A bot may prefer one (`agent:` in its front matter); the other is the fallback.
+  The bot's `model` is Haiku 5.5 by default; a skill that needs more says `model: opus`
+  in its front matter (reply suggestions, meeting notes). Opus runs at effort high, Haiku
+  chooses its own; Codex runs Sol 6.1 (`gpt-6.1-sol`) unless `BURROW_CODEX_MODEL` says
+  otherwise. A bot with `agent: local` (Winky) has an `ollama:` model and is refused by
+  every cloud runner, so its work never leaves the owner's Mac.
   Agents run with a clean environment: no server secret reaches a process that reads
   untrusted mail.
 - **Events.** One SSE stream at `/api/events`; each event decides per key whether it may
@@ -58,7 +63,7 @@ to add one: [modules](modules.md).
   keeps its own durable queue (the message records its progress). See [triage](triage.md)
   and [mail providers](providers.md).
 - **Pensieve** (`modules/pensieve`): recordings uploaded by the Mac app, compressed with
-  ffmpeg, transcribed through OpenAI, notes written by the bot Winky. The `recording`
+  ffmpeg, transcribed through OpenAI, notes written by the bot Kreacher. The `recording`
   subject and trigger. See [Pensieve](pensieve.md).
 
 ## Clients

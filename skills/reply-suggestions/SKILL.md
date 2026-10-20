@@ -1,6 +1,7 @@
 ---
 name: reply-suggestions
 description: For one message, write a short summary when it is long, and up to three complete replies the owner can send with one click.
+model: opus
 ---
 
 # Reply suggestions

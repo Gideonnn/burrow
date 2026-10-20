@@ -33,12 +33,14 @@ public struct ClaudeCLI: Sendable {
     public init(path: String) { self.path = path }
 
     public func run(_ request: AgentRequest) async throws -> Data {
+        // A local bot's request must never reach a cloud model.
+        guard request.agent != "local" else { throw RunnerError.agentFailed("lokale taak, niet voor Claude") }
         let schema = String(decoding: try JSONEncoder().encode(request.schema), as: UTF8.self)
         let arguments = [
             "-p", "--model", request.model, "--output-format", "json", "--tools", "",
             "--strict-mcp-config", "--no-session-persistence", "--system-prompt", request.system,
             "--json-schema", schema,
-        ]
+        ] + (request.effort.map { ["--effort", $0] } ?? [])
         let output = try await Self.exec(path, arguments, input: Data(request.prompt.utf8))
         struct Envelope: Decodable { var is_error: Bool?; var result: String?; var structured_output: JSONValue? }
         let envelope = try JSONDecoder().decode(Envelope.self, from: output)

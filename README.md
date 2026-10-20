@@ -10,7 +10,7 @@ agents (Claude Code, Codex) can use.
 | Server | Runs on Dobby, a small machine at home: the platform, its modules, people, keys, bots, MCP | Running |
 | Hedwig | Mail: Gmail, Microsoft and Fastmail, with a bot that sorts it; a Mac app | Running |
 | Pensieve | Recorded conversations: transcripts and notes; a Mac app | Running |
-| Kreacher, Winky | Bots: a house-elf who sorts the mail, one who writes meeting notes | Running |
+| Kreacher, Winky | Bots: a house-elf for chores on a cloud AI (mail, meeting notes), one for sensitive chores on a local model | Running |
 | Portkey | Routines: triggers that start tasks for the bots | Running |
 | Patronus | A Telegram bot for both of us and the household group | Planned |
 

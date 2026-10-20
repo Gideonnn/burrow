@@ -55,7 +55,7 @@ function household() {
 }
 
 describe('a recording', () => {
-  it('is compressed, transcribed and turned into notes by Winky', async () => {
+  it('is compressed, transcribed and turned into notes by Kreacher on Opus', async () => {
     const h = household();
     await h.send(h.token, 'PATCH', '/api/me/settings', {
       values: { language: 'Dutch' },
@@ -80,7 +80,8 @@ describe('a recording', () => {
       '- [ ] Prijzen nalopen · Ron · donderdag',
     );
     const request = h.agentRequests.at(-1)!;
-    expect(request.system).toContain('You are Winky.');
+    expect(request.system).toContain('You are Kreacher.');
+    expect(request).toMatchObject({ model: 'opus', effort: 'high' });
     expect(request.prompt).toContain('Ron loopt de prijzen na');
 
     const tasks = (await (await h.call(h.token, '/api/tasks')).json()) as {
@@ -188,7 +189,7 @@ describe('a recording', () => {
       name: 'Actiepunten naar taken',
       trigger: { kind: 'recording', title: 'offerte' },
       skill: 'meeting-notes',
-      bot: 'winky',
+      bot: 'kreacher',
     });
     routine.parse(await created.json());
     h.transcripts.push('Gesprek.');

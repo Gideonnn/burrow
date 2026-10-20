@@ -43,8 +43,9 @@ markdown file. The user-facing app may add a plain alias (Raycast opens Hedwig a
   `burrowctl`).
 - `apps/hedwig-mac/`, `apps/pensieve-mac/`: the native macOS apps (SwiftUI, Swift
   packages bundled by `scripts/bundle.sh`; see their READMEs).
-- `bots/`: bot personas, one markdown file each (Kreacher sorts mail, Winky writes
-  notes). A personal directory on the server can add or override bots.
+- `bots/`: bot personas, one markdown file each (Kreacher does the chores on a cloud AI,
+  Winky the sensitive ones on a local model). A personal directory on the server can add
+  or override bots.
 - `skills/`: skills the bots use at runtime (for example the Sorting Hat triage), one
   folder with a `SKILL.md` each. Not to be confused with `.agents/skills/`, which help
   agents develop this repo.

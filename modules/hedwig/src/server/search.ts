@@ -7,7 +7,7 @@ import {
   type SearchScope,
   searchPlan,
 } from '@burrow/contracts';
-import { type Db, type Platform, systemPrompt } from '@burrow/platform';
+import { type Db, type Platform, botRequest } from '@burrow/platform';
 import {
   and,
   type Column,
@@ -187,9 +187,7 @@ export class SearchService {
           .all()
       : [];
     const raw = await runner.run({
-      model: bot.model,
-      agent: bot.agent,
-      system: systemPrompt(bot, [catalog.skills.get(SKILL)!]),
+      ...botRequest(bot, [catalog.skills.get(SKILL)!]),
       prompt: [
         `Today is ${new Date().toISOString().slice(0, 10)}.`,
         `${person.name} searches their mail${person.language ? ` and writes in ${person.language}` : ''}.`,

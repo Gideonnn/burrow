@@ -152,7 +152,7 @@ struct PipelineCard: View {
 
     var body: some View {
         HStack(alignment: .center, spacing: 14) {
-            PersonBadge(current == 2 ? "Winky" : "Dobby", size: 30)
+            PersonBadge(current == 2 ? "Kreacher" : "Dobby", size: 30)
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 6) {
                     ForEach(steps, id: \.0) { status, label in
@@ -169,7 +169,7 @@ struct PipelineCard: View {
                 if detail.status == .failed {
                     Text(detail.error ?? "Mislukt").font(.callout).foregroundStyle(BurrowColor.danger)
                 } else {
-                    Text(detail.status == .writingNotes ? "Winky luistert terug en schrijft de notulen." : "Dobby is ermee bezig.")
+                    Text(detail.status == .writingNotes ? "Kreacher luistert terug en schrijft de notulen." : "Dobby is ermee bezig.")
                         .font(.callout)
                         .foregroundStyle(.secondary)
                 }
@@ -224,7 +224,7 @@ struct NotesView: View {
             Text((try? AttributedString(markdown: markdown, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace))) ?? AttributedString(markdown))
                 .textSelection(.enabled)
         } else {
-            ContentUnavailableView("Nog geen notulen", systemImage: "doc.text", description: Text(detail.status == .failed ? "Zie hierboven wat er misging." : "Winky schrijft ze zodra het transcript klaar is."))
+            ContentUnavailableView("Nog geen notulen", systemImage: "doc.text", description: Text(detail.status == .failed ? "Zie hierboven wat er misging." : "Kreacher schrijft ze zodra het transcript klaar is."))
         }
     }
 

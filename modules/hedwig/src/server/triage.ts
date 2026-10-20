@@ -5,7 +5,7 @@ import {
   type TriageStatus,
   triageDecision,
 } from '@burrow/contracts';
-import { type Access, type Platform, systemPrompt } from '@burrow/platform';
+import { type Access, type Platform, botRequest } from '@burrow/platform';
 import { and, desc, eq, inArray, isNull, like, lt, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { describeOp, reverseOps, serverOpsFor } from '../server-ops';
@@ -97,9 +97,7 @@ export class TriageService {
       .run();
 
     const raw = await runner.run({
-      model: bot.model,
-      agent: bot.agent,
-      system: systemPrompt(bot, [catalog.skills.get(TRIAGE_SKILL)!]),
+      ...botRequest(bot, [catalog.skills.get(TRIAGE_SKILL)!]),
       prompt: triagePrompt({
         ownerName: owner.name,
         instructions: owner.instructions,

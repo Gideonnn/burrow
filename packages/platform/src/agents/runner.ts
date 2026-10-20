@@ -2,17 +2,19 @@ import { spawn } from 'node:child_process';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import type { Effort } from '@burrow/contracts';
 
 export type AgentName = 'claude' | 'codex';
 
 export type AgentRequest = {
   model: string;
+  effort?: Effort;
   system: string;
   prompt: string;
   // JSON Schema the answer must match.
   schema: object;
   // The agent CLI the bot prefers; the others remain the fallback.
-  agent?: AgentName | 'any';
+  agent?: AgentName | 'any' | 'local';
   timeoutMs?: number;
 };
 
@@ -47,6 +49,7 @@ export class ClaudeCliRunner implements AgentRunner {
 
   async run({
     model,
+    effort,
     system,
     prompt,
     schema,
@@ -58,6 +61,7 @@ export class ClaudeCliRunner implements AgentRunner {
         '-p',
         '--model',
         model,
+        ...(effort ? ['--effort', effort] : []),
         '--output-format',
         'json',
         '--tools',
@@ -85,17 +89,18 @@ export class ClaudeCliRunner implements AgentRunner {
 
 // Codex headless, logged in with the ChatGPT plan. Its sandbox is read-only,
 // it starts in an empty folder with a clean environment, and the answer is
-// read from --output-last-message. Bots name Claude models, so Codex uses its
-// own default unless BURROW_CODEX_MODEL names one.
+// read from --output-last-message. Bots name Claude models, so Codex runs
+// Sol 6.1 unless BURROW_CODEX_MODEL names another.
 export class CodexCliRunner implements AgentRunner {
   readonly name = 'codex';
 
   constructor(
     private readonly command = 'codex',
-    private readonly model?: string,
+    private readonly model = 'gpt-6.1-sol',
   ) {}
 
   async run({
+    effort,
     system,
     prompt,
     schema,
@@ -110,7 +115,9 @@ export class CodexCliRunner implements AgentRunner {
         this.command,
         [
           'exec',
-          ...(this.model ? ['--model', this.model] : []),
+          '--model',
+          this.model,
+          ...(effort ? ['-c', `model_reasoning_effort="${effort}"`] : []),
           '--sandbox',
           'read-only',
           '--skip-git-repo-check',
@@ -143,6 +150,9 @@ export class FallbackRunner implements AgentRunner {
   }
 
   async run(request: AgentRequest): Promise<unknown> {
+    if (request.agent === 'local') {
+      throw new Error('a local bot never runs on a cloud agent');
+    }
     let lastError: unknown = new Error(
       'no agent CLI configured (BURROW_AGENTS)',
     );

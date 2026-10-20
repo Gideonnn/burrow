@@ -23,7 +23,7 @@ const env = z.object({
   BURROW_BOTS_DIRS: z.string().optional(),
   BURROW_SKILLS_DIRS: z.string().optional(),
   BURROW_TRIAGE_BOT: z.string().default('kreacher'),
-  BURROW_NOTES_BOT: z.string().default('winky'),
+  BURROW_NOTES_BOT: z.string().default('kreacher'),
   // An address for the public privacy and terms pages.
   BURROW_CONTACT_EMAIL: z.string().optional(),
   // Language for reasons and other text the bots write, e.g. Dutch.
@@ -32,7 +32,7 @@ const env = z.object({
   BURROW_AGENTS: z.string().default('claude,codex'),
   BURROW_CLAUDE_COMMAND: z.string().default('claude'),
   BURROW_CODEX_COMMAND: z.string().default('codex'),
-  // A Codex model; empty uses Codex's own default.
+  // A Codex model; empty uses Sol 6.1.
   BURROW_CODEX_MODEL: z.string().optional(),
   // Server tasks at once, and agent CLI runs at once across everything.
   BURROW_WORKERS: z.coerce.number().int().min(1).max(8).default(2),

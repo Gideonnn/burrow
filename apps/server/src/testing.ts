@@ -51,22 +51,14 @@ export function testHousehold({
           description: 'Sorts mail.',
           model: 'haiku',
           agent: 'claude',
-          skills: ['sorting-hat', 'reply-suggestions', 'mail-search'],
+          skills: [
+            'sorting-hat',
+            'reply-suggestions',
+            'mail-search',
+            'meeting-notes',
+          ],
           rights: ['read', 'organize', 'draft'],
           persona: 'You are Kreacher.',
-        },
-      ],
-      [
-        'winky',
-        {
-          name: 'winky',
-          displayName: 'Winky',
-          description: 'Writes notes.',
-          model: 'sonnet',
-          agent: 'any',
-          skills: ['meeting-notes'],
-          rights: ['read'],
-          persona: 'You are Winky.',
         },
       ],
     ]),
@@ -100,6 +92,7 @@ export function testHousehold({
         {
           name: 'meeting-notes',
           description: 'Notes.',
+          model: 'opus',
           instructions: 'Write notes.',
         },
       ],
@@ -166,7 +159,7 @@ export function testHousehold({
   const pensieve = pensieveModule(platform, {
     audio,
     transcriber,
-    bot: 'winky',
+    bot: 'kreacher',
   });
   platform.use(pensieve.module);
   const app = createApp({

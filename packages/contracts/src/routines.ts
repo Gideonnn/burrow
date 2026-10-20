@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { effort } from './catalog';
 import { address, serverOp } from './mail';
 
 // What starts a routine. New trigger kinds can be added here without touching
@@ -115,11 +116,13 @@ export const claimedTask = z.object({
   task,
   request: z.object({
     model: z.string(),
+    effort: effort.optional(),
     system: z.string(),
     prompt: z.string(),
     schema: z.record(z.string(), z.unknown()),
     // Which agent CLI the bot prefers; the runner falls back to another.
-    agent: z.enum(['claude', 'codex', 'any']).default('any'),
+    // A Claude runner refuses `local`, which is only for a local model.
+    agent: z.enum(['claude', 'codex', 'any', 'local']).default('any'),
     timeoutMs: z.number().int().positive().optional(),
   }),
 });

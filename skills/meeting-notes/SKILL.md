@@ -1,6 +1,7 @@
 ---
 name: meeting-notes
 description: Turn the transcript of a recorded conversation into short, factual notes with decisions, action items and open questions.
+model: opus
 ---
 
 # Meeting notes

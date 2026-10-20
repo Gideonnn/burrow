@@ -21,7 +21,7 @@ const settings: SettingDefinition[] = [
     module: MODULE,
     label: 'Notulen laten schrijven',
     description:
-      'Winky schrijft na elke opname de samenvatting, besluiten en actiepunten.',
+      'Kreacher schrijft na elke opname de samenvatting, besluiten en actiepunten.',
     type: 'boolean',
     default: true,
     feature: true,
@@ -62,7 +62,7 @@ const settings: SettingDefinition[] = [
 export type PensieveOptions = {
   audio: Audio;
   transcriber?: Transcriber;
-  // The bot that writes the notes (Winky).
+  // The bot that writes the notes (Kreacher).
   bot: string;
 };
 

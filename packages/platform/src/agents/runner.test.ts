@@ -2,7 +2,12 @@ import { chmod, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { ClaudeCliRunner, FallbackRunner, parseJsonAnswer } from './runner';
+import {
+  ClaudeCliRunner,
+  CodexCliRunner,
+  FallbackRunner,
+  parseJsonAnswer,
+} from './runner';
 
 let dir: string;
 beforeEach(async () => {
@@ -60,6 +65,18 @@ describe('ClaudeCliRunner', () => {
     );
   });
 
+  it('asks for high effort only when the request does', async () => {
+    const runner = new ClaudeCliRunner(
+      await fakeClaude({ structured_output: { ok: 1 } }),
+    );
+    await runner.run({ ...request, model: 'opus', effort: 'high' });
+    let call = JSON.parse(await readFile(join(dir, 'call.json'), 'utf8'));
+    expect(call.args.join(' ')).toContain('--effort high');
+    await runner.run(request);
+    call = JSON.parse(await readFile(join(dir, 'call.json'), 'utf8'));
+    expect(call.args).not.toContain('--effort');
+  });
+
   it('falls back to parsing the text result', async () => {
     const runner = new ClaudeCliRunner(
       await fakeClaude({ result: '```json\n{"ok":2}\n```' }),
@@ -101,6 +118,47 @@ describe('FallbackRunner', () => {
       ),
     ).toBe('c');
     expect(used).toEqual(['a', 'b', 'c']);
+  });
+});
+
+describe('CodexCliRunner', () => {
+  it('uses Sol 6.1 at the requested effort unless a model is configured', async () => {
+    const script = join(dir, 'codex');
+    await writeFile(
+      script,
+      `#!/usr/bin/env node
+const fs = require('fs');
+const args = process.argv.slice(2);
+fs.writeFileSync(${JSON.stringify(join(dir, 'codex.json'))}, JSON.stringify(args));
+fs.writeFileSync(args[args.indexOf('--output-last-message') + 1], '{"ok":3}');
+process.stdin.resume();
+process.stdin.on('end', () => process.exit(0));
+`,
+    );
+    await chmod(script, 0o755);
+    const args = async () =>
+      JSON.parse(await readFile(join(dir, 'codex.json'), 'utf8')).join(' ');
+    expect(
+      await new CodexCliRunner(script).run({ ...request, effort: 'high' }),
+    ).toEqual({ ok: 3 });
+    expect(await args()).toContain('--model gpt-6.1-sol');
+    expect(await args()).toContain('-c model_reasoning_effort="high"');
+    await new CodexCliRunner(script, 'gpt-other').run(request);
+    expect(await args()).toContain('--model gpt-other');
+    expect(await args()).not.toContain('model_reasoning_effort');
+  });
+});
+
+describe('FallbackRunner with a local bot', () => {
+  it('refuses to send a local request to any cloud agent', async () => {
+    const used: string[] = [];
+    const runner = new FallbackRunner([
+      { name: 'claude', run: async () => used.push('claude') },
+    ]);
+    await expect(
+      runner.run({ ...request, model: 'ollama:gemma4', agent: 'local' }),
+    ).rejects.toThrow(/local/);
+    expect(used).toEqual([]);
   });
 });
 

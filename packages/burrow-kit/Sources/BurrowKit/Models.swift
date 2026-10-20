@@ -214,6 +214,7 @@ public struct TaskItem: Codable, Hashable, Identifiable, Sendable {
 
 public struct AgentRequest: Codable, Hashable, Sendable {
     public var model: String
+    public var effort: String?
     public var system: String
     public var prompt: String
     public var schema: JSONValue
