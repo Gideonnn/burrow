@@ -6,12 +6,13 @@ Issue-ready entries, roughly in build order. Delete an entry in the commit that 
 
 **What:** connect the real mailboxes (Fastmail with an API token; Gmail and Microsoft
 after their client ids are in the settings on Dobby, redirect URI
-`<BURROW_PUBLIC_URL>/oauth/callback`); publish the Google OAuth app (home page
-`/about`, privacy `/privacy`, terms `/terms` are public now); put `OPENAI_API_KEY` and
+`<BURROW_PUBLIC_URL>/oauth/callback`); put `OPENAI_API_KEY` and
 `BURROW_CONTACT_EMAIL` in the settings and restart; add age recipients for backups.
-**Why:** no real mailbox is connected yet, logins of an app in Testing expire after 7
-days, Pensieve stops at transcription without the key, and backups are unencrypted
-copies on Dobby itself.
+The Google OAuth app is in production but unverified: people see Google's "unverified
+app" warning and continue through Advanced; a Workspace account may also need the client
+marked trusted in its admin console.
+**Why:** no real mailbox is connected yet, Pensieve stops at transcription without the
+key, and backups are unencrypted copies on Dobby itself.
 **Scope:** under an hour; see the providers and deploy topics.
 
 ## Angela's Mac
