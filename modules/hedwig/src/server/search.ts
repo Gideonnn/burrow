@@ -24,7 +24,7 @@ import {
   sql,
 } from 'drizzle-orm';
 import { z } from 'zod';
-import { type FactsRow, toFacts } from './facts/store';
+import { type FactsRow, forKey, toFacts } from './facts/store';
 import { type MessageRow, toSummary } from './mail-service';
 import { mailboxes, messageFacts, messages } from './schema';
 
@@ -129,10 +129,8 @@ export function searchMessages(
     .orderBy(desc(messages.receivedAt))
     .limit(query.matchAll ? query.limit : CANDIDATES)
     .all();
-  const summary = ({ m, f }: { m: MessageRow; f: FactsRow | null }) => {
-    const s = toSummary(m, f ? toFacts(f) : null);
-    return query.factsOnly ? { ...s, snippet: '' } : s;
-  };
+  const summary = ({ m, f }: { m: MessageRow; f: FactsRow | null }) =>
+    forKey(toSummary(m, f ? toFacts(f) : null), query);
   if (query.matchAll) return rows.map(summary);
   return rows
     .map((row, index) => ({

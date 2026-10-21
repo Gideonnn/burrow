@@ -321,7 +321,7 @@ Phases 1 to 7, deployed the same night. Where it differs from the plan above:
 - Templates group by sender plus subject pattern only; grouping by sender (phase 0's
   advice) is not done.
 - Agent work about a sensitive message is not moved to the local queue; cloud bots get
-  the redacted body. `localModelOk` exists but no kind uses it.
+  the redacted body. Idle cloud tasks on a local model are not built (see `TODO.md`).
 - The menu bar icon belongs to `burrowctl runner run` under launchd; Hedwig's own runner
   is gone and its settings show the Mac's runner instead.
 

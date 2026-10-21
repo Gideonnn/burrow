@@ -24,7 +24,7 @@ import { HTTPException } from 'hono/http-exception';
 import { z } from 'zod';
 import { canSeeMailbox } from './access';
 import { createDraft, deleteDraft, DraftError, listDrafts } from './drafts';
-import { factsFor, summaries } from './facts/store';
+import { factsFor, forKey, summaries } from './facts/store';
 import type { InsightsService } from './insights';
 import {
   MailError,
@@ -239,7 +239,7 @@ export function hedwigRoutes({
           );
           const facts = factsFor(c.var.db, [row.id]).get(row.id) ?? null;
           if (c.var.access.factsOnly) {
-            return c.json({ ...toSummary(updated, facts), snippet: '' });
+            return c.json(forKey(toSummary(updated, facts), c.var.access));
           }
           return c.json(toDetail(updated, facts));
         },
@@ -282,9 +282,10 @@ export function hedwigRoutes({
           });
         }
       })
-      .get('/drafts', requireRight('read'), (c) =>
-        c.json(listDrafts(c.var.db, c.var.access)),
-      )
+      .get('/drafts', requireRight('read'), (c) => {
+        contentAllowed(c.var.access);
+        return c.json(listDrafts(c.var.db, c.var.access));
+      })
       .post(
         '/drafts',
         requireRight('draft'),

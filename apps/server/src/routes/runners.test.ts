@@ -182,4 +182,21 @@ describe('runners', () => {
     );
     expect(res.status).toBe(404);
   });
+  it('treats a Mac that calls itself server like any other Mac', async () => {
+    const s = setup();
+    s.workers.enqueue({
+      kind: 'test.cloud',
+      personId: s.gideon.id,
+      where: 'client',
+    });
+    const [task] = await s.claim(s.token, { runner: 'server' });
+    const res = await s.post(
+      s.token,
+      `/api/runner/tasks/${task!.task.id}/complete`,
+      {
+        summary: 'Klaar.',
+      },
+    );
+    expect(res.status).toBe(200);
+  });
 });

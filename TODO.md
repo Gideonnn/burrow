@@ -21,7 +21,8 @@ key, and backups are unencrypted copies on Dobby itself.
 local queue when the owner's Mac has a runner, instead of the redacted body in the cloud;
 this needs local bots with those skills. (2) Category and priority per automated sender,
 for newsletters whose subject changes every time. (3) Hide Pensieve transcripts from
-facts-only keys. (4) A kind that uses `localModelOk`.
+facts-only keys. (4) Let a runner with a local model take a cloud task that waited ten
+minutes, for kinds where a small model is good enough (agreed, not built).
 **Why:** left out of the first build of the runners-and-mail-facts plan; see its "What
 was built" section.
 **Scope:** a day each for (1) and (2), an hour for (3).

@@ -134,8 +134,14 @@ export const workRoutes = new Hono<PlatformEnv>()
     '/runner/claim',
     requireRight('tasks'),
     zValidator('json', claimRequest),
-    (c) =>
-      c.json(c.var.platform.workers.claim(c.var.access, c.req.valid('json'))),
+    (c) => {
+      if (c.var.access.factsOnly) {
+        throw new HTTPException(403, { message: 'this key reads facts only' });
+      }
+      return c.json(
+        c.var.platform.workers.claim(c.var.access, c.req.valid('json')),
+      );
+    },
   )
   // Every runner of the household, and the work waiting for the key's person.
   .get('/runners', requireRight('read'), (c) =>

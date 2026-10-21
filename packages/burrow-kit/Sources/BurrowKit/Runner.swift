@@ -176,8 +176,8 @@ public final class Runner {
     }
 
     /// Local requests never reach Claude, and cloud requests never Ollama.
-    public nonisolated static func usesOllama(_ request: AgentRequest) -> Bool {
-        request.agent == "local" || request.model.hasPrefix("ollama:")
+    public nonisolated static func usesOllama(_ request: AgentRequest, queue: String? = nil) -> Bool {
+        queue == "local" || request.agent == "local" || request.model.hasPrefix("ollama:")
     }
 
     /// Starts the loop, or wakes a waiting one so a changed setting applies
@@ -255,7 +255,7 @@ public final class Runner {
                 group.addTask {
                     do {
                         let agent: AgentRunning
-                        if Self.usesOllama(next.request) {
+                        if Self.usesOllama(next.request, queue: next.task.queue) {
                             agent = ollama
                         } else if let claude {
                             agent = claude

@@ -33,6 +33,7 @@ import { mailboxes, messageFacts, messages, messageTemplates } from '../schema';
 import {
   noise,
   RULES_VERSION,
+  redact,
   redactCodes,
   sensitiveKinds,
   templateKey,
@@ -67,9 +68,18 @@ export type FactsOptions = {
 // of repeating mail, and a local model for the rest, for people with the
 // feature on. Search and agents read the facts instead of the mail.
 export class FactsService {
-  // People whose template groups may have changed since the last look.
-  private readonly dirty = new Set<string>();
+  // Per person, the template keys that got new members since the last look;
+  // a person not grouped yet gets one full pass.
+  private readonly dirty = new Map<string, Set<string>>();
   private readonly grouped = new Set<string>();
+  private templatesOn = false;
+  // Per person and key scope, the next messages for Winky, newest first, so
+  // the backlog is not sorted again for every piece.
+  private readonly backlog = new Map<string, string[]>();
+  private readonly progressCache = new Map<
+    string,
+    { at: number; value: { waiting: number; done: number | null } }
+  >();
 
   constructor(private readonly o: FactsOptions) {}
 
@@ -168,7 +178,12 @@ export class FactsService {
         })
         .run();
     }
-    if (key) this.dirty.add(personId);
+    if (key) {
+      const keys = this.dirty.get(personId) ?? new Set<string>();
+      keys.add(key);
+      this.dirty.set(personId, keys);
+    }
+    if (!f) this.backlog.clear();
   }
 
   // Runs the rules over the whole archive in small steps, so the server
@@ -201,8 +216,12 @@ export class FactsService {
   // Groups of at least three automated messages with the same sender and
   // subject pattern become templates; their members wait for the template's
   // answer instead of going to the local model.
+  // Without a bot for templates the members go to Winky instead.
   private ensureTemplates(personId: string) {
-    if (this.grouped.has(personId) && !this.dirty.has(personId)) return;
+    if (!this.templatesOn) return;
+    const keys = this.dirty.get(personId);
+    const full = !this.grouped.has(personId) || (keys?.size ?? 0) > 500;
+    if (!full && !keys?.size) return;
     this.dirty.delete(personId);
     this.grouped.add(personId);
     const groups = this.db
@@ -211,7 +230,9 @@ export class FactsService {
       .where(
         and(
           eq(messageFacts.personId, personId),
-          isNotNull(messageFacts.templateKey),
+          full
+            ? isNotNull(messageFacts.templateKey)
+            : inArray(messageFacts.templateKey, [...keys!]),
         ),
       )
       .groupBy(messageFacts.templateKey)
@@ -272,8 +293,10 @@ export class FactsService {
         done: Number(counts.find((c) => c.done)?.n ?? 0),
       };
     },
-    next: (personId, running) => {
+    next: (personId, running, access) => {
       if (!this.enabled(personId)) return undefined;
+      // A template spans mailboxes, so a key limited to some never gets one.
+      if (access?.restrictions.mailboxes) return undefined;
       this.ensureTemplates(personId);
       const held = running.flatMap(
         (t) => (t.input?.templateIds as string[] | undefined) ?? [],
@@ -427,8 +450,11 @@ export class FactsService {
 
   private factsWork: StandingWork = {
     people: () => this.featurePeople(),
+    // Counting the backlog is a scan; runners ask after every piece.
     progress: (personId) => {
       if (!this.enabled(personId)) return { waiting: 0, done: null };
+      const cached = this.progressCache.get(personId);
+      if (cached && Date.now() - cached.at < 30_000) return cached.value;
       this.ensureTemplates(personId);
       const waiting = this.db
         .select({ n: count() })
@@ -446,28 +472,78 @@ export class FactsService {
           ),
         )
         .get()!.n;
-      return { waiting, done };
+      const value = { waiting, done };
+      this.progressCache.set(personId, { at: Date.now(), value });
+      return value;
     },
-    next: (personId, running) => {
+    next: (personId, running, access) => {
       if (!this.enabled(personId)) return undefined;
       this.ensureTemplates(personId);
-      const held = running.flatMap((t) => (t.subjectId ? [t.subjectId] : []));
-      const row = this.db
+      const held = new Set(
+        running.flatMap((t) => (t.subjectId ? [t.subjectId] : [])),
+      );
+      const scope = access?.restrictions.mailboxes
+        ? access.mailboxIds
+        : undefined;
+      const key = `${personId}|${scope?.join(',') ?? '*'}`;
+      let list = this.backlog.get(key) ?? [];
+      for (let refill = 0; refill < 2; refill++) {
+        while (list.length) {
+          const id = list.shift()!;
+          if (held.has(id) || !this.stillWaiting(personId, id, scope)) continue;
+          this.backlog.set(key, list);
+          return { subject: { type: 'message', id } };
+        }
+        list = this.loadBacklog(personId, held, scope);
+        if (!list.length) break;
+      }
+      this.backlog.set(key, list);
+      return undefined;
+    },
+  };
+
+  private loadBacklog(
+    personId: string,
+    held: Set<string>,
+    scope: readonly string[] | undefined,
+  ): string[] {
+    return this.db
+      .select({ id: messageFacts.messageId })
+      .from(messageFacts)
+      .innerJoin(messages, eq(messages.id, messageFacts.messageId))
+      .where(
+        and(
+          this.waiting(personId),
+          scope ? inArray(messages.mailboxId, [...scope]) : undefined,
+          held.size ? notInArray(messageFacts.messageId, [...held]) : undefined,
+        ),
+      )
+      .orderBy(desc(messages.receivedAt))
+      .limit(200)
+      .all()
+      .map((r) => r.id);
+  }
+
+  private stillWaiting(
+    personId: string,
+    id: string,
+    scope: readonly string[] | undefined,
+  ) {
+    return Boolean(
+      this.db
         .select({ id: messageFacts.messageId })
         .from(messageFacts)
         .innerJoin(messages, eq(messages.id, messageFacts.messageId))
         .where(
           and(
+            eq(messageFacts.messageId, id),
             this.waiting(personId),
-            held.length ? notInArray(messageFacts.messageId, held) : undefined,
+            scope ? inArray(messages.mailboxId, [...scope]) : undefined,
           ),
         )
-        .orderBy(desc(messages.receivedAt))
-        .limit(1)
-        .get();
-      return row ? { subject: { type: 'message', id: row.id } } : undefined;
-    },
-  };
+        .get(),
+    );
+  }
 
   private factsRequest(task: TaskRow) {
     const { catalog } = this.o.platform;
@@ -509,12 +585,14 @@ export class FactsService {
       .set({
         category: f.ruleCategory ?? a.category,
         priority: f.ruleCategory ? 'low' : a.priority,
-        summary: a.summary,
-        people: a.people,
-        organisations: a.organisations,
+        // What the model wrote may quote a secret from the mail; facts reach
+        // cloud agents and facts-only keys.
+        summary: redact(a.summary),
+        people: a.people.map(redact),
+        organisations: a.organisations.map(redact),
         amounts: a.amounts,
         dates: a.dates,
-        keywords: a.keywords,
+        keywords: a.keywords.map(redact),
         sensitive: f.sensitive || a.sensitive,
         sensitiveKinds: added
           ? [...f.sensitiveKinds, 'model']
@@ -575,6 +653,7 @@ export class FactsService {
       templatesBot.skills.includes(TEMPLATES_SKILL) &&
       catalog.skills.has(TEMPLATES_SKILL)
     ) {
+      this.templatesOn = true;
       kinds.push({
         name: 'hedwig.templates',
         title: 'Mail-templates',
@@ -634,6 +713,7 @@ function applyTemplate(tx: Tx, t: TemplateRow) {
       and(
         eq(messageFacts.personId, t.personId),
         eq(messageFacts.templateKey, t.key),
+        eq(messageFacts.source, 'rules'),
         isNull(messageFacts.modelAt),
       ),
     )

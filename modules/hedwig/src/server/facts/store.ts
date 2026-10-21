@@ -3,6 +3,7 @@ import type { Access, Db } from '@burrow/platform';
 import { inArray } from 'drizzle-orm';
 import { type MessageRow, toSummary } from '../mail-service';
 import { messageFacts } from '../schema';
+import { redact, redactCodes } from './rules';
 
 export type FactsRow = typeof messageFacts.$inferSelect;
 
@@ -49,8 +50,23 @@ export function summaries(
     db,
     rows.map((r) => r.id),
   );
-  return rows.map((row) => {
-    const summary = toSummary(row, facts.get(row.id) ?? null);
-    return access?.factsOnly ? { ...summary, snippet: '' } : summary;
-  });
+  return rows.map((row) =>
+    forKey(toSummary(row, facts.get(row.id) ?? null), access),
+  );
+}
+
+// What a facts-only key sees of a message: no snippet, and the subject
+// without secrets, personal numbers or the code of a code mail.
+export function forKey(
+  summary: MessageSummary,
+  access?: { factsOnly?: boolean },
+): MessageSummary {
+  if (!access?.factsOnly) return summary;
+  const noise =
+    summary.facts?.category === 'code' || summary.facts?.category === 'account';
+  return {
+    ...summary,
+    snippet: '',
+    subject: noise ? redactCodes(summary.subject) : redact(summary.subject),
+  };
 }

@@ -257,6 +257,54 @@ describe('mail facts', () => {
     expect(await s.search(facts, 'geheim')).toEqual([]);
     expect(await s.search(s.token, 'geheim')).toHaveLength(1);
   });
+
+  it('keeps a runner key to its own mailboxes, and gives a facts-only key no work', async () => {
+    const s = await setup();
+    await s.indexing(s.token);
+    const work = s.mailbox(s.gideon.id, 'gideon@work.example');
+    await s.deliver(work.id, { subject: 'Werkmail' });
+    const homeOnly = s.key(s.gideon.id, ['read', 'tasks'], [s.home.id]);
+    expect(await s.claim(homeOnly)).toEqual([]);
+    expect(await s.claim(s.token)).toHaveLength(1);
+
+    const facts = s.key(s.gideon.id, ['read', 'tasks'], null, true);
+    const res = await s.post(facts, '/api/runner/claim', { runner: 'Mac' });
+    expect(res.status).toBe(403);
+  });
+
+  it('gives up on a message that no runner ever finishes', async () => {
+    const s = await setup();
+    await s.indexing(s.token);
+    await s.deliver(s.home.id, { subject: 'Te lastig' });
+    const later = (minutes: number) => new Date(Date.now() + minutes * 60_000);
+    expect(await s.claim(s.token)).toHaveLength(1);
+    s.workers.tick(later(31));
+    expect(await s.claim(s.token)).toHaveLength(1);
+    s.workers.tick(later(62));
+    expect(await s.claim(s.token)).toEqual([]);
+  });
+
+  it('redacts what the model quotes from sensitive mail', async () => {
+    const s = await setup();
+    await s.indexing(s.token);
+    const id = await s.deliver(s.home.id, {
+      subject: 'Rekening',
+      bodyText: IBAN,
+    });
+    const [task] = await s.claim(s.token);
+    await s.post(s.token, `/api/runner/tasks/${task!.task.id}/complete`, {
+      ...answer,
+      summary: `Stort op ${IBAN}`,
+      keywords: [IBAN],
+    });
+    const detail = messageSummary.parse(
+      await (await s.call(s.token, `/api/messages/${id}`)).json(),
+    );
+    expect(detail.facts).toMatchObject({
+      summary: 'Stort op [iban]',
+      keywords: ['[iban]'],
+    });
+  });
 });
 
 const access = (s: Awaited<ReturnType<typeof setup>>) => ({

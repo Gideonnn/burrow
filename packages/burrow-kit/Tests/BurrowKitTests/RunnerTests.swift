@@ -104,6 +104,12 @@ import Testing
         #expect(runner.status == "Klaar: Mail-facts: 12.400 van 48.000")
     }
 
+    @Test func keepsATaskOfTheLocalQueueOnOllamaWhateverItsRequestSays() {
+        let request = AgentRequest(model: "haiku", effort: nil, system: "s", prompt: "p", schema: .object([:]), agent: "claude", timeoutMs: nil)
+        #expect(Runner.usesOllama(request, queue: "local"))
+        #expect(!Runner.usesOllama(request, queue: "cloud"))
+    }
+
     @Test func offersTheLocalQueueOnlyAtNightOnTheChargerWithTheModel() {
         var c = RunnerConfig(name: "MacBook")
         c.nightStart = 23 * 60

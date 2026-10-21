@@ -10,7 +10,7 @@ import { inArray } from 'drizzle-orm';
 import { z } from 'zod';
 import { createDraft, DraftError } from './drafts';
 import { redact } from './facts/rules';
-import { factsFor } from './facts/store';
+import { factsFor, forKey } from './facts/store';
 import { type MailService, toDetail, toSummary } from './mail-service';
 import { mailboxes } from './schema';
 import { searchMessages, words } from './search';
@@ -156,8 +156,7 @@ export function registerHedwigTools(
           ...addLabels.map((label) => ({ op: 'addLabel' as const, label })),
         ];
         if (!all.length) return refusal('nothing to do');
-        const updated = toSummary(await mail.apply(id, all));
-        return text(access.factsOnly ? { ...updated, snippet: '' } : updated);
+        return text(forKey(toSummary(await mail.apply(id, all)), access));
       },
     );
   }

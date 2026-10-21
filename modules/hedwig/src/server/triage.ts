@@ -9,6 +9,7 @@ import { type Access, type Platform, botRequest } from '@burrow/platform';
 import { and, desc, eq, inArray, isNull, like, lt, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { describeOp, reverseOps, serverOpsFor } from '../server-ops';
+import { forKey } from './facts/store';
 import { type MailService, toSummary } from './mail-service';
 import { triagePrompt } from './prompt';
 import { learnedRules, mailboxes, messages, triageLog } from './schema';
@@ -164,7 +165,7 @@ export class TriageService {
       unsure: log.unsure,
       serverOps: log.ops.map((op) => describeOp(provider, op)),
       createdAt: log.createdAt.toISOString(),
-      message: toSummary(message),
+      message: forKey(toSummary(message), access),
     }));
   }
 

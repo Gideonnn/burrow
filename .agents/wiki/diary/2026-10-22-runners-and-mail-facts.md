@@ -18,8 +18,9 @@ Built the whole plan of 2026-10-20 (phases 1 to 7) and deployed it.
   for category and priority; not done, because a per-sender answer would still need
   Winky for summary and keywords and saves no model time.
 - **Not built:** moving agent work about a sensitive message to the local queue (no local
-  bot has those skills; the cloud gets the redacted body instead), and no kind uses
-  `localModelOk` yet. Pensieve transcripts are not hidden from facts-only keys.
+  bot has those skills; the cloud gets the redacted body instead), and idle cloud tasks
+  on a local model (built at first, removed in review: unused, and it would have let one
+  person's cloud task run on another's local model). Pensieve transcripts are not hidden from facts-only keys.
 - **Runner keys have only `read` and `tasks`**, from the device login (`app: runner`) or
   the CLI.
 
@@ -38,3 +39,9 @@ Built the whole plan of 2026-10-20 (phases 1 to 7) and deployed it.
   as "plaintext secrets"; write such code with the editor tools, not heredocs.
 - Ollama takes the zod-generated JSON schema (`$schema`, `additionalProperties`,
   `maxLength`, `pattern`) as is.
+- **A review the same night** found that facts-only keys could still claim task prompts
+  (raw bodies) and read draft and filtered snippets, that standing pieces ignored a
+  key's mailbox scope, that a hanging message was handed out forever, that a Mac named
+  `server` could never finish a task, and that `ensureTemplates` and the backlog query
+  would have rewritten or sorted tens of thousands of rows per claim on the Celeron. All
+  fixed with tests.

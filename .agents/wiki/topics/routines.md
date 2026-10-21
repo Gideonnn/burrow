@@ -46,8 +46,12 @@ Every task has a **queue** (`local` or `cloud`, from its kind), a **priority** (
   is missing on each claim instead of one row per item. The row lives only while a
   runner holds it, is never listed or announced, and is deleted when done or failed;
   the module tracks attempts itself.
-- `localModelOk` on a kind lets a runner with a local model take an unpinned cloud task
-  that waited ten minutes. No kind uses it yet.
+- A local task always runs on a local model of the runner holding it (the server sets
+  the task's model at the claim), and the Mac sends every local-queue task to Ollama.
+- The server's pool is known by its id, not its name: a Mac may call itself `server`.
+- A standing piece whose claim times out counts as a failed attempt, so a message that
+  hangs every runner is given up instead of handed out forever.
+- A facts-only key cannot claim (403): task prompts carry content.
 
 ## Triggers
 
