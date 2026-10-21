@@ -5,6 +5,8 @@ import Foundation
 let runnerUsage = """
 usage: burrowctl runner <command>
   login [server-url]            log this Mac in as a runner (a key with only read and tasks)
+  login <server-url> --token-stdin
+                                use a key made with the server CLI instead, read from stdin
   install | uninstall           start the runner at login under launchd, or remove it
   run                           run in the foreground, with a menu bar icon
   on | off                      resume or pause this Mac's runner on the server
@@ -22,6 +24,8 @@ enum RunnerCommand {
 
     static func main(_ args: [String]) {
         switch args.first {
+        case "login" where args.contains("--token-stdin"):
+            loginWithToken(args.dropFirst().first { $0 != "--token-stdin" })
         case "login": login(args.dropFirst().first)
         case "install": install()
         case "uninstall": uninstall()
@@ -64,9 +68,29 @@ enum RunnerCommand {
         }
     }
 
+    // For a Mac nobody sits at: the key comes from `cli.sh create-key` on the
+    // server, piped in, so it never shows on screen.
+    static func loginWithToken(_ server: String?) {
+        guard let url = server.flatMap(URL.init(string:)) ?? SharedServer.last else {
+            fail("geef het serveradres: burrowctl runner login https://burrow.example.com --token-stdin")
+        }
+        let token = String(decoding: FileHandle.standardInput.readDataToEndOfFile(), as: UTF8.self)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !token.isEmpty else { fail("geen sleutel op stdin") }
+        do {
+            let me = try blocking { try await APIClient(baseURL: url, token: token).profile() }
+            guard me.can(.tasks) else { fail("deze sleutel mist het recht tasks") }
+            try store.save(Connection(serverURL: url, token: token))
+            print("ingelogd als \(me.person.name) met de sleutel \"\(me.key.name)\"")
+        } catch {
+            fail(error.localizedDescription, code: 2)
+        }
+    }
+
     static func install() {
         guard store.load() != nil else { fail("log eerst in: burrowctl runner login") }
-        let me = URL(fileURLWithPath: CommandLine.arguments[0]).standardizedFileURL.resolvingSymlinksInPath().path
+        // argv[0] is a bare name when started from PATH, so ask the system.
+        let me = (Bundle.main.executableURL ?? URL(fileURLWithPath: CommandLine.arguments[0])).standardizedFileURL.resolvingSymlinksInPath().path
         let log = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Logs/burrow-runner.log").path
         let job: [String: Any] = [
             "Label": label,
