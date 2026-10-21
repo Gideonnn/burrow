@@ -39,8 +39,9 @@ to add one: [modules](modules.md).
 - **Shares.** `shares(module, itemId, personId)`: an owner shares one item.
 - **Files and uploads.** Large files live under `<data>/files/<module>/`; uploads arrive
   in chunks of at most 32 MB (Cloudflare caps a request at 100 MB) and resume by offset.
-- **Workers.** See [routines and tasks](routines.md): task kinds, a server pool
-  (`BURROW_WORKERS`), client runners per kind, and at most `BURROW_AGENT_RUNS` agent CLI
+- **Workers.** See [routines and tasks](routines.md): task kinds on a local and a cloud
+  queue with priorities and pinned models, the server pool (`BURROW_WORKERS`), runners on
+  the Macs (`burrowctl runner`), standing work, and at most `BURROW_AGENT_RUNS` agent CLI
   runs at once across everything.
 - **Agents.** Claude Code and Codex CLIs logged in on Dobby (Codex with the ChatGPT
   plan). A bot may prefer one (`agent:` in its front matter); the other is the fallback.

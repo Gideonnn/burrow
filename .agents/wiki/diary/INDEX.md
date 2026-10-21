@@ -2,6 +2,7 @@
 
 Newest first.
 
+- [2026-10-22 Runners, two queues and mail facts in one night](2026-10-22-runners-and-mail-facts.md): the claim is the registration, standing work as short-lived rows, and a keychain prompt that blocks a headless runner.
 - [2026-10-20 A model per skill, Winky only local, and two Ollama traps](2026-10-20-models-per-skill-and-local-winky.md): Haiku by default, Opus for writing at effort high, Sol 6.1 for Codex; local bots never fall back to the cloud.
 - [2026-10-21 Search in Hedwig](2026-10-21-hedwig-search.md): words as you type, meaning on Enter; the bot plans the search and never reads mail.
 - [2026-10-20 The whole archive on Dobby, and search in the open place](2026-10-20-hedwig-archive-and-search-scope.md): backfill per mailbox instead of provider search; search follows the sidebar.

@@ -24,14 +24,30 @@ and where it runs.
 
 ## Where tasks run
 
-- `server`: the pool on Dobby runs `BURROW_WORKERS` tasks at once (default 2). Across
-  triage, suggestions and tasks at most `BURROW_AGENT_RUNS` agent CLIs run at once.
-  After a restart, tasks that were running are queued again.
-- `client`: a client app of the owner claims tasks of the kinds it knows
-  (`POST /api/runner/claim` with `kinds`, tasks right), runs the request the server built
-  with its local `claude`, and posts the raw answer back; the server validates it. A
-  claim that goes quiet for 30 minutes is released; with `fallbackAfterHours` the server
-  takes over a task no client picked up. Hedwig claims `routine` tasks.
+Every task has a **queue** (`local` or `cloud`, from its kind), a **priority** (`low`,
+`normal`, `high`, `urgent`; claimed highest first, oldest first within it) and may pin a
+**model** (`haiku`, `ollama:<name>`). Whatever claims tasks is a **runner** in the
+`runners` table; `GET /api/runners` lists them with the work waiting per kind.
+
+- **The server's pool** is the runner `server` (no key): `BURROW_WORKERS` tasks at once
+  (default 2), only cloud tasks with `where: server`, plus cloud standing work. Across
+  triage, suggestions and tasks at most `BURROW_AGENT_RUNS` agent CLIs run at once. After
+  a restart, tasks that were running are queued again. An admin can pause it.
+- **A Mac** runs `burrowctl runner` (see [mail facts](mail-facts.md)). Each
+  `POST /api/runner/claim` (tasks right) registers it by key and name and says what it
+  offers: queues, agents, local models, kinds (`*` for any). It gets cloud tasks with
+  `where: client` of its own person, and of others who turned on
+  `platform.shareCloudWork` (a personal setting an admin cannot change); local tasks
+  only of its own person and only with a matching local model. Only the key that
+  claimed a task may complete or fail it. A claim that goes quiet for 30 minutes is
+  released; with `fallbackAfterHours` the server takes over a task no client picked up.
+  A paused runner gets nothing.
+- **Standing work** (`TaskKind.standing`): a kind that hands out the next piece of what
+  is missing on each claim instead of one row per item. The row lives only while a
+  runner holds it, is never listed or announced, and is deleted when done or failed;
+  the module tracks attempts itself.
+- `localModelOk` on a kind lets a runner with a local model take an unpinned cloud task
+  that waited ten minutes. No kind uses it yet.
 
 ## Triggers
 

@@ -15,7 +15,8 @@
 - [Operating the apps as an agent](topics/agent-control.md): `burrowctl` to read, open, prepare and change settings in any running app, and its limits.
 - [App updates](topics/app-updates.md): local iteration, signed releases through the server, the restart.
 - [Deploy to Dobby](topics/deploy.md): systemd user service, Cloudflare Tunnel and Access, backups and the first setup.
-- [Routines and tasks](topics/routines.md): task kinds, the worker pool, triggers, approval and runners on server and clients.
+- [Routines and tasks](topics/routines.md): task kinds, queues, priorities, runners on server and Macs, standing work, triggers and approval.
+- [Mail facts](topics/mail-facts.md): rules for secrets and codes, templates on Haiku, Winky on the Mac, `burrowctl runner`, facts-only keys.
 
 ## Diary
 

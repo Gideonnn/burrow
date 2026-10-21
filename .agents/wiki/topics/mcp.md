@@ -21,7 +21,7 @@ module its own (`modules/<name>/…/mcp-tools.ts`).
 | `get_instructions`, `set_instructions` | read, organize | The person's standing instructions for their bots |
 | `list_routines`, `save_routine`, `delete_routine` | read, organize | Routines |
 | `list_tasks` | read | What the bots did, with results |
-| `list_mailboxes`, `search_messages`, `get_message` | read | Hedwig: the key's mailboxes |
+| `list_mailboxes`, `search_messages`, `get_message` | read | Hedwig: the key's mailboxes. Results carry the [mail facts](mail-facts.md); low-priority mail only with `includeLow`; `get_message` returns secrets and personal numbers as placeholders, and a facts-only key does not get it at all |
 | `organize_message` | organize | Archive, spam, inbox, read, flag, labels at the provider |
 | `create_draft` | draft | A draft that appears in Hedwig for a person to send |
 | `list_recordings`, `search_recordings`, `get_recording` | read | Pensieve: own and shared recordings, transcripts, notes |

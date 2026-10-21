@@ -22,6 +22,8 @@ swift build -c release --product burrowctl >/dev/null
 mkdir -p "$HOME/.local/bin"
 /bin/cp -f "$(swift build -c release --show-bin-path)/hedwigctl" "$HOME/.local/bin/hedwigctl"
 /bin/cp -f "$(swift build -c release --show-bin-path)/burrowctl" "$HOME/.local/bin/burrowctl"
+# Signed like the apps, so the keychain keeps trusting the runner across builds.
+../../packages/burrow-kit/scripts/sign-app.sh "$HOME/.local/bin/burrowctl" >/dev/null
 echo "→ installed ~/.local/bin/burrowctl and hedwigctl"
 
 if pgrep -xq Hedwig; then

@@ -1,6 +1,8 @@
 # Runners, two queues and mail facts from a local model
 
-Plan of 2026-10-20, not built yet. Decisions agreed with Gideon are marked **(agreed)**.
+Plan of 2026-10-20, built on 2026-10-22 (phases 1 to 7; see "What was built" at the end
+and the [mail facts topic](../../.agents/wiki/topics/mail-facts.md)). Decisions agreed with
+Gideon are marked **(agreed)**.
 
 Every machine that does agent work registers itself as a **runner** and works off a
 queue. There are two queues: a **local** queue for work on raw, possibly sensitive
@@ -307,6 +309,21 @@ yet, so this is inbox mail only.
   conversation passed the "automated" test, so `Fwd:` is excluded from templates.
 - Traps (Homebrew's Ollama without structured output, the schema not shown to the model)
   are in the diary of 2026-10-20.
+
+## What was built (2026-10-22)
+
+Phases 1 to 7, deployed the same night. Where it differs from the plan above:
+
+- Runners register on their first claim; there is no separate `POST /api/runners`. The
+  server's pool is the runner `server`. `GET /api/runners`, `PATCH` and `DELETE
+  /api/runners/:id` list, pause and remove them.
+- `where` stays: Dobby takes `server` tasks, Macs take `client` tasks of the cloud queue.
+- Templates group by sender plus subject pattern only; grouping by sender (phase 0's
+  advice) is not done.
+- Agent work about a sensitive message is not moved to the local queue; cloud bots get
+  the redacted body. `localModelOk` exists but no kind uses it.
+- The menu bar icon belongs to `burrowctl runner run` under launchd; Hedwig's own runner
+  is gone and its settings show the Mac's runner instead.
 
 ## Open questions
 

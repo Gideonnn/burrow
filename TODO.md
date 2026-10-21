@@ -15,6 +15,17 @@ marked trusted in its admin console.
 key, and backups are unencrypted copies on Dobby itself.
 **Scope:** under an hour; see the providers and deploy topics.
 
+## Mail facts: the rest of the plan
+
+**What:** (1) agent work about a sensitive message (summary, reply suggestions) on the
+local queue when the owner's Mac has a runner, instead of the redacted body in the cloud;
+this needs local bots with those skills. (2) Category and priority per automated sender,
+for newsletters whose subject changes every time. (3) Hide Pensieve transcripts from
+facts-only keys. (4) A kind that uses `localModelOk`.
+**Why:** left out of the first build of the runners-and-mail-facts plan; see its "What
+was built" section.
+**Scope:** a day each for (1) and (2), an hour for (3).
+
 ## Angela's Mac
 
 **What:** install Hedwig and Pensieve on Angela's Mac (once by hand, then they update

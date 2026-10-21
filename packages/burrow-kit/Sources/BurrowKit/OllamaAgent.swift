@@ -19,7 +19,9 @@ public struct OllamaAgent: AgentRunning {
     public func run(_ request: AgentRequest) async throws -> Data {
         let name = Self.modelName(request.model)
         struct Message: Encodable { var role: String; var content: String }
-        struct Options: Encodable { var temperature = 0; var num_ctx = 8192 }
+        // A full answer is a few hundred tokens; the cap stops a model that
+        // keeps repeating itself inside a string the schema cannot bound.
+        struct Options: Encodable { var temperature = 0; var num_ctx = 8192; var num_predict = 1_024 }
         struct Body: Encodable {
             var model: String
             var stream = false
