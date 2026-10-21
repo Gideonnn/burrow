@@ -24,6 +24,7 @@ import { HTTPException } from 'hono/http-exception';
 import { z } from 'zod';
 import { canSeeMailbox } from './access';
 import { createDraft, deleteDraft, DraftError, listDrafts } from './drafts';
+import { factsFor, summaries } from './facts/store';
 import type { InsightsService } from './insights';
 import {
   MailError,
@@ -43,7 +44,15 @@ const listQuery = z.object({
 const searchQuery = searchScope.extend({
   q: z.string().trim().min(1).max(500),
   limit: z.coerce.number().int().min(1).max(200).default(50),
+  includeLow: z.stringbool().default(false),
 });
+
+// A facts-only key never reads a message itself.
+const contentAllowed = (access: Access) => {
+  if (access.factsOnly) {
+    throw new HTTPException(403, { message: 'this key reads facts only' });
+  }
+};
 
 const searchedMailboxes = (access: Access, scope: SearchScope) => {
   if (!scope.mailboxId) return access.mailboxIds;
@@ -147,7 +156,7 @@ export function hedwigRoutes({
             .orderBy(desc(messages.receivedAt))
             .limit(limit)
             .all();
-          return c.json(rows.map(toSummary));
+          return c.json(summaries(c.var.db, rows, c.var.access));
         },
       )
       // Word search as you type, in the open place or every mailbox the key sees.
@@ -156,13 +165,22 @@ export function hedwigRoutes({
         requireRight('read'),
         zValidator('query', searchQuery),
         (c) => {
-          const { q, limit, ...scope } = c.req.valid('query');
+          const { q, limit, includeLow, ...scope } = c.req.valid('query');
           return c.json<SearchResponse>({
             explanation: null,
             results: searchMessages(
               c.var.db,
               searchedMailboxes(c.var.access, scope),
-              inScope({ groups: words(q), matchAll: true, limit }, scope),
+              inScope(
+                {
+                  groups: words(q),
+                  matchAll: true,
+                  limit,
+                  includeLow,
+                  factsOnly: c.var.access.factsOnly,
+                },
+                scope,
+              ),
             ),
           });
         },
@@ -178,13 +196,14 @@ export function hedwigRoutes({
               message: 'zoeken met AI is niet beschikbaar op deze server',
             });
           }
-          const { question, ...scope } = c.req.valid('json');
+          const { question, includeLow, ...scope } = c.req.valid('json');
           return c.json<SearchResponse>(
             await search.ask(
               c.var.access.personId,
               searchedMailboxes(c.var.access, scope),
               question,
               scope,
+              { includeLow, factsOnly: c.var.access.factsOnly },
             ),
           );
         },
@@ -201,7 +220,10 @@ export function hedwigRoutes({
         if (!row || !canSeeMailbox(c.var.access, row.mailboxId)) {
           throw notFound();
         }
-        return c.json(toDetail(row));
+        contentAllowed(c.var.access);
+        return c.json(
+          toDetail(row, factsFor(c.var.db, [row.id]).get(row.id) ?? null),
+        );
       })
       .post(
         '/messages/:id/actions',
@@ -215,7 +237,11 @@ export function hedwigRoutes({
           const updated = await providerCall(() =>
             mail.apply(row.id, c.req.valid('json').ops),
           );
-          return c.json(toDetail(updated));
+          const facts = factsFor(c.var.db, [row.id]).get(row.id) ?? null;
+          if (c.var.access.factsOnly) {
+            return c.json({ ...toSummary(updated, facts), snippet: '' });
+          }
+          return c.json(toDetail(updated, facts));
         },
       )
       .post(
@@ -243,6 +269,7 @@ export function hedwigRoutes({
         if (!row || !canSeeMailbox(c.var.access, row.mailboxId)) {
           throw notFound();
         }
+        contentAllowed(c.var.access);
         const owner = mail.mailbox(row.mailboxId)!.ownerId;
         if (!c.var.platform.settings.enabled(owner, 'hedwig.insights')) {
           return c.json({ summary: null, replies: [] });

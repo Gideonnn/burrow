@@ -66,6 +66,9 @@ export const apiKeySummary = z.object({
   prefix: z.string(),
   rights: z.array(right),
   restrictions: keyRestrictions,
+  // The key reads facts about content (category, summary, names) but never
+  // the content itself.
+  factsOnly: z.boolean(),
   // restrictions.mailboxes, kept for older clients.
   mailboxIds: z.array(z.string()).nullable(),
   lastUsedAt: z.iso.datetime().nullable(),
@@ -80,6 +83,7 @@ export const createKeyRequest = z.object({
   // null: every mailbox of the person, including future ones.
   mailboxIds: z.array(z.string()).nullable().default(null),
   restrictions: keyRestrictions.default({}),
+  factsOnly: z.boolean().default(false),
 });
 export type CreateKeyRequest = z.infer<typeof createKeyRequest>;
 

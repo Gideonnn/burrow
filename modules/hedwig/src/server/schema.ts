@@ -1,4 +1,6 @@
 import type {
+  FactCategory,
+  FactPriority,
   Address,
   MailboxRole,
   MailFolder,
@@ -140,3 +142,72 @@ export const messageInsights = sqliteTable('message_insights', {
     .notNull(),
   createdAt: createdAt(),
 });
+
+// What the rules, a template or a model found in a message; see the facts
+// service. One row per message once the rules ran.
+export const messageFacts = sqliteTable(
+  'message_facts',
+  {
+    messageId: text('message_id')
+      .primaryKey()
+      .references(() => messages.id, { onDelete: 'cascade' }),
+    personId: text('person_id')
+      .notNull()
+      .references(() => people.id),
+    rulesVersion: integer('rules_version').notNull(),
+    sensitive: integer('sensitive', { mode: 'boolean' }).notNull(),
+    sensitiveKinds: text('sensitive_kinds', { mode: 'json' })
+      .$type<string[]>()
+      .notNull(),
+    // code or account when a rule recognised noise; wins over any model.
+    ruleCategory: text('rule_category').$type<FactCategory>(),
+    category: text('category').$type<FactCategory>(),
+    priority: text('priority').$type<FactPriority>(),
+    summary: text('summary'),
+    people: text('people', { mode: 'json' }).$type<string[]>().notNull(),
+    organisations: text('organisations', { mode: 'json' })
+      .$type<string[]>()
+      .notNull(),
+    amounts: text('amounts', { mode: 'json' })
+      .$type<{ value: number; currency: string }[]>()
+      .notNull(),
+    dates: text('dates', { mode: 'json' }).$type<string[]>().notNull(),
+    keywords: text('keywords', { mode: 'json' }).$type<string[]>().notNull(),
+    source: text('source').$type<'rules' | 'template' | 'model'>().notNull(),
+    // Sender and subject pattern, for mail a service sends again and again.
+    templateKey: text('template_key'),
+    templateId: text('template_id'),
+    model: text('model'),
+    modelAt: integer('model_at', { mode: 'timestamp_ms' }),
+    modelAttempts: integer('model_attempts').notNull().default(0),
+    modelError: text('model_error'),
+    indexedAt: integer('indexed_at', { mode: 'timestamp_ms' }).notNull(),
+  },
+  (t) => [
+    index('message_facts_person_model').on(t.personId, t.modelAt),
+    index('message_facts_person_template').on(t.personId, t.templateKey),
+  ],
+);
+
+// One answer for mail that repeats: a sender with a subject pattern.
+export const messageTemplates = sqliteTable(
+  'message_templates',
+  {
+    id: id(),
+    personId: text('person_id')
+      .notNull()
+      .references(() => people.id),
+    key: text('key').notNull(),
+    members: integer('members').notNull(),
+    category: text('category').$type<FactCategory>(),
+    priority: text('priority').$type<FactPriority>(),
+    summary: text('summary'),
+    organisation: text('organisation'),
+    keywords: text('keywords', { mode: 'json' }).$type<string[]>(),
+    model: text('model'),
+    factsAt: integer('facts_at', { mode: 'timestamp_ms' }),
+    attempts: integer('attempts').notNull().default(0),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex('message_templates_person_key').on(t.personId, t.key)],
+);

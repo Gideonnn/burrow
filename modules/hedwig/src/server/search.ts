@@ -1,4 +1,5 @@
 import {
+  type FactCategory,
   type MailFolder,
   type MailboxRole,
   type MessageSummary,
@@ -13,15 +14,19 @@ import {
   type Column,
   desc,
   eq,
+  getTableColumns,
   gte,
   inArray,
+  isNull,
   lt,
+  ne,
   or,
   sql,
 } from 'drizzle-orm';
 import { z } from 'zod';
+import { type FactsRow, toFacts } from './facts/store';
 import { type MessageRow, toSummary } from './mail-service';
-import { mailboxes, messages } from './schema';
+import { mailboxes, messageFacts, messages } from './schema';
 
 const SKILL = 'mail-search';
 const schema = z.toJSONSchema(searchPlan, { target: 'draft-7' });
@@ -39,6 +44,11 @@ export type SearchQuery = {
   roles?: MailboxRole[] | null;
   unreadOnly?: boolean;
   hasAttachments?: boolean;
+  categories?: FactCategory[] | null;
+  // Login codes and other low-priority mail are left out unless asked for.
+  includeLow?: boolean;
+  // A facts-only key searches subjects, people and facts, never bodies.
+  factsOnly?: boolean;
   limit: number;
 };
 
@@ -48,12 +58,16 @@ const pattern = (word: string) =>
 const likeEscaped = (column: Column, word: string) =>
   sql`${column} like ${pattern(word)} escape '\\'`;
 
-const anyField = (word: string) =>
+const anyField = (word: string, factsOnly = false) =>
   or(
     likeEscaped(messages.subject, word),
     likeEscaped(messages.from, word),
     likeEscaped(messages.to, word),
-    likeEscaped(messages.bodyText, word),
+    factsOnly ? undefined : likeEscaped(messages.bodyText, word),
+    likeEscaped(messageFacts.keywords, word),
+    likeEscaped(messageFacts.summary, word),
+    likeEscaped(messageFacts.people, word),
+    likeEscaped(messageFacts.organisations, word),
   );
 
 const contains = (haystack: string, word: string) =>
@@ -79,13 +93,22 @@ export function searchMessages(
   }
   if (!scope.length) return [];
   const groups = query.groups.filter((g) => g.length);
-  const groupSql = groups.map((g) => or(...g.map(anyField)));
+  const groupSql = groups.map((g) =>
+    or(...g.map((w) => anyField(w, query.factsOnly))),
+  );
   const rows = db
-    .select()
+    .select({ m: getTableColumns(messages), f: messageFacts })
     .from(messages)
+    .leftJoin(messageFacts, eq(messageFacts.messageId, messages.id))
     .where(
       and(
         inArray(messages.mailboxId, scope),
+        query.includeLow
+          ? undefined
+          : or(isNull(messageFacts.priority), ne(messageFacts.priority, 'low')),
+        query.categories?.length
+          ? inArray(messageFacts.category, query.categories)
+          : undefined,
         query.folder ? eq(messages.folder, query.folder) : undefined,
         query.unreadOnly ? eq(messages.unread, true) : undefined,
         query.hasAttachments ? eq(messages.hasAttachments, true) : undefined,
@@ -106,20 +129,43 @@ export function searchMessages(
     .orderBy(desc(messages.receivedAt))
     .limit(query.matchAll ? query.limit : CANDIDATES)
     .all();
-  if (query.matchAll) return rows.map(toSummary);
+  const summary = ({ m, f }: { m: MessageRow; f: FactsRow | null }) => {
+    const s = toSummary(m, f ? toFacts(f) : null);
+    return query.factsOnly ? { ...s, snippet: '' } : s;
+  };
+  if (query.matchAll) return rows.map(summary);
   return rows
-    .map((row, index) => ({ row, index, score: score(row, groups) }))
+    .map((row, index) => ({
+      row,
+      index,
+      score: score(row.m, row.f, groups, query.factsOnly),
+    }))
     .sort((a, b) => b.score - a.score || a.index - b.index)
     .slice(0, query.limit)
-    .map(({ row }) => toSummary(row));
+    .map(({ row }) => summary(row));
 }
 
-function score(row: MessageRow, groups: string[][]) {
+// A hit in the subject counts double; one in the sender, the body or the
+// facts once.
+function score(
+  row: MessageRow,
+  facts: FactsRow | null,
+  groups: string[][],
+  factsOnly = false,
+) {
   const text = [
     row.from.name ?? '',
     row.from.email,
     ...row.to.map((a) => `${a.name ?? ''} ${a.email}`),
-    row.bodyText ?? '',
+    factsOnly ? '' : (row.bodyText ?? ''),
+    ...(facts
+      ? [
+          facts.summary ?? '',
+          ...facts.keywords,
+          ...facts.people,
+          ...facts.organisations,
+        ]
+      : []),
   ].join(' ');
   let total = 0;
   for (const group of groups) {
@@ -165,6 +211,7 @@ export class SearchService {
     mailboxIds: readonly string[],
     question: string,
     scope: SearchScope = {},
+    options: { includeLow?: boolean; factsOnly?: boolean } = {},
   ): Promise<SearchResponse> {
     const { platform } = this.o;
     const { catalog, runner, db } = platform;
@@ -204,7 +251,16 @@ export class SearchService {
       results: searchMessages(
         db,
         mailboxIds,
-        inScope({ ...plan, matchAll: false, limit: 50 }, scope),
+        inScope(
+          {
+            ...plan,
+            includeLow: plan.includeLow || options.includeLow,
+            factsOnly: options.factsOnly,
+            matchAll: false,
+            limit: 50,
+          },
+          scope,
+        ),
       ),
     };
   }

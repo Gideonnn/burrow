@@ -25,8 +25,8 @@ async function setup() {
 type Setup = Awaited<ReturnType<typeof setup>>;
 
 // A real MCP client talking to the app in-process.
-async function connect(s: Setup, rights: Right[]) {
-  const token = s.key(s.gideon.id, rights);
+async function connect(s: Setup, rights: Right[], factsOnly = false) {
+  const token = s.key(s.gideon.id, rights, null, factsOnly);
   const client = new Client({ name: 'test', version: '1' });
   await client.connect(
     new StreamableHTTPClientTransport(new URL('http://burrow.test/api/mcp'), {
@@ -66,6 +66,10 @@ describe('MCP', () => {
     const names = (await full.listTools()).tools.map((t) => t.name);
     expect(names).toContain('create_draft');
     expect(names.some((n) => /send/.test(n))).toBe(false);
+    const facts = await connect(s, ['read'], true);
+    const factTools = (await facts.listTools()).tools.map((t) => t.name);
+    expect(factTools).toContain('search_messages');
+    expect(factTools).not.toContain('get_message');
   });
 
   it('searches and reads only the key’s mailboxes', async () => {

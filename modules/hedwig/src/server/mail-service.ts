@@ -1,5 +1,6 @@
 import type {
   MessageDetail,
+  MessageFacts,
   MessageSummary,
   SendRequest,
   ServerOp,
@@ -26,6 +27,9 @@ export class MailService {
   // Mailboxes a sync or backfill is busy with; one at a time per mailbox, so
   // two clients never refresh the same OAuth tokens at once.
   private readonly busy = new Set<string>();
+  // Called with every message stored or changed by sync and backfill, after
+  // the commit; the facts rules run here.
+  onStored?: (messageIds: string[]) => void;
 
   constructor(
     private readonly db: Db,
@@ -123,6 +127,11 @@ export class MailService {
           .run();
       });
       for (const event of pending) this.emit(event);
+      this.onStored?.(
+        pending
+          .filter((e) => e.type !== 'message.removed')
+          .map((e) => e.messageId),
+      );
       return arrived;
     } finally {
       this.busy.delete(mailboxId);
@@ -140,9 +149,11 @@ export class MailService {
     try {
       const page = await this.clientFor(box).backfill(box.backfillCursor);
       const now = new Date();
+      const stored: string[] = [];
       this.db.transaction((tx) => {
         for (const m of page.messages) {
-          tx.insert(messages)
+          const row = tx
+            .insert(messages)
             .values({
               mailboxId: box.id,
               providerId: m.providerId,
@@ -150,7 +161,9 @@ export class MailService {
               triagedAt: now,
             })
             .onConflictDoNothing()
-            .run();
+            .returning({ id: messages.id })
+            .get();
+          if (row) stored.push(row.id);
         }
         tx.update(mailboxes)
           .set(
@@ -161,6 +174,7 @@ export class MailService {
           .where(eq(mailboxes.id, box.id))
           .run();
       });
+      this.onStored?.(stored);
       return page.next !== null;
     } finally {
       this.busy.delete(mailboxId);
@@ -243,7 +257,10 @@ function columnsFrom(m: ProviderMessage) {
   };
 }
 
-export function toSummary(row: MessageRow): MessageSummary {
+export function toSummary(
+  row: MessageRow,
+  facts: MessageFacts | null = null,
+): MessageSummary {
   return {
     id: row.id,
     mailboxId: row.mailboxId,
@@ -258,12 +275,16 @@ export function toSummary(row: MessageRow): MessageSummary {
     flagged: row.flagged,
     labels: row.labels,
     hasAttachments: row.hasAttachments,
+    facts,
   };
 }
 
-export function toDetail(row: MessageRow): MessageDetail {
+export function toDetail(
+  row: MessageRow,
+  facts: MessageFacts | null = null,
+): MessageDetail {
   return {
-    ...toSummary(row),
+    ...toSummary(row, facts),
     cc: row.cc,
     bodyText: row.bodyText,
     bodyHtml: row.bodyHtml,

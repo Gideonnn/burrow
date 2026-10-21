@@ -4,6 +4,7 @@ displayName: Winky
 description: The discreet house-elf for sensitive chores. Runs only on a local model on the owner's own Mac.
 model: ollama:gemma4:26b-a4b
 agent: local
+skills: [mail-facts]
 rights: [read]
 ---
 

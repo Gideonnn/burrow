@@ -58,7 +58,7 @@ export function listPeople(db: Db) {
 
 export function createKey(
   db: Db,
-  request: CreateKeyRequest,
+  request: Omit<CreateKeyRequest, 'factsOnly'> & { factsOnly?: boolean },
   checks: readonly RestrictionCheck[] = [],
 ) {
   const owner = person(db, request.personId);
@@ -87,6 +87,7 @@ export function createKey(
       prefix,
       rights: [...new Set(request.rights)],
       restrictions,
+      factsOnly: request.factsOnly ?? false,
     })
     .returning()
     .get();
@@ -122,6 +123,7 @@ export function summarizeKey(row: typeof apiKeys.$inferSelect): ApiKeySummary {
     prefix: row.prefix,
     rights: row.rights,
     restrictions: row.restrictions,
+    factsOnly: row.factsOnly,
     mailboxIds: row.restrictions.mailboxes ?? null,
     lastUsedAt: row.lastUsedAt?.toISOString() ?? null,
     revokedAt: row.revokedAt?.toISOString() ?? null,

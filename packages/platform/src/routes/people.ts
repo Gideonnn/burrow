@@ -133,10 +133,17 @@ export const peopleRoutes = new Hono<PlatformEnv>()
       if (!person(c.var.db, id)) {
         throw new HTTPException(404, { message: 'unknown person' });
       }
+      const { values } = c.req.valid('json');
+      const personal = c.var.platform.settings
+        .schema()
+        .filter((d) => d.personal && d.key in values);
+      if (personal.length && id !== c.var.access.personId) {
+        throw new HTTPException(403, {
+          message: `only the person changes ${personal.map((d) => d.key).join(', ')}`,
+        });
+      }
       try {
-        return c.json(
-          c.var.platform.settings.update(id, c.req.valid('json').values),
-        );
+        return c.json(c.var.platform.settings.update(id, values));
       } catch (error) {
         return asHttp(error);
       }

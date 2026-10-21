@@ -1,4 +1,9 @@
-import { claimRequest, routineInput } from '@burrow/contracts';
+import {
+  claimRequest,
+  routineInput,
+  type RunnersResponse,
+  updateRunnerRequest,
+} from '@burrow/contracts';
 import { zValidator } from '@hono/zod-validator';
 import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
@@ -129,13 +134,42 @@ export const workRoutes = new Hono<PlatformEnv>()
     '/runner/claim',
     requireRight('tasks'),
     zValidator('json', claimRequest),
+    (c) =>
+      c.json(c.var.platform.workers.claim(c.var.access, c.req.valid('json'))),
+  )
+  // Every runner of the household, and the work waiting for the key's person.
+  .get('/runners', requireRight('read'), (c) =>
+    c.json<RunnersResponse>({
+      runners: c.var.platform.workers.runners(c.var.access),
+      work: c.var.platform.workers.work(c.var.access),
+    }),
+  )
+  .patch(
+    '/runners/:id',
+    requireRight('tasks'),
+    zValidator('json', updateRunnerRequest),
     (c) => {
-      const { runner, max, kinds } = c.req.valid('json');
-      return c.json(
-        c.var.platform.workers.claim(c.var.access, runner, kinds, max),
-      );
+      try {
+        return c.json(
+          c.var.platform.workers.setPaused(
+            c.req.param('id'),
+            c.var.access,
+            c.req.valid('json').paused,
+          ),
+        );
+      } catch (error) {
+        return asHttp(error);
+      }
     },
   )
+  .delete('/runners/:id', requireRight('tasks'), (c) => {
+    try {
+      c.var.platform.workers.removeRunner(c.req.param('id'), c.var.access);
+    } catch (error) {
+      asHttp(error);
+    }
+    return c.json({ deleted: true });
+  })
   .post('/runner/tasks/:id/complete', requireRight('tasks'), async (c) => {
     try {
       await c.var.platform.workers.complete(

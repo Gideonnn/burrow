@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { factCategory, messageFacts } from './facts';
 
 export const mailProvider = z.enum(['gmail', 'microsoft', 'fastmail']);
 export type MailProvider = z.infer<typeof mailProvider>;
@@ -29,6 +30,8 @@ export const messageSummary = z.object({
   flagged: z.boolean(),
   labels: z.array(z.string()),
   hasAttachments: z.boolean(),
+  // Null until the rules ran; a facts-only key gets an empty snippet.
+  facts: messageFacts.nullable().default(null),
 });
 export type MessageSummary = z.infer<typeof messageSummary>;
 
@@ -119,6 +122,10 @@ export const searchPlan = z.object({
   roles: z.array(mailboxRole).nullable(),
   unreadOnly: z.boolean(),
   hasAttachments: z.boolean(),
+  // Only mail of these kinds ("facturen" is invoice); null for any.
+  categories: z.array(factCategory).nullable().default(null),
+  // Login codes and other low-priority mail are hidden unless asked for.
+  includeLow: z.boolean().default(false),
   explanation: z.string(),
 });
 export type SearchPlan = z.infer<typeof searchPlan>;
@@ -134,6 +141,7 @@ export type SearchScope = z.infer<typeof searchScope>;
 
 export const aiSearchRequest = searchScope.extend({
   question: z.string().trim().min(1).max(500),
+  includeLow: z.boolean().default(false),
 });
 
 export const searchResponse = z.object({

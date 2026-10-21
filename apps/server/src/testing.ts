@@ -55,10 +55,24 @@ export function testHousehold({
             'sorting-hat',
             'reply-suggestions',
             'mail-search',
+            'mail-templates',
             'meeting-notes',
           ],
           rights: ['read', 'organize', 'draft'],
           persona: 'You are Kreacher.',
+        },
+      ],
+      [
+        'winky',
+        {
+          name: 'winky',
+          displayName: 'Winky',
+          description: 'Reads sensitive mail locally.',
+          model: 'ollama:gemma4:26b-a4b',
+          agent: 'local',
+          skills: ['mail-facts'],
+          rights: ['read'],
+          persona: 'You are Winky.',
         },
       ],
     ]),
@@ -85,6 +99,22 @@ export function testHousehold({
           name: 'mail-search',
           description: 'Plans a search.',
           instructions: 'Plan the search.',
+        },
+      ],
+      [
+        'mail-facts',
+        {
+          name: 'mail-facts',
+          description: 'Indexes one message.',
+          instructions: 'Index it.',
+        },
+      ],
+      [
+        'mail-templates',
+        {
+          name: 'mail-templates',
+          description: 'Indexes templates.',
+          instructions: 'Index them.',
         },
       ],
       [
@@ -191,10 +221,18 @@ export function testHousehold({
     personId: string,
     rights: Right[],
     mailboxIds: string[] | null = null,
+    factsOnly = false,
   ) =>
     createKey(
       db,
-      { personId, name: 'test key', rights, mailboxIds, restrictions: {} },
+      {
+        personId,
+        name: 'test key',
+        rights,
+        mailboxIds,
+        restrictions: {},
+        factsOnly,
+      },
       platform.restrictionChecks,
     ).token;
 
@@ -217,6 +255,7 @@ export function testHousehold({
     events: platform.events,
     triage: hedwig.triage,
     insights: hedwig.insights,
+    facts: hedwig.facts,
     routines: platform.routines,
     workers: platform.workers,
     arrived,

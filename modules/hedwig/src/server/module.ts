@@ -8,6 +8,7 @@ import { inArray } from 'drizzle-orm';
 import { mailboxAccess, mailboxRestriction } from './access';
 import type { Accounts } from './accounts';
 import { createDraft } from './drafts';
+import { FACTS_FEATURE, FactsService } from './facts/service';
 import { InsightsService, LONG_MESSAGE } from './insights';
 import { type ClientFor, MailService, type MessageRow } from './mail-service';
 import { registerHedwigTools } from './mcp-tools';
@@ -42,6 +43,16 @@ const settings: SettingDefinition[] = [
     feature: true,
   },
   {
+    key: FACTS_FEATURE,
+    module: 'hedwig',
+    label: 'Mail laten indexeren',
+    description:
+      'Winky leest je mail op je eigen Mac en noteert per mail een samenvatting, namen, bedragen en zoekwoorden, zodat zoeken en agents je mail vinden zonder hem te lezen. Herhaalde automatische mail gaat zonder codes en persoonsnummers naar Kreacher.',
+    type: 'boolean',
+    default: false,
+    feature: true,
+  },
+  {
     key: 'hedwig.insights',
     module: 'hedwig',
     label: 'Samenvattingen en antwoordvoorstellen',
@@ -60,6 +71,8 @@ export type HedwigOptions = {
   // Without accounts the server cannot connect new OAuth mailboxes.
   accounts?: Accounts;
   bot: string;
+  // The local bot that indexes mail facts; Winky by default.
+  factsBot?: string;
   // Poll the providers; off in tests.
   sync?: boolean;
   // Replaces what happens to newly arrived mail (triage); for tests.
@@ -73,6 +86,13 @@ type MessageFacts = { message: MessageRow; decision: TriageDecision };
 export function hedwigModule(platform: Platform, options: HedwigOptions) {
   const { db } = platform;
   const mail = new MailService(db, options.clientFor, platform.events);
+  const facts = new FactsService({
+    platform,
+    mail,
+    factsBot: options.factsBot ?? 'winky',
+    templatesBot: options.bot,
+  });
+  mail.onStored = (ids) => facts.applyRules(ids);
   const insights = new InsightsService({ platform, mail, bot: options.bot });
   const search = new SearchService({ platform, bot: options.bot });
   const triage = new TriageService({
@@ -172,6 +192,7 @@ export function hedwigModule(platform: Platform, options: HedwigOptions) {
                 personId: task.personId,
                 rights: new Set(['draft']),
                 restrictions: {},
+                factsOnly: false,
                 mailboxIds: [message.mailboxId],
               },
               {
@@ -185,6 +206,7 @@ export function hedwigModule(platform: Platform, options: HedwigOptions) {
         },
       },
     ],
+    taskKinds: facts.kinds(),
     triggers: [
       {
         kind: 'message',
@@ -192,6 +214,12 @@ export function hedwigModule(platform: Platform, options: HedwigOptions) {
       },
     ],
     start: () => {
+      void facts
+        .rulesPass()
+        .then((n) => n && console.log(`hedwig: rules ran over ${n} messages`))
+        .catch((error: Error) =>
+          console.error(`hedwig: the rules pass failed: ${error.message}`),
+        );
       if (options.sync === false) return;
       const stopSync = startSyncLoop(mail, onArrived);
       const stopBackfill = startBackfillLoop(mail);
@@ -209,7 +237,7 @@ export function hedwigModule(platform: Platform, options: HedwigOptions) {
     },
   };
 
-  return { module, mail, triage, insights, onArrived };
+  return { module, mail, triage, insights, facts, onArrived };
 }
 
 function matches(

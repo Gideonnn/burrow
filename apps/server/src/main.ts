@@ -48,6 +48,7 @@ const platform = new Platform({
   language: config.language,
   workers: config.workers,
   agents: config.agentRuns,
+  agentNames: config.agents.map((a) => a.name),
 });
 
 const accounts = new Accounts({

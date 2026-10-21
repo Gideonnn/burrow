@@ -1,5 +1,6 @@
 import type {
   KeyRestrictions,
+  Queue,
   Right,
   RoutineTrigger,
   SettingsValues,
@@ -57,6 +58,9 @@ export const apiKeys = sqliteTable('api_keys', {
     .$type<KeyRestrictions>()
     .notNull()
     .default({}),
+  factsOnly: integer('facts_only', { mode: 'boolean' })
+    .notNull()
+    .default(false),
   lastUsedAt: integer('last_used_at', { mode: 'timestamp_ms' }),
   revokedAt: integer('revoked_at', { mode: 'timestamp_ms' }),
   createdAt: createdAt(),
@@ -87,6 +91,29 @@ export const routines = sqliteTable('routines', {
   createdAt: createdAt(),
 });
 
+// A device or process that claims tasks: a Mac with its agents and local
+// models, or the server's own pool (no key, no person).
+export const runners = sqliteTable(
+  'runners',
+  {
+    id: id(),
+    keyId: text('key_id').references(() => apiKeys.id, {
+      onDelete: 'cascade',
+    }),
+    personId: text('person_id').references(() => people.id),
+    name: text('name').notNull(),
+    queues: text('queues', { mode: 'json' }).$type<Queue[]>().notNull(),
+    agents: text('agents', { mode: 'json' }).$type<string[]>().notNull(),
+    models: text('models', { mode: 'json' }).$type<string[]>().notNull(),
+    kinds: text('kinds', { mode: 'json' }).$type<string[]>().notNull(),
+    concurrency: integer('concurrency').notNull().default(1),
+    paused: integer('paused', { mode: 'boolean' }).notNull().default(false),
+    lastSeenAt: integer('last_seen_at', { mode: 'timestamp_ms' }),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex('runners_key_name').on(t.keyId, t.name)],
+);
+
 export const tasks = sqliteTable(
   'tasks',
   {
@@ -105,6 +132,14 @@ export const tasks = sqliteTable(
     input: text('input', { mode: 'json' }).$type<Record<string, unknown>>(),
     status: text('status').$type<TaskStatus>().notNull(),
     where: text('where').$type<TaskWhere>().notNull().default('server'),
+    queue: text('queue').$type<Queue>().notNull().default('cloud'),
+    // 0 low, 1 normal, 2 high, 3 urgent.
+    priority: integer('priority').notNull().default(1),
+    // Only a runner offering this model may claim the task.
+    model: text('model'),
+    runnerId: text('runner_id').references(() => runners.id, {
+      onDelete: 'set null',
+    }),
     // A client task nobody claimed moves to the server after this moment.
     fallbackAt: integer('fallback_at', { mode: 'timestamp_ms' }),
     result: text('result', { mode: 'json' }).$type<TaskResult>(),
@@ -119,7 +154,7 @@ export const tasks = sqliteTable(
   },
   (t) => [
     index('tasks_person_status').on(t.personId, t.status),
-    index('tasks_status').on(t.status),
+    index('tasks_status').on(t.status, t.queue, t.priority),
     index('tasks_subject').on(t.subjectType, t.subjectId),
   ],
 );

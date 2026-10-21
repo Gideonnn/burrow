@@ -1,4 +1,5 @@
 import { untrusted } from '@burrow/platform';
+import { redact } from './facts/rules';
 import type { MessageRow } from './mail-service';
 
 const MAX_BODY = 8_000;
@@ -22,7 +23,9 @@ export type TriageContext = {
 // obey.
 export function triagePrompt(ctx: TriageContext): string {
   const m = ctx.message;
-  const body = (m.bodyText ?? m.snippet).slice(0, MAX_BODY);
+  // The bots that read this run on a cloud AI, so secrets and personal
+  // numbers never leave the house.
+  const body = redact((m.bodyText ?? m.snippet).slice(0, MAX_BODY));
   const addr = (a: { name?: string; email: string }) =>
     a.name ? `${a.name} <${a.email}>` : a.email;
   return `${ctx.task ?? 'Sort this message for'} ${ctx.ownerName}.
@@ -38,7 +41,7 @@ ${ctx.rules.length ? ctx.rules.map((r) => `- ${r}`).join('\n') : '(none)'}
 - From: ${addr(m.from)}
 - To: ${m.to.map(addr).join(', ') || '(none)'}
 - Cc: ${m.cc.map(addr).join(', ') || '(none)'}
-- Subject: ${m.subject}
+- Subject: ${redact(m.subject)}
 - Received: ${m.receivedAt.toISOString()}
 - Attachments: ${m.hasAttachments ? 'yes' : 'no'}
 - Authentication-Results: ${m.headers.authenticationResults ?? '(missing)'}

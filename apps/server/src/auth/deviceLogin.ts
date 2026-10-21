@@ -168,8 +168,12 @@ export function deviceLogin({ publicUrl, devPersonName }: DeviceLoginOptions) {
         throw new HTTPException(400, { message: 'invalid or expired code' });
       }
       const owner = person(c.var.db, request.personId)!;
-      const rights: Right[] = ['read', 'organize', 'draft', 'send', 'tasks'];
-      if (owner.admin) rights.push('admin');
+      // A runner only claims tasks; it never reads, sorts or sends mail.
+      const rights: Right[] =
+        request.app === 'runner'
+          ? ['read', 'tasks']
+          : ['read', 'organize', 'draft', 'send', 'tasks'];
+      if (owner.admin && request.app !== 'runner') rights.push('admin');
       const { key, token } = createKey(c.var.db, {
         personId: owner.id,
         name: `${title(request.app)} op ${request.device}`,

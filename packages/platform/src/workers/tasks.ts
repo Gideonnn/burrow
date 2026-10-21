@@ -1,21 +1,57 @@
 import {
   type ClaimedTask,
+  type ClaimRequest,
+  type Queue,
+  type QueueWork,
+  type Runner,
   type Subject,
   type Task,
+  type TaskPriority,
   type TaskResult,
   type TaskStatus,
   type TaskWhere,
+  taskPriority,
   taskResult,
 } from '@burrow/contracts';
-import { and, desc, eq, inArray, lt, lte, ne, sql } from 'drizzle-orm';
+import {
+  and,
+  count,
+  desc,
+  eq,
+  inArray,
+  isNull,
+  lt,
+  lte,
+  ne,
+  notInArray,
+  sql,
+} from 'drizzle-orm';
 import type { Access } from '../access';
 import type { AgentRequest, AgentRunner } from '../agents/runner';
 import type { Db } from '../db';
 import type { EventBus } from '../events';
-import { tasks } from '../schema';
+import { people, runners, tasks } from '../schema';
 import type { Subjects } from './subjects';
 
 export type TaskRow = typeof tasks.$inferSelect;
+export type RunnerRow = typeof runners.$inferSelect;
+
+// Work a module hands out piece by piece instead of as one task row per item
+// (indexing fifty thousand messages): on each claim it gives the next piece
+// of what is still missing. The task row lives only while a runner holds the
+// piece; a runner that stops loses nothing.
+export type StandingWork = {
+  // People who have work of this kind waiting.
+  people: () => string[];
+  progress: (personId: string) => { waiting: number; done: number | null };
+  // The next piece for the person, skipping what the running tasks hold.
+  next: (
+    personId: string,
+    running: TaskRow[],
+  ) =>
+    | { subject?: Subject | null; input?: Record<string, unknown> }
+    | undefined;
+};
 
 // A kind of work a module offers. Agent kinds build a request for a bot and
 // validate its answer, and may run on a client app; code kinds run code on the
@@ -41,6 +77,15 @@ export type TaskKind = {
   failed?: (task: TaskRow, error: string) => void;
   // Runs of a code kind before it fails for good (network hiccups).
   attempts?: number;
+  // What the queue view calls this work, e.g. "Mail-facts".
+  title?: string;
+  queue?: Queue;
+  priority?: TaskPriority;
+  // A model every task of this kind must run on (haiku, ollama:<name>).
+  model?: string;
+  // An unpinned cloud task that waited ten minutes may run on a local model.
+  localModelOk?: boolean;
+  standing?: StandingWork;
 };
 
 export type NewTask = {
@@ -51,10 +96,19 @@ export type NewTask = {
   where?: TaskWhere;
   routineId?: string | null;
   fallbackAt?: Date | null;
+  priority?: TaskPriority;
+  model?: string | null;
 };
 
 // A client that claimed a task and went quiet gives it back after this.
 const CLAIM_TIMEOUT_MS = 30 * 60_000;
+// A runner silent for longer shows as offline.
+const ONLINE_MS = 5 * 60_000;
+const IDLE_FOR_LOCAL_MS = 10 * 60_000;
+const SERVER = 'server';
+const CLOUD_MODELS = new Set(['haiku', 'opus']);
+
+const rank = (p: TaskPriority) => taskPriority.options.indexOf(p);
 
 export class WorkerError extends Error {}
 
@@ -65,15 +119,27 @@ export type WorkersOptions = {
   runner: AgentRunner;
   // Server tasks running at once.
   concurrency: number;
+  // The agent CLIs of the server's own pool.
+  agents?: string[];
+  // Whether a person lets the household's other Macs run their cloud work.
+  sharesCloudWork?: (personId: string) => boolean;
 };
 
-// The task queue and the server's worker pool. Client apps claim the kinds
-// they can run while they are open.
+// Set when a cloud task runs on a runner's local model instead.
+type Fit = { model?: string };
+
+// The task queue and the server's worker pool. Every runner (a Mac, the
+// server's pool) claims the highest-priority task it may run: local tasks
+// only on a device of their person with a local model, cloud tasks on any
+// cloud agent that works for their person.
 export class Workers {
   private readonly kinds = new Map<string, TaskKind>();
   private readonly running = new Set<Promise<void>>();
+  private readonly db: Db;
 
-  constructor(private readonly o: WorkersOptions) {}
+  constructor(private readonly o: WorkersOptions) {
+    this.db = o.db;
+  }
 
   register(kind: TaskKind) {
     if (this.kinds.has(kind.name)) {
@@ -82,14 +148,21 @@ export class Workers {
     if (!kind.agent === !kind.run) {
       throw new WorkerError(`task kind "${kind.name}" needs agent or run`);
     }
+    if (kind.queue === 'local' && !kind.agent) {
+      throw new WorkerError(`local task kind "${kind.name}" needs an agent`);
+    }
     this.kinds.set(kind.name, kind);
   }
 
   enqueue(t: NewTask): string {
-    if (!this.kinds.has(t.kind)) {
+    const kind = this.kinds.get(t.kind);
+    if (!kind) {
       throw new WorkerError(`unknown task kind "${t.kind}"`);
     }
-    const row = this.o.db
+    if (kind.standing) {
+      throw new WorkerError(`task kind "${t.kind}" is standing work`);
+    }
+    const row = this.db
       .insert(tasks)
       .values({
         kind: t.kind,
@@ -99,6 +172,9 @@ export class Workers {
         subjectId: t.subject?.id ?? null,
         input: t.input ?? null,
         where: t.where ?? 'server',
+        queue: kind.queue ?? 'cloud',
+        priority: rank(t.priority ?? kind.priority ?? 'normal'),
+        model: t.model ?? kind.model ?? null,
         fallbackAt: t.fallbackAt ?? null,
         status: 'queued',
       })
@@ -109,23 +185,14 @@ export class Workers {
     return row.id;
   }
 
-  // Starts queued server tasks while there is room in the pool.
+  // Starts server tasks while there is room in the pool.
   pump() {
+    const server = this.serverRunner();
+    if (server.paused) return;
     while (this.running.size < this.o.concurrency) {
-      const next = this.o.db
-        .select()
-        .from(tasks)
-        .where(and(eq(tasks.status, 'queued'), eq(tasks.where, 'server')))
-        .orderBy(tasks.createdAt)
-        .limit(1)
-        .get();
+      const next = this.next(server);
       if (!next) return;
-      const claimed = this.setStatus(next.id, 'running', {
-        claimedBy: 'server',
-        claimedAt: new Date(),
-        attempts: next.attempts + 1,
-      });
-      const run: Promise<void> = this.execute(claimed).finally(() => {
+      const run: Promise<void> = this.execute(next.row).finally(() => {
         this.running.delete(run);
         this.pump();
       });
@@ -140,29 +207,33 @@ export class Workers {
 
   // After a restart nothing runs on the server any more.
   recover() {
-    this.o.db
-      .update(tasks)
-      .set({ status: 'queued', claimedBy: null, claimedAt: null })
-      .where(and(eq(tasks.status, 'running'), eq(tasks.claimedBy, 'server')))
-      .run();
+    for (const row of this.db
+      .select()
+      .from(tasks)
+      .where(and(eq(tasks.status, 'running'), eq(tasks.claimedBy, SERVER)))
+      .all()) {
+      this.release(row);
+    }
     this.pump();
   }
 
   // Every minute: hands stalled client claims back to the queue and moves
   // client tasks past their fallback moment to the server.
   tick(now = new Date()) {
-    this.o.db
-      .update(tasks)
-      .set({ status: 'queued', claimedBy: null, claimedAt: null })
+    for (const row of this.db
+      .select()
+      .from(tasks)
       .where(
         and(
           eq(tasks.status, 'running'),
-          ne(tasks.claimedBy, 'server'),
+          ne(tasks.claimedBy, SERVER),
           lt(tasks.claimedAt, new Date(now.getTime() - CLAIM_TIMEOUT_MS)),
         ),
       )
-      .run();
-    this.o.db
+      .all()) {
+      this.release(row);
+    }
+    this.db
       .update(tasks)
       .set({ where: 'server' })
       .where(
@@ -173,8 +244,183 @@ export class Workers {
         ),
       )
       .run();
+    this.db
+      .update(runners)
+      .set({ lastSeenAt: now })
+      .where(eq(runners.id, this.serverRunner().id))
+      .run();
     this.pump();
   }
+
+  // A claim nobody finishes goes back; standing work is handed out again.
+  private release(row: TaskRow) {
+    if (this.isStanding(row)) {
+      this.db.delete(tasks).where(eq(tasks.id, row.id)).run();
+      return;
+    }
+    this.setStatus(row.id, 'queued', {
+      claimedBy: null,
+      claimedAt: null,
+      runnerId: null,
+    });
+  }
+
+  // --- choosing work ------------------------------------------------------
+
+  // The best task the runner may run now, claimed for it.
+  private next(
+    r: RunnerRow,
+    access?: Access,
+  ): { row: TaskRow; fit: Fit } | undefined {
+    const now = Date.now();
+    let regular: { row: TaskRow; fit: Fit } | undefined;
+    for (const row of this.db
+      .select()
+      .from(tasks)
+      .where(eq(tasks.status, 'queued'))
+      .orderBy(desc(tasks.priority), tasks.createdAt, sql`rowid`)
+      .limit(200)
+      .all()) {
+      const fit = this.fits(row, r, now, access);
+      if (fit) {
+        regular = { row, fit };
+        break;
+      }
+    }
+    const floor = regular ? regular.row.priority : -1;
+    for (const kind of this.standingFor(r)) {
+      if (rank(kind.priority ?? 'low') <= floor) break;
+      const piece = this.standingPiece(kind, r);
+      if (piece) return { row: piece, fit: {} };
+    }
+    if (!regular) return undefined;
+    return { row: this.claimRow(regular.row, r), fit: regular.fit };
+  }
+
+  private fits(
+    t: TaskRow,
+    r: RunnerRow,
+    now: number,
+    access?: Access,
+  ): Fit | undefined {
+    const kind = this.kinds.get(t.kind);
+    if (!kind || kind.standing) return undefined;
+    if (r.keyId === null) {
+      if (t.queue !== 'cloud' || t.where !== 'server') return undefined;
+      return t.model?.startsWith('ollama:') ? undefined : {};
+    }
+    if (!kind.agent) return undefined;
+    if (!r.kinds.includes('*') && !r.kinds.includes(t.kind)) return undefined;
+    const own = t.personId === r.personId;
+    if (own && access && !this.visible(t, access)) return undefined;
+    if (t.queue === 'local') {
+      return own && this.localModel(r, t.model) ? {} : undefined;
+    }
+    if (!own && !this.o.sharesCloudWork?.(t.personId)) return undefined;
+    if (t.where === 'client' && this.cloudModel(r, t.model)) return {};
+    if (
+      kind.localModelOk &&
+      !t.model &&
+      r.models.length &&
+      now - t.createdAt.getTime() > IDLE_FOR_LOCAL_MS
+    ) {
+      return { model: r.models[0] };
+    }
+    return undefined;
+  }
+
+  private localModel(r: RunnerRow, pinned: string | null | undefined) {
+    if (!r.queues.includes('local')) return undefined;
+    return pinned ? r.models.find((m) => m === pinned) : r.models[0];
+  }
+
+  private cloudModel(r: RunnerRow, pinned: string | null | undefined) {
+    if (!r.queues.includes('cloud') || !r.agents.length) return false;
+    return !pinned || (CLOUD_MODELS.has(pinned) && r.agents.includes('claude'));
+  }
+
+  // Standing kinds the runner can serve, highest priority first.
+  private standingFor(r: RunnerRow): TaskKind[] {
+    return [...this.kinds.values()]
+      .filter((k) => {
+        if (!k.standing) return false;
+        const queue = k.queue ?? 'cloud';
+        if (r.keyId === null) return queue === 'cloud';
+        if (!k.agent) return false;
+        if (!r.kinds.includes('*') && !r.kinds.includes(k.name)) return false;
+        return queue === 'local'
+          ? Boolean(this.localModel(r, k.model))
+          : this.cloudModel(r, k.model);
+      })
+      .sort((a, b) => rank(b.priority ?? 'low') - rank(a.priority ?? 'low'));
+  }
+
+  private standingPiece(kind: TaskKind, r: RunnerRow): TaskRow | undefined {
+    const work = kind.standing!;
+    const candidates = r.personId ? [r.personId] : work.people();
+    for (const personId of candidates) {
+      const running = this.db
+        .select()
+        .from(tasks)
+        .where(
+          and(
+            eq(tasks.kind, kind.name),
+            eq(tasks.personId, personId),
+            eq(tasks.status, 'running'),
+          ),
+        )
+        .all();
+      const piece = work.next(personId, running);
+      if (!piece) continue;
+      return this.db
+        .insert(tasks)
+        .values({
+          kind: kind.name,
+          personId,
+          subjectType: piece.subject?.type ?? null,
+          subjectId: piece.subject?.id ?? null,
+          input: piece.input ?? null,
+          where: r.keyId === null ? 'server' : 'client',
+          queue: kind.queue ?? 'cloud',
+          priority: rank(kind.priority ?? 'low'),
+          model: kind.model ?? null,
+          status: 'running',
+          claimedBy: r.keyId === null ? SERVER : r.name,
+          claimedAt: new Date(),
+          runnerId: r.id,
+          attempts: 1,
+        })
+        .returning()
+        .get();
+    }
+    return undefined;
+  }
+
+  private claimRow(t: TaskRow, r: RunnerRow): TaskRow {
+    return this.setStatus(t.id, 'running', {
+      claimedBy: r.keyId === null ? SERVER : r.name,
+      claimedAt: new Date(),
+      runnerId: r.id,
+      attempts: t.attempts + 1,
+    });
+  }
+
+  // The kind builds the request; a pinned or substituted model wins over the
+  // bot's own.
+  private request(row: TaskRow, fit: Fit): AgentRequest {
+    const request = this.kinds.get(row.kind)!.agent!.request(row);
+    if (fit.model) {
+      return {
+        ...request,
+        model: fit.model,
+        agent: 'local',
+        effort: undefined,
+      };
+    }
+    return row.model ? { ...request, model: row.model } : request;
+  }
+
+  // --- running ------------------------------------------------------------
 
   private async execute(row: TaskRow) {
     const kind = this.kinds.get(row.kind);
@@ -188,7 +434,7 @@ export class Workers {
         : this.accept(
             kind,
             row,
-            await this.o.runner.run(kind.agent!.request(row)),
+            await this.o.runner.run(this.request(row, {})),
           );
       await this.settle(row.id, result);
     } catch (error) {
@@ -220,7 +466,9 @@ export class Workers {
     const kind = this.kinds.get(row.kind);
     try {
       await kind?.apply?.(row, row.result!);
-      this.setStatus(row.id, 'done');
+      if (kind?.standing)
+        this.db.delete(tasks).where(eq(tasks.id, row.id)).run();
+      else this.setStatus(row.id, 'done');
     } catch (error) {
       this.giveUp(row, (error as Error).message);
     }
@@ -237,6 +485,9 @@ export class Workers {
         `failed hook of ${row.kind}: ${(hookError as Error).message}`,
       );
     }
+    if (this.isStanding(row)) {
+      this.db.delete(tasks).where(eq(tasks.id, row.id)).run();
+    }
   }
 
   // --- people and clients -------------------------------------------------
@@ -245,8 +496,9 @@ export class Workers {
     access: Access,
     filter: { limit?: number; kinds?: string[]; subject?: Subject } = {},
   ): Task[] {
+    const standing = this.standingNames;
     return (
-      this.o.db
+      this.db
         .select()
         .from(tasks)
         .where(
@@ -255,6 +507,7 @@ export class Workers {
             filter.kinds?.length
               ? inArray(tasks.kind, filter.kinds)
               : undefined,
+            standing.length ? notInArray(tasks.kind, standing) : undefined,
             filter.subject
               ? eq(tasks.subjectType, filter.subject.type)
               : undefined,
@@ -285,50 +538,29 @@ export class Workers {
       attempts: 0,
       claimedBy: null,
       claimedAt: null,
+      runnerId: null,
     });
     this.pump();
   }
 
-  // Hands queued client tasks of the key's person to a client runner.
-  claim(
-    access: Access,
-    runnerName: string,
-    kinds: string[],
-    max = 2,
-  ): ClaimedTask[] {
-    const agentKinds = kinds.filter((k) => this.kinds.get(k)?.agent);
-    if (!agentKinds.length) return [];
-    const queued = this.o.db
-      .select()
-      .from(tasks)
-      .where(
-        and(
-          eq(tasks.status, 'queued'),
-          eq(tasks.where, 'client'),
-          eq(tasks.personId, access.personId),
-          inArray(tasks.kind, agentKinds),
-        ),
-      )
-      .orderBy(tasks.createdAt)
-      .all()
-      .filter((t) => this.visible(t, access))
-      .slice(0, max);
+  // Registers the runner (each claim is its heartbeat) and hands it the best
+  // tasks it may run, with the agent request already built.
+  claim(access: Access, offer: ClaimRequest): ClaimedTask[] {
+    const r = this.registerRunner(access, offer);
+    if (r.paused) return [];
     const claimed: ClaimedTask[] = [];
-    for (const t of queued) {
+    while (claimed.length < offer.max) {
+      const next = this.next(r, access);
+      if (!next) break;
       let request: AgentRequest;
       try {
-        request = this.kinds.get(t.kind)!.agent!.request(t);
+        request = this.request(next.row, next.fit);
       } catch (error) {
-        this.giveUp(t, (error as Error).message);
+        this.giveUp(next.row, (error as Error).message);
         continue;
       }
-      const row = this.setStatus(t.id, 'running', {
-        claimedBy: runnerName,
-        claimedAt: new Date(),
-        attempts: t.attempts + 1,
-      });
       claimed.push({
-        task: this.toTask(row),
+        task: this.toTask(next.row),
         request: {
           ...request,
           schema: request.schema as Record<string, unknown>,
@@ -340,8 +572,7 @@ export class Workers {
   }
 
   async complete(id: string, access: Access, raw: unknown) {
-    const row = this.find(id, access, 'running');
-    if (row.claimedBy === 'server') throw new WorkerError('not found');
+    const row = this.claimedBy(id, access);
     let result: TaskResult;
     try {
       result = this.accept(this.kinds.get(row.kind)!, row, raw);
@@ -353,15 +584,169 @@ export class Workers {
   }
 
   fail(id: string, access: Access, error: string) {
-    const row = this.find(id, access, 'running');
-    if (row.claimedBy === 'server') throw new WorkerError('not found');
-    this.giveUp(row, error);
+    this.giveUp(this.claimedBy(id, access), error);
+  }
+
+  // --- runners ------------------------------------------------------------
+
+  private registerRunner(access: Access, offer: ClaimRequest): RunnerRow {
+    const values = {
+      personId: access.personId,
+      // The local queue needs a local model on the same device.
+      queues: offer.models.length
+        ? offer.queues
+        : offer.queues.filter((q) => q !== 'local'),
+      agents: offer.agents,
+      models: offer.models,
+      kinds: offer.kinds,
+      concurrency: offer.concurrency,
+      lastSeenAt: new Date(),
+    };
+    return this.db
+      .insert(runners)
+      .values({ keyId: access.keyId, name: offer.runner, ...values })
+      .onConflictDoUpdate({
+        target: [runners.keyId, runners.name],
+        set: values,
+      })
+      .returning()
+      .get();
+  }
+
+  // The server's own pool, registered like any other runner.
+  serverRunner(): RunnerRow {
+    const found = this.db
+      .select()
+      .from(runners)
+      .where(and(isNull(runners.keyId), eq(runners.name, SERVER)))
+      .get();
+    if (found) return found;
+    return this.db
+      .insert(runners)
+      .values({
+        keyId: null,
+        personId: null,
+        name: SERVER,
+        queues: ['cloud'],
+        agents: this.o.agents ?? ['claude'],
+        models: [],
+        kinds: ['*'],
+        concurrency: this.o.concurrency,
+        lastSeenAt: new Date(),
+      })
+      .returning()
+      .get();
+  }
+
+  runners(access: Access, now = new Date()): Runner[] {
+    this.serverRunner();
+    return this.db
+      .select({ runner: runners, personName: people.name })
+      .from(runners)
+      .leftJoin(people, eq(people.id, runners.personId))
+      .orderBy(sql`${runners.keyId} is not null`, runners.createdAt)
+      .all()
+      .map(({ runner: r, personName }) => {
+        const mine = r.personId === access.personId;
+        const doing = mine
+          ? this.db
+              .select()
+              .from(tasks)
+              .where(and(eq(tasks.runnerId, r.id), eq(tasks.status, 'running')))
+              .all()
+              .map((t) => this.toTask(t).title)
+          : [];
+        return {
+          id: r.id,
+          name: r.name,
+          personName: personName ?? null,
+          mine,
+          queues: r.queues,
+          agents: r.agents,
+          models: r.models,
+          kinds: r.kinds,
+          paused: r.paused,
+          online:
+            r.keyId === null ||
+            (r.lastSeenAt !== null &&
+              now.getTime() - r.lastSeenAt.getTime() < ONLINE_MS),
+          lastSeenAt: r.lastSeenAt?.toISOString() ?? null,
+          doing: doing.length ? [...new Set(doing)].join(', ') : null,
+        };
+      });
+  }
+
+  // A person pauses their own runners; the server's pool only an admin.
+  setPaused(id: string, access: Access, paused: boolean): Runner {
+    const r = this.ownRunner(id, access, true);
+    this.db.update(runners).set({ paused }).where(eq(runners.id, r.id)).run();
+    if (!paused && r.keyId === null) this.pump();
+    return this.runners(access).find((x) => x.id === id)!;
+  }
+
+  removeRunner(id: string, access: Access) {
+    const r = this.ownRunner(id, access, false);
+    this.db
+      .update(tasks)
+      .set({ runnerId: null })
+      .where(eq(tasks.runnerId, r.id))
+      .run();
+    this.db.delete(runners).where(eq(runners.id, r.id)).run();
+  }
+
+  private ownRunner(id: string, access: Access, serverToo: boolean) {
+    const r = this.db.select().from(runners).where(eq(runners.id, id)).get();
+    const allowed =
+      r &&
+      ((r.keyId !== null && r.personId === access.personId) ||
+        (serverToo && r.keyId === null && access.rights.has('admin')));
+    if (!allowed) throw new WorkerError('not found');
+    return r;
+  }
+
+  // What waits for the key's person, per kind; standing work with progress.
+  work(access: Access): QueueWork[] {
+    const waiting = this.db
+      .select({ queue: tasks.queue, kind: tasks.kind, n: count() })
+      .from(tasks)
+      .where(
+        and(eq(tasks.personId, access.personId), eq(tasks.status, 'queued')),
+      )
+      .groupBy(tasks.queue, tasks.kind)
+      .all()
+      .map(({ queue, kind, n }) => ({
+        queue,
+        kind,
+        title: this.kinds.get(kind)?.title ?? kind,
+        waiting: n,
+        done: null,
+      }));
+    const standing = [...this.kinds.values()]
+      .filter((k) => k.standing)
+      .map((k) => ({
+        queue: k.queue ?? 'cloud',
+        kind: k.name,
+        title: k.title ?? k.name,
+        ...k.standing!.progress(access.personId),
+      }))
+      .filter((w) => w.waiting > 0 || w.done !== null);
+    return [...waiting, ...standing];
   }
 
   // --- helpers ------------------------------------------------------------
 
   task(id: string): TaskRow | undefined {
-    return this.o.db.select().from(tasks).where(eq(tasks.id, id)).get();
+    return this.db.select().from(tasks).where(eq(tasks.id, id)).get();
+  }
+
+  private get standingNames() {
+    return [...this.kinds.values()]
+      .filter((k) => k.standing)
+      .map((k) => k.name);
+  }
+
+  private isStanding(row: TaskRow) {
+    return Boolean(this.kinds.get(row.kind)?.standing);
   }
 
   // A task is its person's; one about a subject is only visible to keys that
@@ -383,12 +768,27 @@ export class Workers {
     return t;
   }
 
+  // A running task is finished by the key whose runner claimed it.
+  private claimedBy(id: string, access: Access): TaskRow {
+    const t = this.task(id);
+    if (!t || t.status !== 'running' || t.claimedBy === SERVER) {
+      throw new WorkerError('not found');
+    }
+    const r = t.runnerId
+      ? this.db.select().from(runners).where(eq(runners.id, t.runnerId)).get()
+      : undefined;
+    if (r ? r.keyId !== access.keyId : !this.visible(t, access)) {
+      throw new WorkerError('not found');
+    }
+    return t;
+  }
+
   private setStatus(
     id: string,
     status: TaskStatus,
     extra: Partial<TaskRow> = {},
   ): TaskRow {
-    const row = this.o.db
+    const row = this.db
       .update(tasks)
       .set({ ...extra, status, updatedAt: new Date() })
       .where(eq(tasks.id, id))
@@ -399,6 +799,7 @@ export class Workers {
   }
 
   private changed(row: TaskRow) {
+    if (this.isStanding(row)) return;
     this.o.events.emitTo([row.personId], {
       type: 'task.changed',
       taskId: row.id,
@@ -423,6 +824,9 @@ export class Workers {
       skill: about.skill ?? '',
       bot: about.bot ?? '',
       where: t.where,
+      queue: t.queue,
+      priority: taskPriority.options[t.priority] ?? 'normal',
+      model: t.model ?? null,
       status: t.status,
       subject,
       messageId: subject?.type === 'message' ? subject.id : null,

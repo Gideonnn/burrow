@@ -6,3 +6,6 @@ export * from './mail-service';
 export * from './module';
 export * from './schema';
 export * from './triage';
+export * from './facts/rules';
+export * from './facts/service';
+export * from './facts/store';

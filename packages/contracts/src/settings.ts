@@ -17,6 +17,8 @@ export const settingDefinition = z.object({
     .optional(),
   default: settingValue,
   feature: z.boolean().default(false),
+  // Only the person changes it, never a household admin for them.
+  personal: z.boolean().optional(),
 });
 export type SettingDefinition = z.infer<typeof settingDefinition>;
 

@@ -118,7 +118,7 @@ describe('triage', () => {
       action: { kind: 'delete' },
     } as never);
     const id = await arrive(s, s.home.id, 'Retry me');
-    await s.triage.retryUntriaged();
+    await s.triage.retryUntriaged(new Date('2026-10-18T00:00:00Z'));
     expect(s.provider(s.home.id).applied).toEqual([]);
     expect(s.mail.message(id)?.triagedAt).toBeNull();
 
@@ -127,7 +127,7 @@ describe('triage', () => {
       reason: 'Newsletter.',
       unsure: false,
     });
-    await s.triage.retryUntriaged();
+    await s.triage.retryUntriaged(new Date('2026-10-18T00:00:00Z'));
     expect(s.mail.message(id)?.folder).toBe('archive');
   });
 

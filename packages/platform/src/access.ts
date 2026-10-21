@@ -17,6 +17,8 @@ export type BaseAccess = {
   personId: string;
   rights: ReadonlySet<Right>;
   restrictions: KeyRestrictions;
+  // Facts about content only, never the content itself.
+  factsOnly: boolean;
 };
 
 export type Access = BaseAccess & AccessExtensions;
@@ -57,6 +59,7 @@ export function accessForKey(
     personId: key.personId,
     rights: new Set(key.rights),
     restrictions: key.restrictions,
+    factsOnly: key.factsOnly,
   };
   return Object.assign(
     base,

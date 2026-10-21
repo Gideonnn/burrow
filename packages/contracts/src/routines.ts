@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { effort } from './catalog';
 import { address, serverOp } from './mail';
+import { queue, runnerOffer, taskPriority } from './runners';
 
 // What starts a routine. New trigger kinds can be added here without touching
 // the routines that already exist.
@@ -98,6 +99,10 @@ export const task = z.object({
   skill: z.string(),
   bot: z.string(),
   where: taskWhere,
+  queue,
+  priority: taskPriority,
+  // A model the task must run on, e.g. haiku or ollama:<name>.
+  model: z.string().nullable(),
   status: taskStatus,
   subject: subject.nullable(),
   // subject.id when the subject is a message, kept for older clients.
@@ -128,10 +133,10 @@ export const claimedTask = z.object({
 });
 export type ClaimedTask = z.infer<typeof claimedTask>;
 
-// A client runner asks for tasks of the kinds it can run.
-export const claimRequest = z.object({
+// A runner asks for tasks of the kinds it can run, and says what it offers.
+export const claimRequest = runnerOffer.extend({
   runner: z.string().min(1).max(80),
-  max: z.number().int().min(1).max(5).default(2),
+  max: z.number().int().min(1).max(8).default(2),
   kinds: z.array(z.string().min(1)).min(1).default(['routine']),
 });
 export type ClaimRequest = z.infer<typeof claimRequest>;

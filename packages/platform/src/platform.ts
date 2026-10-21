@@ -26,6 +26,8 @@ export type PlatformOptions = {
   // Server tasks at once, and agent runs at once across everything.
   workers?: number;
   agents?: number;
+  // The agent CLIs the server runs, for its entry in the runner list.
+  agentNames?: string[];
   events?: EventBus;
 };
 
@@ -45,6 +47,17 @@ const platformSettings: SettingDefinition[] = [
     options: LANGUAGES,
     default: null,
     feature: false,
+  },
+  {
+    key: 'platform.shareCloudWork',
+    module: 'platform',
+    label: 'Mijn cloudtaken mogen ook op andere Macs in huis draaien',
+    description:
+      'Taken voor een cloud-AI, zonder geheimen en persoonsnummers, mogen dan ook op de Mac van een huisgenoot lopen.',
+    type: 'boolean',
+    default: false,
+    feature: false,
+    personal: true,
   },
 ];
 
@@ -87,6 +100,9 @@ export class Platform {
       subjects: this.subjects,
       runner: this.runner,
       concurrency: o.workers ?? 2,
+      agents: o.agentNames,
+      sharesCloudWork: (personId) =>
+        this.settings.enabled(personId, 'platform.shareCloudWork'),
     });
     this.routines = new Routines({
       db: o.db,
