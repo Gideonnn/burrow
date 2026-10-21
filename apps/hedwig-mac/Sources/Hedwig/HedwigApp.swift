@@ -117,13 +117,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// `hedwigctl`) and the `burrowctl mcp` tools.
     @MainActor private func startControl() {
         let model = model
-        services.addLocalSetting(LocalSetting(
-            name: "runner", help: "Whether this Mac runs bot tasks meant for it while Hedwig is open (on or off).",
-            get: { model.runsTasks ? "on" : "off" },
-            set: { value in
-                guard ["on", "off"].contains(value) else { throw ControlError("runner is on or off") }
-                model.runsTasks = value == "on"
-            }))
         services.startControl(
             state: { model.controlState() },
             busy: { model.composing > 0 ? "a message is being written" : nil },

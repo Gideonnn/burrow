@@ -65,13 +65,18 @@ private struct SearchHeader: View {
     var body: some View {
         @Bindable var model = model
         VStack(alignment: .leading, spacing: 6) {
-            if model.placeScope != .everywhere {
-                Picker("Zoek in", selection: $model.searchEverywhere) {
-                    Text(place).tag(false)
-                    Text("Alle mailboxen").tag(true)
+            HStack {
+                if model.placeScope != .everywhere {
+                    Picker("Zoek in", selection: $model.searchEverywhere) {
+                        Text(place).tag(false)
+                        Text("Alle mailboxen").tag(true)
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
                 }
-                .pickerStyle(.segmented)
-                .labelsHidden()
+                Toggle("Toon ook codes", isOn: $model.searchIncludesLow)
+                    .help("Inlogcodes, wachtwoordherstel en andere mail met lage prioriteit")
+                    .fixedSize()
             }
             HStack(spacing: 6) {
                 if model.aiSearching {
@@ -110,6 +115,10 @@ struct MessageRow: View {
                         .font(.headline)
                         .lineLimit(1)
                     Spacer()
+                        if message.facts?.sensitive == true {
+                        Image(systemName: "lock.fill").font(.caption).foregroundStyle(.secondary)
+                            .help("Bevat gevoelige gegevens; gaat nooit naar een cloud-AI")
+                    }
                     if message.hasAttachments {
                         Image(systemName: "paperclip").font(.caption).foregroundStyle(.secondary)
                     }
@@ -118,12 +127,13 @@ struct MessageRow: View {
                         .foregroundStyle(.secondary)
                 }
                 Text(message.subject).font(.subheadline).lineLimit(1)
-                Text(message.snippet.split(whereSeparator: \.isNewline).joined(separator: " "))
+                Text(message.facts?.summary ?? message.snippet.split(whereSeparator: \.isNewline).joined(separator: " "))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
-                if message.flagged || !message.labels.isEmpty || showMailbox {
+                if message.flagged || !message.labels.isEmpty || showMailbox || category != nil {
                     HStack(spacing: 5) {
+                        if let category { Tag(text: category, color: .teal) }
                         if message.flagged { Tag(text: "Antwoord nodig", color: .orange) }
                         ForEach(message.labels, id: \.self) { Tag(text: $0, color: .secondary) }
                         if showMailbox, let box = model.mailbox(message.mailboxId) {
@@ -136,6 +146,8 @@ struct MessageRow: View {
         }
         .padding(.vertical, 4)
     }
+
+    private var category: String? { message.facts?.categoryTitle }
 }
 
 struct Tag: View {

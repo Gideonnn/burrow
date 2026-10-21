@@ -25,6 +25,40 @@ Every app answers `state`, `tree`, `find`, `press`, `type`, `select`, `settings`
 `open`, `rename`, `redo`, `share`, `stop`, `upload` and `mirror`. `hedwigctl` is the old
 name of `burrowctl hedwig`.
 
+## The runner: this Mac doing Burrow's tasks
+
+`burrowctl runner` claims tasks from the server and runs them on this Mac: requests for a
+local model (`ollama:<name>`, the local queue with raw mail) through Ollama on
+`localhost:11434`, everything else with the local `claude`. A local request never reaches
+Claude. It replaces the runner that lived in Hedwig, so it works with every app closed.
+
+```bash
+burrowctl runner login [server-url]  # a device key with only read and tasks
+burrowctl runner install             # launchd agent app.burrow.runner, starts at login
+burrowctl runner on | off            # resume or pause it on the server
+burrowctl runner status              # the household's runners and your waiting work
+burrowctl runner config              # settings, in the defaults suite app.burrow.runner
+burrowctl runner set nightOnly=false concurrency=1
+burrowctl runner uninstall
+```
+
+- The local queue is only offered inside the night window (`nightStart`, `nightEnd`,
+  default 00:00 to 07:00) on the charger (`nightOnly`, `chargerOnly`), and only when
+  Ollama has the configured `model` (default `ollama:gemma4:26b-a4b`). The cloud queue is
+  offered whenever Claude is found (`claudePath` overrides the search).
+- Each claim is the heartbeat, so the server lists the runner as online; pausing is a
+  server flag, so the menu, `on`/`off` and Hedwig's Settings › Runners agree.
+- While tasks run it holds a sleep assertion. A closed lid without an external display
+  still sleeps, so leave the lid open at night.
+- `run` is the foreground process launchd starts: the loop plus a menu bar icon (status,
+  progress such as "Mail-facts: 12.400 van 48.000", Aan, "Alleen 's nachts aan de
+  lader", Lokaal, Cloud, Stoppen). Its log is `~/Library/Logs/burrow-runner.log`.
+- The key is read from the Keychain once at start, so a rebuilt binary asks for Keychain
+  access while you are there, not at night.
+
+Code: `packages/burrow-kit/Sources/BurrowKit/Runner.swift`, `OllamaAgent.swift`,
+`ClaudeCLI.swift` and `Sources/burrowctl/RunnerCommand.swift`.
+
 ## As MCP tools
 
 ```bash
@@ -45,7 +79,7 @@ Every command of every running app becomes a tool `<app>_<command>`; `burrow_app
   cannot approve itself.
 - Not possible at all: logging in or out, keys, the server address, starting a
   recording. `set_setting` only reaches settings modules declare and the app's own
-  local settings (Hedwig: `runner`).
+  local settings.
 - The sockets are `~/Library/Application Support/Burrow/control/<app>.sock`, mode 600:
   any process of the same macOS user can use them. `BURROW_CONTROL_DIR` moves them, for
   a test copy next to the real apps.

@@ -14,6 +14,7 @@ struct SettingsView: View {
                 HouseholdSettingsView(model: household).tabItem { Label("Huishouden", systemImage: "house") }
                 WorkersView(model: household).tabItem { Label("Workers", systemImage: "person.2.wave.2") }
             }
+            RunnersSettings().tabItem { Label("Runners", systemImage: "gearshape.2") }
             if model.me?.can(.admin) == true {
                 AccessSettings().tabItem { Label("Sleutels", systemImage: "key.horizontal") }
             }
@@ -68,10 +69,17 @@ struct AgentSettings: View {
                 }
             }
             Section("Taken op deze Mac") {
-                Toggle("Deze Mac voert taken uit zolang Hedwig open is", isOn: Binding(get: { model.runsTasks }, set: { model.runsTasks = $0 }))
-                    .disabled(model.me?.can(.tasks) != true)
-                TextField("Pad naar claude (leeg: zoek zelf)", text: Binding(get: { model.claudePath }, set: { model.claudePath = $0 }))
-                LabeledContent("Status", value: model.runner.status)
+                if model.thisMacRunners.isEmpty {
+                    Text("Deze Mac voert nog geen taken uit. Zet de runner aan in Terminal; hij draait ook als Hedwig dicht is:")
+                    Text("burrowctl runner login && burrowctl runner install")
+                        .font(.body.monospaced())
+                        .textSelection(.enabled)
+                } else {
+                    ForEach(model.thisMacRunners) { runner in RunnerRow(runner: runner) }
+                    Text("Instellingen zoals \"alleen 's nachts aan de lader\" staan in het menubalk-icoon of in burrowctl runner config.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
             Section("Geleerd van jouw controles") {
                 if rules.isEmpty { Text("Nog niets geleerd.").foregroundStyle(.secondary) }

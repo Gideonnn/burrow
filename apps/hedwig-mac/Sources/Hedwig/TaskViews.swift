@@ -39,7 +39,7 @@ struct TaskListView: View {
             }
         }
         .navigationTitle("Taken")
-        .navigationSubtitle(model.runner.status)
+        .navigationSubtitle(model.runnerStatus)
         .task { await model.refreshTasks() }
     }
 

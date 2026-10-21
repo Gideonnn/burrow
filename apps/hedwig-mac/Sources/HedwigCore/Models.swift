@@ -49,6 +49,50 @@ public struct Me: Codable, Sendable {
     }
 }
 
+/// What the server knows about a message without reading it again: the
+/// rules, a template or a model derived it, so it is as untrusted as the mail.
+public struct MessageFacts: Codable, Hashable, Sendable {
+    public struct Amount: Codable, Hashable, Sendable {
+        public var value: Double
+        public var currency: String
+    }
+
+    public var category: String?
+    public var priority: String?
+    public var summary: String?
+    public var sensitive: Bool
+    public var sensitiveKinds: [String]?
+    public var people: [String]?
+    public var organisations: [String]?
+    public var keywords: [String]?
+    public var dates: [String]?
+    public var amounts: [Amount]?
+    public var source: String?
+
+    /// The category as a tag; nil for "other" or none.
+    public var categoryTitle: String? {
+        switch category {
+        case "personal": "Persoonlijk"
+        case "work": "Werk"
+        case "school": "School"
+        case "order": "Bestelling"
+        case "shipping": "Bezorging"
+        case "invoice": "Factuur"
+        case "bank": "Bank"
+        case "travel": "Reis"
+        case "appointment": "Afspraak"
+        case "government": "Overheid"
+        case "health": "Gezondheid"
+        case "newsletter": "Nieuwsbrief"
+        case "promotion": "Reclame"
+        case "notification": "Melding"
+        case "account": "Account"
+        case "code": "Code"
+        default: nil
+        }
+    }
+}
+
 public struct MessageSummary: Codable, Hashable, Identifiable, Sendable {
     public var id: String
     public var mailboxId: String
@@ -63,6 +107,8 @@ public struct MessageSummary: Codable, Hashable, Identifiable, Sendable {
     public var flagged: Bool
     public var labels: [String]
     public var hasAttachments: Bool
+    // Optional so an older server still decodes.
+    public var facts: MessageFacts?
 }
 
 public struct MessageDetail: Codable, Hashable, Identifiable, Sendable {
@@ -82,12 +128,13 @@ public struct MessageDetail: Codable, Hashable, Identifiable, Sendable {
     public var hasAttachments: Bool
     public var bodyText: String?
     public var bodyHtml: String?
+    public var facts: MessageFacts?
 
     public var summary: MessageSummary {
         MessageSummary(
             id: id, mailboxId: mailboxId, threadId: threadId, from: from, to: to, subject: subject,
             snippet: snippet, receivedAt: receivedAt, folder: folder, unread: unread, flagged: flagged,
-            labels: labels, hasAttachments: hasAttachments)
+            labels: labels, hasAttachments: hasAttachments, facts: facts)
     }
 }
 

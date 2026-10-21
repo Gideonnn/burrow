@@ -73,7 +73,8 @@ struct AccessSettings: View {
             mailboxes.filter { ids.contains($0.id) }.map(\.address).joined(separator: ", ")
         } ?? "alle mailboxen"
         let state = key.revokedAt != nil ? "ingetrokken" : key.lastUsedAt.map { "gebruikt \(shortDate($0))" } ?? "nog niet gebruikt"
-        return "\(person) · \(boxes) · \(key.rights.map(rightName).joined(separator: ", ")) · \(state)"
+        let facts = key.factsOnly == true ? " · alleen feiten" : ""
+        return "\(person) · \(boxes) · \(key.rights.map(rightName).joined(separator: ", "))\(facts) · \(state)"
     }
 
     private func load() async {
@@ -120,6 +121,7 @@ struct NewKeySheet: View {
     @State private var allMailboxes = true
     @State private var chosen: Set<String> = []
     @State private var rights: Set<Right> = [.read, .organize, .draft]
+    @State private var factsOnly = false
     @State private var failure: String?
 
     var body: some View {
@@ -145,6 +147,10 @@ struct NewKeySheet: View {
                         get: { rights.contains(right) },
                         set: { if $0 { rights.insert(right) } else { rights.remove(right) } }))
                 }
+                Toggle("Alleen feiten", isOn: $factsOnly)
+                Text("De sleutel ziet categorie, samenvatting, namen en bedragen van mail, maar nooit de mail zelf.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
             .formStyle(.grouped)
             if let failure { Text(failure).foregroundStyle(.red) }
@@ -165,7 +171,7 @@ struct NewKeySheet: View {
         do {
             guard let result = try await model.api?.createKey(
                 personId: personId, name: name, rights: Right.allCases.filter(rights.contains),
-                mailboxIds: allMailboxes ? nil : Array(chosen))
+                mailboxIds: allMailboxes ? nil : Array(chosen), factsOnly: factsOnly)
             else { return }
             dismiss()
             onCreated(result)

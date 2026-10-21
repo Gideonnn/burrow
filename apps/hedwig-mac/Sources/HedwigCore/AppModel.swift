@@ -47,6 +47,10 @@ public final class AppModel {
     public var searchEverywhere = false {
         didSet { if oldValue != searchEverywhere, isSearching { rerunSearch() } }
     }
+    /// Also finds login codes and other low-priority mail, hidden by default.
+    public var searchIncludesLow = false {
+        didSet { if oldValue != searchIncludesLow, isSearching { rerunSearch() } }
+    }
     /// What the bot searched for after an AI search.
     public private(set) var searchExplanation: String?
     public private(set) var aiSearching = false
@@ -66,7 +70,8 @@ public final class AppModel {
     public var selectedDraftId: String?
     public private(set) var tasks: [TaskItem] = []
     public var selectedTaskId: String?
-    public let runner = LocalRunner()
+    /// The household's runners and the work waiting for this person.
+    public private(set) var runners: RunnersResponse?
     public private(set) var unreadCounts: [String: Int] = [:]
     public private(set) var isLoading = false
     public var error: String?
@@ -147,7 +152,7 @@ public final class AppModel {
         await refreshFiltered()
         await refreshDrafts()
         await refreshTasks()
-        startRunner()
+        await refreshRunners()
         eventsTask?.cancel()
         eventsTask = Task { [weak self] in
             guard let stream = self?.api?.events() else { return }
@@ -391,7 +396,7 @@ public final class AppModel {
         guard !Task.isCancelled, let api else { return }
         do {
             let scope = searchScope
-            let response = try await api.search(query, in: scope)
+            let response = try await api.search(query, in: scope, includeLow: searchIncludesLow)
             guard !Task.isCancelled, query == searchQuery, scope == searchScope else { return }
             showResults(response.results)
         } catch {
@@ -413,7 +418,7 @@ public final class AppModel {
         aiSearching = true
         defer { if question == searchQuery, scope == searchScope { aiSearching = false } }
         do {
-            let response = try await api.aiSearch(question, in: scope)
+            let response = try await api.aiSearch(question, in: scope, includeLow: searchIncludesLow)
             guard question == searchQuery, scope == searchScope else { return }
             searchExplanation = response.explanation
             showResults(response.results)
@@ -556,6 +561,7 @@ extension AppModel {
 extension AppModel {
     public func refreshTasks() async {
         guard let api else { return }
+        await refreshRunners()
         if let list = try? await api.tasks() {
             tasks = list
             if selectedTaskId == nil || !list.contains(where: { $0.id == selectedTaskId }) {
@@ -587,30 +593,32 @@ extension AppModel {
 
     public var tasksAwaitingReview: Int { tasks.filter { $0.status == "review" }.count }
 
-    /// Whether this Mac runs tasks meant for clients; on by default.
-    public var runsTasks: Bool {
-        get { !UserDefaults.standard.bool(forKey: "app.burrow.hedwig.runnerOff") }
-        set {
-            UserDefaults.standard.set(!newValue, forKey: "app.burrow.hedwig.runnerOff")
-            startRunner()
-        }
+    public func refreshRunners() async {
+        guard let api, me?.can(.read) == true else { return }
+        runners = try? await api.runners()
     }
 
-    public var claudePath: String {
-        get { UserDefaults.standard.string(forKey: "app.burrow.hedwig.claudePath") ?? "" }
-        set { UserDefaults.standard.set(newValue, forKey: "app.burrow.hedwig.claudePath") }
+    /// The runners this person registered from this Mac (`burrowctl runner`).
+    public var thisMacRunners: [RunnerInfo] {
+        let name = RunnerConfig.load().name
+        return runners?.runners.filter { $0.mine && $0.name == name } ?? []
     }
 
-    func startRunner() {
-        guard runsTasks, me?.can(.tasks) == true, let name = me?.key.name else {
-            runner.stop()
-            return
+    /// What this Mac's runner is doing, for the task list.
+    public var runnerStatus: String {
+        guard let mine = thisMacRunners.first else { return "Geen runner op deze Mac" }
+        if !mine.online { return "Runner offline" }
+        if mine.paused { return "Runner gepauzeerd" }
+        return mine.doing ?? "Runner wacht op taken"
+    }
+
+    public func setRunner(_ runner: RunnerInfo, paused: Bool) async {
+        guard let api else { return }
+        do {
+            try await api.setRunner(id: runner.id, paused: paused)
+            await refreshRunners()
+        } catch {
+            self.error = error.localizedDescription
         }
-        runner.start(
-            api: { [weak self] in self?.api },
-            name: name,
-            kinds: ["routine"],
-            agent: { [weak self] in ClaudeCLI.find(override: self?.claudePath.isEmpty == false ? self?.claudePath : nil) },
-            onChange: { [weak self] in Task { await self?.refreshTasks() } })
     }
 }
