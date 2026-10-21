@@ -8,6 +8,7 @@ usage: burrowctl <command>
   <app> <cmd> [args…]           run a command; arguments in the order `commands` lists,
                                 or as name=value (e.g. burrowctl hedwig show inbox)
   mcp                           serve every running app's commands as MCP tools on stdio
+  runner <command>              this Mac as a runner for Burrow's tasks; see `burrowctl runner`
 
 Every app answers `state`, `tree`, `find`, `press`, `type`, `select`, `settings` and
 `commands`. Sending, deleting, logging out and recording wait for the person.
@@ -31,6 +32,8 @@ case "apps":
     print(running.isEmpty ? "no Burrow app is running" : running.joined(separator: "\n"))
 case "mcp":
     MCPServer().run()
+case "runner":
+    RunnerCommand.main(Array(args.dropFirst()))
 case "-h", "--help", "help":
     print(usage)
 default:

@@ -142,15 +142,17 @@ public struct APIClient: Sendable {
 
     public func keys() async throws -> [ApiKeySummary] { try await call("GET", "api/admin/keys") }
 
-    public func createKey(personId: String, name: String, rights: [Right], mailboxIds: [String]?) async throws -> CreatedKey {
-        try await call("POST", "api/admin/keys", body: NewKey(personId: personId, name: name, rights: rights, mailboxIds: mailboxIds))
+    public func createKey(personId: String, name: String, rights: [Right], mailboxIds: [String]?, factsOnly: Bool = false) async throws -> CreatedKey {
+        try await call(
+            "POST", "api/admin/keys",
+            body: NewKey(personId: personId, name: name, rights: rights, mailboxIds: mailboxIds, factsOnly: factsOnly))
     }
 
     public func revokeKey(_ id: String) async throws {
         let _: Empty = try await call("DELETE", "api/admin/keys/\(id)")
     }
 
-    struct NewKey: Encodable { var personId: String; var name: String; var rights: [Right]; var mailboxIds: [String]? }
+    struct NewKey: Encodable { var personId: String; var name: String; var rights: [Right]; var mailboxIds: [String]?; var factsOnly: Bool }
 
     // MARK: Bots and tasks
 
@@ -172,8 +174,23 @@ public struct APIClient: Sendable {
         let _: Empty = try await call("POST", "api/tasks/\(id)/retry")
     }
 
-    public func claim(runner: String, kinds: [String] = ["routine"], max: Int = 1) async throws -> [ClaimedTask] {
-        try await call("POST", "api/runner/claim", body: ClaimBody(runner: runner, max: max, kinds: kinds))
+    public func claim(runner: String, kinds: [String] = ["routine"], offer: RunnerOffer = RunnerOffer(), max: Int = 1) async throws -> [ClaimedTask] {
+        try await call(
+            "POST", "api/runner/claim",
+            body: ClaimBody(
+                runner: runner, max: max, kinds: kinds, queues: offer.queues, agents: offer.agents,
+                models: offer.models, concurrency: offer.concurrency))
+    }
+
+    public func runners() async throws -> RunnersResponse { try await call("GET", "api/runners") }
+
+    @discardableResult
+    public func setRunner(id: String, paused: Bool) async throws -> RunnerInfo {
+        try await call("PATCH", "api/runners/\(id)", body: ["paused": paused])
+    }
+
+    public func deleteRunner(id: String) async throws {
+        let _: Empty = try await call("DELETE", "api/runners/\(id)")
     }
 
     /// Posts the agent's raw JSON answer; the server validates it.
@@ -187,7 +204,15 @@ public struct APIClient: Sendable {
         let _: Empty = try await call("POST", "api/runner/tasks/\(id)/fail", body: ["error": error])
     }
 
-    struct ClaimBody: Encodable { var runner: String; var max: Int; var kinds: [String] }
+    struct ClaimBody: Encodable {
+        var runner: String
+        var max: Int
+        var kinds: [String]
+        var queues: [String]
+        var agents: [String]
+        var models: [String]
+        var concurrency: Int
+    }
 
     public func eventsRequest() -> URLRequest {
         var r = request("GET", "api/events")

@@ -1,16 +1,23 @@
 import Foundation
-import Observation
+
+/// Runs one agent request on this Mac and returns the answer as raw JSON for
+/// the server to validate.
+public protocol AgentRunning: Sendable {
+    func run(_ request: AgentRequest) async throws -> Data
+}
 
 public enum RunnerError: Error, LocalizedError, Equatable {
     case agentNotFound
     case agentFailed(String)
     case invalidAnswer
+    case ollama(String)
 
     public var errorDescription: String? {
         switch self {
         case .agentNotFound: "Claude Code is niet gevonden op deze Mac."
         case .agentFailed(let m): "Claude Code faalde: \(m)"
-        case .invalidAnswer: "Claude Code gaf geen bruikbaar antwoord."
+        case .invalidAnswer: "Het model gaf geen bruikbaar antwoord."
+        case .ollama(let m): m
         }
     }
 }
@@ -19,7 +26,7 @@ public enum RunnerError: Error, LocalizedError, Equatable {
 /// the same headless way as the server: no tools, no MCP servers, a JSON
 /// schema for the answer. Returns the answer as raw JSON for the server to
 /// validate.
-public struct ClaudeCLI: Sendable {
+public struct ClaudeCLI: AgentRunning {
     public let path: String
 
     /// GUI apps do not inherit the shell PATH, so the usual install places are
@@ -81,61 +88,6 @@ public struct ClaudeCLI: Sendable {
             } catch {
                 continuation.resume(throwing: error)
             }
-        }
-    }
-}
-
-/// Claims tasks meant for this Mac while the app is open, runs them one at a
-/// time, and reports the result. Each app claims only the task kinds it knows.
-/// Stops when the app quits; the server gives a task back to the queue if a
-/// run never reports.
-@MainActor
-@Observable
-public final class LocalRunner {
-    public private(set) var status = "Wacht op taken"
-    public private(set) var completed = 0
-    @ObservationIgnored private var loop: Task<Void, Never>?
-
-    public init() {}
-
-    public func start(
-        api: @escaping @MainActor () -> APIClient?, name: String, kinds: [String] = ["routine"],
-        agent: @escaping @MainActor () -> ClaudeCLI?, onChange: @escaping @MainActor () -> Void
-    ) {
-        loop?.cancel()
-        loop = Task { [weak self] in
-            while !Task.isCancelled {
-                await self?.runOnce(api: api(), name: name, kinds: kinds, agent: agent())
-                onChange()
-                try? await Task.sleep(nanoseconds: 60 * 1_000_000_000)
-            }
-        }
-    }
-
-    public func stop() {
-        loop?.cancel()
-        status = "Uit"
-    }
-
-    public func runOnce(api: APIClient?, name: String, kinds: [String] = ["routine"], agent: ClaudeCLI?) async {
-        guard let api else { return }
-        guard let agent else {
-            status = RunnerError.agentNotFound.errorDescription!
-            return
-        }
-        guard let claimed = try? await api.claim(runner: name, kinds: kinds), let next = claimed.first else {
-            status = "Wacht op taken"
-            return
-        }
-        status = "Bezig: \(next.task.displayTitle)"
-        do {
-            let answer = try await agent.run(next.request)
-            try await api.complete(task: next.task.id, answer: answer)
-            completed += 1
-            status = "Klaar: \(next.task.displayTitle)"
-        } catch {
-            try? await api.fail(task: next.task.id, error: error.localizedDescription)
-            status = "Mislukt: \(next.task.displayTitle)"
         }
     }
 }

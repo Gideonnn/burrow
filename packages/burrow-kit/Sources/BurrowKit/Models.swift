@@ -90,6 +90,8 @@ public struct ApiKeySummary: Codable, Hashable, Identifiable, Sendable {
     public var rights: [Right]
     public var restrictions: [String: [String]]?
     public var mailboxIds: [String]?
+    /// The key reads facts about mail (category, summary, names), never the mail itself.
+    public var factsOnly: Bool?
     public var lastUsedAt: Date?
     public var revokedAt: Date?
 }
@@ -200,6 +202,10 @@ public struct TaskItem: Codable, Hashable, Identifiable, Sendable {
     public var skill: String
     public var bot: String
     public var `where`: String
+    // Optional so an older server still decodes.
+    public var queue: String?
+    public var priority: String?
+    public var model: String?
     public var status: String
     public var subject: Subject?
     public var messageId: String?
@@ -225,6 +231,62 @@ public struct AgentRequest: Codable, Hashable, Sendable {
 public struct ClaimedTask: Codable, Hashable, Sendable {
     public var task: TaskItem
     public var request: AgentRequest
+}
+
+/// What a runner tells the server with each claim; the claim is also its heartbeat.
+public struct RunnerOffer: Codable, Hashable, Sendable {
+    public var queues: [String]
+    public var agents: [String]
+    public var models: [String]
+    public var concurrency: Int
+
+    public init(queues: [String] = ["cloud"], agents: [String] = ["claude"], models: [String] = [], concurrency: Int = 1) {
+        self.queues = queues
+        self.agents = agents
+        self.models = models
+        self.concurrency = concurrency
+    }
+}
+
+/// A machine that claims and runs tasks: a Mac, or the server's own pool.
+public struct RunnerInfo: Codable, Hashable, Identifiable, Sendable {
+    public var id: String
+    public var name: String
+    public var personName: String?
+    public var mine: Bool
+    public var queues: [String]
+    public var agents: [String]
+    public var models: [String]
+    public var kinds: [String]
+    public var paused: Bool
+    public var online: Bool
+    public var lastSeenAt: Date?
+    public var doing: String?
+}
+
+/// Work waiting for the key's person, per task kind.
+public struct QueueWork: Codable, Hashable, Identifiable, Sendable {
+    public var queue: String
+    public var kind: String
+    public var title: String
+    public var waiting: Int
+    public var done: Int?
+    public var id: String { "\(queue)/\(kind)" }
+
+    /// "Mail-facts: 12.400 van 48.000", or "Mail-facts: 35 te gaan" without a total.
+    public var progress: String {
+        let f = NumberFormatter()
+        f.numberStyle = .decimal
+        f.locale = Locale(identifier: "nl_NL")
+        let n = { (v: Int) in f.string(from: NSNumber(value: v)) ?? String(v) }
+        if let done { return "\(title): \(n(done)) van \(n(done + waiting))" }
+        return "\(title): \(n(waiting)) te gaan"
+    }
+}
+
+public struct RunnersResponse: Codable, Hashable, Sendable {
+    public var runners: [RunnerInfo]
+    public var work: [QueueWork]
 }
 
 /// The bots and skills the server knows.
