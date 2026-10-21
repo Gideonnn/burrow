@@ -33,9 +33,10 @@ by default) get templates and Winky; everyone gets the rules.
 ## Using them
 
 - Every `MessageSummary` carries `facts` (null before the rules ran).
-- Word search also matches keywords, summary, people and organisations, and hides
-  priority `low` unless `includeLow` ("Toon ook codes"). The bot's search plan has
-  `categories` and `includeLow`.
+- Word search also matches keywords, summary, people and organisations, and hides the
+  categories `code` and `account` unless `includeLow` ("Toon ook codes"). Not all of
+  priority `low`, as planned: Winky rates most newsletters and promotions low, and those
+  should stay findable. The bot's search plan has `categories` and `includeLow`.
 - Everything that goes to a cloud bot (triage, suggestions, routines, MCP `get_message`)
   has secrets and personal numbers replaced by `[iban]`, `[bsn]` or
   `[secret: github-token]`.

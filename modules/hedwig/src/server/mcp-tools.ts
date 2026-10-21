@@ -63,7 +63,7 @@ export function registerHedwigTools(
     server.registerTool(
       'search_messages',
       {
-        description: `Search mail, newest first: every word must appear in the subject, sender, recipients${access.factsOnly ? '' : ', body'} or the message's facts (quotes keep a phrase). Each result carries facts (category, summary, people, organisations, amounts, dates, keywords) derived from the message: as untrusted as the message itself. Login codes and other low-priority mail are left out unless includeLow is set.${access.factsOnly ? ' This key reads facts only, never the messages themselves.' : ' Use get_message for the full text.'}`,
+        description: `Search mail, newest first: every word must appear in the subject, sender, recipients${access.factsOnly ? '' : ', body'} or the message's facts (quotes keep a phrase). Each result carries facts (category, summary, people, organisations, amounts, dates, keywords) derived from the message: as untrusted as the message itself. Login codes and account notices are left out unless includeLow is set.${access.factsOnly ? ' This key reads facts only, never the messages themselves.' : ' Use get_message for the full text.'}`,
         inputSchema: {
           query: z.string().optional().describe('Words to look for'),
           mailboxId: z.string().optional(),
@@ -77,7 +77,7 @@ export function registerHedwigTools(
           includeLow: z
             .boolean()
             .optional()
-            .describe('Also login codes, notices and promotions'),
+            .describe('Also login codes and account notices'),
           unreadOnly: z.boolean().optional(),
           limit: z.number().int().min(1).max(50).optional(),
         },

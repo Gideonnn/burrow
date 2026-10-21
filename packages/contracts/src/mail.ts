@@ -124,7 +124,7 @@ export const searchPlan = z.object({
   hasAttachments: z.boolean(),
   // Only mail of these kinds ("facturen" is invoice); null for any.
   categories: z.array(factCategory).nullable().default(null),
-  // Login codes and other low-priority mail are hidden unless asked for.
+  // Login codes and account notices are hidden unless asked for.
   includeLow: z.boolean().default(false),
   explanation: z.string(),
 });

@@ -19,7 +19,7 @@ import {
   inArray,
   isNull,
   lt,
-  ne,
+  notInArray,
   or,
   sql,
 } from 'drizzle-orm';
@@ -31,6 +31,7 @@ import { mailboxes, messageFacts, messages } from './schema';
 const SKILL = 'mail-search';
 const schema = z.toJSONSchema(searchPlan, { target: 'draft-7' });
 const CANDIDATES = 500;
+const NOISE: FactCategory[] = ['code', 'account'];
 
 export type SearchQuery = {
   // Every group must match for word search; for a plan, any group does and
@@ -45,7 +46,7 @@ export type SearchQuery = {
   unreadOnly?: boolean;
   hasAttachments?: boolean;
   categories?: FactCategory[] | null;
-  // Login codes and other low-priority mail are left out unless asked for.
+  // Login codes and account notices are left out unless asked for.
   includeLow?: boolean;
   // A facts-only key searches subjects, people and facts, never bodies.
   factsOnly?: boolean;
@@ -103,9 +104,14 @@ export function searchMessages(
     .where(
       and(
         inArray(messages.mailboxId, scope),
+        // Codes and account notices; newsletters a model rated low stay
+        // findable.
         query.includeLow
           ? undefined
-          : or(isNull(messageFacts.priority), ne(messageFacts.priority, 'low')),
+          : or(
+              isNull(messageFacts.category),
+              notInArray(messageFacts.category, NOISE),
+            ),
         query.categories?.length
           ? inArray(messageFacts.category, query.categories)
           : undefined,

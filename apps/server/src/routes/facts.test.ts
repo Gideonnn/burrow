@@ -305,6 +305,23 @@ describe('mail facts', () => {
       keywords: ['[iban]'],
     });
   });
+
+  it('keeps newsletters a model rated low findable', async () => {
+    const s = await setup();
+    await s.indexing(s.token);
+    await s.deliver(s.home.id, {
+      subject: 'Weekoverzicht',
+      bodyText: 'Nieuws',
+    });
+    const [task] = await s.claim(s.token);
+    await s.post(s.token, `/api/runner/tasks/${task!.task.id}/complete`, {
+      ...answer,
+      category: 'newsletter',
+      priority: 'low',
+      keywords: ['beurs'],
+    });
+    expect(await s.search(s.token, 'beurs')).toHaveLength(1);
+  });
 });
 
 const access = (s: Awaited<ReturnType<typeof setup>>) => ({
