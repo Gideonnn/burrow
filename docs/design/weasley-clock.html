@@ -705,12 +705,33 @@ textarea.field { height: auto; padding: 8px 10px; resize: none; font: inherit; w
 .today .ti small { color: var(--text-2); margin-left: 4px; }
 .today .ti .r { font-size: 12px; color: var(--text-2); }
 .today .nw { font-size: 10px; font-weight: 700; color: var(--clock); background: color-mix(in srgb, var(--clock) 14%, transparent); padding: 1px 5px; border-radius: 4px; margin-left: 4px; }
+.evs { display: grid; grid-template-columns: 1fr; }
+.ev-row { display: grid; grid-template-columns: 56px 1fr auto; gap: 14px; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.ev-row:last-child { border-bottom: 0; }
+.ev-row.past { opacity: .55; }
+.ev-date { width: 56px; border-radius: 10px; overflow: hidden; text-align: center; border: 1px solid var(--line); background: var(--surface); }
+.ev-date i { display: block; font-style: normal; font-size: 10.5px; font-weight: 700; color: #fff; background: var(--remembrall); padding: 2px 0; text-transform: uppercase; }
+.ev-date b { display: block; font-size: 20px; line-height: 1.3; }
+.ev-date small { display: block; font-size: 10.5px; color: var(--text-2); padding-bottom: 3px; }
+.ev-row .t b { font-size: 14px; display: block; }
+.ev-row .t span { font-size: 12px; color: var(--text-2); }
+.ev-row .st { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 5px; }
+.ev-row .rt { text-align: right; font-size: 12px; color: var(--text-2); display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+.evd { display: grid; grid-template-columns: 1.1fr 1fr; }
+.evd .l { padding: 18px 20px; border-right: 1px solid var(--line); display: flex; flex-direction: column; gap: 12px; }
+.evd .rr { padding: 18px 20px; display: flex; flex-direction: column; gap: 10px; background: var(--surface-2); }
+.evd h3 { font-size: 20px; margin: 0; }
+.kv2 { display: grid; grid-template-columns: 90px 1fr; gap: 5px 12px; font-size: 12.5px; margin: 0; } .kv2 dt { color: var(--text-2); } .kv2 dd { margin: 0; }
+.tkt { display: grid; grid-template-columns: 64px 1fr auto; gap: 12px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 8px; font-size: 12.5px; }
+.tkt .qr { width: 64px; height: 64px; border-radius: 6px; border: 1px solid var(--line); background: conic-gradient(from 90deg at 30% 30%, var(--text) 25%, transparent 0) 0 0/10px 10px, var(--surface-2); }
+.tkt b { display: block; font-size: 13px; } .tkt small { color: var(--text-2); }
+.mlink { display: flex; gap: 8px; align-items: center; font-size: 12.5px; padding: 4px 0; } .mlink small { color: var(--text-2); margin-left: auto; }
 .cap { font-size: 12px; font-weight: 600; color: var(--text-2); margin: 0 0 8px; }
 </style>
 
 <header class="topbar">
   <div class="brand">Weasley Clock · agenda's <span class="muted" style="font-weight:400">ontwerp v1</span></div>
-  <nav><a href="#connect">Koppelen</a><a href="#notices">Meldingen</a><a href="#agents">Via een bot</a></nav>
+  <nav><a href="#connect">Koppelen</a><a href="#notices">Meldingen</a><a href="#agents">Via een bot</a><a href="#outings">Uitjes en kaarten</a></nav>
   <div class="seg"><button data-theme-pick="auto" class="on">Auto</button><button data-theme-pick="light">Light</button><button data-theme-pick="dark">Dark</button></div>
 </header>
 
@@ -798,9 +819,64 @@ textarea.field { height: auto; padding: 8px 10px; resize: none; font: inherit; w
     </div>
   </div>
 </section>
+
+<section class="sec" id="outings">
+  <h2><span class="num">4</span>Uitjes en kaarten</h2>
+  <p class="intro">An event in the calendar can hold its tickets: added automatically from the order mail (pdf, Wallet pass), or by hand (a pdf, a screenshot, another mail). The event keeps a short checklist, so a personalisation deadline half a year after buying is not missed, and it is found by every name it goes by, not only the ticket shop's.</p>
+  <div class="grid" style="grid-template-columns: 1fr 1fr; align-items:start">
+    <div>
+      <div class="cap">The event, opened from the calendar or the Hedwig card</div>
+      <div class="mac a-clock short" style="height:auto;grid-template-rows:auto;margin:0">
+        <div class="evd">
+          <div class="l">
+            <div><span class="badge" style="background:color-mix(in srgb,var(--remembrall) 14%,transparent);color:var(--remembrall)">90's party</span></div>
+            <h3>Neon Nineties</h3>
+            <dl class="kv2"><dt>Wanneer</dt><dd>za 13 mei 2027 · deuren 20:00, aanvang 21:00</dd><dt>Waar</dt><dd>Voorbeeldhal, Utrecht</dd><dt>Agenda</dt><dd><span class="dot" style="background:var(--clock)"></span> Wij · Gideon en Eva</dd><dt>Bestelling</dt><dd>KL-48291 via Kaartloket · € 74,00</dd></dl>
+            <div class="chk-wrap">
+              <div class="cap" style="margin-bottom:6px">Voor je gaat</div>
+              <div style="display:flex;flex-direction:column;gap:6px;font-size:12.5px">
+                <span style="display:flex;gap:8px;align-items:center;color:var(--success)"><svg class="i sm"><use href="#i-check"/></svg><span style="color:var(--text)">2 kaarten bewaard, ook offline</span></span>
+                <span style="display:flex;gap:8px;align-items:center;color:var(--warning)"><svg class="i sm"><use href="#i-warn"/></svg><span style="color:var(--text)">Op naam zetten vóór 29 apr <small class="muted">· herinnering 4 weken en 1 week ervoor</small></span></span>
+                <span style="display:flex;gap:8px;align-items:center;color:var(--text-3)"><svg class="i sm"><use href="#i-clock"/></svg><span style="color:var(--text)">Treinen of parkeren regelen <small class="muted">· zelf toegevoegd</small></span></span>
+              </div>
+            </div>
+            <div><div class="cap" style="margin-bottom:4px">Vind je terug als</div><div style="display:flex;gap:4px;flex-wrap:wrap"><span class="badge outline">90's party</span><span class="badge outline">Neon Nineties</span><span class="badge outline">Voorbeeldhal</span><span class="badge outline">Kaartloket</span><span class="badge outline">KL-48291</span></div></div>
+          </div>
+          <div class="rr">
+            <div class="cap" style="margin:0">Kaarten</div>
+            <div class="tkt"><span class="qr"></span><div><b style="color:var(--warning)">Nog geen naam</b><small>Kaart 1 · staand · pdf</small></div><button class="btn sm">Toon</button></div>
+            <div class="tkt"><span class="qr"></span><div><b style="color:var(--warning)">Nog geen naam</b><small>Kaart 2 · staand · pdf</small></div><button class="btn sm">Toon</button></div>
+            <div class="tix" style="display:flex"><span class="btn sm ghost" style="border:1px dashed var(--line-strong)"><svg class="i sm"><use href="#i-plus"/></svg>Kaart toevoegen</span></div>
+            <div class="cap" style="margin:8px 0 0">Mails</div>
+            <div class="mlink"><svg class="i sm"><use href="#i-envelope"/></svg>Je bestelling KL-48291 is gelukt<small>Kaartloket · 22 okt</small></div>
+            <div class="mlink"><svg class="i sm"><use href="#i-envelope"/></svg>Vergeet je tickets niet op naam te zetten<small>Kaartloket · 1 apr</small></div>
+            <div class="mlink"><svg class="i sm"><use href="#i-envelope"/></svg>Praktische info Neon Nineties<small>Neon Events · 6 mei</small></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="cap">Later: a page Uitjes</div>
+      <div class="mac a-clock short" style="height:auto;grid-template-rows:auto;margin:0"><div class="evs">
+        <div class="ev-row"><span class="ev-date"><i>nov</i><b>8</b><small>za</small></span><div class="t"><b>Cabaret Theo Voorbeeld</b><span>Stadsschouwburg Voorbeeld · 20:15 · Wij</span><div class="st"><span class="badge ok">2 kaarten</span><span class="badge ok">In agenda</span></div></div><div class="rt">over 17 dagen</div></div>
+        <div class="ev-row"><span class="ev-date"><i>mei</i><b>13</b><small>za</small></span><div class="t"><b>Neon Nineties</b><span>Voorbeeldhal · 21:00 · Wij</span><div class="st"><span class="badge ok">2 kaarten</span><span class="badge doubt">Op naam vóór 29 apr</span></div></div><div class="rt">over 7 maanden</div></div>
+        <div class="ev-row"><span class="ev-date"><i>jun</i><b>20</b><small>vr</small></span><div class="t"><b>Zomerweide Festival</b><span>Weiland Voorbeeld · hele dag · Wij</span><div class="st"><span class="badge err">Kaarten ontbreken</span><span class="badge outline">in de app van Ticketvoorbeeld</span></div></div><div class="rt">over 8 maanden<button class="btn sm">Toevoegen</button></div></div>
+        <div class="ev-row past"><span class="ev-date"><i>sep</i><b>27</b><small>za</small></span><div class="t"><b>Jazz in het park</b><span>Voorbeeldpark · Wij</span></div><div class="rt">geweest</div></div>
+      </div></div>
+      <div class="card" style="margin-top:14px"><h4>How it works</h4><ul class="small">
+        <li>An order mail from a ticket shop becomes an event card in Hedwig; <b>In agenda</b> creates the event in Wij with the tickets and the mail attached, in one click.</li>
+        <li>Later mails about the same event (a reminder, practical info, a changed time) join it by order number, or by event name and date.</li>
+        <li>The event's names, venue, shop and order number go into the search words of every mail and of the event, so <i>90's party</i> finds the Kaartloket order.</li>
+        <li>Deadlines read from the mail ("uiterlijk 14 dagen voor het evenement op naam") become checklist items with reminders in Vandaag and as notices.</li>
+        <li>Tickets are sensitive: they stay on Dobby and the Macs, never go to a cloud AI, and Telegram only gets a pointer.</li>
+      </ul></div>
+    </div>
+  </div>
+</section>
 </main>
 
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-ticket" viewBox="0 0 24 24"><path d="M3 8a2 2 0 0 0 2-2h14a2 2 0 0 0 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 0-2 2H5a2 2 0 0 0-2-2v-2a2 2 0 0 0 0-4z"/></symbol>
   <symbol id="i-video" viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="2.5"/><path d="M16 10.5l5-3v9l-5-3z"/></symbol>
 </svg>
 <script>

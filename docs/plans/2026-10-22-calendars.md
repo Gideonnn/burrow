@@ -89,6 +89,33 @@ mail connections reconnect once to add Agenda and Contacten.
 - Telegram: "Zet zaterdag om zes etentje bij Sanne in Wij" becomes `add_event` by
   Kreacher; Patronus answers with the event and Ongedaan maken.
 
+## Events and tickets
+
+Concerts, theatre, festivals and parties are often booked half a year ahead through a
+ticket shop (Weeztix, Ticketmaster, Eventbrite) whose mail never names the event the way
+you search for it, and some need the tickets in your name before a deadline.
+
+- **Hedwig card Evenement** for an order mail: date, venue, a checklist and the tickets.
+  Recognised from schema.org `EventReservation`, ticket shop templates, or Winky.
+- **In agenda, one click (agreed):** creates the event in the shared calendar with the
+  tickets and the mail attached; the other member gets the usual notice.
+- **Tickets on the event**, automatically from the mail (pdf, Wallet pass `.pkpass`) or by
+  hand (a pdf, a screenshot, another mail). Hedwig does not download attachments yet
+  (it points to the webmail), so storing them is a prerequisite; the platform's uploads
+  hold them.
+- **Checklist:** in agenda, tickets stored, and deadlines read from the mail ("uiterlijk
+  14 dagen voor het evenement op naam") with reminders four weeks and one week before,
+  in Vandaag and as a notice. Personal items can be added by hand.
+- **Found by every name:** the event's title, kind ("90's party"), artist, venue,
+  organiser, shop and order number become search words of the event and of every mail
+  linked to it; extra aliases can be added. Later mails join by order number, or by
+  event name and date.
+- **On the day:** Vandaag and the card show doors and start, Kaarten tonen (QR at full
+  brightness) and the route.
+- **Later, a page Uitjes:** upcoming events with their ticket status, past ones below.
+- Tickets are sensitive (a QR code is money): they never go to a cloud AI, and Telegram
+  gets only a pointer to the app.
+
 ## Phases
 
 1. **Accounts with services.** The switches at connect time, the new scopes and the
@@ -99,6 +126,8 @@ mail connections reconnect once to add Agenda and Contacten.
 4. **Agent tools and rights**, Telegram once Patronus exists. A day.
 5. **Hedwig cards** use it: free/busy, RSVP via the provider, In agenda (the cards plan
    in `TODO.md`).
+6. **Events and tickets:** attachment storage, the Evenement card, tickets and checklist
+   on events, aliases in search, the Uitjes page. About three days.
 
 ## Open
 

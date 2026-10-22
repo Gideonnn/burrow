@@ -49,7 +49,10 @@ in a shared calendar, and calendar tools and rights for bots.
 **Why:** Gideon wants the shared household calendar to tell him what the other added, as
 iCloud family calendars did, and to add events by asking a bot; the cards need free/busy.
 The store is the start of Burrow's own calendar.
-**Scope:** about five days in four phases; Google first.
+Includes events with their tickets: one-click In agenda from an order mail, tickets
+attached automatically or by hand, personalisation deadlines as reminders, and search by
+every name of the event (the plan's "Events and tickets").
+**Scope:** about five days in four phases, Google first; events and tickets three more.
 
 ## Angela's Mac
 

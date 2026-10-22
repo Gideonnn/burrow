@@ -708,6 +708,7 @@ textarea.field { height: auto; padding: 8px 10px; resize: none; font: inherit; w
 .mc .btn .dom { font-weight: 400; opacity: 0.75; font-size: 11.5px; }
 .mc .ft { display: flex; align-items: center; gap: 6px; padding: 8px 14px; border-top: 1px solid var(--line); background: var(--surface-2); font-size: 11.5px; color: var(--text-2); }
 .mc .ft .grow { flex: 1; }
+.mc .ft > span, .mc .ft > a { white-space: nowrap; }
 .mc .ft svg { color: var(--text-3); }
 .mc .note { font-size: 12.5px; background: var(--surface-2); border-left: 2px solid var(--k); padding: 6px 10px; border-radius: 0 6px 6px 0; }
 .mc .note b { font-weight: 600; }
@@ -756,6 +757,31 @@ textarea.field { height: auto; padding: 8px 10px; resize: none; font: inherit; w
 .today .ti.past { opacity: 0.5; }
 .mc .cal { display: flex; gap: 6px; align-items: center; font-size: 12.5px; }
 .mc .cal.free { color: var(--success); } .mc .cal.clash { color: var(--warning); }
+.mc.t-ticket { --k: var(--remembrall); }
+.chk-list { display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.chk-list .ci { display: grid; grid-template-columns: 18px 1fr auto; gap: 8px; align-items: center; padding: 6px 10px; font-size: 12.5px; border-bottom: 1px solid var(--line); min-height: 34px; }
+.chk-list .ci:last-child { border-bottom: 0; }
+.chk-list .ci small { display: block; color: var(--text-2); font-size: 11.5px; }
+.chk-list .ci .s { width: 16px; height: 16px; border-radius: 50%; display: grid; place-items: center; }
+.chk-list .ci .s svg { width: 10px; height: 10px; stroke-width: 2.6; }
+.chk-list .ci .s.ok { background: var(--success); color: #fff; }
+.chk-list .ci .s.todo { border: 1.5px solid var(--line-strong); }
+.chk-list .ci .s.warn { background: var(--warning); color: #fff; }
+.chk-list .ci.warn { background: var(--warning-tint); }
+.chk-list .ci.warn small { color: var(--warning); font-weight: 600; }
+.tix { display: flex; gap: 8px; flex-wrap: wrap; }
+.tix .tk { display: grid; grid-template-columns: 34px 1fr; gap: 8px; align-items: center; border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px 6px 6px; font-size: 12px; background: var(--surface); position: relative; cursor: pointer; }
+.tix .tk:hover { background: var(--hover); }
+.tix .tk b { display: block; font-weight: 600; }
+.tix .tk small { color: var(--text-2); }
+.tix .tk.noname b { color: var(--warning); }
+.qr { width: 34px; height: 34px; border-radius: 4px; background:
+  conic-gradient(from 90deg at 30% 30%, var(--text) 25%, transparent 0) 0 0/8px 8px,
+  linear-gradient(var(--surface-2), var(--surface-2)); border: 1px solid var(--line); }
+.tix .add { display: flex; align-items: center; gap: 6px; border: 1px dashed var(--line-strong); border-radius: 8px; padding: 6px 12px; font-size: 12px; color: var(--text-2); cursor: pointer; }
+.tix .add:hover { background: var(--hover); }
+.alias { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+.alias .badge { font-weight: 500; }
 .orig-bar { display: flex; align-items: center; gap: 8px; border: 1px dashed var(--line-strong); border-radius: 10px; padding: 8px 12px; color: var(--text-2); font-size: 12.5px; cursor: pointer; }
 .orig-bar:hover { background: var(--hover); }
 .orig-bar .grow { flex: 1; }
@@ -788,6 +814,7 @@ table.t tr:last-child td { border-bottom: 0; }
   <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></symbol>
   <symbol id="i-ext" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4"/></symbol>
   <symbol id="i-bellx" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 9.5-4.9M18 11v5l2 2H8"/><path d="M10 20a2 2 0 0 0 4 0"/><path d="M4 4l16 16"/></symbol>
+  <symbol id="i-ticket" viewBox="0 0 24 24"><path d="M3 8a2 2 0 0 0 2-2h14a2 2 0 0 0 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 0-2 2H5a2 2 0 0 0-2-2v-2a2 2 0 0 0 0-4z"/><path d="M14 6v12" stroke-dasharray="2 2"/></symbol>
   <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
   <symbol id="i-phonecall" viewBox="0 0 24 24"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/></symbol>
 </svg>
@@ -839,11 +866,11 @@ table.t tr:last-child td { border-bottom: 0; }
       <div class="detail" id="detail"></div>
     </div>
   </div>
-  <p class="scr-note"><b>Notes.</b> The card sits between the header and the mail, where Hedwig shows the summary today; the summary line moves into the card's footer when there is a card. In <i>Automatisch</i> the invite, the code, the parcel and the newsletter replace their mail (the dashed bar opens the original, key <kbd>O</kbd>; Noor's one line is quoted in the card); the bill and the flight sit above it; Sanne's personal mail gets no card at all. <b>Vandaag</b> on top of the list gathers the meeting, the two calendar items, the parcel and the bill due this week; it folds away and disappears when there is nothing.</p>
+  <p class="scr-note"><b>Notes.</b> The card sits between the header and the mail, where Hedwig shows the summary today; the summary line moves into the card's footer when there is a card. In <i>Automatisch</i> the invite, the code, the parcel and the newsletter replace their mail (the dashed bar opens the original, key <kbd>O</kbd>; Noor's one line is quoted in the card); the bill, the flight and the concert tickets sit above it (try <i>In Wij zetten</i> on the Kaartloket mail); Sanne's personal mail gets no card at all. <b>Vandaag</b> on top of the list gathers the meeting, the two calendar items, the parcel and the bill due this week; it folds away and disappears when there is nothing.</p>
 </section>
 
 <section class="sec" id="types">
-  <h2><span class="num">2</span>Six types to start with</h2>
+  <h2><span class="num">2</span>Seven types to start with</h2>
   <p class="intro">Each type maps onto categories Hedwig already gives every message. A card shows only what it can read with certainty; a field it cannot read is left out, never guessed.</p>
   <table class="t">
     <tr><th style="width:150px">Kaart</th><th>Herkend aan</th><th>Wat de kaart toont</th><th>De hoofdactie</th><th style="width:130px">Standaard</th></tr>
@@ -852,6 +879,7 @@ table.t tr:last-child td { border-bottom: 0; }
     <tr><td><b>Pakket</b><br><span class="muted small">order, shipping</span></td><td>schema.org <code>ParcelDelivery</code>/<code>Order</code> in the HTML, a template, or Winky.</td><td>Delivery window, steps, track code; all mails about one track code merge into one timeline.</td><td><b>Volg pakket</b></td><td>In plaats van</td></tr>
     <tr><td><b>Factuur</b><br><span class="muted small">invoice</span></td><td>Amount and due date in the facts; IBAN and reference from the mail.</td><td>Amount, due date countdown, payee, IBAN check against earlier bills.</td><td><b>Verwerk factuur</b> (the existing task); never pay</td><td>Boven</td></tr>
     <tr><td><b>Reis</b><br><span class="muted small">travel</span></td><td>schema.org <code>FlightReservation</code>, <code>TrainReservation</code>, <code>LodgingReservation</code>, or Winky.</td><td>Route and times, booking code, when check-in opens.</td><td><b>Inchecken</b> (enabled when it opens)</td><td>Boven</td></tr>
+    <tr><td><b>Evenement</b><br><span class="muted small">order, appointment</span></td><td>schema.org <code>EventReservation</code>, ticket shops as templates, or Winky. Later mails of the organiser join by event name and date.</td><td>Date and venue, a checklist (in agenda, op naam, kaarten bewaard), the tickets with QR, and the names it can be found by.</td><td><b>In agenda</b>, on the day <b>Kaarten tonen</b></td><td>Boven</td></tr>
     <tr><td><b>Nieuwsbrief</b><br><span class="muted small">newsletter, promotion</span></td><td><code>List-Unsubscribe</code> plus category newsletter.</td><td>Three points from Winky, the links in the mail with their domains.</td><td><b>Afmelden</b> (one click, asks first)</td><td>In plaats van</td></tr>
   </table>
 </section>
@@ -969,7 +997,7 @@ const fmtDay = (t, now) => {
   if (diff === 0) return 'Vandaag';
   if (diff === 1) return 'Morgen';
   if (diff === -1) return 'Gisteren';
-  return d.toLocaleDateString('nl-NL', { weekday: 'short', day: 'numeric', month: 'short' });
+  return d.toLocaleDateString('nl-NL', { weekday: 'short', day: 'numeric', month: 'short', ...(d.getFullYear() !== n.getFullYear() ? { year: 'numeric' } : {}) });
 };
 const mmss = (ms) => { const s = Math.max(0, Math.ceil(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
 const rel = (ms) => {
@@ -978,6 +1006,7 @@ const rel = (ms) => {
   const h = Math.floor(m / 60), r = m % 60;
   if (h < 24) return r ? `${h} u ${r} min` : `${h} uur`;
   const d = Math.round(Math.abs(ms) / DAY);
+  if (d > 60) return `${Math.round(d / 30.4)} maanden`;
   return d === 1 ? '1 dag' : `${d} dagen`;
 };
 const copyBtn = (what) => `<button class="copy" data-toast="${esc(what)} gekopieerd" title="Kopieer">${ic('copy')}</button>`;
@@ -1072,7 +1101,31 @@ function digestCard(c) {
     <div class="acts"><button class="btn danger" data-toast="Afmeldverzoek verstuurd naar ${esc(c.domain)}">${ic('bellx')}Afmelden</button><span class="muted small">Stuurt het afmeldverzoek van de afzender, na een bevestiging.</span></div></div>
     <div class="ft"><span class="av sm bot"><svg class="i"><use href="#i-elf2"/></svg></span><span>Samengevat door Winky op je Mac</span></div></div>`;
 }
-const RENDER = { event: eventCard, code: codeCard, parcel: parcelCard, invoice: invoiceCard, trip: tripCard, digest: digestCard };
+function ticketCard(c, now) {
+  const left = c.start - now, today = left < DAY && left > -6 * HOUR;
+  const due = c.personalise && !c.personalise.done ? c.personalise.due - now : null;
+  const ci = (state, label, sub, act = '') => `<div class="ci ${state === 'warn' ? 'warn' : ''}"><span class="s ${state}">${state === 'ok' ? ic('check') : state === 'warn' ? ic('warn') : ''}</span><span>${label}${sub ? `<small>${sub}</small>` : ''}</span>${act}</div>`;
+  const items = [
+    ci('ok', `${c.count} kaarten besteld`, `bestelling ${esc(c.order)} via ${esc(c.vendor)}`),
+    c.inCalendar ? ci('ok', 'In de agenda', `Wij · ${fmtDay(c.start, now).toLowerCase()} ${fmtTime(c.start)}, met de kaarten erbij`)
+                 : ci('todo', 'Nog niet in de agenda', null, `<button class="btn sm" data-cal="${c.id}">In Wij zetten</button>`),
+    c.personalise ? (c.personalise.done ? ci('ok', 'Op naam gezet', c.holders.join(' en '))
+      : ci(due < 30 * DAY ? 'warn' : 'todo', 'Kaarten op naam zetten', `vóór ${fmtDay(c.personalise.due, now).toLowerCase()} · nog ${rel(due)}`, `<span style="display:flex;gap:4px"><button class="btn sm" data-toast="Opent ${esc(c.domain)}">${ic('ext')}Doen</button><button class="btn sm ghost" data-named="${c.id}">Gedaan</button></span>`)) : '',
+    c.files ? ci('ok', 'Kaarten bewaard', `${c.files} pdf's uit deze mail, ook offline op je Mac`)
+            : ci('todo', 'Kaarten zitten niet in deze mail', `${esc(c.where)}`, `<button class="btn sm" data-toast="Kies een pdf, Wallet-pas, screenshot of andere mail">Toevoegen</button>`),
+  ].join('');
+  const tix = c.files ? `<div class="tix">${c.holders.map((h, i) => `<div class="tk ${h ? '' : 'noname'}" data-toast="Toont kaart ${i + 1} met QR-code"><span class="qr"></span><span><b>${h ? esc(h) : 'Nog geen naam'}</b><small>Kaart ${i + 1} · ${esc(c.kind)}</small></span></div>`).join('')}<span class="add" data-toast="Kies een pdf, Wallet-pas of screenshot">${ic('plus')}Kaart toevoegen</span></div>` : '';
+  const hero = today
+    ? `<div class="count"><span class="n">${left > 0 ? fmtTime(c.doors) : 'Nu'}</span><div class="l"><b>${left > 0 ? 'Deuren open, aanvang ' + fmtTime(c.start) : 'Bezig'}</b>${esc(c.venue)}</div></div>
+       <div class="acts"><button class="btn lg k" data-toast="Toont de kaarten met QR-code, schermhelderheid vol">${ic('ticket', '')}Kaarten tonen</button><button class="btn" data-toast="Opent Kaarten met de route">${ic('map')}Route</button></div>`
+    : `<div class="hero"><span class="big">${fmtDay(c.start, now)}</span><span class="rel">${fmtTime(c.start)} · ${esc(c.venue)} · over ${rel(left)}</span></div>
+       ${c.inCalendar ? '' : `<div class="acts"><button class="btn k" data-cal="${c.id}">${ic('calendar')}In agenda</button><span class="muted small">Zet het in Wij met de kaarten en deze mail erbij</span></div>`}`;
+  return `<div class="mc t-ticket"><div class="hd"><span class="tile">${ic('ticket', '')}</span><div class="ttl"><small>Evenement · ${esc(c.kindLong)}</small><b>${esc(c.title)}</b></div>${due !== null && due < 30 * DAY ? '<span class="badge doubt">Op naam zetten</span>' : ''}</div>
+    <div class="bd">${hero}<div class="chk-list">${items}</div>${tix}
+    <div class="alias"><span class="muted small">Vind je terug als</span>${c.aliases.map((a) => `<span class="badge outline">${esc(a)}</span>`).join('')}<button class="btn sm ghost" data-toast="Zoekwoord toegevoegd">${ic('plus')}</button></div></div>
+    <div class="ft">${ic('doc')}<span>Uit de gegevens in de mail</span><span>·</span><span>verkocht door ${esc(c.vendor)}</span><span class="grow"></span><a href="#" data-toast="Toont de 3 mails over dit evenement">3 mails</a></div></div>`;
+}
+const RENDER = { event: eventCard, code: codeCard, parcel: parcelCard, invoice: invoiceCard, trip: tripCard, digest: digestCard, ticket: ticketCard };
 
 /* ---- list line per card ---- */
 function liveLine(card, now) {
@@ -1092,6 +1145,10 @@ function liveLine(card, now) {
     }
     case 'parcel': return card.step === 3 ? L('box', 'Bezorgd', 'clock') : L('box', `<span class="${card.today ? 'now' : ''}">${card.today ? 'Vandaag' : esc(card.day)} ${esc(card.window)}</span>`, 'clock');
     case 'invoice': return L('coin', `${esc(card.amount)} · voor ${fmtDay(card.due, now).toLowerCase()}${card.ibanChanged ? ' · <span class="now" style="color:var(--danger)">ander IBAN</span>' : ''}`, 'gringotts');
+    case 'ticket': {
+      const due = card.personalise && !card.personalise.done ? card.personalise.due - now : null;
+      return L('ticket', `${fmtDay(card.start, now)} · ${due !== null && due < 30 * DAY ? '<span class="now" style="color:var(--warning)">op naam zetten</span>' : card.inCalendar ? 'in Wij' : 'nog niet in agenda'}`, 'remembrall');
+    }
     case 'trip': return L('plane', `${esc(card.from)} → ${esc(card.to)} · inchecken over ${rel(card.checkin - now)}`, 'patronus');
     default: return '';
   }
@@ -1131,14 +1188,21 @@ const ORIG = {
   invoice: `<p>Beste heer Spierings,</p><p>In de bijlage vindt u de factuur over oktober 2026 van <b>€ 84,20</b>. Wilt u dit bedrag voor 31 oktober overmaken op NL91 ABNA 0417 1643 00 onder vermelding van 7001 2345 6789?</p><p>Liever automatisch betalen? Regel het in Mijn Energie.</p><p>Met vriendelijke groet,<br>Energie Voorbeeld</p>`,
   trip: `<div class="banner-img" style="background:#3a3f9a">Je reis naar Lissabon</div><p>Boekingscode <b>K7Q2ZP</b></p><p>VB 1234 · Amsterdam (AMS) 07:25 → Lissabon (LIS) 09:50</p><p>Online inchecken opent 48 uur voor vertrek.</p><a class="cta" style="background:#3a3f9a">Beheer je boeking</a><p class="faint">Bagage · Stoelkeuze · Voorwaarden</p>`,
   digest: `<div class="banner-img" style="background:#5a7a3a">Herfst bij Pedaal</div><p>Beste klant, de dagen worden korter en natter. Tot en met 31 oktober krijg je 20% korting op alle regenkleding en zijn bestellingen boven 50 euro gratis bezorgd.</p><a class="cta" style="background:#5a7a3a">Shop de collectie</a><p>Nieuw: fietsverlichting die 40 uur meegaat. En zaterdag 1 november gratis bandencheck in de winkel aan de Voorbeeldstraat 12.</p><p class="faint">Je ontvangt deze mail omdat je klant bent bij Fietsenwinkel Pedaal. Afmelden.</p>`,
+  ticket: `<div class="banner-img" style="background:#222">KAARTLOKET</div><p>Bedankt voor je bestelling!</p><p>Bestelnummer <b>KL-48291</b><br>2x Regular · € 74,00</p><p>Je e-tickets zitten als pdf in de bijlage. Let op: tickets moeten uiterlijk 14 dagen voor het evenement op naam staan. Dat doe je in je account.</p><a class="cta" style="background:#222">Naar mijn tickets</a><p class="faint">Kaartloket verkoopt tickets namens de organisator. Vragen over het evenement? Neem contact op met de organisator.</p>`,
   personal: `<p>Hoi Gideon,</p><p>Hebben jullie zin om zaterdag te komen eten? We dachten aan een uur of zes, de kinderen mogen mee. Laat je het even weten?</p><p>Groetjes,<br>Sanne</p>`,
 };
 
+const TICKET = {
+  type: 'ticket', id: 'm8', title: 'Neon Nineties', kindLong: "90's party", kind: 'staand', vendor: 'Kaartloket', domain: 'kaartloket.example.com', organiser: 'Neon Events',
+  venue: 'Voorbeeldhal, Utrecht', start: at(21, 0, 203), doors: at(20, 0, 203), count: 2, order: 'KL-48291', files: 2, holders: [null, null],
+  personalise: { due: at(23, 59, 189), done: false }, inCalendar: false, aliases: ["90's party", 'Neon Nineties', 'Voorbeeldhal', 'Kaartloket'],
+};
 const MAILS = [
   { id: 'm1', from: 'Noor de Vries', email: 'noor@studio.example.com', to: 'gideon@studio.example.com', subject: 'Weekstart team Noorderlicht', when: '08:10', card: MEETING, place: 'replace', orig: 'meeting', unread: true, p: '#7A6A5A' },
   { id: 'm2', from: 'Bank Voorbeeld', email: 'noreply@bank.example.nl', to: 'gideon@example.com', subject: 'Je inlogcode', when: fmtTime(t0 - MIN), card: { type: 'code', service: 'Bank Voorbeeld', code: '482 913', valid: 10 * MIN, until: t0 + 9 * MIN }, place: 'replace', orig: 'code', unread: true, p: '#2b5f8a' },
   { id: 'm3', from: 'Pakketdienst Voorbeeld', email: 'noreply@pakketdienst.example.com', to: 'gideon@example.com', subject: 'Je pakket komt vandaag tussen 14:15 en 16:45', when: '07:31', card: { type: 'parcel', carrier: 'Pakketdienst Voorbeeld', title: 'Bestelling bij Fietsenwinkel Pedaal', window: '14:15 tot 16:45', today: true, step: 2, track: '3SVBD1234567', items: 'Regenjas, maat L', address: 'Voorbeeldlaan 4', domain: 'pakketdienst.example.com' }, place: 'replace', orig: 'parcel', unread: true, p: '#e07b00' },
   { id: 'm4', from: 'Energie Voorbeeld', email: 'facturen@energie.example.nl', to: 'gideon@example.com', subject: 'Je factuur van oktober', when: 'Gisteren', card: { type: 'invoice', payee: 'Energie Voorbeeld', period: 'oktober 2026', amount: '€ 84,20', due: t0 + 5 * DAY, iban: 'NL91 ABNA 0417 1643 00', ref: '7001 2345 6789', pdf: 'factuur-2026-10.pdf', domain: 'energie.example.nl' }, place: 'above', orig: 'invoice', unread: true, p: '#85660F' },
+  { id: 'm8', from: 'Kaartloket', email: 'tickets@kaartloket.example.com', to: 'gideon@example.com', subject: 'Je bestelling KL-48291 is gelukt', when: 'ma', card: TICKET, place: 'above', orig: 'ticket', unread: true, p: '#B9436B' },
   { id: 'm5', from: 'Voorbeeld Airlines', email: 'booking@voorbeeldair.example.com', to: 'gideon@example.com', subject: 'Je boeking K7Q2ZP naar Lissabon', when: 'ma', card: { type: 'trip', flight: 'VB 1234', title: 'Amsterdam naar Lissabon', from: 'AMS', to: 'LIS', fromCity: 'Amsterdam', toCity: 'Lissabon', dep: at(7, 25, 9), arr: at(9, 50, 9), checkin: at(7, 25, 7), pnr: 'K7Q2ZP', pax: 'Gideon, Sanne', domain: 'voorbeeldair.example.com' }, place: 'above', orig: 'trip', unread: true, p: '#3a3f9a' },
   { id: 'm6', from: 'Fietsenwinkel Pedaal', email: 'nieuws@pedaal.example.com', to: 'gideon@example.com', subject: 'Herfstdeals op regenkleding', when: 'ma', card: { type: 'digest', sender: 'Fietsenwinkel Pedaal', title: 'Herfstdeals op regenkleding', points: ['20% korting op regenkleding tot en met 31 oktober.', 'Gratis bezorging boven 50 euro.', 'Zaterdag 1 november gratis bandencheck in de winkel.'], links: [['Shop de collectie', 'pedaal.example.com'], ['Fietsverlichting', 'pedaal.example.com'], ['Bandencheck reserveren', 'afspraak.example.nl']], domain: 'pedaal.example.com' }, place: 'replace', orig: 'digest', unread: true, summary: '20% korting op regenkleding tot en met 31 oktober.', p: '#5a7a3a' },
   { id: 'm7', from: 'Sanne Jansen', email: 'sanne@example.nl', to: 'gideon@example.com', subject: 'Etentje zaterdag?', when: 'zo', card: null, orig: 'personal', unread: false, summary: 'Sanne nodigt jullie uit voor zaterdag rond zes uur, kinderen welkom.', p: '#8A4FA3' },
@@ -1215,8 +1279,12 @@ const CAT = [
   ['Pakket · bezorgd', 'parcel', { ...MAILS[2].card, step: 3, deliveredAt: 'Vandaag 15:02, bij de voordeur' }],
   ['Factuur · klopt', 'invoice', MAILS[3].card],
   ['Factuur · ander IBAN dan eerder', 'invoice', { ...MAILS[3].card, iban: 'NL02 RABO 0123 4567 89', ibanChanged: true, due: t0 + 2 * DAY }],
-  ['Reis · inchecken nog dicht', 'trip', MAILS[4].card],
-  ['Nieuwsbrief · in plaats van de mail', 'digest', MAILS[5].card],
+  ['Reis · inchecken nog dicht', 'trip', MAILS[5].card],
+  ['Nieuwsbrief · in plaats van de mail', 'digest', MAILS[6].card],
+  ['Evenement · net besteld, ver vooruit', 'ticket', { ...TICKET, personalise: { ...TICKET.personalise }, inCalendar: false }],
+  ['Evenement · op naam zetten bijna te laat', 'ticket', { ...TICKET, start: t0 + 19 * DAY, doors: t0 + 19 * DAY - HOUR, personalise: { due: t0 + 5 * DAY, done: false }, inCalendar: true }],
+  ['Evenement · kaarten staan niet in de mail', 'ticket', { ...TICKET, title: 'Zomerweide Festival', kindLong: 'festival', vendor: 'Ticketvoorbeeld', files: 0, where: 'Ze staan in de app van Ticketvoorbeeld. Voeg ze toe als pdf, Wallet-pas of screenshot.', personalise: null, inCalendar: true, start: t0 + 60 * DAY, aliases: ['Zomerweide', 'festival'] }],
+  ['Evenement · vandaag', 'ticket', { ...TICKET, start: t0 + 3 * HOUR, doors: t0 + 2 * HOUR, personalise: { done: true }, holders: ['Gideon', 'Eva'], inCalendar: true }],
 ];
 function renderCat(now) {
   document.getElementById('cat').innerHTML = CAT.map(([cap, type, c]) => `<div><div class="cap">${esc(cap)}</div>${RENDER[type](c, now)}</div>`).join('');
@@ -1228,7 +1296,8 @@ function renderSpecimen(now) {
     ['Pakketdienst Voorbeeld', '07:31', 'Je pakket komt vandaag', MAILS[2].card],
     ['Energie Voorbeeld', 'Gisteren', 'Je factuur van oktober', MAILS[3].card],
     ['Waterbedrijf Voorbeeld', 'ma', 'Termijnbedrag november', { ...MAILS[3].card, amount: '€ 31,50', due: now0 + 2 * DAY, ibanChanged: true }],
-    ['Voorbeeld Airlines', 'ma', 'Je boeking K7Q2ZP', MAILS[4].card],
+    ['Kaartloket', 'ma', 'Je bestelling KL-48291 is gelukt', { ...TICKET, personalise: { due: now0 + 12 * DAY, done: false } }],
+    ['Voorbeeld Airlines', 'ma', 'Je boeking K7Q2ZP', MAILS[5].card],
     ['Bram Visser', 'vr', 'Retro', { ...MEETING, start: now0 - 2 * DAY, end: now0 - 2 * DAY + HOUR, cancelled: false }],
   ];
   document.getElementById('list-specimen').innerHTML = rows.map(([f, w, s, c], i) => `<div class="row ${i < 4 ? 'unread' : ''}"><span class="udot"></span><div><div class="l1"><b>${esc(f)}</b><span class="when">${w}</span></div><div class="l2">${esc(s)}</div>${liveLine(c, now)}</div></div>`).join('');
@@ -1241,11 +1310,13 @@ setInterval(renderAll, 1000);
 /* ---- interaction ---- */
 function toast(t) { const el = document.getElementById('toast'); el.textContent = t; el.classList.add('on'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('on'), 1600); }
 document.addEventListener('click', (e) => {
-  const b = e.target.closest('[data-toast],[data-id],[data-orig],[data-ev],[data-mode],[data-rsvp],[data-today]');
+  const b = e.target.closest('[data-toast],[data-id],[data-orig],[data-ev],[data-mode],[data-rsvp],[data-today],[data-cal],[data-named]');
   if (!b) return;
   if (b.dataset.toast) { e.preventDefault(); e.stopPropagation(); toast(b.dataset.toast); return; }
   if (b.dataset.rsvp !== undefined) { MEETING.answer = b.dataset.rsvp || null; if (b.dataset.rsvp) toast(`Jouw antwoord "${b.dataset.rsvp}" is verstuurd naar Noor de Vries`); }
   if (b.dataset.today) todayOpen = !todayOpen;
+  if (b.dataset.cal) { TICKET.inCalendar = true; toast('In Wij gezet, met 2 kaarten en de mail erbij. Eva krijgt een melding.'); }
+  if (b.dataset.named) { TICKET.personalise.done = true; TICKET.holders = ['Gideon', 'Eva']; toast('Afgevinkt. Namen gelezen uit de nieuwe kaarten.'); }
   if (b.dataset.id) { sel = b.dataset.id; MAILS.find((m) => m.id === sel).unread = false; }
   if (b.dataset.orig) { open.has(b.dataset.orig) ? open.delete(b.dataset.orig) : open.add(b.dataset.orig); }
   if (b.dataset.ev) { setEvent(b.dataset.ev); sel = 'm1'; document.querySelectorAll('[data-ev]').forEach((x) => x.classList.toggle('on', x === b)); }
