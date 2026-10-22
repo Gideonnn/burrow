@@ -55,6 +55,18 @@ struct TicketEntry: Identifiable {
     var id: String { "\(ticket.id)#\(index)" }
 
     static func all(_ tickets: [OutingTicket], _ previews: [String: TicketPreview]) -> [TicketEntry] {
+        let entries = everyFace(tickets, previews)
+        let keep = TicketDedupe.keep(entries.map { entry in
+            switch entry.face {
+            case let .pass(pass, _): .init(payload: pass.barcode?.message, isPass: true)
+            case let .code(code): .init(payload: code.payload, isPass: false)
+            case .file, .loading: .init(payload: nil, isPass: false)
+            }
+        })
+        return zip(entries, keep).filter(\.1).map(\.0)
+    }
+
+    private static func everyFace(_ tickets: [OutingTicket], _ previews: [String: TicketPreview]) -> [TicketEntry] {
         tickets.flatMap { ticket -> [TicketEntry] in
             switch previews[ticket.id] {
             case let .pass(pass, code): [TicketEntry(ticket: ticket, face: .pass(pass, code: code), index: 0)]
@@ -90,7 +102,7 @@ struct OutingTicketsBlock: View {
                     .frame(width: 34, height: 34)
                     .background((count == 0 && links.isEmpty ? Color.orange : Color.pink).opacity(0.14), in: RoundedRectangle(cornerRadius: 9))
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(title(count)).font(.body.weight(.medium))
+                    Text(title(count == 0 ? 0 : entries.count)).font(.body.weight(.medium))
                     Text(subtitle(count, links)).font(.callout).foregroundStyle(.secondary)
                 }
                 Spacer()
@@ -145,7 +157,7 @@ struct OutingTicketsBlock: View {
     }
 
     private func title(_ count: Int) -> String {
-        if count > 0 { return "\(count) \(count == 1 ? "kaart" : "kaarten") bewaard" }
+        if count > 0 { return "\(count) \(count == 1 ? "kaartje" : "kaartjes") bewaard" }
         return outing.shopSentence ?? "Nog geen kaarten"
     }
 

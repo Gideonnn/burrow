@@ -25,6 +25,9 @@ struct OutingDetailView: View {
                     if !outing.isPast() {
                         OutingTicketsBlock(outing: outing)
                         OutingChecklist(outing: outing)
+                    } else if !outing.tickets.isEmpty || !(outing.ticketLinks ?? []).isEmpty {
+                        // Looking back: the tickets stay, the to-do list does not.
+                        OutingTicketsBlock(outing: outing)
                     }
                     detailsToggle
                     if model.showsOutingDetails {
