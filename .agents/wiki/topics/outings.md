@@ -45,5 +45,6 @@ changing `organize`. MCP: `list_outings` (read) and `add_outing` (organize); no 
 
 ## Not yet
 
-Calendar sync to the shared calendar, reminders before a deadline, and the Evenementen
-page in Hedwig (its design is being iterated) follow; see `TODO.md`.
+Calendar sync to the shared calendar (every outing goes in, without a button), tickets
+to each person's Telegram on the day, reminders before a deadline, and the Evenementen
+page in Hedwig (design v2 in `docs/design/hedwig-events.html`) follow; see `TODO.md`.

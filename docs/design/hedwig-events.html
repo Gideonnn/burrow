@@ -4,8 +4,9 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="color-scheme" content="light dark" />
-<title>Hedwig · evenementen · ontwerp v1</title>
+<title>Hedwig · evenementen · ontwerp v2</title>
 <style>
+/* Tokens and components copied from burrow-design-system.html (v2). */
 /* ---------------------------------------------------------------------------
    Tokens. Light is the default; dark lives on [data-theme=dark] so the whole
    document, or one mockup, can switch. Every colour below is listed with its
@@ -660,950 +661,296 @@ textarea.field { height: auto; padding: 8px 10px; resize: none; font: inherit; w
     <symbol id="i-brain" viewBox="0 0 24 24"><path d="M9 4a3 3 0 0 0-3 3 3 3 0 0 0-2 5 3 3 0 0 0 2 5 3 3 0 0 0 3 3h3V4zM15 4a3 3 0 0 1 3 3 3 3 0 0 1 2 5 3 3 0 0 1-2 5 3 3 0 0 1-3 3h-3V4z"/></symbol>
   </defs>
 </svg>
-<svg width="0" height="0" style="position:absolute" aria-hidden="true">
-  <symbol id="i-ticket" viewBox="0 0 24 24"><path d="M3 8a2 2 0 0 0 2-2h14a2 2 0 0 0 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 0-2 2H5a2 2 0 0 0-2-2v-2a2 2 0 0 0 0-4z"/><path d="M14 6v12" stroke-dasharray="2 2"/></symbol>
-  <symbol id="i-ext" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4"/></symbol>
-  <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-8 9"/></symbol>
-  <symbol id="i-wallet" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="14" rx="2.5"/><path d="M3 10h18M6 6l9-3 2 3"/><circle cx="16.5" cy="15" r="1.2" fill="currentColor"/></symbol>
-  <symbol id="i-chev-l" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></symbol>
-</svg>
-
 <style>
-/* Evenementen page. Own classes carry the ev- prefix; .ctrl matches hedwig-cards. */
-.ctrl { display: flex; gap: 10px 18px; align-items: center; flex-wrap: wrap; margin: 0 auto 14px; max-width: 1280px; font-size: 12.5px; color: var(--text-2); }
-.ctrl .grp { display: flex; gap: 8px; align-items: center; }
-.ev { --k: var(--remembrall); }
-.mac.ev-win { height: 900px; }
-.mac .body.three.ev-three { grid-template-columns: 200px 330px minmax(0, 1fr); }
-.ev-q { flex: 1; min-width: 0; border: 0; background: transparent; font: inherit; font-size: 13px; color: var(--text); outline: none; padding: 0; }
-.ev-q::placeholder { color: var(--text-3); }
-button.tb-cap.text { cursor: pointer; }
-.btn.ev-k { background: var(--k); color: #fff; border-color: transparent; }
-.btn.ev-h { background: var(--app, var(--hedwig)); color: #fff; border-color: transparent; }
-[data-theme="dark"] .btn.ev-k, [data-theme="dark"] .btn.ev-h { color: #1C1A17; }
+.e2-win { height: 760px; }
+.mac .body.e2-body { grid-template-columns: 200px 360px 1fr; }
+.e2-list { padding: 6px 10px 16px; display: flex; flex-direction: column; gap: 8px; overflow: auto; }
+.e2-h { font-size: 11px; font-weight: 600; color: var(--text-3); padding: 10px 4px 2px; }
+.e2-item { display: grid; grid-template-columns: 48px 1fr; gap: 12px; padding: 10px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); cursor: pointer; align-items: center; }
+.e2-item:hover { background: var(--hover); }
+.e2-item.sel { border-color: color-mix(in srgb, var(--hedwig) 60%, var(--line)); box-shadow: 0 0 0 3px color-mix(in srgb, var(--hedwig) 16%, transparent); }
+.e2-item.past { opacity: .55; }
+.e2-date { text-align: center; border-radius: 10px; background: var(--surface-2); padding: 4px 0 5px; line-height: 1.1; }
+.e2-date small { display: block; font-size: 10px; font-weight: 700; color: var(--remembrall); text-transform: uppercase; }
+.e2-date b { font-size: 20px; }
+.e2-item .t { font-weight: 600; font-size: 14px; }
+.e2-item .p { font-size: 12px; color: var(--text-2); }
+.e2-status { font-size: 12px; margin-top: 4px; display: flex; gap: 5px; align-items: center; }
+.e2-status.ok { color: var(--success); } .e2-status.todo { color: var(--warning); } .e2-status.today { color: var(--hedwig); font-weight: 600; }
+.e2-status svg { flex: none; }
+.e2-add { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px; border-radius: 12px; border: 1px dashed var(--line-strong); color: var(--text-2); font-size: 13px; cursor: pointer; }
+.e2-add:hover { background: var(--hover); }
 
-/* list */
-.ev-grp { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; color: var(--text-3); padding: 12px 14px 4px; }
-.ev-row { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 10px; padding: 10px 12px; border-bottom: 1px solid var(--line); cursor: pointer; align-items: start; position: relative; }
-.ev-row:hover { background: var(--hover); }
-.ev-row.on { background: color-mix(in srgb, var(--app) 15%, var(--surface)); }
-.ev-row.on::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--app); }
-.ev-date { width: 44px; border-radius: 9px; border: 1px solid var(--line); background: var(--surface); text-align: center; overflow: hidden; line-height: 1.1; box-shadow: var(--shadow-1); }
-.ev-date i { display: block; font-style: normal; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; padding: 2px 0; background: var(--k); color: #fff; }
-[data-theme="dark"] .ev-date i { color: #1C1A17; }
-.ev-date b { display: block; font-size: 18px; font-weight: 700; padding-top: 3px; font-variant-numeric: tabular-nums; }
-.ev-date small { display: block; font-size: 10px; color: var(--text-2); padding-bottom: 3px; }
-.ev-row.past .ev-date i { background: var(--text-3); }
-.ev-row .t { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
-.ev-row .l1 { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
-.ev-row .t b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
-.ev-row .t .s { font-size: 12px; color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ev-row .via { font-size: 11.5px; color: var(--text-2); display: flex; gap: 4px; align-items: center; }
-.ev-row .via mark, .ev-hl { background: color-mix(in srgb, var(--gringotts) 28%, transparent); color: inherit; border-radius: 3px; padding: 0 3px; }
-.ev-row .bds { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 5px; }
-.ev-row .rt { font-size: 12px; color: var(--text-2); white-space: nowrap; font-variant-numeric: tabular-nums; text-align: right; flex: none; }
-.ev-row .rt.now { color: var(--k); font-weight: 700; }
-.ev-row.past .t b { color: var(--text-2); font-weight: 500; }
-.ev-row.past .ev-date { box-shadow: none; opacity: 0.8; }
-.badge.ev-wij { background: color-mix(in srgb, var(--clock) 14%, transparent); color: var(--clock); }
-.badge.ev-wij::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
-.banner.warn.ev-ban { cursor: pointer; }
-.banner.warn.ev-ban:hover { filter: brightness(0.98); }
-.ev-listft { padding: 12px 14px 16px; font-size: 11.5px; color: var(--text-3); line-height: 1.4; }
+.e2-detail { overflow: auto; padding: 28px 32px 40px; display: flex; flex-direction: column; gap: 22px; }
+.e2-top { display: flex; gap: 18px; align-items: center; }
+.e2-top .e2-date { width: 64px; padding: 6px 0 8px; } .e2-top .e2-date b { font-size: 28px; }
+.e2-top h2 { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; margin: 0; }
+.e2-top .sub { color: var(--text-2); font-size: 14px; margin-top: 2px; }
+.e2-facts { display: grid; grid-template-columns: 90px 1fr auto; gap: 14px 16px; align-items: center; font-size: 14px; }
+.e2-facts .k { color: var(--text-2); font-size: 13px; }
+.e2-faces { display: flex; gap: 6px; align-items: center; }
+.e2-faces .who { display: inline-flex; gap: 6px; align-items: center; padding: 2px 10px 2px 2px; border-radius: 999px; background: var(--surface-2); font-size: 13px; }
+.e2-block { border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.e2-block h3 { font-size: 13px; font-weight: 600; color: var(--text-2); margin: 0; display: flex; gap: 6px; align-items: center; }
+.e2-todo { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; cursor: pointer; }
+.e2-todo .c { width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid var(--line-strong); flex: none; display: grid; place-items: center; margin-top: 1px; }
+.e2-todo.done .c { background: var(--success); border-color: var(--success); color: #fff; }
+.e2-todo.done .l { color: var(--text-3); text-decoration: line-through; }
+.e2-todo .l small { display: block; font-size: 12px; color: var(--warning); text-decoration: none; }
+.e2-todo.done .l small { color: var(--text-3); }
+.e2-tix { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+.e2-tix .ic { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: color-mix(in srgb, #2AABEE 16%, transparent); color: #2AABEE; flex: none; }
+.e2-tix small { display: block; color: var(--text-2); font-size: 12px; }
+.e2-more { align-self: flex-start; color: var(--text-2); font-size: 13px; display: flex; gap: 6px; align-items: center; cursor: pointer; padding: 6px 10px; border-radius: 8px; }
+.e2-more:hover { background: var(--hover); }
+.e2-more svg { transition: transform 150ms; }
+.e2-more.open svg { transform: rotate(180deg); }
+.e2-details { display: none; flex-direction: column; gap: 16px; border-top: 1px solid var(--line); padding-top: 16px; }
+.e2-details.open { display: flex; }
+.e2-details .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.e2-field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--text-2); }
+.e2-field .field { color: var(--text); }
+.e2-row { display: flex; gap: 8px; align-items: center; font-size: 13px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.e2-row:last-child { border-bottom: 0; }
+.e2-row .grow { flex: 1; }
+.e2-row small { color: var(--text-2); }
 
-/* detail */
-.ev-dhead { display: flex; gap: 12px; align-items: flex-start; padding: 14px 20px 12px; border-bottom: 1px solid var(--line); }
-.ev-tile { width: 40px; height: 40px; border-radius: 10px; background: color-mix(in srgb, var(--k) 14%, transparent); color: var(--k); display: grid; place-items: center; flex: none; }
-.ev-tile.past { background: var(--surface-2); color: var(--text-3); }
-.ev-ttl { flex: 1; min-width: 0; }
-.ev-kindrow { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
-.ev-kind { display: inline-flex; align-items: center; gap: 3px; height: 20px; padding: 0 5px 0 8px; border-radius: 999px; background: color-mix(in srgb, var(--k) 14%, transparent); color: var(--k); font-size: 11.5px; font-weight: 600; }
-.ev-kind svg { width: 11px; height: 11px; }
-.ev-title { display: block; font: inherit; font-size: 20px; font-weight: 700; letter-spacing: -0.01em; border: 1px solid transparent; border-radius: 6px; background: transparent; color: var(--text); padding: 0 6px; margin: 3px 0 2px -7px; width: calc(100% + 7px); height: 30px; }
-.ev-in { font: inherit; font-size: 12.5px; height: 26px; border: 1px solid transparent; border-radius: 6px; background: transparent; color: var(--text); padding: 0 6px; margin-left: -7px; width: calc(100% + 7px); min-width: 0; }
-textarea.ev-in { height: auto; min-height: 54px; padding: 5px 6px; resize: none; line-height: 1.4; display: block; }
-.ev-in::placeholder, .ev-title::placeholder { color: var(--text-3); }
-.ev-in:hover, .ev-title:hover { border-color: var(--line); background: var(--surface-2); }
-.ev-in:focus, .ev-title:focus { outline: none; border-color: var(--app); background: var(--surface); box-shadow: 0 0 0 3px color-mix(in srgb, var(--app) 22%, transparent); }
-.ev-by { font-size: 12px; color: var(--text-2); display: flex; gap: 6px; align-items: flex-start; line-height: 1.4; }
-.ev-by > span:last-child { flex: 1; min-width: 0; }
-.ev-by .av.sm { margin-top: 1px; }
-.ev-by .av.sm { width: 16px; height: 16px; font-size: 8px; }
-.ev-hacts { display: flex; gap: 6px; align-items: center; padding-top: 2px; }
-.ev-wijst { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; border-radius: 7px; font-size: 13px; font-weight: 600; color: var(--clock); background: color-mix(in srgb, var(--clock) 12%, transparent); }
-.ev-dbody { padding: 16px 20px 28px; display: flex; flex-direction: column; gap: 16px; }
-.ev-hero { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
-.ev-hero .big { font-size: 22px; font-weight: 650; letter-spacing: -0.01em; }
-.ev-hero .rel { font-size: 13px; color: var(--text-2); }
-.ev-hero.past .big { color: var(--text-2); }
-.ev-count { display: flex; align-items: center; gap: 14px; padding: 12px 14px; border-radius: 12px; background: color-mix(in srgb, var(--k) 10%, transparent); }
-.ev-count .n { font-size: 36px; font-weight: 700; letter-spacing: -0.02em; color: var(--k); line-height: 1; font-variant-numeric: tabular-nums; }
-.ev-count .l { font-size: 12.5px; color: var(--text-2); line-height: 1.4; }
-.ev-count .l b { display: block; color: var(--text); font-size: 14px; font-weight: 600; }
-.ev-acts { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-.ev-acts .grow { flex: 1; }
-.ev-today { display: flex; flex-direction: column; gap: 10px; }
-.ev-note { font-size: 12.5px; background: var(--surface-2); border-left: 2px solid var(--k); padding: 7px 10px; border-radius: 0 6px 6px 0; line-height: 1.45; }
-.ev-note b { font-weight: 600; display: block; font-size: 11.5px; color: var(--text-2); }
-.ev-alert { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 10px; background: var(--warning-tint); font-size: 12.5px; line-height: 1.4; }
-.ev-alert > svg { color: var(--warning); margin-top: 2px; }
-.ev-alert .grow { flex: 1; }
-.ev-alert b { display: block; color: var(--warning); font-weight: 650; }
-.ev-cols { display: grid; grid-template-columns: minmax(0, 1fr) 290px; gap: 22px; align-items: start; }
-.ev-col { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
-.ev-sec h3 { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--text-2); margin: 0 0 8px; min-height: 22px; }
-.ev-sec h3 > svg { color: var(--text-3); }
-.ev-sec h3 .n { font-weight: 500; color: var(--text-3); }
-.ev-sec h3 .grow { flex: 1; }
-.ev-sec h3 .aside { font-weight: 400; font-size: 11.5px; color: var(--text-3); }
-.ev-hint { font-size: 11.5px; color: var(--text-3); margin: 7px 0 0; line-height: 1.4; }
-.ev-form { display: grid; grid-template-columns: 70px minmax(0, 1fr); gap: 3px 10px; align-items: center; font-size: 12.5px; }
-.ev-form > label { color: var(--text-2); align-self: center; }
-.ev-form > label.top { align-self: start; padding-top: 5px; }
-.ev-times { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding-left: 7px; }
-.ev-times label { display: flex; flex-direction: column; font-size: 10.5px; color: var(--text-3); line-height: 1.2; }
-.ev-times .ev-in { font-variant-numeric: tabular-nums; }
-.ev-addr { display: flex; gap: 6px; align-items: center; min-width: 0; padding-left: 7px; }
-.ev-addr .ev-in { flex: 1; width: auto; }
-.ev-who { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; padding: 3px 0; }
-.chip .av.sm { width: 18px; height: 18px; font-size: 8.5px; }
-.chip.add { cursor: pointer; }
+.e2-sheet { max-width: 460px; margin: 0 auto; background: var(--surface); border-radius: 16px; box-shadow: var(--shadow-3); padding: 22px; display: flex; flex-direction: column; gap: 14px; }
+.e2-sheet h3 { margin: 0; font-size: 17px; }
+.e2-drop { border: 1.5px dashed var(--line-strong); border-radius: 12px; padding: 16px; text-align: center; color: var(--text-2); font-size: 13px; }
+.e2-in { display: flex; flex-direction: column; gap: 5px; font-size: 12px; color: var(--text-2); }
+.e2-in .field { height: 34px; font-size: 14px; }
 
-/* checklist (same look as the Evenement card) */
-.ev-chk { display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--surface); }
-.ev-ci { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; gap: 9px; align-items: center; padding: 7px 10px; font-size: 12.5px; border-bottom: 1px solid var(--line); min-height: 40px; }
-.ev-ci:last-child { border-bottom: 0; }
-.ev-ci .l { min-width: 0; line-height: 1.3; }
-.ev-ci .l small { display: block; color: var(--text-2); font-size: 11.5px; line-height: 1.35; margin-top: 1px; }
-.ev-ci.struck .l > span { color: var(--text-3); text-decoration: line-through; }
-.ev-ci.warn { background: var(--warning-tint); }
-.ev-ci.warn .l small.d { color: var(--warning); font-weight: 600; }
-.ev-ci .acts { display: flex; gap: 4px; align-items: center; }
-.ev-ci .l .acts { margin-top: 6px; }
-.ev-s { width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; border: 1.5px solid var(--line-strong); background: var(--surface); }
-.ev-s:hover { border-color: var(--app); }
-.ev-s svg { width: 11px; height: 11px; stroke-width: 2.6; }
-.ev-s.ok { background: var(--success); border-color: transparent; color: var(--surface); }
-.ev-s.warn { border-color: var(--warning); border-width: 2px; }
-.ev-ci.add { grid-template-columns: 18px minmax(0, 1fr) auto auto; background: var(--surface-2); }
-.ev-ci.add > svg { color: var(--text-3); justify-self: center; }
-.ev-ci.add .ev-in { margin-left: -6px; }
-.ev-sel { font: inherit; font-size: 12px; height: 24px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--text); padding: 0 4px; }
-.ev-due { width: 78px !important; margin-left: 0 !important; border-color: var(--line) !important; background: var(--surface) !important; }
-.ev-tag { font-size: 11px; color: var(--text-3); white-space: nowrap; }
+.e2-phone { width: 330px; border-radius: 40px; background: #111; padding: 12px; box-shadow: var(--shadow-3); margin: 0 auto; }
+.e2-screen { border-radius: 30px; overflow: hidden; background: #8fa9bd; height: 620px; display: flex; flex-direction: column; font-size: 14px; }
+[data-theme="dark"] .e2-screen { background: #17212b; }
+.e2-tg-bar { background: var(--surface); padding: 30px 14px 10px; display: flex; gap: 10px; align-items: center; border-bottom: 1px solid var(--line); }
+.e2-tg-bar .av { background: #5A5FBF; }
+.e2-tg-bar b { display: block; font-size: 14px; } .e2-tg-bar span { font-size: 11.5px; color: var(--text-2); }
+.e2-msgs { padding: 12px; display: flex; flex-direction: column; gap: 8px; overflow: hidden; }
+.e2-day { align-self: center; font-size: 11px; background: rgba(0,0,0,.25); color: #fff; padding: 2px 8px; border-radius: 999px; }
+.e2-msg { align-self: flex-start; max-width: 88%; background: var(--surface); border-radius: 14px 14px 14px 4px; padding: 8px 10px; line-height: 1.4; box-shadow: 0 1px 1px rgba(0,0,0,.12); }
+.e2-msg small { display: block; text-align: right; font-size: 10.5px; color: var(--text-3); }
+.e2-file { display: flex; gap: 10px; align-items: center; }
+.e2-file .fi { width: 40px; height: 40px; border-radius: 10px; background: #2AABEE; color: #fff; display: grid; place-items: center; font-size: 10px; font-weight: 700; }
+.e2-file small { display: inline; text-align: left; }
+.e2-kb { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; max-width: 88%; }
+.e2-kb span { background: rgba(255,255,255,.55); color: #1d1d1d; border-radius: 8px; padding: 6px; font-size: 12.5px; font-weight: 500; text-align: center; }
+[data-theme="dark"] .e2-kb span { background: rgba(255,255,255,.12); color: var(--text); }
 
-/* tickets */
-.ev-tks { display: flex; flex-direction: column; gap: 6px; }
-.ev-tk { display: grid; grid-template-columns: 42px minmax(0, 1fr) auto; gap: 9px; align-items: center; border: 1px solid var(--line); border-radius: 9px; padding: 6px 8px 6px 6px; background: var(--surface); cursor: pointer; }
-.ev-tk:hover { background: var(--hover); }
-.ev-tk .qrw { width: 42px; height: 42px; border-radius: 5px; overflow: hidden; border: 1px solid var(--line); background: #fff; }
-.ev-tk .qrw svg { display: block; width: 100%; height: 100%; }
-.ev-tk .who { min-width: 0; line-height: 1.25; }
-.ev-tk .who small { display: block; font-size: 11px; color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ev-tk .nm { display: flex; align-items: center; gap: 2px; min-width: 0; }
-.ev-tk .nm > svg { width: 10px; height: 10px; color: var(--text-3); margin-right: 4px; }
-.ev-tk > svg { color: var(--text-3); }
-.ev-holder { field-sizing: content; appearance: none; -webkit-appearance: none; font: inherit; font-size: 12.5px; font-weight: 600; color: var(--text); background: transparent; border: 1px solid transparent; border-radius: 5px; padding: 0 2px; margin-left: -3px; height: 20px; cursor: pointer; }
-.ev-holder:hover { border-color: var(--line); background: var(--surface-2); }
-.ev-tk.past { opacity: 0.55; }
-.ev-tk.past .qrw { filter: grayscale(1) opacity(0.5); }
-.ev-rel { position: relative; }
-.ev-addtk { display: flex; width: 100%; align-items: center; justify-content: center; gap: 6px; border: 1px dashed var(--line-strong); border-radius: 9px; padding: 7px 12px; font-size: 12px; color: var(--text-2); margin-top: 6px; }
-.ev-addtk:hover { background: var(--hover); color: var(--text); }
-.ev-drop { border: 1.5px dashed var(--line-strong); border-radius: 10px; padding: 14px 12px 12px; text-align: center; font-size: 12.5px; color: var(--text-2); display: flex; flex-direction: column; align-items: center; gap: 6px; line-height: 1.4; }
-.ev-drop > svg { width: 26px; height: 26px; color: var(--text-3); stroke-width: 1.4; }
-.ev-drop b { color: var(--danger); font-weight: 650; }
-.ev-drop .ev-acts { justify-content: center; margin-top: 4px; }
-.ev-priv { display: flex; gap: 6px; align-items: flex-start; font-size: 11.5px; color: var(--text-2); margin-top: 8px; line-height: 1.4; }
-.ev-priv svg { color: var(--info); margin-top: 1px; }
-.ev-menu { position: absolute; z-index: 15; left: 0; right: 0; top: calc(100% + 4px); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow-2); padding: 5px; min-width: 250px; }
-.ev-menu.up { top: auto; bottom: calc(100% + 4px); }
-.ev-menu.kindm { right: auto; width: 220px; }
-.ev-menu .lbl { font-size: 11px; font-weight: 600; color: var(--text-3); padding: 5px 8px 3px; }
-.ev-menu .none { font-size: 12px; color: var(--text-3); padding: 4px 8px 6px; }
-.ev-menu .sep { height: 1px; background: var(--line); margin: 4px 2px; }
-.ev-menu button { display: flex; width: 100%; gap: 8px; align-items: flex-start; padding: 6px 8px; border-radius: 6px; font-size: 12.5px; text-align: left; line-height: 1.3; }
-.ev-menu button > svg { margin-top: 1px; color: var(--text-2); }
-.ev-menu button small { display: block; color: var(--text-2); font-size: 11px; }
-.ev-menu button:hover { background: var(--app); color: #fff; }
-.ev-menu button:hover small, .ev-menu button:hover > svg { color: rgba(255,255,255,0.85); }
-[data-theme="dark"] .ev-menu button:hover { color: #1C1A17; }
-[data-theme="dark"] .ev-menu button:hover small, [data-theme="dark"] .ev-menu button:hover > svg { color: rgba(28,26,23,0.8); }
-.ev-menu button .ck { width: 14px; flex: none; }
-
-/* mails, aliases, history */
-.ev-mails { display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
-.ev-mails a { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 7px 10px; font-size: 12.5px; color: var(--text); border-bottom: 1px solid var(--line); line-height: 1.3; }
-.ev-mails a:last-child { border-bottom: 0; }
-.ev-mails a:hover { background: var(--hover); text-decoration: none; }
-.ev-mails a > svg:first-child { color: var(--app); }
-.ev-mails a > svg:last-child { color: var(--text-3); }
-.ev-mails a span { min-width: 0; }
-.ev-mails a span b { display: block; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ev-mails a small { color: var(--text-2); font-size: 11px; display: flex; gap: 4px; align-items: center; white-space: nowrap; overflow: hidden; }
-.ev-mails a small svg { width: 11px; height: 11px; }
-.ev-mails .badge { font-size: 10.5px; height: 17px; padding: 0 6px; }
-.ev-als { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
-.ev-al { display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 3px 0 8px; border-radius: 11px; border: 1px solid var(--line-strong); font-size: 12px; background: var(--surface); }
-.ev-al small { color: var(--text-3); font-size: 10.5px; }
-.ev-al button { width: 16px; height: 16px; border-radius: 50%; display: grid; place-items: center; color: var(--text-3); }
-.ev-al button:hover { background: var(--hover); color: var(--text); }
-.ev-al button svg { width: 10px; height: 10px; stroke-width: 2.2; }
-.ev-aladd { font: inherit; font-size: 12px; height: 22px; width: 104px; border: 1px dashed var(--line-strong); border-radius: 11px; padding: 0 9px; background: transparent; color: var(--text); }
-.ev-aladd:focus { outline: none; border-style: solid; border-color: var(--app); width: 150px; }
-.ev-aladd::placeholder { color: var(--text-2); }
-.ev-hist { display: flex; flex-direction: column; gap: 2px; }
-.ev-hist .h { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 8px; font-size: 12px; padding: 3px 0; line-height: 1.35; align-items: start; }
-.ev-hist .h small { display: block; color: var(--text-3); font-size: 11px; }
-.ev-hist .av.sm { width: 18px; height: 18px; font-size: 8.5px; }
-.ev-hist .av.bot svg { width: 11px; height: 11px; }
-.ev-hist .h.new { animation: evflash 1.2s ease-out; border-radius: 4px; }
-@keyframes evflash { from { background: color-mix(in srgb, var(--app) 22%, transparent); } to { background: transparent; } }
-
-/* modal sheet inside the window, and the same sheet in the document */
-.ev-modal { position: absolute; left: 0; right: 0; top: 52px; bottom: 0; background: color-mix(in srgb, #000 30%, transparent); display: flex; justify-content: center; align-items: flex-start; z-index: 30; padding: 18px 20px; }
-.ev-modal .ev-sheet { max-height: 100%; }
-.ev-sheet { width: 590px; max-width: 100%; background: var(--surface); border-radius: 14px; box-shadow: var(--shadow-3); display: flex; flex-direction: column; overflow: hidden; text-align: left; font-size: 13px; color: var(--text); }
-.ev-sh-hd { display: flex; gap: 12px; align-items: flex-start; padding: 16px 20px 12px; border-bottom: 1px solid var(--line); }
-.ev-sh-hd .grow { flex: 1; min-width: 0; }
-.ev-sh-hd h3 { font-size: 16px; margin: 0 0 3px; }
-.ev-sh-hd p { margin: 1px 0 0; font-size: 12px; color: var(--text-2); display: flex; gap: 5px; align-items: center; flex-wrap: wrap; }
-.ev-sh-hd p b { color: var(--text); font-weight: 500; }
-.ev-sh-bd { padding: 14px 20px 16px; display: flex; flex-direction: column; gap: 14px; overflow: auto; min-height: 0; }
-.ev-sh-grid { display: grid; grid-template-columns: 74px minmax(0, 1fr) 96px; gap: 7px 10px; align-items: center; }
-.ev-sh-grid > label { font-size: 12.5px; color: var(--text-2); text-align: right; }
-.ev-fi { font: inherit; font-size: 13px; height: 28px; border: 1px solid var(--line-strong); border-radius: 7px; background: var(--surface); color: var(--text); padding: 0 9px; width: 100%; min-width: 0; }
-.ev-fi::placeholder { color: var(--text-3); }
-.ev-fi:focus, .ev-fi:focus-within { outline: none; border-color: var(--app); box-shadow: 0 0 0 3px color-mix(in srgb, var(--app) 22%, transparent); }
-.ev-fi.got { background: color-mix(in srgb, var(--app) 6%, var(--surface)); }
-.ev-fl { display: flex; align-items: center; gap: 6px; }
-.ev-fl small { color: var(--text-3); font-size: 11.5px; white-space: nowrap; }
-.ev-fl input { border: 0; background: transparent; font: inherit; color: inherit; width: 100%; outline: none; min-width: 0; padding: 0; font-variant-numeric: tabular-nums; }
-.ev-fl input::placeholder { color: var(--text-3); }
-.ev-tm3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
-.ev-from { font-size: 11px; color: var(--app); display: inline-flex; gap: 4px; align-items: center; white-space: nowrap; }
-.ev-from.miss { color: var(--text-3); }
-.ev-sh-grid .seg { flex-wrap: wrap; }
-.ev-sh-grid .seg button { padding: 0 9px; }
-.ev-sh-lbl { font-size: 12px; font-weight: 700; color: var(--text-2); margin-bottom: 6px; }
-.ev-found { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
-.ev-found .r { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 9px; padding: 8px 12px; border-bottom: 1px solid var(--line); font-size: 12.5px; cursor: pointer; line-height: 1.35; align-items: start; }
-.ev-found .r:last-child { border-bottom: 0; }
-.ev-found .r:hover { background: var(--hover); }
-.ev-found .r b { font-weight: 600; }
-.ev-found .r small { display: block; color: var(--text-2); font-size: 11.5px; }
-.ev-cb { width: 16px; height: 16px; border-radius: 4px; border: 1px solid var(--line-strong); background: var(--surface); display: grid; place-items: center; margin-top: 1px; color: var(--surface); }
-.ev-cb svg { width: 11px; height: 11px; stroke-width: 2.6; visibility: hidden; }
-.ev-cb.on { background: var(--app); border-color: transparent; }
-.ev-cb.on svg { visibility: visible; }
-.ev-sh-tg { display: flex; align-items: center; gap: 12px; padding: 9px 12px; border: 1px solid var(--line); border-radius: 10px; }
-.ev-sh-tg .lbl { flex: 1; line-height: 1.3; }
-.ev-sh-tg .lbl small { display: block; font-size: 11.5px; color: var(--text-2); }
-.ev-sh-ft { display: flex; gap: 8px; align-items: center; padding: 12px 20px; border-top: 1px solid var(--line); background: var(--surface-2); }
-.ev-sh-ft .grow { flex: 1; }
-.ev-sh-ft .muted { display: inline-flex; gap: 5px; align-items: center; }
-.chip.ev-off { opacity: 0.4; }
-button.chip { cursor: pointer; }
-.ev-dim { background: color-mix(in srgb, #000 24%, var(--sidebar)); border-radius: 12px; padding: 36px 20px; display: flex; justify-content: center; }
-.ev-pair { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 18px; align-items: start; }
-@media (max-width: 1100px) { .ev-pair { grid-template-columns: 1fr; } }
-
-/* Kaarten tonen */
-.ev-show { background: #0d0d0e; color: #f5f5f5; display: flex; flex-direction: column; padding: 16px 22px 22px; gap: 16px; font-size: 13px; }
-.ev-show.full { position: fixed; inset: 0; z-index: 200; }
-.ev-show-top { display: flex; align-items: center; gap: 10px; font-size: 12.5px; color: rgba(255,255,255,0.7); }
-.ev-show-top .grow { flex: 1; }
-.ev-show-top .bright { display: inline-flex; gap: 6px; align-items: center; color: #FFD66B; font-weight: 600; }
-.ev-show-x { height: 28px; padding: 0 12px; border-radius: 14px; background: rgba(255,255,255,0.14); color: #fff; font-weight: 600; display: inline-flex; gap: 8px; align-items: center; }
-.ev-show-x kbd { background: rgba(255,255,255,0.14); border: 0; color: #fff; }
-.ev-show-mid { flex: 1; display: flex; align-items: center; justify-content: center; gap: 28px; }
-.ev-nav { width: 44px; height: 44px; border-radius: 50%; background: rgba(255,255,255,0.12); color: #fff; display: grid; place-items: center; }
-.ev-nav:hover { background: rgba(255,255,255,0.2); }
-.ev-nav[disabled] { opacity: 0.2; cursor: default; }
-.ev-pass { width: 360px; background: #fff; color: #151515; border-radius: 20px; padding: 18px 22px 16px; display: flex; flex-direction: column; align-items: center; gap: 8px; box-shadow: 0 30px 80px rgba(0,0,0,0.6); }
-.ev-pass-hd { width: 100%; display: flex; justify-content: space-between; align-items: baseline; gap: 10px; border-bottom: 1px dashed #d4d4d4; padding-bottom: 10px; margin-bottom: 4px; }
-.ev-pass-hd b { font-size: 16px; }
-.ev-pass-hd span { font-size: 12px; color: #666; white-space: nowrap; }
-.ev-pass-qr svg { display: block; }
-.ev-pass-name { font-size: 22px; font-weight: 700; letter-spacing: -0.01em; margin-top: 4px; }
-.ev-pass-sub { font-size: 12.5px; color: #555; display: flex; gap: 6px; align-items: center; }
-.ev-pass-sub .ok { color: #2A7549; font-weight: 600; }
-.ev-pass-sub .no { color: #9A5B00; font-weight: 600; }
-.ev-pass-code { font-family: var(--mono); font-size: 12px; color: #777; letter-spacing: 0.08em; }
-.ev-dots { display: flex; justify-content: center; gap: 6px; }
-.ev-dots i { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,0.3); }
-.ev-dots i.on { background: #fff; }
-.ev-show-ft { text-align: center; font-size: 12.5px; color: rgba(255,255,255,0.65); }
-.ev-screen { border-radius: 16px; overflow: hidden; box-shadow: var(--shadow-3); border: 9px solid #1d1d1f; }
-.ev-screen .ev-show { min-height: 640px; }
-
-/* states */
-.ev-states { display: grid; grid-template-columns: repeat(auto-fill, minmax(390px, 1fr)); gap: 18px; align-items: start; }
-.ev-stcard .cap { font-size: 12px; font-weight: 600; color: var(--text-2); margin: 0 0 6px; display: flex; gap: 8px; align-items: center; }
-.ev-stcard .cap .grow { flex: 1; }
-.ev-stcard .cap button { font-size: 12px; color: var(--hedwig); font-weight: 500; }
-.ev-stcard > p { margin: 8px 2px 0; }
-.ev-mini { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-1); overflow: hidden; font-size: 13px; }
-.ev-mini .ev-dhead { padding: 12px 14px 10px; }
-.ev-mini .ev-tile { width: 32px; height: 32px; border-radius: 8px; }
-.ev-mini .ev-ttl > b { display: block; font-size: 15px; font-weight: 650; margin: 2px 0 1px; }
-.ev-mini-bd { padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 12px; }
-.ev-mini .ev-hero .big { font-size: 18px; }
-.ev-mini .ev-count .n { font-size: 28px; }
-.ev-mini.on { border-color: color-mix(in srgb, var(--k) 55%, var(--line)); box-shadow: 0 0 0 3px color-mix(in srgb, var(--k) 14%, transparent), var(--shadow-1); }
-
-.empty .btn svg { width: 13px; height: 13px; color: inherit; margin: 0; stroke-width: 1.7; }
-.ev-toast { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(20px); background: var(--text); color: var(--bg); padding: 8px 14px; border-radius: 8px; font-size: 13px; opacity: 0; transition: all 160ms ease-out; pointer-events: none; z-index: 300; max-width: 560px; text-align: center; }
-.ev-toast.on { opacity: 1; transform: translateX(-50%); }
-.ev-try { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
-.ev-try button { font-size: 12px; height: 22px; padding: 0 8px; border-radius: 11px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--text); }
-.ev-try button:hover { background: var(--surface-2); }
+.e2-card { border: 1px solid var(--line); border-radius: 14px; background: var(--surface); padding: 14px 16px; display: flex; gap: 14px; align-items: center; box-shadow: var(--shadow-1); }
+.e2-card .grow { flex: 1; }
+.e2-card .t { font-weight: 600; font-size: 15px; } .e2-card .p { color: var(--text-2); font-size: 13px; }
+.e2-cmp { width: 100%; border-collapse: collapse; font-size: 13px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.e2-cmp td, .e2-cmp th { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.e2-cmp th { font-size: 12px; color: var(--text-2); background: var(--surface-2); }
+.e2-toast { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 8px 14px; border-radius: 8px; font-size: 13px; opacity: 0; transition: opacity 160ms; pointer-events: none; z-index: 99; }
+.e2-toast.on { opacity: 1; }
 </style>
 
 <header class="topbar">
-  <div class="brand">Hedwig · evenementen <span class="muted" style="font-weight:400">ontwerp v1</span></div>
-  <nav><a href="#page">De pagina</a><a href="#states">Elke staat</a><a href="#show">Kaarten tonen</a><a href="#new">Nieuw evenement</a><a href="#behaviour">Gedrag</a></nav>
-  <div class="seg" id="theme-seg"><button data-theme-pick="auto" class="on">Auto</button><button data-theme-pick="light">Light</button><button data-theme-pick="dark">Dark</button></div>
+  <div class="brand">Hedwig · evenementen <span class="muted" style="font-weight:400">ontwerp v2</span></div>
+  <nav><a href="#page">De pagina</a><a href="#mail">Vanuit een mail</a><a href="#add">Toevoegen</a><a href="#telegram">Op de dag</a><a href="#moved">Wat er verschoof</a></nav>
+  <div class="seg"><button data-theme-pick="auto" class="on">Auto</button><button data-theme-pick="light">Light</button><button data-theme-pick="dark">Dark</button></div>
 </header>
 
-<main class="doc ev">
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="i-ticket" viewBox="0 0 24 24"><path d="M3 8a2 2 0 0 0 2-2h14a2 2 0 0 0 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 0-2 2H5a2 2 0 0 0-2-2v-2a2 2 0 0 0 0-4z"/></symbol></svg>
+<main class="doc">
 <div class="hero">
-  <h1>Evenementen in Hedwig</h1>
-  <p class="lead">Concerts, theatre, festivals and parties, booked half a year ahead through ticket shops whose mail never names the night the way you remember it. <b>Evenementen</b> is one page in Hedwig, under Overal, where Gideon and Eva keep every outing together: the date and the place, the tickets with their QR codes, what still has to happen before the night, the mails that belong to it, and every name it can be found by.</p>
-  <div class="meta"><span>22 October 2026</span><span>·</span><span>Invented people, shops and venues</span><span>·</span><span>UI text Dutch, notes English</span></div>
-  <p class="muted small" style="margin-top:10px">Builds on the Evenement card in <a href="hedwig-cards.html">hedwig-cards.html</a> (same checklist, ticket rows and aliases; the card is this page cut short) and supersedes the Uitjes sketch in <a href="weasley-clock.html#outings">weasley-clock.html</a>. Rules: <code>docs/plans/2026-10-22-calendars.md</code>, section Events and tickets. Calendar sync is not built yet, so "In Wij" is shown as a state with a one-click action.</p>
+  <h1>Evenementen, doodsimpel</h1>
+  <p class="lead">v2 after Gideon's feedback: this is a family app, so it has to pass the Wife Acceptance Factor. Each outing says <b>one sentence</b> about its state, the page asks for <b>at most one thing</b> at a time, and the tickets come to your phone on the day. Everything from v1 still exists, folded behind <b>Details</b>.</p>
+  <div class="meta"><span>22 October 2026</span><span>·</span><span>Invented people, shops and venues</span><span>·</span><span>v1 is in git history</span></div>
 </div>
+
+<section class="sec">
+  <h2><span class="num">0</span>Rules for this page</h2>
+  <div class="grid g4">
+    <div class="card"><h4>One sentence</h4><p class="muted small" style="margin:0">Every outing shows one status line: <i>Alles geregeld</i>, the single next thing to do, or <i>Vanavond</i>. No badges.</p></div>
+    <div class="card"><h4>Three facts</h4><p class="muted small" style="margin:0">Wanneer, waar, wie. Doors, end time, order number and search words live in Details.</p></div>
+    <div class="card"><h4>Nothing to sync by hand</h4><p class="muted small" style="margin:0">Every outing goes into Wij by itself and the tickets go to Telegram on the day. No buttons for either.</p></div>
+    <div class="card"><h4>Details for whoever wants them</h4><p class="muted small" style="margin:0">One quiet link opens all of v1: times, tickets per person, mails, search words, history, delete.</p></div>
+  </div>
+</section>
 
 <section class="sec" id="page">
   <h2><span class="num">1</span>De pagina</h2>
-  <p class="intro">Click an event in the list, tick checklist items, add a ticket, edit any field, or search. The clock is fixed at Thursday 22 October 2026, 17:42, so <i>Stille Wateren</i> is tonight. <b>Staat</b> jumps to an event in that state.</p>
-  <div class="ctrl">
-    <div class="grp">Staat <span class="seg" id="st-seg"><button data-st="net">Net geboekt</button><button data-st="naam">Op naam bijna</button><button data-st="mist">Kaarten ontbreken</button><button data-st="vandaag">Vandaag</button><button data-st="geweest">Geweest</button><button data-st="leeg">Leeg</button></span></div>
-    <div class="grp">Zoek eens op <span class="ev-try"><button data-try="90s party">90s party</button><button data-try="KL-48291">KL-48291</button><button data-try="Kaartloket">Kaartloket</button><button data-try="cabaret">cabaret</button><button data-try="Kolenloods">Kolenloods</button></span></div>
-  </div>
-  <div class="mac a-hedwig ev-win" id="ev-win">
+  <p class="intro">Click an outing, tick the thing to do, open <b>Details</b>.</p>
+  <div class="mac a-hedwig e2-win">
     <div class="tb"><span class="lights"><i></i><i></i><i></i></span><span class="title">Hedwig</span><span class="sub">Evenementen</span><span class="grow"></span>
-      <label class="field search" style="width:270px;height:28px"><svg class="i sm"><use href="#i-search"/></svg><input id="ev-q" class="ev-q" placeholder="Zoek op naam, zaal, winkel, bestelnummer" autocomplete="off" spellcheck="false"></label>
-      <button class="tb-cap text" data-new="blank"><svg class="i"><use href="#i-plus"/></svg>Nieuw evenement</button>
-    </div>
-    <div class="body three ev-three">
+      <div class="field search ph" style="width:220px;height:28px"><svg class="i sm"><use href="#i-search"/></svg>Zoek</div></div>
+    <div class="body e2-body">
       <div class="side">
         <div class="sb-label">Inboxen</div>
         <div class="sb-row"><svg class="i"><use href="#i-tray2"/></svg><span class="grow">Alle inboxen</span><span class="n">7</span></div>
         <div class="sb-row two"><svg class="i"><use href="#i-tray"/></svg><span class="grow">Gideon<small>gideon@example.com</small></span><span class="n">4</span></div>
-        <div class="sb-row two"><svg class="i"><use href="#i-tray"/></svg><span class="grow">Werk<small>gideon@studio.example.com</small></span><span class="n">3</span></div>
-        <div class="sb-row two"><svg class="i"><use href="#i-tray"/></svg><span class="grow">Samen<small>huis@example.com</small></span><span class="badge shared" style="height:16px;padding:0 5px"><svg class="i sm"><use href="#i-person2"/></svg></span></div>
         <div class="sb-label">Overal</div>
         <div class="sb-row"><svg class="i"><use href="#i-shield"/></svg><span class="grow">Gefilterd</span></div>
-        <div class="sb-row"><svg class="i"><use href="#i-checklist"/></svg><span class="grow">Taken</span><span class="badge count" style="background:var(--warning)">1</span></div>
-        <div class="sb-row sel active"><svg class="i"><use href="#i-ticket"/></svg><span class="grow">Evenementen</span><span class="badge count" id="ev-sbn" style="background:rgba(255,255,255,.28)">1</span></div>
-        <div class="sb-row"><svg class="i"><use href="#i-doc"/></svg><span class="grow">Concepten</span><span class="n">2</span></div>
-        <div class="sb-row"><svg class="i"><use href="#i-paperplane"/></svg><span class="grow">Verstuurd</span></div>
+        <div class="sb-row sel active"><svg class="i"><use href="#i-calendar"/></svg><span class="grow">Evenementen</span><span class="badge count" style="background:rgba(255,255,255,.25)">1</span></div>
+        <div class="sb-row"><svg class="i"><use href="#i-doc"/></svg><span class="grow">Concepten</span></div>
         <div class="sb-row"><svg class="i"><use href="#i-archive"/></svg><span class="grow">Archief</span></div>
-        <div class="sb-foot"><span class="dot ok"></span><span><b>burrow.example.nl</b>MacBook Gideon · Hedwig</span></div>
       </div>
-      <div class="list">
-        <div class="pane-hd"><span class="t">Evenementen</span><span class="s" id="ev-n">5 komend</span><span class="grow"></span><span class="badge shared"><svg class="i sm"><use href="#i-person2"/></svg>Samen met Eva</span></div>
-        <div id="ev-ban"></div>
-        <div class="scroll" id="ev-list"></div>
-      </div>
-      <div class="detail" id="ev-detail"></div>
+      <div class="list"><div class="e2-list" id="e2-list"></div></div>
+      <div class="detail"><div class="e2-detail" id="e2-detail"></div></div>
     </div>
-    <div id="ev-modal"></div>
   </div>
-  <p class="scr-note"><b>Notes.</b> Evenementen sits under Overal because events are not per mailbox: both adults see the same list, and the toolbar search on this page searches events by every alias (try <i>90s party</i>; apostrophes and accents do not matter). The sidebar badge counts what needs one of them within 30 days. Rows carry three quiet facts: tickets, the personalisation deadline (amber inside 30 days) and whether it is in Wij. Every field in the detail is plain text until you hover it, like Finder's Get Info; a change is saved at once, written to <i>Wie deed wat</i>, and, once calendar sync exists, pushed to Wij. The checklist and ticket rows are the Evenement card's, so a ticked item in the card is ticked here.</p>
+  <p class="scr-note"><b>Notes.</b> The sidebar badge counts outings that need something from you, nothing else. The list has no filters, tabs or counts: upcoming outings, then a quiet <i>Geweest</i>. The status line picks the most urgent open item; a deadline turns it orange four weeks before. <i>Wie</i> is both of you by default.</p>
 </section>
 
-<section class="sec" id="states">
-  <h2><span class="num">2</span>Elke staat</h2>
-  <p class="intro">The top of the detail in each state, side by side. These are live: ticking an item here ticks it in the window above, and <i>Open</i> selects the event there.</p>
-  <div class="ev-states" id="ev-states"></div>
-</section>
-
-<section class="sec" id="show">
-  <h2><span class="num">3</span>Kaarten tonen</h2>
-  <p class="intro">At the door you want one thing: a QR code a scanner can read. <i>Kaarten tonen</i> (key <kbd>K</kbd>) opens a full-screen view on black, raises the screen to full brightness while it is open and puts it back after.</p>
-  <div class="ev-pair">
-    <div class="ev-screen" id="ev-show-doc"></div>
-    <div class="card"><h4>How it behaves</h4><ul class="small">
-      <li>One ticket at a time, large; arrows or swipe for the next one. The holder's name is printed under the code because a personalised ticket is checked against an ID.</li>
-      <li>Opens on the first ticket of the person whose Mac it is, so Gideon and Eva can each show their own from their own device.</li>
-      <li>Works offline: the pdf, the Wallet pass or the screenshot is cached on the Mac once the event is less than a week away.</li>
-      <li>A Wallet pass also offers <i>Voeg toe aan Wallet</i>, for the phone at the door.</li>
-      <li>The QR is drawn from the stored file, never re-encoded, and never leaves Dobby and the Macs: no cloud AI, and Telegram gets only "Je kaarten staan in Hedwig".</li>
-    </ul><button class="btn ev-k" style="margin-top:10px" data-show="sw"><svg class="i sm"><use href="#i-ticket"/></svg>Probeer het op volledig scherm</button></div>
+<section class="sec" id="mail">
+  <h2><span class="num">2</span>Vanuit een mail</h2>
+  <p class="intro">The card above an order mail shrinks to one line. A mail Hedwig reads with certainty becomes an outing by itself; then the card only says so. Otherwise one button.</p>
+  <div class="grid g2">
+    <div><div class="cap muted small" style="margin-bottom:6px">Herkend, al bewaard</div>
+      <div class="e2-card"><div class="e2-date"><small>mei</small><b>13</b></div><div class="grow"><div class="t">Neon Nineties</div><div class="p">Staat in Evenementen en in Wij · nog doen: kaarten op naam vóór 29 apr</div></div><button class="btn" data-toast="Opent Evenementen">Bekijk</button></div></div>
+    <div><div class="cap muted small" style="margin-bottom:6px">Twijfel: één klik</div>
+      <div class="e2-card"><div class="e2-date"><small>jun</small><b>18</b></div><div class="grow"><div class="t">Zomerweide Festival?</div><div class="p">Hedwig denkt dat dit om een evenement gaat</div></div><button class="btn primary" data-toast="Bewaard in Evenementen en Wij">Bewaar</button></div></div>
   </div>
 </section>
 
-<section class="sec" id="new">
-  <h2><span class="num">4</span>Nieuw evenement, of maak er een van een mail</h2>
-  <p class="intro">An order mail that Hedwig recognises with certainty (schema.org <code>EventReservation</code> or a known shop template) becomes an event on its own, as <i>Neon Nineties</i> did. Anything else goes through this sheet: from the mail's menu or its card (<i>Maak evenement van deze mail</i>), prefilled and marked per field, or empty from <i>Nieuw evenement</i>. Every field stays editable.</p>
-  <div class="ctrl" style="max-width:none"><div class="grp">Sheet <span class="seg" id="sheet-seg"><button data-sheetmode="mail" class="on">Van een mail</button><button data-sheetmode="blank">Leeg</button></span></div></div>
-  <div class="ev-pair">
-    <div class="ev-dim a-hedwig" id="ev-sheet-doc"></div>
-    <div class="card"><h4>What the sheet does</h4><ul class="small">
-      <li>Fields read from the mail say <i>uit de mail</i>; a field it could not read stays empty and is marked as missing (<i>niet in de mail</i>, <i>ontbreekt</i>). Nothing is guessed.</li>
-      <li>Winky reads it, locally on Dobby, because the mail holds the tickets. A cloud bot never sees this sheet's input.</li>
-      <li><i>Ook uit de mail</i> lists what comes along: the ticket files, a deadline sentence turned into a checklist item with its two reminders, and the mail itself as the first linked mail.</li>
-      <li>Aliases start with title, kind, venue, organiser, shop and order number; remove what is noise, add what you would type.</li>
-      <li><i>Meteen in Wij zetten</i> is on by default because every event is shared.</li>
+<section class="sec" id="add">
+  <h2><span class="num">3</span>Zelf toevoegen</h2>
+  <p class="intro">Three fields. Dropping a mail, pdf or screenshot fills them in. Everything else can wait for Details.</p>
+  <div class="e2-sheet">
+    <h3>Nieuw evenement</h3>
+    <div class="e2-drop"><svg class="i lg"><use href="#i-arrowdown"/></svg><br>Sleep een mail, pdf of screenshot hierheen</div>
+    <div class="e2-in">Wat<div class="field">Cabaret Theo Voorbeeld</div></div>
+    <div class="grid g2" style="gap:10px"><div class="e2-in">Wanneer<div class="field">za 8 nov, 20:15</div></div><div class="e2-in">Waar<div class="field ph">Zaal of plaats</div></div></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn">Annuleer</button><button class="btn primary">Bewaar</button></div>
+  </div>
+</section>
+
+<section class="sec" id="telegram">
+  <h2><span class="num">4</span>Op de dag: Telegram</h2>
+  <p class="intro">Tickets are shown at the door from a phone, so the desktop has no ticket view. On the morning of the outing Patronus sends each person their own ticket in their own chat; a Wallet pass opens straight into Wallet. Deadlines arrive the same way, with buttons.</p>
+  <div class="grid g2" style="align-items:start">
+    <div class="e2-phone"><div class="e2-screen">
+      <div class="e2-tg-bar"><span class="av">P</span><div><b>Patronus</b><span>bot</span></div></div>
+      <div class="e2-msgs">
+        <span class="e2-day">Vandaag</span>
+        <div class="e2-msg"><b>Vanavond: Stille Wateren</b><br>Deuren 19:30, De Kolenloods.<br>Hieronder je kaart.<small>09:00</small></div>
+        <div class="e2-msg"><div class="e2-file"><span class="fi">PDF</span><div>Kaart Gideon.pdf<br><small>182 kB</small></div></div><small>09:00</small></div>
+        <div class="e2-kb"><span>Route</span><span>Alle kaarten</span></div>
+        <span class="e2-day">ma 22 okt</span>
+        <div class="e2-msg">De kaarten voor <b>Foute Vrijdag XL</b> moeten over 5 dagen op naam.<small>10:00</small></div>
+        <div class="e2-kb"><span>Doen</span><span>Gedaan</span></div>
+      </div>
+    </div></div>
+    <div class="card"><h4>Rules</h4><ul class="small">
+      <li>Each person gets the tickets in their name; a ticket without a name goes to both.</li>
+      <li>Sent at 09:00 on the day (or at noon the day before for a morning start), with the route.</li>
+      <li><b>Trade-off:</b> Telegram keeps what it receives, and a QR code gets someone in. So only on the day, only in private chats, never in the household group, and Patronus deletes the ticket messages the day after.</li>
+      <li><i>Alle kaarten</i> sends the other tickets too, for when one phone is dead.</li>
+      <li>Deadline reminders four weeks and one week before, as one message with <i>Doen</i> (opens the shop) and <i>Gedaan</i>.</li>
+      <li>Until Patronus exists, the Mac shows a notification instead and the tickets open from Details.</li>
     </ul></div>
   </div>
 </section>
 
-<section class="sec" id="behaviour">
-  <h2><span class="num">5</span>Gedrag</h2>
-  <p class="intro">The rules behind the page, short.</p>
-  <div class="grid g3">
-    <div class="card"><h4>Mails join by themselves</h4><p class="muted small">A later mail joins an event by its order number, or by event name plus date. A weaker guess (only the organiser) shows on the mail as <i>Hoort dit bij Neon Nineties?</i> with Ja and Nee; nothing is linked silently on a guess. <i>Koppel een mail</i> does it by hand, and a linked mail gets the event's aliases as search words.</p></div>
-    <div class="card"><h4>Deadlines and reminders</h4><p class="muted small">A deadline sentence in a mail ("uiterlijk 14 dagen voor het evenement op naam") becomes a checklist item with a date. Four weeks and one week before, it appears in Vandaag and as a notice to both. Whoever ticks it closes it for both. Custom items have an optional date and person; only dated ones remind.</p></div>
-    <div class="card"><h4>Two people, one event</h4><p class="muted small">Both can change everything. Each change is saved per field with who and when, shown in <i>Wie deed wat</i>. The other person gets a quiet notice only for changes that matter on the night: date, times, venue, tickets, and ticked deadlines. Last write wins per field; there is no locking.</p></div>
-    <div class="card"><h4>Tickets are sensitive</h4><p class="muted small">A QR code is money. Ticket files live in the platform's uploads on Dobby and in an offline cache on the Macs; QR codes in screenshots are read on the Mac (Vision), not by a model. No cloud AI sees them, Kreacher's tools cannot reach them, Telegram gets a pointer only.</p></div>
-    <div class="card"><h4>Wij</h4><p class="muted small"><i>In Wij zetten</i> creates the event in the shared Google calendar with the times, the address, a link back to Hedwig and the tickets as attachments for whoever opens it on the phone. Once sync exists, a time moved in Wij shows up here as a change by that person.</p></div>
-    <div class="card"><h4>After the night</h4><p class="muted small">The day after, the event moves under Geweest. Notes, mails and aliases stay, so <i>Jazz in het park</i> still finds last year's order. The ticket files are removed from Dobby 30 days after the event.</p></div>
-  </div>
+<section class="sec" id="moved">
+  <h2><span class="num">5</span>Wat er verschoof ten opzichte van v1</h2>
+  <table class="e2-cmp">
+    <tr><th>v1</th><th>v2</th></tr>
+    <tr><td>Badges per outing (kaarten, op naam, In Wij)</td><td>One status sentence</td></tr>
+    <tr><td>In Wij zetten as a button and checklist item</td><td>Automatic; not shown</td></tr>
+    <tr><td>Kaarten tonen, full screen on the Mac</td><td>Telegram on the day; files under Details</td></tr>
+    <tr><td>Doors, end, address, order number, notes</td><td>Details</td></tr>
+    <tr><td>Tickets per person, Op naam per ticket</td><td>Details; the deadline itself stays as the one thing to do</td></tr>
+    <tr><td>Linked mails, Koppel een mail</td><td>Details</td></tr>
+    <tr><td>Vind je terug als (search words)</td><td>Details; filled automatically</td></tr>
+    <tr><td>Wie deed wat, history</td><td>Details</td></tr>
+    <tr><td>Deadline banner, Staat filters</td><td>Gone; the sidebar badge and the status line say it</td></tr>
+    <tr><td>Nieuw evenement with every field</td><td>Wat, wanneer, waar</td></tr>
+  </table>
 </section>
 </main>
-<div id="ev-overlay"></div>
-<div class="ev-toast" id="ev-toast"></div>
+<div class="e2-toast" id="e2-toast"></div>
 
 <script>
 (function () {
-  var root = document.documentElement;
-  var media = window.matchMedia('(prefers-color-scheme: dark)');
+  var root = document.documentElement, media = window.matchMedia('(prefers-color-scheme: dark)');
   var pick = localStorage.getItem('burrow-theme') || 'auto';
   function apply() {
     root.setAttribute('data-theme', pick === 'auto' ? (media.matches ? 'dark' : 'light') : pick);
     document.querySelectorAll('[data-theme-pick]').forEach(function (b) { b.classList.toggle('on', b.dataset.themePick === pick); });
   }
-  document.querySelectorAll('[data-theme-pick]').forEach(function (b) {
-    b.addEventListener('click', function () { pick = b.dataset.themePick; localStorage.setItem('burrow-theme', pick); apply(); });
-  });
-  media.addEventListener('change', apply);
-  apply();
+  document.querySelectorAll('[data-theme-pick]').forEach(function (b) { b.addEventListener('click', function () { pick = b.dataset.themePick; localStorage.setItem('burrow-theme', pick); apply(); }); });
+  media.addEventListener('change', apply); apply();
 })();
 
-const MIN = 60e3, HOUR = 60 * MIN, DAY = 24 * HOUR;
-// The page runs on a fixed clock so every state is reproducible; it still ticks from page load.
-const BASE = new Date(2026, 9, 22, 17, 42).getTime(), LOADED = Date.now();
-const now = () => BASE + (Date.now() - LOADED);
-const WD = ['zo', 'ma', 'di', 'wo', 'do', 'vr', 'za'];
-const MO = ['jan', 'feb', 'mrt', 'apr', 'mei', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
-const D = (y, m, d) => new Date(y, m - 1, d).getTime();
-const addDays = (t, n) => { const d = new Date(t); d.setDate(d.getDate() + n); return d.getTime(); };
-const daysLeft = (t) => Math.round((dayStart(t) - dayStart(now())) / DAY);
-const $ = (s, r = document) => r.querySelector(s);
-const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
-const ic = (n, cls = 'sm') => `<svg class="i ${cls}"><use href="#i-${n}"/></svg>`;
-const norm = (s) => String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/['’`]/g, '');
-const dayStart = (t) => { const d = new Date(t); return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime(); };
-const fDay = (t) => { const d = new Date(t), y = new Date(now()).getFullYear(); return `${WD[d.getDay()]} ${d.getDate()} ${MO[d.getMonth()]}${d.getFullYear() !== y ? ' ' + d.getFullYear() : ''}`; };
-const fDM = (t) => { const d = new Date(t); return `${d.getDate()} ${MO[d.getMonth()]}`; };
-const at = (e, hhmm) => { if (!/^\d{1,2}:\d{2}$/.test(hhmm || '')) return e.date + 20 * HOUR; const [h, m] = hhmm.split(':').map(Number); return e.date + h * HOUR + m * MIN; };
-const daysTo = (e) => Math.round((dayStart(e.date) - dayStart(now())) / DAY);
-const isToday = (e) => { const d = daysTo(e); return d <= 0 && d + (e.days || 1) - 1 >= 0; };
-const isPast = (e) => daysTo(e) + (e.days || 1) - 1 < 0;
-const relDays = (e) => { const d = daysTo(e); if (isToday(e)) return 'vandaag'; if (d < 0) return 'geweest'; if (d === 1) return 'morgen'; if (d <= 60) return `over ${d} dagen`; return `over ${Math.round(d / 30.4)} maanden`; };
-const relTime = (ms) => { const m = Math.max(0, Math.round(ms / MIN)); if (m < 60) return `${m} min`; const h = Math.floor(m / 60), r = m % 60; return r ? `${h} u ${r} min` : `${h} uur`; };
-const dateText = (e) => e.dateLabel || (e.days > 1 ? `${fDay(e.date).replace(/ \d{4}$/, '')} tot ${fDay(addDays(e.date, e.days - 1))}` : fDay(e.date));
-const whenTxt = (d) => /^(vandaag|gisteren|zojuist)/.test(d) ? d : 'op ' + d;
-const P = { g: { name: 'Gideon', cls: 'p-g', ini: 'G' }, a: { name: 'Eva', cls: 'p-a', ini: 'E' }, h: { name: 'Hedwig' } };
-const av = (w) => w === 'h' ? `<span class="av sm bot" title="Hedwig">${ic('envelope')}</span>` : P[w] ? `<span class="av sm ${P[w].cls}">${P[w].ini}</span>` : `<span class="av sm">${esc(String(w)[0])}</span>`;
-const KINDS = ["90's party", 'concert', 'festival', 'theater', 'feest'];
-const FIELD = { title: 'de titel', dateLabel: 'de datum', doors: 'de deuren', start: 'de aanvang', end: 'het einde', venue: 'de zaal', address: 'het adres', notes: 'de notities' };
-
-function qr(seed, px) {
-  let h = 2166136261;
-  for (const c of seed) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); }
-  const rnd = () => { h ^= h << 13; h ^= h >>> 17; h ^= h << 5; return (h >>> 0) / 4294967296; };
-  const N = 25, inF = (x, y) => (x < 8 && y < 8) || (x >= N - 8 && y < 8) || (x < 8 && y >= N - 8);
-  let r = '';
-  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) if (!inF(x, y) && rnd() < 0.48) r += `M${x} ${y}h1v1h-1z`;
-  const f = (x, y) => `M${x} ${y}h7v7h-7zM${x + 1} ${y + 1}v5h5v-5zM${x + 2} ${y + 2}h3v3h-3z`;
-  return `<svg viewBox="-2 -2 ${N + 4} ${N + 4}" width="${px}" height="${px}" shape-rendering="crispEdges"><rect x="-2" y="-2" width="${N + 4}" height="${N + 4}" fill="#fff"/><path fill="#111" fill-rule="evenodd" d="${r}${f(0, 0)}${f(N - 7, 0)}${f(0, N - 7)}"/></svg>`;
-}
-
+const ic = (n, c = 'sm') => `<svg class="i ${c}"><use href="#i-${n}"/></svg>`;
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const EVENTS = [
-  { id: 'sw', title: 'Stille Wateren', kind: 'concert', date: D(2026, 10, 22), doors: '19:30', start: '20:30', end: '23:00',
-    venue: 'De Kolenloods', address: 'Voorbeeldkade 3, Utrecht', who: ['g', 'a'], notes: 'Garderobe alleen met pin. Terug met de nachtbus van 00:12.', inWij: true, tkind: 'staand',
-    tickets: [{ holder: 'g', named: true, src: 'pdf uit de mail', code: 'PK-51120-01' }, { holder: 'a', named: true, src: 'Wallet-pas', code: 'PK-51120-02' }],
-    personalise: { due: D(2026, 10, 8) + DAY - MIN, done: true, rule: 'uiterlijk 14 dagen voor het concert op naam', shop: 'Podiumkassa', domain: 'podiumkassa.example.com' },
-    custom: [{ t: 'Treinen regelen', who: 'g', due: '', done: true }],
-    info: 'Deuren 19:30, ingang Noord. Voorprogramma om 19:45. Garderobe € 2, alleen pin.', infoFrom: 'Praktische info voor vanavond',
-    mails: [{ s: 'Je bestelling PK-51120 is gelukt', f: 'Podiumkassa', d: '14 mrt', role: 'Bestelling', att: ['tickets-PK-51120.pdf'] }, { s: 'Zet je tickets op naam', f: 'Podiumkassa', d: '10 sep', role: 'Herinnering' }, { s: 'Praktische info voor vanavond', f: 'De Kolenloods', d: 'vandaag 10:02', role: 'Praktische info' }],
-    aliases: [['naam', 'Stille Wateren'], ['soort', 'concert'], ['zaal', 'Kolenloods'], ['organisator', 'Kolenloods Live'], ['winkel', 'Podiumkassa'], ['bestelling', 'PK-51120']],
-    history: [{ w: 'a', t: 'maakte dit van een mail van Podiumkassa', d: '14 mrt' }, { w: 'g', t: 'zette de kaarten op naam', d: '2 okt' }, { w: 'h', t: 'koppelde "Praktische info voor vanavond"', d: 'vandaag 10:02' }] },
-  { id: 'tv', title: 'Theo Voorbeeld: Halve Waarheden', kind: 'theater', date: D(2026, 11, 7), doors: '19:30', start: '20:15', end: '22:30',
-    venue: 'Stadsschouwburg Voorbeeld', address: 'Voorbeeldplein 1, Haarlem', who: ['g', 'a'], notes: 'Rij 7, stoel 12 en 13. Pauze rond 21:15.', inWij: true, tkind: 'zitplaats',
-    tickets: [{ holder: 'g', named: false, src: 'pdf uit de mail', code: 'SV-2210-0712', seat: 'rij 7, stoel 12' }, { holder: 'a', named: false, src: 'pdf uit de mail', code: 'SV-2210-0713', seat: 'rij 7, stoel 13' }],
-    personalise: null,
-    custom: [{ t: 'Oppas regelen', who: 'a', due: '31 okt', done: false }, { t: 'Tafel reserveren bij Bistro Voorbeeld', who: 'g', due: '', done: true }],
-    mails: [{ s: 'Uw kaarten voor Halve Waarheden', f: 'Stadsschouwburg Voorbeeld', d: '3 okt', role: 'Bestelling', att: ['e-tickets-SV-2210.pdf'] }],
-    aliases: [['naam', 'Halve Waarheden'], ['artiest', 'Theo Voorbeeld'], ['soort', 'theater'], ['soort', 'cabaret'], ['zaal', 'Stadsschouwburg'], ['bestelling', 'SV-2210']],
-    history: [{ w: 'a', t: 'voegde dit toe', d: '3 okt' }, { w: 'a', t: 'zette het in Wij', d: '3 okt' }, { w: 'g', t: 'wijzigde de aanvang naar 20:15', d: '5 okt' }] },
-  { id: 'fv', title: 'Foute Vrijdag XL', kind: 'feest', date: D(2026, 11, 20), doors: '21:00', start: '21:30', end: '03:00',
-    venue: 'Hal 4', address: 'Kadeweg 4, Rotterdam', who: ['g', 'a'], notes: '', inWij: true, tkind: 'staand',
-    tickets: [{ holder: 'g', named: false, src: 'pdf uit de mail', code: 'TB-88412-1' }, { holder: 'a', named: false, src: 'pdf uit de mail', code: 'TB-88412-2' }],
-    personalise: { due: D(2026, 10, 27) + DAY - MIN, done: false, rule: 'Personaliseren kan tot en met 27 oktober. Zonder naam geen toegang.', shop: 'Ticketbalie', domain: 'ticketbalie.example.com' },
-    custom: [{ t: 'Laatste trein of hotel', who: 'g', due: '', done: false }, { t: 'Oppas regelen', who: 'a', due: '14 nov', done: true }],
-    mails: [{ s: 'Bestelbevestiging TB-88412', f: 'Ticketbalie', d: '18 jun', role: 'Bestelling', att: ['TB-88412.pdf'] }, { s: 'Herinnering: zet je tickets op naam', f: 'Ticketbalie', d: '20 okt', role: 'Herinnering' }],
-    aliases: [['naam', 'Foute Vrijdag'], ['soort', 'feest'], ['soort', "80's"], ['organisator', 'Feestfabriek'], ['zaal', 'Hal 4'], ['winkel', 'Ticketbalie'], ['bestelling', 'TB-88412']],
-    history: [{ w: 'g', t: 'maakte dit van een mail van Ticketbalie', d: '18 jun' }, { w: 'a', t: 'vinkte "Oppas regelen" af', d: '12 okt' }, { w: 'h', t: 'herinnerde jullie aan op naam zetten', d: '20 okt' }] },
-  { id: 'nn', title: 'Neon Nineties', kind: "90's party", date: D(2027, 5, 13), doors: '20:00', start: '21:00', end: '02:00',
-    venue: 'Voorbeeldhal', address: 'Hallenweg 14, Utrecht', who: ['g', 'a'], notes: '', inWij: false, tkind: 'staand',
-    tickets: [{ holder: 'g', named: false, src: 'pdf uit de mail', code: 'KL-48291-1' }, { holder: 'a', named: false, src: 'pdf uit de mail', code: 'KL-48291-2' }],
-    personalise: { due: D(2027, 4, 29) + DAY - MIN, done: false, rule: 'uiterlijk 14 dagen voor het evenement op naam', shop: 'Kaartloket', domain: 'kaartloket.example.com' },
-    custom: [],
-    mails: [{ s: 'Je bestelling KL-48291 is gelukt', f: 'Kaartloket', d: 'vandaag 09:12', role: 'Bestelling', att: ['tickets-KL-48291.pdf', 'NeonNineties.pkpass'] }],
-    aliases: [['naam', 'Neon Nineties'], ['soort', "90's party"], ['zaal', 'Voorbeeldhal'], ['organisator', 'Neon Events'], ['winkel', 'Kaartloket'], ['bestelling', 'KL-48291']],
-    history: [{ w: 'h', t: 'maakte dit van de bestelmail van Kaartloket', d: 'vandaag 09:14' }] },
-  { id: 'zw', title: 'Zomerweide Festival', kind: 'festival', date: D(2027, 6, 18), days: 3, doors: '12:00', start: '13:00', end: '23:00',
-    venue: 'Weiland Voorbeeld', address: 'Voorbeelddijk 8, Voorbeeldveen', who: ['g', 'a'], notes: 'Camping bij de oostingang.', inWij: true, tkind: 'weekend met camping',
-    tickets: [], where: 'Ze staan in de app van Ticketvoorbeeld, vanaf twee weken vooraf. Voeg ze dan toe als Wallet-pas of screenshot.',
-    personalise: null,
-    custom: [{ t: 'Treinen regelen', who: 'g', due: '1 jun', done: false }, { t: 'Tent en matjes nakijken', who: 'a', due: '', done: false }],
-    mails: [{ s: 'Je bestelling TV-30017 is bevestigd', f: 'Ticketvoorbeeld', d: '9 okt', role: 'Bestelling' }],
-    aliases: [['naam', 'Zomerweide'], ['soort', 'festival'], ['zaal', 'Weiland Voorbeeld'], ['winkel', 'Ticketvoorbeeld'], ['bestelling', 'TV-30017']],
-    history: [{ w: 'a', t: 'maakte dit van een mail van Ticketvoorbeeld', d: '9 okt' }, { w: 'g', t: 'voegde "Treinen regelen" toe', d: '10 okt' }] },
-  { id: 'mi', title: 'Feest 40 jaar Mila', kind: 'feest', date: D(2026, 10, 3), doors: '20:00', start: '20:00', end: '01:00',
-    venue: 'Zaal De Lindeboom', address: 'Voorbeeldstraat 20, Leiden', who: ['g', 'a'], needsTickets: false, tickets: [], inWij: true, personalise: null,
-    notes: 'Cadeau: bon voor de ballonvaart, samen met Bram en Noor.', custom: [{ t: 'Cadeau regelen', who: 'a', due: '1 okt', done: true }],
-    mails: [{ s: 'Uitnodiging: Mila wordt 40!', f: 'Mila', d: '2 sep', role: 'Uitnodiging' }],
-    aliases: [['naam', 'Mila 40'], ['soort', 'feest'], ['zaal', 'De Lindeboom']], history: [{ w: 'g', t: 'voegde dit toe', d: '2 sep' }] },
-  { id: 'jz', title: 'Jazz in het park', kind: 'concert', date: D(2026, 9, 27), doors: '14:00', start: '14:30', end: '18:00',
-    venue: 'Voorbeeldpark', address: 'Parklaan 1, Amersfoort', who: ['g', 'a'], inWij: true, tkind: 'staand', personalise: null,
-    tickets: [{ holder: 'g', named: false, src: 'pdf uit de mail', code: 'KL-40017-1' }, { holder: 'a', named: false, src: 'pdf uit de mail', code: 'KL-40017-2' }],
-    custom: [{ t: 'Kleed en thermoskan mee', who: 'a', due: '', done: true }], notes: 'Volgend jaar eerder komen, vooraan was het vol.',
-    mails: [{ s: 'Je tickets voor Jazz in het park', f: 'Kaartloket', d: '2 aug', role: 'Bestelling', att: ['jazz-tickets.pdf'] }],
-    aliases: [['naam', 'Jazz in het park'], ['soort', 'concert'], ['zaal', 'Voorbeeldpark'], ['winkel', 'Kaartloket'], ['bestelling', 'KL-40017']],
-    history: [{ w: 'g', t: 'maakte dit van een mail van Kaartloket', d: '2 aug' }] },
+  { id: 'e1', title: 'Stille Wateren', kind: 'cabaret', mon: 'okt', day: 22, when: 'Vanavond, 20:00', doors: '19:30', place: 'De Kolenloods', city: 'Voorbeeldstad', who: ['Gideon', 'Eva'], tickets: 2, today: true, todos: [] },
+  { id: 'e2', title: 'Foute Vrijdag XL', kind: "90's party", mon: 'nov', day: 20, when: 'vr 20 nov, 21:30', doors: '21:00', place: 'Hal 4', city: 'Voorbeeldstad', who: ['Gideon', 'Eva'], tickets: 2, todos: [{ t: 'Kaarten op naam zetten', due: 'vóór di 27 okt · nog 5 dagen', done: false }] },
+  { id: 'e3', title: 'Theo Voorbeeld: Halve Waarheden', kind: 'cabaret', mon: 'nov', day: 7, when: 'za 7 nov, 20:15', doors: '19:45', place: 'Stadsschouwburg Voorbeeld', city: 'Voorbeeldstad', who: ['Gideon', 'Eva'], tickets: 2, todos: [{ t: 'Oppas regelen', due: 'Eva', done: true }] },
+  { id: 'e4', title: 'Neon Nineties', kind: "90's party", mon: 'mei', day: 13, when: 'do 13 mei 2027, 21:00', doors: '20:00', place: 'Voorbeeldhal', city: 'Utrecht', who: ['Gideon', 'Eva'], tickets: 2, todos: [{ t: 'Kaarten op naam zetten', due: 'vóór 29 apr 2027', done: false, later: true }] },
+  { id: 'e5', title: 'Zomerweide Festival', kind: 'festival', mon: 'jun', day: 18, when: 'vr 18 tot zo 20 jun 2027', doors: '12:00', place: 'Weiland Voorbeeld', city: 'Voorbeelddorp', who: ['Gideon', 'Eva'], tickets: 0, todos: [{ t: 'Kaarten toevoegen', due: 'ze staan in de app van Ticketvoorbeeld', done: false, later: true }] },
+  { id: 'e6', title: 'Feest 40 jaar Mila', kind: 'feest', mon: 'okt', day: 3, when: 'za 3 okt', place: 'Zaal De Lindeboom', who: ['Gideon', 'Eva'], tickets: 0, todos: [], past: true },
 ];
-const byId = (id) => EVENTS.find((e) => e.id === id);
-const STATES = [
-  ['net', 'nn', 'Net geboekt, ver vooruit', 'The order mail made the event on its own this morning. Not in Wij yet: one click, and Eva gets a notice. The deadline is half a year out, so its badge stays grey.'],
-  ['naam', 'fv', 'Op naam zetten, deadline dichtbij', 'Inside 30 days the deadline turns amber in the row, the sidebar badge and Vandaag. Both reminders have gone out; Nu doen opens the shop, Gedaan ticks it for both.'],
-  ['mist', 'zw', 'Kaarten ontbreken', 'The shop keeps the tickets in its own app until two weeks before. The event says where they are and takes a Wallet pass or a screenshot later.'],
-  ['vandaag', 'sw', 'Vandaag', 'Doors countdown, Kaarten tonen as the primary action, the route, and the organiser\'s practical info quoted from its mail.'],
-  ['geweest', 'jz', 'Geweest', 'Quiet, under Geweest. Notes and mails stay findable; the ticket files go from Dobby 30 days later.'],
-];
+let sel = 'e4', more = false;
+const order = ['e1', 'e3', 'e2', 'e4', 'e5', 'e6'];
 
-const S = { sel: 'nn', q: '', empty: false, menu: null, modal: null, show: null, docShow: 0, docSheet: 'mail' };
-
-/* ---- list ---- */
-function match(e, q) {
-  if (norm(e.title).includes(q) || norm(e.venue).includes(q)) return { via: null };
-  const a = e.aliases.find(([, w]) => norm(w).includes(q));
-  if (a) return { via: a };
-  if (norm(e.kind).includes(q)) return { via: ['soort', e.kind] };
-  return null;
-}
-function dueSoon(e) { const p = e.personalise; return p && !p.done && !isPast(e) && p.due - now() < 30 * DAY; }
-function badges(e) {
-  if (isPast(e)) return '';
-  const b = [];
-  if (e.needsTickets !== false) b.push(e.tickets.length ? `<span class="badge ok">${e.tickets.length} ${e.tickets.length === 1 ? 'kaart' : 'kaarten'}</span>` : '<span class="badge err">Kaarten ontbreken</span>');
-  if (e.personalise && !e.personalise.done) b.push(`<span class="badge ${dueSoon(e) ? 'doubt' : 'outline'}">Op naam vóór ${fDM(e.personalise.due)}</span>`);
-  b.push(e.inWij ? '<span class="badge ev-wij">In Wij</span>' : '<span class="badge outline">Nog niet in Wij</span>');
-  return b.join('');
-}
-function dateBlock(e) {
-  const d = new Date(e.date), last = new Date(addDays(e.date, (e.days || 1) - 1));
-  return `<span class="ev-date"><i>${MO[d.getMonth()]}</i><b>${d.getDate()}</b><small>${e.days > 1 ? `${WD[d.getDay()]} tot ${WD[last.getDay()]}` : WD[d.getDay()]}</small></span>`;
-}
-function rowHtml(e, m) {
-  const today = isToday(e), past = isPast(e);
-  const sub = today ? `${esc(e.venue)} · deuren ${e.doors}` : `${esc(e.venue)} · ${e.days > 1 ? e.days + ' dagen' : esc(e.start || 'tijd volgt')}`;
-  const via = m && m.via ? `<span class="via">${ic('search')}${esc(m.via[0])} <mark>${esc(m.via[1])}</mark></span>` : '';
-  const rt = today ? (now() < at(e, e.doors) ? `over ${relTime(at(e, e.doors) - now())}` : 'nu') : relDays(e);
-  return `<div class="ev-row ${S.sel === e.id ? 'on' : ''} ${past ? 'past' : ''}" data-sel="${e.id}">${dateBlock(e)}<div class="t"><div class="l1"><b>${esc(e.title)}</b><span class="rt ${today ? 'now' : ''}">${rt}</span></div><span class="s">${sub}</span>${via}${badges(e) ? `<div class="bds">${badges(e)}</div>` : ''}</div></div>`;
-}
-function listHtml() {
-  if (S.empty) return `<div class="empty" style="height:100%">${ic('ticket', 'xl')}<b>Nog geen evenementen</b><p>Bestel kaarten zoals altijd: een bestelmail wordt hier vanzelf een evenement. Of maak er zelf een, ook zonder kaarten.</p><button class="btn ev-h" data-new="blank" style="margin-top:10px">${ic('plus')}Nieuw evenement</button></div>`;
-  const q = norm(S.q.trim());
-  const rows = EVENTS.map((e) => ({ e, m: q ? match(e, q) : { via: null } })).filter((x) => x.m);
-  if (!rows.length) return `<div class="empty" style="height:100%">${ic('search', 'xl')}<b>Niets gevonden voor "${esc(S.q)}"</b><p>Geen evenement heet zo of heeft dit als zoekwoord. Voeg het toe onder <i>Vind je terug als</i>, dan vind je het voortaan wel.</p><button class="btn" style="margin-top:10px" data-toast="Zoekt in alle mail naar &quot;${esc(S.q)}&quot;">Zoek in alle mail</button></div>`;
-  const today = rows.filter((x) => isToday(x.e)).sort((a, b) => a.e.date - b.e.date);
-  const up = rows.filter((x) => !isToday(x.e) && !isPast(x.e)).sort((a, b) => a.e.date - b.e.date);
-  const past = rows.filter((x) => isPast(x.e)).sort((a, b) => b.e.date - a.e.date);
-  const grp = (t, xs) => xs.length ? `<div class="ev-grp">${t}</div>${xs.map((x) => rowHtml(x.e, x.m)).join('')}` : '';
-  return grp('Vandaag', today) + grp('Komend', up) + grp('Geweest', past)
-    + (q ? '' : '<div class="ev-listft">Een bestelmail van een kaartenwinkel wordt hier vanzelf een evenement. Ook in je mail vind je ze terug op elk zoekwoord.</div>');
+function status(e) {
+  if (e.past) return `<div class="e2-status" style="color:var(--text-3)">Geweest</div>`;
+  if (e.today) return `<div class="e2-status today">${ic('bolt')}Vanavond · kaarten staan in Telegram</div>`;
+  const open = e.todos.find((t) => !t.done);
+  if (open && !open.later) return `<div class="e2-status todo">${ic('warn')}Nog doen: ${esc(open.t.toLowerCase())}</div>`;
+  if (open) return `<div class="e2-status" style="color:var(--text-2)">${ic('clock')}Later: ${esc(open.t.toLowerCase())}</div>`;
+  return `<div class="e2-status ok">${ic('check')}Alles geregeld</div>`;
 }
 function renderList() {
-  const html = listHtml(), el = $('#ev-list');
-  if (el._h !== html) { el.innerHTML = html; el._h = html; }
-  const up = EVENTS.filter((e) => !isPast(e)).length;
-  $('#ev-n').textContent = S.empty ? 'geen' : `${up} komend`;
-  const soon = S.empty ? [] : EVENTS.filter(dueSoon);
-  $('#ev-sbn').style.display = soon.length ? '' : 'none';
-  $('#ev-sbn').textContent = soon.length;
-  const ban = soon.length && !S.q ? soon.map((e) => `<div class="banner warn ev-ban" data-sel="${e.id}">${ic('warn')}<span class="grow"><b>${esc(e.title)}</b>: kaarten op naam zetten, nog ${daysLeft(e.personalise.due)} dagen</span>${ic('chev-r')}</div>`).join('') : '';
-  const b = $('#ev-ban'); if (b._h !== ban) { b.innerHTML = ban; b._h = ban; }
-}
-
-/* ---- detail parts ---- */
-function heroHtml(e) {
-  const n = now();
-  if (isToday(e)) {
-    const doors = at(e, e.doors), start = at(e, e.start);
-    const big = n < doors ? e.doors : n < start ? e.start : 'Nu';
-    const lbl = n < doors ? `Deuren open over ${relTime(doors - n)}` : n < start ? `Deuren open, aanvang over ${relTime(start - n)}` : 'Bezig';
-    return `<div class="ev-today"><div class="ev-count"><span class="n">${big}</span><div class="l"><b>${lbl}</b>Aanvang ${esc(e.start)} · ${esc(e.venue)}, ${esc(e.address)}</div></div>
-      <div class="ev-acts"><button class="btn lg ev-k" data-show="${e.id}">${ic('ticket', '')}Kaarten tonen</button><button class="btn lg" data-route="${e.id}">${ic('map', '')}Route</button><span class="grow"></span><span class="muted small"><kbd>K</kbd> kaarten</span></div>
-      ${e.info ? `<div class="ev-note"><b>Uit "${esc(e.infoFrom)}"</b>${esc(e.info)}</div>` : ''}</div>`;
-  }
-  if (isPast(e)) return `<div class="ev-hero past"><span class="big">${dateText(e)}</span><span class="rel">geweest · ${esc(e.venue)}</span></div>`;
-  return `<div class="ev-hero"><span class="big">${dateText(e)}</span><span class="rel">${e.days > 1 ? '' : esc(e.start || 'tijd volgt') + ' · '}${esc(e.venue)} · ${relDays(e)}</span></div>`;
-}
-function alertHtml(e) {
-  if (!dueSoon(e)) return '';
-  const p = e.personalise, d = daysLeft(p.due);
-  return `<div class="ev-alert">${ic('warn')}<div class="grow"><b>Nog ${d} dagen om de kaarten op naam te zetten</b>${esc(p.shop)} schrijft: "${esc(p.rule)}"</div><button class="btn sm" data-toast="Opent ${esc(p.domain)} in je browser">${ic('ext')}Nu doen</button></div>`;
-}
-function byHtml(e, mini) {
-  const c = e.history[0], last = e.history.length > 1 ? e.history[e.history.length - 1] : null;
-  return `${av(c.w)}<span>${P[c.w].name} ${esc(c.t)} ${esc(whenTxt(c.d))}${last && !mini ? ` · laatst ${P[last.w].name}, ${esc(last.d)}` : ''}</span>`;
-}
-function headHtml(e, mini) {
-  const by = byHtml(e, mini);
-  const kind = mini ? `<span class="ev-kind" style="padding-right:8px">${esc(e.kind)}</span>`
-    : `<span class="ev-rel"><button class="ev-kind" data-kindmenu="${e.id}">${esc(e.kind)}${ic('chev-d')}</button>${S.menu === 'kind' ? kindMenu(e) : ''}</span>`;
-  const wij = e.inWij ? `<button class="ev-wijst" data-toast="Opent het evenement in de agenda Wij">${ic('check')}In Wij</button>`
-    : `<button class="btn ev-h" data-wij="${e.id}">${ic('calendar')}In Wij zetten</button>`;
-  return `<div class="ev-dhead"><span class="ev-tile ${isPast(e) ? 'past' : ''}">${ic('ticket', 'lg')}</span><div class="ev-ttl">
-    <div class="ev-kindrow">${kind}${mini ? '' : `<span class="badge shared">${ic('person2')}Gedeeld met Eva</span>`}</div>
-    ${mini ? `<b>${esc(e.title)}</b>` : `<input class="ev-title" data-f="title" value="${esc(e.title)}" aria-label="Titel">`}
-    <div class="ev-by" ${mini ? '' : 'id="ev-by"'}>${by}</div></div>
-    <div class="ev-hacts">${wij}${mini ? '' : `<button class="btn ghost" data-toast="Dupliceren, Als agenda-item exporteren, Verwijderen">${ic('ellipsis')}</button>`}</div></div>`;
-}
-function kindMenu(e) {
-  return `<div class="ev-menu kindm"><div class="lbl">Soort</div>${KINDS.map((k) => `<button data-kind="${esc(k)}"><span class="ck">${k === e.kind ? ic('check') : ''}</span><span>${esc(k)}</span></button>`).join('')}<div class="sep"></div><button data-kind="?"><span class="ck">${ic('plus')}</span><span>Eigen soort…<small>bijvoorbeeld cabaret of musical</small></span></button></div>`;
-}
-function formHtml(e) {
-  const who = e.who.map((w) => `<span class="chip">${av(w)}${P[w].name}</span>`).join('');
-  return `<div class="ev-form">
-    <label>Datum</label><input class="ev-in" data-f="dateLabel" value="${esc(dateText(e))}">
-    <label>Tijden</label><div class="ev-times"><label>Deuren<input class="ev-in" data-f="doors" value="${esc(e.doors)}" placeholder="--:--"></label><label>Aanvang<input class="ev-in" data-f="start" value="${esc(e.start)}" placeholder="--:--"></label><label>Einde<input class="ev-in" data-f="end" value="${esc(e.end)}" placeholder="onbekend"></label></div>
-    <label>Zaal</label><input class="ev-in" data-f="venue" value="${esc(e.venue)}">
-    <label>Adres</label><div class="ev-addr"><input class="ev-in" data-f="address" value="${esc(e.address)}" placeholder="Straat en plaats"><button class="btn sm" data-route="${e.id}">${ic('map')}Route</button></div>
-    <label>Wie gaan</label><div class="ev-who">${who}<button class="chip add" data-toast="Kies iemand uit Contacten, bijvoorbeeld een vriend met een eigen kaart">${ic('plus')}Iemand</button></div>
-    <label class="top">Notities</label><textarea class="ev-in" data-f="notes" rows="2" placeholder="Voor jullie allebei, bijvoorbeeld waar je afspreekt">${esc(e.notes)}</textarea>
-  </div>`;
-}
-function checkItems(e) {
-  const n = now(), items = [];
-  items.push(e.inWij ? { k: 'wij', st: 'ok', l: 'In Wij', s: `${dateText(e)}${e.days > 1 ? '' : ', ' + esc(e.start)}, met de kaarten en de mails erbij` }
-    : { k: 'wij', st: 'todo', l: 'Nog niet in Wij', s: 'Eva ziet het in haar agenda zodra het in Wij staat', act: `<button class="btn sm" data-wij="${e.id}">In Wij zetten</button>` });
-  if (e.needsTickets !== false) items.push(e.tickets.length ? { k: 'tix', st: 'ok', l: 'Kaarten bewaard', s: isPast(e) ? `${e.tickets.length} kaarten, tot ${fDM(addDays(e.date, 30))} op Dobby` : `${e.tickets.length} op Dobby, offline op deze Mac vanaf een week vooraf` }
-    : { k: 'tix', st: 'todo', l: 'Kaarten ontbreken', s: esc(e.where || 'Voeg ze toe als pdf, Wallet-pas of screenshot'), act: `<button class="btn sm" data-addmenu="${e.id}">Toevoegen</button>` });
-  const p = e.personalise;
-  if (p) {
-    if (p.done) items.push({ k: 'pers', st: 'ok', l: 'Op naam gezet', s: e.tickets.map((t) => P[t.holder] ? P[t.holder].name : 'iemand').join(' en ') });
-    else {
-      const r1 = addDays(p.due, -28), r2 = addDays(p.due, -7);
-      const rem = r2 < n ? `herinnerd op ${fDM(r1)} en ${fDM(r2)}` : r1 < n ? `herinnerd op ${fDM(r1)}, nog eens op ${fDM(r2)}` : `herinnering op ${fDM(r1)} en ${fDM(r2)}`;
-      const soon = dueSoon(e);
-      items.push({ k: 'pers', st: soon ? 'warn' : 'todo', l: `Op naam zetten vóór ${fDay(p.due)}`, d: soon ? `nog ${daysLeft(p.due)} dagen · ${rem}` : `${rem}, ook in Vandaag`, s: soon ? '' : `uit de mail van ${esc(p.shop)}: "${esc(p.rule)}"`,
-        below: `<span class="acts"><button class="btn sm" data-toast="Opent ${esc(p.domain)} in je browser">${ic('ext')}Doen</button><button class="btn sm ghost" data-tick="${e.id}:pers">Gedaan</button></span>` });
-    }
-  }
-  e.custom.forEach((c, i) => items.push({ k: 'c' + i, st: c.done ? 'ok' : 'todo', custom: true, l: esc(c.t), s: [P[c.who] ? P[c.who].name : 'Samen', c.due ? `vóór ${esc(c.due)}` : ''].filter(Boolean).join(' · ') }));
-  return items;
-}
-function checklistHtml(e, mini) {
-  const items = checkItems(e);
-  const rows = items.map((it) => `<div class="ev-ci ${it.st === 'warn' ? 'warn' : ''} ${it.custom && it.st === 'ok' ? 'struck' : ''}">
-    <button class="ev-s ${it.st}" data-tick="${e.id}:${it.k}" title="${it.st === 'ok' ? 'Weer open zetten' : 'Afvinken'}">${it.st === 'ok' ? ic('check') : ''}</button>
-    <span class="l"><span>${it.l}</span>${it.d ? `<small class="d">${it.d}</small>` : ''}${it.s ? `<small>${it.s}</small>` : ''}${it.below || ''}</span>${it.act || ''}</div>`).join('');
-  const add = mini ? '' : `<div class="ev-ci add">${ic('plus')}<input class="ev-in ev-newtask" data-ev="${e.id}" placeholder="Taak toevoegen, bijvoorbeeld oppas regelen"><select class="ev-sel ev-newwho" aria-label="Wie"><option value="s">Samen</option><option value="g">Gideon</option><option value="a">Eva</option></select><input class="ev-in ev-due ev-newdue" placeholder="vóór…" aria-label="Datum"></div>`;
-  return `<div class="ev-chk">${rows}${add}</div>`;
-}
-function checkCount(e) { const it = checkItems(e); return `${it.filter((x) => x.st === 'ok').length} van ${it.length}`; }
-function addMenu(e, up) {
-  const att = e.mails.flatMap((m) => (m.att || []).map((a) => ({ a, m })));
-  return `<div class="ev-menu ${up ? 'up' : ''}"><div class="lbl">Uit een gekoppelde mail</div>
-    ${att.length ? att.map((x) => `<button data-addtk="${e.id}" data-src="${esc(x.a)}">${ic(x.a.endsWith('.pkpass') ? 'wallet' : 'doc')}<span>${esc(x.a)}<small>${esc(x.m.f)} · ${esc(x.m.d)}</small></span></button>`).join('') : '<div class="none">Geen bijlagen in de gekoppelde mails</div>'}
-    <div class="sep"></div>
-    <button data-addtk="${e.id}" data-src="bestand">${ic('doc')}<span>Bestand kiezen…<small>pdf, Wallet-pas (.pkpass) of afbeelding</small></span></button>
-    <button data-addtk="${e.id}" data-src="screenshot">${ic('image')}<span>Screenshot of foto<small>de QR-code wordt op deze Mac uitgelezen</small></span></button>
-    <button data-addtk="${e.id}" data-src="mail">${ic('envelope')}<span>Uit een andere mail…<small>kies een mail, Hedwig haalt de bijlagen op</small></span></button></div>`;
-}
-function ticketsHtml(e) {
-  const n = e.tickets.length, past = isPast(e);
-  if (e.needsTickets === false && !n) return `<h3>${ic('ticket')}Kaarten</h3><p class="ev-hint" style="margin:0">Geen kaarten nodig. <button class="btn sm ghost" data-addmenu="${e.id}">Toch een kaart toevoegen</button></p>${S.menu === 'add' ? `<div class="ev-rel">${addMenu(e)}</div>` : ''}`;
-  const head = `<h3>${ic('ticket')}Kaarten <span class="n">${n || ''}</span><span class="grow"></span>${n && !past ? `<button class="btn sm" data-show="${e.id}">Kaarten tonen</button>` : ''}</h3>`;
-  const tk = e.tickets.map((t, i) => {
-    const nb = e.personalise ? (t.named ? '<span class="badge ok">Op naam</span>' : '<span class="badge doubt">Nog niet op naam</span>') : '';
-    const sel = `<select class="ev-holder" data-holder="${e.id}:${i}" aria-label="Voor wie">${['g', 'a'].map((w) => `<option value="${w}" ${t.holder === w ? 'selected' : ''}>${P[w].name}</option>`).join('')}<option value="x" ${t.holder === 'x' ? 'selected' : ''}>Iemand anders</option></select>`;
-    return `<div class="ev-tk ${past ? 'past' : ''}" ${past ? 'data-toast="Deze kaart is verlopen"' : `data-show="${e.id}" data-i="${i}"`}><span class="qrw">${qr(t.code, 42)}</span><span class="who"><span class="nm">${sel}${ic('chev-d')}${past ? '<span class="badge outline">Verlopen</span>' : nb}</span><small>Kaart ${i + 1} · ${esc(t.seat || e.tkind)} · ${esc(t.src)}</small></span>${ic('chev-r')}</div>`;
-  }).join('');
-  const body = n ? `<div class="ev-tks">${tk}</div>`
-    : `<div class="ev-drop">${ic('ticket', '')}<b>Kaarten ontbreken</b><span>${esc(e.where || 'Voeg ze toe als pdf, Wallet-pas of screenshot.')}</span><span class="faint small">Of sleep ze hierheen.</span></div>`;
-  const add = past ? `<p class="ev-hint">${ic('clock')} De kaartbestanden gaan op ${fDM(addDays(e.date, 30))} van Dobby, 30 dagen na afloop.</p>`
-    : `<div class="ev-rel"><button class="ev-addtk" data-addmenu="${e.id}">${ic('plus')}Kaart toevoegen</button>${S.menu === 'add' ? addMenu(e, false) : ''}</div>`;
-  return `${head}${body}${add}<div class="ev-priv">${ic('lock')}<span>Alleen op Dobby en jullie Macs. Nooit naar een cloud-AI; Telegram krijgt alleen een verwijzing.</span></div>`;
-}
-function mailsHtml(e) {
-  const order = (e.aliases.find((a) => a[0] === 'bestelling') || [])[1];
-  return `<h3>${ic('envelope')}Mails <span class="n">${e.mails.length}</span><span class="grow"></span><button class="btn sm ghost" data-toast="Kies een mail in Hedwig, of sleep hem op dit evenement">${ic('link')}Koppel een mail</button></h3>
-    <div class="ev-mails">${e.mails.map((m) => `<a href="#" data-toast="Opent in Hedwig: ${esc(m.s)}">${ic('envelope')}<span><b>${esc(m.s)}</b><small>${esc(m.role)} · ${esc(m.f)} · ${esc(m.d)}${m.att ? ` · ${ic('paperclip')}${m.att.length}` : ''}</small></span>${ic('chev-r')}</a>`).join('')}</div>
-    ${isPast(e) ? '' : `<p class="ev-hint">Nieuwe mails ${order ? `met ${esc(order)}, of ` : ''}met "${esc(e.title)}" rond ${fDM(e.date)} komen hier vanzelf bij.</p>`}`;
-}
-function aliasesHtml(e) {
-  return `<h3>${ic('search')}Vind je terug als</h3><div class="ev-als">${e.aliases.map((a, i) => `<span class="ev-al"><small>${esc(a[0])}</small>${esc(a[1])}<button data-rmal="${e.id}:${i}" title="Weghalen">${ic('xmark')}</button></span>`).join('')}<input class="ev-aladd" data-aladd="${e.id}" placeholder="+ zoekwoord"></div>
-    <p class="ev-hint">Zoek in Hedwig op een van deze woorden en je vindt dit evenement en zijn ${e.mails.length === 1 ? 'mail' : e.mails.length + ' mails'}.</p>`;
-}
-function histHtml(e) {
-  return `<div class="ev-hist">${e.history.slice().reverse().map((h, i) => `<div class="h ${h.fresh && i === 0 ? 'new' : ''}">${av(h.w)}<span>${P[h.w].name} ${esc(h.t)}<small>${esc(h.d)}</small></span></div>`).join('')}</div>`;
-}
-function detailHtml() {
-  const e = byId(S.sel);
-  if (S.empty || !e) return `<div class="empty">${ic('ticket', 'xl')}<b>Geen evenement gekozen</b><p>Kies er een in de lijst, of maak een nieuw evenement.</p></div>`;
-  return `${headHtml(e)}<div class="scroll"><div class="ev-dbody">
-    <div data-hero="${e.id}">${heroHtml(e)}</div>${alertHtml(e)}
-    <div class="ev-cols"><div class="ev-col">
-      <section class="ev-sec"><h3>${ic('info')}Gegevens<span class="grow"></span><span class="aside">Eva ziet wijzigingen meteen</span></h3>${formHtml(e)}</section>
-      <section class="ev-sec"><h3>${ic('checklist')}Voor je gaat <span class="n">${checkCount(e)}</span></h3>${checklistHtml(e)}</section>
-    </div><div class="ev-col">
-      <section class="ev-sec">${ticketsHtml(e)}</section>
-      <section class="ev-sec">${mailsHtml(e)}</section>
-      <section class="ev-sec">${aliasesHtml(e)}</section>
-      <section class="ev-sec"><h3>${ic('clock')}Wie deed wat</h3><div id="ev-hist">${histHtml(e)}</div></section>
-    </div></div></div></div>`;
+  const items = order.map((id) => EVENTS.find((e) => e.id === id));
+  const up = items.filter((e) => !e.past), past = items.filter((e) => e.past);
+  const card = (e) => `<div class="e2-item ${e.id === sel ? 'sel' : ''} ${e.past ? 'past' : ''}" data-ev="${e.id}"><div class="e2-date"><small>${e.mon}</small><b>${e.day}</b></div><div><div class="t">${esc(e.title)}</div><div class="p">${esc(e.when)} · ${esc(e.place)}</div>${status(e)}</div></div>`;
+  document.getElementById('e2-list').innerHTML = `<div class="e2-add" data-toast="Opent Nieuw evenement">${ic('plus')}Evenement toevoegen</div>${up.map(card).join('')}<div class="e2-h">Geweest</div>${past.map(card).join('')}`;
 }
 function renderDetail() {
-  const sc = $('#ev-detail .scroll'), top = sc ? sc.scrollTop : 0, keep = renderDetail.keepScroll;
-  $('#ev-detail').innerHTML = detailHtml();
-  const sc2 = $('#ev-detail .scroll'); if (sc2 && keep) sc2.scrollTop = top;
-  renderDetail.keepScroll = false;
-}
-
-/* ---- states section ---- */
-function renderStates() {
-  $('#ev-states').innerHTML = STATES.map(([k, id, cap, note]) => {
-    const e = byId(id);
-    return `<div class="ev-stcard"><div class="cap">${esc(cap)}<span class="grow"></span><button data-jump="${k}">Open in het venster ${ic('chev-r')}</button></div>
-      <div class="ev-mini a-hedwig ${isToday(e) ? 'on' : ''}">${headHtml(e, true)}<div class="ev-mini-bd"><div data-hero="${e.id}">${heroHtml(e)}</div>${alertHtml(e)}${checklistHtml(e, true)}</div></div>
-      <p class="muted small">${esc(note)}</p></div>`;
-  }).join('');
-}
-
-/* ---- Kaarten tonen ---- */
-function showHtml(e, i, full) {
-  const n = e.tickets.length, t = e.tickets[i];
-  const name = P[t.holder] ? P[t.holder].name : 'Iemand anders';
-  const named = e.personalise ? (t.named ? '<span class="ok">Op naam</span>' : '<span class="no">Nog niet op naam</span>') : '<span>Geen naam nodig</span>';
-  const tgt = full ? 'full' : 'doc';
-  return `<div class="ev-show ${full ? 'full' : ''}">
-    <div class="ev-show-top"><span class="bright">${ic('sun')}Helderheid vol</span><span class="grow"></span><span><b>${esc(e.title)}</b> · ${dateText(e)}</span><span class="grow"></span>${full ? '<button class="ev-show-x" data-closeshow>Klaar <kbd>esc</kbd></button>' : '<span class="ev-show-x">Klaar <kbd>esc</kbd></span>'}</div>
-    <div class="ev-show-mid"><button class="ev-nav" data-shownav="${tgt}:-1" ${i === 0 ? 'disabled' : ''} aria-label="Vorige">${ic('chev-l', 'lg')}</button>
-      <div class="ev-pass"><div class="ev-pass-hd"><b>${esc(e.title)}</b><span>${fDay(e.date)} · deuren ${esc(e.doors)}</span></div>
-        <div class="ev-pass-qr">${qr(t.code, 280)}</div>
-        <div class="ev-pass-name">${esc(name)}</div>
-        <div class="ev-pass-sub">${named}<span>·</span><span>${esc(t.seat || e.tkind)}</span><span>·</span><span>Kaart ${i + 1} van ${n}</span></div>
-        <div class="ev-pass-code">${esc(t.code)}</div></div>
-      <button class="ev-nav" data-shownav="${tgt}:1" ${i === n - 1 ? 'disabled' : ''} aria-label="Volgende">${ic('chev-r', 'lg')}</button></div>
-    <div class="ev-dots">${e.tickets.map((_, j) => `<i class="${j === i ? 'on' : ''}"></i>`).join('')}</div>
-    <div class="ev-show-ft">${esc(e.venue)}, ${esc(e.address)}${e.info ? ' · ingang Noord' : ''} · <kbd style="background:rgba(255,255,255,.12);border:0;color:#fff">←</kbd> <kbd style="background:rgba(255,255,255,.12);border:0;color:#fff">→</kbd> volgende kaart</div></div>`;
-}
-function renderShow() {
-  $('#ev-overlay').innerHTML = S.show ? showHtml(byId(S.show.id), S.show.i, true) : '';
-  $('#ev-show-doc').innerHTML = showHtml(byId('sw'), S.docShow, false);
-}
-
-/* ---- sheet ---- */
-const PREFILL = { title: 'The Paper Lanterns', kind: 'concert', date: 'vr 12 feb 2027', doors: '19:30', start: '20:30', end: '', venue: 'Muziekgebouw Voorbeeld', address: 'Stationsplein 9, Eindhoven',
-  aliases: [['naam', 'The Paper Lanterns'], ['soort', 'concert'], ['zaal', 'Muziekgebouw Voorbeeld'], ['organisator', 'Lantaarn Live'], ['winkel', 'Podiumkassa'], ['bestelling', 'PK-77310']] };
-function sheetHtml(mode, scope) {
-  const m = mode === 'mail', f = m ? PREFILL : { kind: 'concert' };
-  const from = (k) => m ? (f[k] ? `<span class="ev-from">${ic('doc')}uit de mail</span>` : '<span class="ev-from miss">niet in de mail</span>') : '<span></span>';
-  const inp = (k, ph) => `<input class="ev-fi ${m && f[k] ? 'got' : ''}" data-k="${k}" value="${esc(f[k] || '')}" placeholder="${esc(ph)}">`;
-  const tm = (k, l) => `<label class="ev-fi ev-fl ${m && f[k] ? 'got' : ''}"><small>${l}</small><input data-k="${k}" value="${esc(f[k] || '')}" placeholder="${m && !f[k] ? 'ontbreekt' : '--:--'}"></label>`;
-  const cb = `<span class="ev-cb on">${ic('check')}</span>`;
-  return `<div class="ev-sheet a-hedwig" data-mode="${mode}" data-scope="${scope}">
-    <div class="ev-sh-hd"><span class="ev-tile">${ic('ticket', 'lg')}</span><div class="grow"><h3>${m ? 'Maak evenement van deze mail' : 'Nieuw evenement'}</h3>
-      ${m ? `<p>${ic('envelope')}<b>Je tickets voor The Paper Lanterns</b>· Podiumkassa · vandaag 11:20</p><p>${ic('elf2')}Gelezen door Winky, lokaal op Dobby. Kijk de velden even na.</p>`
-          : '<p>Alles is later aan te passen. Kaarten en mails kun je ook achteraf toevoegen.</p>'}</div></div>
-    <div class="ev-sh-bd">
-      <div class="ev-sh-grid">
-        <label>Titel</label>${inp('title', 'Bijvoorbeeld Neon Nineties')}${from('title')}
-        <label>Soort</label><span><span class="seg">${KINDS.map((k) => `<button data-pickkind="${esc(k)}" class="${f.kind === k ? 'on' : ''}">${esc(k)}</button>`).join('')}</span></span>${from('kind')}
-        <label>Datum</label>${inp('date', 'bijvoorbeeld 13 mei 2027')}${from('date')}
-        <label>Tijden</label><div class="ev-tm3">${tm('doors', 'Deuren')}${tm('start', 'Aanvang')}${tm('end', 'Einde')}</div>${m ? `<span class="ev-from">${ic('doc')}deels</span>` : '<span></span>'}
-        <label>Zaal</label>${inp('venue', 'Naam van de zaal')}${from('venue')}
-        <label>Adres</label>${inp('address', 'Straat en plaats, voor de route')}${from('address')}
-        <label>Wie gaan</label><div class="ev-who"><button class="chip" data-whotg>${av('g')}Gideon</button><button class="chip" data-whotg>${av('a')}Eva</button><button class="chip add" data-toast="Kies iemand uit Contacten">${ic('plus')}Iemand</button></div><span></span>
-      </div>
-      ${m ? `<div><div class="ev-sh-lbl">Ook uit de mail</div><div class="ev-found">
-          <div class="r" data-cb>${cb}<span><b>2 kaarten bewaren</b><small>tickets-PK-77310.pdf · alleen op Dobby en jullie Macs</small></span></div>
-          <div class="r" data-cb>${cb}<span><b>Op naam zetten vóór vr 29 jan 2027</b><small>"uiterlijk 14 dagen voor het concert" · herinnering op 1 jan en 22 jan</small></span></div>
-          <div class="r" data-cb>${cb}<span><b>Deze mail koppelen</b><small>latere mails met PK-77310 komen er vanzelf bij</small></span></div></div></div>`
-        : `<div><div class="ev-sh-lbl">Kaarten en mails</div><div class="ev-acts"><button class="btn" data-toast="Kies een pdf, Wallet-pas of screenshot">${ic('ticket')}Kaart toevoegen…</button><button class="btn" data-toast="Kies een mail in Hedwig">${ic('link')}Mail koppelen…</button></div></div>`}
-      <div><div class="ev-sh-lbl">Vind je terug als</div><div class="ev-als">${(m ? PREFILL.aliases : []).map((a) => `<span class="ev-al"><small>${esc(a[0])}</small>${esc(a[1])}<button data-rmchip title="Weghalen">${ic('xmark')}</button></span>`).join('')}<input class="ev-aladd" data-chipadd placeholder="+ zoekwoord"></div>${m ? '' : '<p class="ev-hint">Titel, soort en zaal komen er vanzelf bij.</p>'}</div>
-      <div class="ev-sh-tg"><div class="lbl">Meteen in Wij zetten<small>Jullie gedeelde agenda; Eva krijgt een melding</small></div><span class="toggle on" data-toggle role="switch"></span></div>
+  const e = EVENTS.find((x) => x.id === sel);
+  const todos = e.todos.length
+    ? e.todos.map((t, i) => `<div class="e2-todo ${t.done ? 'done' : ''}" data-todo="${i}"><span class="c">${t.done ? ic('check') : ''}</span><span class="l">${esc(t.t)}<small>${esc(t.due)}</small></span></div>`).join('')
+    : `<span class="muted" style="font-size:14px">Niets meer te doen.</span>`;
+  const tix = e.tickets
+    ? `<div class="e2-tix"><span class="ic">${ic('paperplane', 'lg')}</span><span>${e.tickets} kaarten bewaard<small>${e.today ? 'Vanochtend naar jullie Telegram gestuurd' : 'Komen op de dag in jullie Telegram'}</small></span></div>`
+    : `<div class="e2-tix"><span class="ic" style="background:var(--warning-tint);color:var(--warning)">${ic('ticket', 'lg')}</span><span>Nog geen kaarten<small>Sleep ze hierheen: pdf, Wallet-pas of screenshot</small></span></div>`;
+  document.getElementById('e2-detail').innerHTML = `
+    <div class="e2-top"><div class="e2-date"><small>${e.mon}</small><b>${e.day}</b></div><div><h2>${esc(e.title)}</h2><div class="sub">${esc(e.kind)}</div></div></div>
+    <div class="e2-facts">
+      <span class="k">Wanneer</span><span>${esc(e.when)}</span><span></span>
+      <span class="k">Waar</span><span>${esc(e.place)}${e.city ? ', ' + esc(e.city) : ''}</span><button class="btn" data-toast="Opent Kaarten met de route">${ic('map')}Route</button>
+      <span class="k">Wie</span><span class="e2-faces">${e.who.map((w) => `<span class="who"><span class="av sm" style="--p:${w === 'Eva' ? 'var(--eva)' : 'var(--gideon)'}">${w[0]}</span>${w}</span>`).join('')}</span><span></span>
     </div>
-    <div class="ev-sh-ft">${m ? `<span class="muted small">${ic('lock')}Kaarten gaan nooit naar een cloud-AI</span>` : ''}<span class="grow"></span><button class="btn" data-cancel>Annuleer</button><button class="btn ev-h" data-make>Maak evenement</button></div></div>`;
+    ${e.past ? '' : `<div class="e2-block"><h3>${ic('checklist')}Nog doen</h3>${todos}<div class="e2-todo" data-toast="Typ iets, bijvoorbeeld oppas regelen"><span class="c" style="border-style:dashed">${ic('plus')}</span><span class="l" style="color:var(--text-2)">Iets toevoegen</span></div></div>`}
+    ${e.past ? '' : `<div class="e2-block">${tix}</div>`}
+    <div class="e2-more ${more ? 'open' : ''}" data-more="1">Details${ic('chev-d')}</div>
+    <div class="e2-details ${more ? 'open' : ''}">
+      <div class="grid2">
+        <div class="e2-field">Deuren open<div class="field">${esc(e.doors || '')}</div></div>
+        <div class="e2-field">Einde<div class="field ph">Onbekend</div></div>
+        <div class="e2-field">Adres<div class="field">Hallenweg 1, 3500 AA ${esc(e.city || '')}</div></div>
+        <div class="e2-field">Soort<div class="field">${esc(e.kind)}</div></div>
+      </div>
+      <div class="e2-field">Notities<div class="field ph">Waar we afspreken, wie rijdt</div></div>
+      <div><div class="e2-field" style="margin-bottom:4px">Kaarten</div>
+        ${e.tickets ? `<div class="e2-row">${ic('ticket')}<span class="grow">Kaart 1 · Gideon</span><small>op naam: nog niet</small><button class="btn sm">Open</button></div><div class="e2-row">${ic('ticket')}<span class="grow">Kaart 2 · Eva</span><small>op naam: nog niet</small><button class="btn sm">Open</button></div>` : '<div class="e2-row"><span class="grow muted">Nog geen kaarten</span><button class="btn sm">Toevoegen</button></div>'}</div>
+      <div><div class="e2-field" style="margin-bottom:4px">Mails</div><div class="e2-row">${ic('envelope')}<span class="grow">Je bestelling KL-48291 is gelukt</span><small>Kaartloket · 22 okt</small></div><div class="e2-row">${ic('link')}<span class="grow muted">Koppel een mail</span></div></div>
+      <div class="e2-field">Zoekwoorden<div style="display:flex;gap:4px;flex-wrap:wrap"><span class="badge outline">${esc(e.title)}</span><span class="badge outline">${esc(e.kind)}</span><span class="badge outline">${esc(e.place)}</span><span class="badge outline">Kaartloket</span><span class="badge outline">KL-48291</span><span class="badge outline">+</span></div></div>
+      <div class="e2-field">Geschiedenis<span style="color:var(--text)">Hedwig maakte dit van de mail van Kaartloket, 22 okt · Eva voegde "Oppas regelen" toe, 23 okt</span></div>
+      <div style="display:flex;gap:8px"><button class="btn danger">Verwijder evenement</button></div>
+    </div>`;
 }
-function renderModal() { $('#ev-modal').innerHTML = S.modal ? `<div class="ev-modal" data-modalbg>${sheetHtml(S.modal, 'win')}</div>` : ''; }
-function renderDocSheet() { $('#ev-sheet-doc').innerHTML = sheetHtml(S.docSheet, 'doc'); }
-function parseDate(s) {
-  const m = norm(s).match(/(\d{1,2})\s+([a-z]{3})[a-z]*\.?\s*(\d{4})?/);
-  if (!m) return null;
-  const mi = m[2] === 'maa' ? 2 : MO.indexOf(m[2]) >= 0 ? MO.indexOf(m[2]) : ['jan', 'feb', 'mar', 'apr', 'mei', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'].indexOf(m[2]);
-  if (mi < 0) return null;
-  const n = new Date(now());
-  let t = new Date(m[3] ? +m[3] : n.getFullYear(), mi, +m[1]).getTime();
-  if (!m[3] && t < dayStart(now())) t = new Date(n.getFullYear() + 1, mi, +m[1]).getTime();
-  return t;
-}
-function makeEvent(sh) {
-  const mode = sh.dataset.mode, mail = mode === 'mail';
-  const v = (k) => ((sh.querySelector(`[data-k="${k}"]`) || {}).value || '').trim();
-  const title = v('title');
-  if (!title) { toast('Geef het evenement eerst een naam'); sh.querySelector('[data-k="title"]').focus(); return; }
-  const kind = (sh.querySelector('[data-pickkind].on') || {}).dataset?.pickkind || 'concert';
-  const wij = sh.querySelector('[data-toggle]').classList.contains('on');
-  const parsed = parseDate(v('date'));
-  const venue = v('venue');
-  const aliases = [...sh.querySelectorAll('.ev-al')].map((el) => [el.querySelector('small').textContent, el.childNodes[1].textContent]);
-  if (!mail) { aliases.push(['naam', title], ['soort', kind]); if (venue) aliases.push(['zaal', venue]); }
-  const e = { id: 'n' + Date.now(), title, kind, date: parsed ?? (mail ? D(2027, 2, 12) : dayStart(now()) + 30 * DAY), dateLabel: parsed || !v('date') ? '' : v('date'),
-    doors: v('doors'), start: v('start'), end: v('end'), venue: venue || 'Zaal nog onbekend', address: v('address'), who: ['g', 'a'], notes: '', inWij: wij, tkind: 'staand', custom: [],
-    tickets: mail ? [{ holder: 'g', named: false, src: 'pdf uit de mail', code: 'PK-77310-1' }, { holder: 'a', named: false, src: 'pdf uit de mail', code: 'PK-77310-2' }] : [],
-    where: 'Voeg ze toe als pdf, Wallet-pas of screenshot.',
-    personalise: mail ? { due: D(2027, 1, 29) + DAY - MIN, done: false, rule: 'uiterlijk 14 dagen voor het concert op naam', shop: 'Podiumkassa', domain: 'podiumkassa.example.com' } : null,
-    mails: mail ? [{ s: 'Je tickets voor The Paper Lanterns', f: 'Podiumkassa', d: 'vandaag 11:20', role: 'Bestelling', att: ['tickets-PK-77310.pdf'] }] : [],
-    aliases, history: [{ w: 'g', t: mail ? 'maakte dit van een mail van Podiumkassa' : 'voegde dit toe', d: 'zojuist' }] };
-  EVENTS.push(e);
-  Object.assign(S, { sel: e.id, empty: false, q: '', modal: null, menu: null });
-  $('#ev-q').value = '';
-  syncSeg(); renderModal(); renderList(); renderDetail();
-  if (sh.dataset.scope === 'doc') { renderDocSheet(); $('#page').scrollIntoView({ behavior: 'smooth' }); }
-  toast(wij ? 'Evenement gemaakt en in Wij gezet. Eva krijgt een melding.' : 'Evenement gemaakt. Eva ziet het in haar lijst.');
-}
-
-/* ---- shared helpers ---- */
-function toast(t) { const el = $('#ev-toast'); el.textContent = t; el.classList.add('on'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('on'), 2200); }
-function log(e, t) { e.history.forEach((h) => delete h.fresh); e.history.push({ w: 'g', t, d: 'zojuist', fresh: true }); }
-function syncSeg() {
-  const k = S.empty ? 'leeg' : (STATES.find((s) => s[1] === S.sel) || [])[0];
-  document.querySelectorAll('[data-st]').forEach((b) => b.classList.toggle('on', b.dataset.st === k));
-}
-function renderAll() { renderList(); renderDetail(); renderStates(); renderModal(); renderShow(); }
-function tick() {
-  renderList();
-  document.querySelectorAll('[data-hero]').forEach((el) => { const h = heroHtml(byId(el.dataset.hero)); if (el._h !== h) { el.innerHTML = h; el._h = h; } });
-}
-function toggleTick(e, k) {
-  if (k === 'wij') { e.inWij = !e.inWij; log(e, e.inWij ? 'zette het in Wij' : 'haalde het uit Wij'); toast(e.inWij ? 'In Wij gezet, met de kaarten en de mails erbij. Eva krijgt een melding.' : 'Uit Wij gehaald. Eva krijgt een melding.'); return true; }
-  if (k === 'tix') { toast(e.tickets.length ? 'Dit vinkt vanzelf af zolang er kaarten zijn' : 'Voeg eerst een kaart toe'); return false; }
-  if (k === 'pers') { const p = e.personalise; p.done = !p.done; e.tickets.forEach((t) => { t.named = p.done; }); log(e, p.done ? 'vinkte "Op naam zetten" af' : 'zette "Op naam zetten" weer open'); toast(p.done ? 'Afgevinkt. De herinneringen stoppen, ook voor Eva.' : 'Weer open gezet'); return true; }
-  const c = e.custom[+k.slice(1)]; c.done = !c.done; log(e, `${c.done ? 'vinkte' : 'opende'} "${c.t}" ${c.done ? 'af' : 'weer'}`); toast(c.done ? 'Afgevinkt. Eva ziet het ook.' : 'Weer open gezet'); return true;
-}
-
-/* ---- events ---- */
+function render() { renderList(); renderDetail(); }
+render();
+function toast(t) { const el = document.getElementById('e2-toast'); el.textContent = t; el.classList.add('on'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('on'), 1500); }
 document.addEventListener('click', (ev) => {
-  const t = ev.target;
-  if (t.closest('select, input, textarea')) return;
-  const b = t.closest('[data-toast],[data-sel],[data-st],[data-try],[data-wij],[data-tick],[data-addmenu],[data-addtk],[data-kindmenu],[data-kind],[data-rmal],[data-show],[data-shownav],[data-closeshow],[data-new],[data-cancel],[data-make],[data-modalbg],[data-sheetmode],[data-pickkind],[data-whotg],[data-cb],[data-toggle],[data-rmchip],[data-route],[data-jump]');
-  const hadMenu = S.menu;
-  if (hadMenu && !(b && (b.dataset.addmenu || b.dataset.addtk || b.dataset.kindmenu || b.dataset.kind))) { S.menu = null; renderDetail.keepScroll = true; renderDetail(); }
+  const b = ev.target.closest('[data-ev],[data-more],[data-todo],[data-toast]');
   if (!b) return;
-  const d = b.dataset, sel = byId(S.sel);
-  if (d.modalbg !== undefined && t !== b) return;
-  if (d.toast) { ev.preventDefault(); ev.stopPropagation(); toast(d.toast); return; }
-  if (d.route) { const e = byId(d.route); toast(`Opent Apple Kaarten met de route naar ${e.address || e.venue}`); return; }
-  if (d.sel) { S.sel = d.sel; S.empty = false; S.menu = null; syncSeg(); renderList(); renderDetail(); return; }
-  if (d.st) {
-    S.empty = d.st === 'leeg'; S.menu = null;
-    if (!S.empty) { S.sel = STATES.find((s) => s[0] === d.st)[1]; S.q = ''; $('#ev-q').value = ''; }
-    syncSeg(); renderList(); renderDetail(); return;
-  }
-  if (d.jump) { S.empty = false; S.q = ''; $('#ev-q').value = ''; S.sel = STATES.find((s) => s[0] === d.jump)[1]; syncSeg(); renderList(); renderDetail(); $('#page').scrollIntoView({ behavior: 'smooth' }); return; }
-  if (d.try) { S.q = d.try; S.empty = false; $('#ev-q').value = d.try; syncSeg(); renderList(); return; }
-  if (d.wij) { const e = byId(d.wij); if (!e.inWij) toggleTick(e, 'wij'); renderDetail.keepScroll = true; renderAll(); return; }
-  if (d.tick) { const [id, k] = d.tick.split(':'); if (toggleTick(byId(id), k)) { renderDetail.keepScroll = true; renderAll(); } return; }
-  if (d.addmenu) { if (d.addmenu !== S.sel) { S.sel = d.addmenu; syncSeg(); renderList(); } S.menu = hadMenu === 'add' ? null : 'add'; renderDetail.keepScroll = true; renderDetail(); return; }
-  if (d.kindmenu) { S.menu = hadMenu === 'kind' ? null : 'kind'; renderDetail.keepScroll = true; renderDetail(); return; }
-  if (d.kind) {
-    let k = d.kind;
-    if (k === '?') { k = prompt('Eigen soort', 'cabaret'); if (!k) { S.menu = null; renderDetail(); return; } }
-    sel.kind = k; const a = sel.aliases.find((x) => x[0] === 'soort'); if (a) a[1] = k; else sel.aliases.push(['soort', k]);
-    S.menu = null; log(sel, `wijzigde de soort naar ${k}`); renderDetail.keepScroll = true; renderAll(); toast(`Soort is nu ${k}. Zoeken op "${k}" vindt het ook.`); return;
-  }
-  if (d.addtk) {
-    const e = byId(d.addtk), src = d.src;
-    const label = src === 'bestand' ? 'bestand' : src === 'screenshot' ? 'screenshot' : src === 'wallet' ? 'Wallet-pas' : src === 'mail' ? 'pdf uit een andere mail' : src.endsWith('.pkpass') ? 'Wallet-pas uit de mail' : 'pdf uit de mail';
-    if (src === 'mail') { S.menu = null; renderDetail.keepScroll = true; renderDetail(); toast('Kies een mail in de lijst; Hedwig haalt de bijlagen op en leest de kaarten uit'); return; }
-    const n = e.tickets.length;
-    e.tickets.push({ holder: n % 2 ? 'a' : 'g', named: false, src: label, code: `${e.id.toUpperCase()}-${Date.now() % 100000}` });
-    S.menu = null; log(e, `voegde kaart ${n + 1} toe (${label})`); renderDetail.keepScroll = true; renderAll();
-    toast(`Kaart ${n + 1} bewaard${src.includes('.') ? ' uit ' + src : ''}. Alleen op Dobby en jullie Macs.`); return;
-  }
-  if (d.rmal) { const [id, i] = d.rmal.split(':'), e = byId(id), a = e.aliases.splice(+i, 1)[0]; log(e, `haalde zoekwoord "${a[1]}" weg`); renderDetail.keepScroll = true; renderDetail(); renderList(); toast(`"${a[1]}" weggehaald`); return; }
-  if (d.show) { const e = byId(d.show); if (!e.tickets.length) { toast('Nog geen kaarten om te tonen'); return; } S.show = { id: e.id, i: +(d.i || 0) }; renderShow(); return; }
-  if (d.shownav) { const [w, dir] = d.shownav.split(':'); if (w === 'full') { const e = byId(S.show.id); S.show.i = Math.max(0, Math.min(e.tickets.length - 1, S.show.i + +dir)); } else S.docShow = Math.max(0, Math.min(1, S.docShow + +dir)); renderShow(); return; }
-  if (d.closeshow !== undefined) { S.show = null; renderShow(); return; }
-  if (d.new) { S.modal = d.new; renderModal(); setTimeout(() => { const i = $('#ev-modal [data-k="title"]'); if (i) i.focus(); }, 30); return; }
-  if (d.cancel !== undefined) { const sh = b.closest('.ev-sheet'); if (sh.dataset.scope === 'win') { S.modal = null; renderModal(); } else { renderDocSheet(); toast('Geannuleerd, er is niets gemaakt'); } return; }
-  if (d.modalbg !== undefined) { S.modal = null; renderModal(); return; }
-  if (d.make !== undefined) { makeEvent(b.closest('.ev-sheet')); return; }
-  if (d.sheetmode) { S.docSheet = d.sheetmode; document.querySelectorAll('[data-sheetmode]').forEach((x) => x.classList.toggle('on', x === b)); renderDocSheet(); return; }
-  if (d.pickkind) { b.parentElement.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b)); return; }
-  if (d.whotg !== undefined) { b.classList.toggle('ev-off'); return; }
-  if (d.cb !== undefined) { b.querySelector('.ev-cb').classList.toggle('on'); return; }
-  if (d.toggle !== undefined) { b.classList.toggle('on'); return; }
-  if (d.rmchip !== undefined) { b.closest('.ev-al').remove(); return; }
+  if (b.dataset.toast) { toast(b.dataset.toast); return; }
+  if (b.dataset.ev) { sel = b.dataset.ev; }
+  if (b.dataset.more) more = !more;
+  if (b.dataset.todo !== undefined) { const t = EVENTS.find((x) => x.id === sel).todos[+b.dataset.todo]; t.done = !t.done; toast(t.done ? 'Afgevinkt. Eva ziet het ook.' : 'Weer open'); }
+  render();
 });
-document.addEventListener('change', (ev) => {
-  const t = ev.target, e = byId(S.sel);
-  if (t.dataset.holder) { const [id, i] = t.dataset.holder.split(':'), x = byId(id); x.tickets[+i].holder = t.value; log(x, `gaf kaart ${+i + 1} aan ${P[t.value] ? P[t.value].name : 'iemand anders'}`); $('#ev-hist').innerHTML = histHtml(x); toast(`Kaart ${+i + 1} is voor ${P[t.value] ? P[t.value].name : 'iemand anders'}`); return; }
-  if (!t.dataset.f || !e || !t.closest('#ev-detail')) return;
-  const f = t.dataset.f, v = t.value.trim();
-  if (f === 'dateLabel') { const p = parseDate(v); if (p) { e.date = p; e.dateLabel = ''; e.days = 1; } else e.dateLabel = v; }
-  else e[f] = v;
-  if (f === 'title') { const a = e.aliases.find((x) => x[0] === 'naam'); if (a) a[1] = v; }
-  log(e, `wijzigde ${FIELD[f]}`);
-  $('#ev-hist').innerHTML = histHtml(e);
-  $('#ev-by').innerHTML = byHtml(e);
-  renderList(); renderStates();
-  const onNight = ['title', 'dateLabel', 'doors', 'start', 'end', 'venue', 'address'].includes(f);
-  toast(e.inWij && onNight ? 'Opgeslagen en aangepast in Wij. Eva krijgt een melding.' : 'Opgeslagen. Eva ziet het ook.');
-});
-document.addEventListener('input', (ev) => { if (ev.target.id === 'ev-q') { S.q = ev.target.value; S.empty = false; syncSeg(); renderList(); } });
-document.addEventListener('keydown', (ev) => {
-  const t = ev.target;
-  if (ev.key === 'Enter' && t.classList.contains('ev-newtask') && t.value.trim()) {
-    const e = byId(t.dataset.ev), row = t.closest('.ev-ci');
-    const who = row.querySelector('.ev-newwho').value, due = row.querySelector('.ev-newdue').value.trim().replace(/^vóór\s*/, '');
-    e.custom.push({ t: t.value.trim(), who, due, done: false }); log(e, `voegde "${t.value.trim()}" toe`);
-    renderDetail.keepScroll = true; renderAll(); toast(due ? `Toegevoegd, met een herinnering op ${due}` : 'Toegevoegd aan de checklist. Eva ziet het ook.');
-    const n = $('#ev-detail .ev-newtask'); if (n) n.focus(); return;
-  }
-  if (ev.key === 'Enter' && t.dataset.aladd && t.value.trim()) {
-    const e = byId(t.dataset.aladd), w = t.value.trim(); e.aliases.push(['eigen', w]); log(e, `voegde zoekwoord "${w}" toe`);
-    renderDetail.keepScroll = true; renderDetail(); renderList(); toast(`Zoeken op "${w}" vindt nu dit evenement en zijn mails`);
-    const n = $('#ev-detail .ev-aladd'); if (n) n.focus(); return;
-  }
-  if (ev.key === 'Enter' && t.dataset.chipadd !== undefined && t.value.trim()) {
-    t.insertAdjacentHTML('beforebegin', `<span class="ev-al"><small>eigen</small>${esc(t.value.trim())}<button data-rmchip title="Weghalen">${ic('xmark')}</button></span>`); t.value = ''; return;
-  }
-  if (ev.key === 'Enter' && t.dataset.f && t.tagName === 'INPUT') { t.blur(); return; }
-  if (ev.key === 'Escape') {
-    if (S.show) { S.show = null; renderShow(); return; }
-    if (S.modal) { S.modal = null; renderModal(); return; }
-    if (S.menu) { S.menu = null; renderDetail(); return; }
-    if (t.id === 'ev-q') { t.value = ''; S.q = ''; renderList(); return; }
-  }
-  if (S.show && (ev.key === 'ArrowRight' || ev.key === 'ArrowLeft')) { const e = byId(S.show.id); S.show.i = Math.max(0, Math.min(e.tickets.length - 1, S.show.i + (ev.key === 'ArrowRight' ? 1 : -1))); renderShow(); return; }
-  if (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || ev.metaKey || ev.ctrlKey) return;
-  if (ev.key.toLowerCase() === 'k') { const e = byId(S.sel); if (e && e.tickets.length && !isPast(e)) { S.show = { id: e.id, i: 0 }; renderShow(); } }
-});
-
-syncSeg();
-renderAll();
-renderDocSheet();
-setInterval(tick, 20000);
 </script>
+
 </body>
 </html>

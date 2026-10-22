@@ -113,8 +113,10 @@ you search for it, and some need the tickets in your name before a deadline.
 - **On the day:** Vandaag and the card show doors and start, Kaarten tonen (QR at full
   brightness) and the route.
 - **Later, a page Uitjes:** upcoming events with their ticket status, past ones below.
-- Tickets are sensitive (a QR code is money): they never go to a cloud AI, and Telegram
-  gets only a pointer to the app.
+- Tickets are sensitive (a QR code gets someone in): they never go to a cloud AI. On the
+  day of the outing Patronus sends each person their own ticket in a private Telegram
+  chat (agreed: tickets are shown from the phone, never the desktop), never in the
+  household group, and deletes those messages the day after.
 
 ## Phases
 
