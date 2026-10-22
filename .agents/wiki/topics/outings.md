@@ -93,7 +93,18 @@ the family, everything else folded behind **Details**.
   missing tickets within 14 days, "Later: …" for a later item, "Kaarten toevoegen", or
   "Alles geregeld". Then Geweest. The logic lives in `HedwigCore/OutingStatus.swift`, so
   it is tested without a window.
-- **Detail**: Wanneer, Waar (Route opens Apple Maps), Wie (click a person to toggle),
+- **Waar** (`Sources/Hedwig/OutingMapCard.swift`): a still map (`MKMapSnapshotter`, light
+  or dark) with a pin holding the picture or the kind's symbol, venue and city on a
+  material label, and Route (directions in Apple Maps); clicking the map opens the place.
+  `MKLocalSearch` asks "venue, address", then the address alone; `PlaceBook`
+  (`HedwigCore/OutingPlaces.swift`) keeps the answers in
+  `~/Library/Application Support/Hedwig/places.json` by venue and address, so a page
+  opens with its map at once. No answer (offline) is asked again next time; not found is
+  remembered for the session and shows the plain line with Route. The travel time ("ca.
+  25 min met de auto", `MKDirections` ETA) shows only when this Mac already allows
+  location; Hedwig never asks by itself, only from the map's menu "Toon reistijd vanaf
+  deze Mac". `CLGeocoder` is deprecated from macOS 26, so it is not used.
+- **Detail**: Wanneer, Waar (the map above), Wie (click a person to toggle),
   Nog doen with "Iets toevoegen", and the tickets. Dropping a pdf, `.pkpass` or image
   uploads it (`/api/uploads`, then `POST /api/outings/:id/tickets`). Details: every field,
   tickets per person, linked mails (someone else's shows "Mail van …"), search words,

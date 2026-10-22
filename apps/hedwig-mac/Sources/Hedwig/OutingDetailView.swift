@@ -100,6 +100,7 @@ struct OutingDetailView: View {
 private struct OutingFacts: View {
     @Environment(AppModel.self) private var model
     let outing: Outing
+    @State private var lookup: (key: String, place: OutingPlace?)?
 
     var body: some View {
         Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 12) {
@@ -108,14 +109,28 @@ private struct OutingFacts: View {
                 Text(OutingFormat.when(outing))
                 Color.clear.frame(width: 1, height: 1)
             }
-            GridRow {
-                key("Waar")
-                Text(place ?? "Nog onbekend").foregroundStyle(place == nil ? .secondary : .primary).textSelection(.enabled)
-                if let route {
-                    Button { NSWorkspace.shared.open(route) } label: { Label("Route", systemImage: "map") }
-                        .controlSize(.small)
-                } else {
-                    Color.clear.frame(width: 1, height: 1)
+            if let found = mapPlace {
+                GridRow(alignment: .top) {
+                    key("Waar")
+                    OutingMapCard(outing: outing, place: found)
+                        .transition(.opacity)
+                        .gridCellColumns(2)
+                }
+            } else if lookingUp {
+                GridRow(alignment: .top) {
+                    key("Waar")
+                    OutingMapPlaceholder().gridCellColumns(2)
+                }
+            } else {
+                GridRow {
+                    key("Waar")
+                    Text(place ?? "Nog onbekend").foregroundStyle(place == nil ? .secondary : .primary).textSelection(.enabled)
+                    if let route {
+                        Button { NSWorkspace.shared.open(route) } label: { Label("Route", systemImage: "map") }
+                            .controlSize(.small)
+                    } else {
+                        Color.clear.frame(width: 1, height: 1)
+                    }
                 }
             }
             GridRow(alignment: .center) {
@@ -124,10 +139,23 @@ private struct OutingFacts: View {
                 Color.clear.frame(width: 1, height: 1)
             }
         }
+        .task(id: outing.placeKey) {
+            guard let key = outing.placeKey, OutingMaps.book.cached(outing) == nil else { return }
+            let found = await OutingMaps.book.place(for: outing)
+            withAnimation(.easeOut(duration: 0.2)) { lookup = (key, found) }
+        }
     }
 
     private func key(_ text: String) -> some View {
         Text(text).foregroundStyle(.secondary).gridColumnAlignment(.leading)
+    }
+
+    private var mapPlace: OutingPlace? {
+        OutingMaps.book.cached(outing) ?? (lookup?.key == outing.placeKey ? lookup?.place : nil)
+    }
+
+    private var lookingUp: Bool {
+        outing.placeKey != nil && lookup?.key != outing.placeKey
     }
 
     private var place: String? {
@@ -136,10 +164,7 @@ private struct OutingFacts: View {
     }
 
     private var route: URL? {
-        guard let query = outing.address ?? outing.venue else { return nil }
-        var components = URLComponents(string: "http://maps.apple.com/")!
-        components.queryItems = [URLQueryItem(name: "q", value: query)]
-        return components.url
+        outing.placeQueries.first.map(MapsLink.route(to:))
     }
 
     /// Everyone in the household; the ones going are filled in. A click
