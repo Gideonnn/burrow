@@ -350,9 +350,24 @@ h2.sec { font-size: 20px; margin-top: 40px; }
 .pill { height: 28px; padding: 0 12px; border-radius: 999px; font-size: 12.5px; background: var(--surface); border: 1px solid var(--line); color: var(--text-2); display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .pill:hover { border-color: var(--line-strong); }
 .pill.on { background: var(--text); color: var(--bg); border-color: var(--text); }
-.pill .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
-.pill.lbl.on { background: color-mix(in srgb, var(--c) 16%, var(--surface)); color: var(--text); border-color: var(--c); }
-.filters .sep { width: 1px; height: 18px; background: var(--line-strong); margin: 0 4px; }
+.lblwrap { position: relative; margin-left: 4px; }
+.lblmenu { height: 28px; padding: 0 8px 0 10px; border-radius: 7px; font-size: 12.5px; color: var(--text-2); display: inline-flex; align-items: center; gap: 5px; }
+.lblmenu:hover, .lblmenu.open { background: var(--hover); color: var(--text); }
+.lblmenu.active { color: var(--text); font-weight: 500; }
+.lblmenu .x { color: var(--text-3); margin-left: 2px; }
+.pop { position: absolute; top: 32px; left: 0; z-index: 5; width: 210px; background: var(--surface); border-radius: 10px; box-shadow: var(--shadow-2); padding: 5px; display: none; }
+.pop.open { display: block; }
+.pop .h { font-size: 11px; color: var(--text-3); padding: 4px 8px; }
+.pop .r { display: flex; align-items: center; gap: 8px; padding: 5px 8px; border-radius: 6px; font-size: 12.5px; cursor: pointer; }
+.pop .r:hover { background: var(--hover); }
+.pop .r .ck { width: 14px; color: var(--primary); visibility: hidden; }
+.pop .r.on .ck { visibility: visible; }
+.pop .r .n { margin-left: auto; color: var(--text-3); font-size: 11.5px; }
+.pop .sep2 { height: 1px; background: var(--line); margin: 4px 6px; }
+.pop .r.manage { color: var(--text-2); }
+.tag { color: var(--text-3); cursor: pointer; }
+.tag:hover { color: var(--text); text-decoration: underline; }
+.chip.quiet { background: none; border-color: var(--line-strong); color: var(--text-2); }
 .filters .grow { flex: 1; }
 .filters .who { font-size: 12.5px; color: var(--text-2); display: inline-flex; gap: 6px; align-items: center; }
 
@@ -373,7 +388,7 @@ h2.sec { font-size: 20px; margin-top: 40px; }
 .mem .info .m .grow { flex: 1; }
 .mem .tbtn { margin-top: 6px; align-self: flex-start; height: 26px; padding: 0 10px; border-radius: 7px; font-size: 12px; font-weight: 600; color: var(--primary); background: var(--primary-tint); display: inline-flex; gap: 5px; align-items: center; }
 .mem .tbtn:hover { filter: brightness(0.95); }
-.callart { height: 100%; display: flex; align-items: center; gap: 2px; padding: 0 14px; background: linear-gradient(160deg, color-mix(in srgb, var(--c) 22%, var(--surface)), var(--surface-2)); }
+.callart { height: 100%; display: flex; align-items: center; gap: 2px; padding: 0 14px; background: linear-gradient(160deg, var(--surface-2), var(--sel)); }
 .callart i { flex: 1; border-radius: 2px; }
 .callart .avs { position: absolute; left: 10px; bottom: 9px; display: flex; }
 .callart .avs .av { border: 2px solid var(--surface); margin-right: -6px; }
@@ -388,7 +403,7 @@ h2.sec { font-size: 20px; margin-top: 40px; }
 .mv-main { padding: 18px 24px 24px; overflow: auto; display: flex; flex-direction: column; gap: 14px; }
 .mv-main .video { margin-top: 0; flex: none; height: 310px; aspect-ratio: auto; }
 .mv-main .video .person { width: 22%; }
-.bigwave { height: 200px; border-radius: 14px; display: flex; align-items: center; gap: 3px; padding: 0 22px; background: linear-gradient(160deg, color-mix(in srgb, var(--l-klant) 22%, var(--surface)), var(--surface-2)); position: relative; flex: none; }
+.bigwave { height: 200px; border-radius: 14px; display: flex; align-items: center; gap: 3px; padding: 0 22px; background: linear-gradient(160deg, var(--surface-2), var(--sel)); position: relative; flex: none; }
 .bigwave i { flex: 1; border-radius: 2px; }
 .bigwave .play { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 56px; height: 56px; border-radius: 50%; background: var(--primary); color: var(--on-primary); display: grid; place-items: center; box-shadow: var(--shadow-2); }
 .strip { position: relative; height: 58px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--line); flex: none; }
@@ -552,12 +567,18 @@ h2.sec { font-size: 20px; margin-top: 40px; }
           <button class="pill" data-kind="video"><svg class="i sm"><use href="#i-cam"/></svg>Video</button>
           <button class="pill" data-kind="screen"><svg class="i sm"><use href="#i-screen"/></svg>Scherm</button>
           <button class="pill" data-kind="dict"><svg class="i sm"><use href="#i-dict"/></svg>Dictaten</button>
-          <span class="sep"></span>
-          <button class="pill lbl" data-label="interview" style="--c:var(--l-interview)"><span class="dot"></span>Interviews</button>
-          <button class="pill lbl" data-label="werk" style="--c:var(--l-werk)"><span class="dot"></span>Werk</button>
-          <button class="pill lbl" data-label="klant" style="--c:var(--l-klant)"><span class="dot"></span>Studio Vos</button>
-          <button class="pill lbl" data-label="thuis" style="--c:var(--l-thuis)"><span class="dot"></span>Thuis</button>
-          <button class="pill lbl" data-label="ideeen" style="--c:var(--l-ideeen)"><span class="dot"></span>Ideeën</button>
+          <span class="lblwrap"><button class="lblmenu"><svg class="i sm"><use href="#i-tag"/></svg><span class="lbltext">Label</span><svg class="i sm" style="transform:rotate(90deg)"><use href="#i-chev"/></svg></button>
+            <div class="pop">
+              <div class="h">Toon alleen</div>
+              <div class="r" data-label="interview"><svg class="i sm ck"><use href="#i-check"/></svg>Interviews<span class="n">2</span></div>
+              <div class="r" data-label="werk"><svg class="i sm ck"><use href="#i-check"/></svg>Werk<span class="n">2</span></div>
+              <div class="r" data-label="klant"><svg class="i sm ck"><use href="#i-check"/></svg>Studio Vos<span class="n">1</span></div>
+              <div class="r" data-label="thuis"><svg class="i sm ck"><use href="#i-check"/></svg>Thuis<span class="n">2</span></div>
+              <div class="r" data-label="ideeen"><svg class="i sm ck"><use href="#i-check"/></svg>Ideeën<span class="n">1</span></div>
+              <div class="sep2"></div>
+              <div class="r manage">Labels beheren…</div>
+            </div>
+          </span>
           <span class="grow"></span>
           <span class="who"><span class="av g">G</span><span class="av e" style="margin-left:-8px;border:2px solid var(--bg)">E</span>Iedereen</span>
         </div>
@@ -566,45 +587,45 @@ h2.sec { font-size: 20px; margin-top: 40px; }
           <div class="cards">
             <div class="mem" data-k="video interview" data-open="femke">
               <div class="art"><div class="video"><div class="scene"></div><div class="person"><i class="torso"></i><i class="hair"></i><i class="head"></i></div></div><span class="kind"><svg class="i sm"><use href="#i-cam"/></svg></span><span class="dur">52:10</span></div>
-              <div class="info"><b>Interview Femke de Wit</b><span class="m"><span class="dot" style="background:var(--l-interview)"></span>Interviews<span class="grow"></span><span class="av e">E</span></span><span class="tbtn" data-act="transcript"><svg class="i sm"><use href="#i-doc"/></svg>Maak transcript</span></div>
+              <div class="info"><b>Interview Femke de Wit</b><span class="m"><span class="tag" data-label="interview">Interviews</span><span class="grow"></span><span class="av e">E</span></span><span class="tbtn" data-act="transcript"><svg class="i sm"><use href="#i-doc"/></svg>Maak transcript</span></div>
             </div>
             <div class="mem" data-k="screen werk">
               <div class="art"><div class="video"><div class="screenshot"><div class="sbar"></div><div class="col"><i style="height:60%"></i><i style="height:85%"></i><i style="height:40%"></i></div></div></div>
                 <div class="busy"><div><svg viewBox="0 0 46 46"><circle cx="23" cy="23" r="19" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="4"/><circle cx="23" cy="23" r="19" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-dasharray="119.4" stroke-dashoffset="43"/></svg>Verkleinen · 64%</div></div></div>
-              <div class="info"><b>Demo nieuwe rapportage</b><span class="m"><span class="dot" style="background:var(--l-werk)"></span>Werk · 12:40<span class="grow"></span><span class="av g">G</span></span><span class="m" style="color:var(--text-3)">2,1 GB wordt ± 150 MB</span></div>
+              <div class="info"><b>Demo nieuwe rapportage</b><span class="m">12:40 · <span class="tag" data-label="werk">Werk</span><span class="grow"></span><span class="av g">G</span></span><span class="m" style="color:var(--text-3)">2,1 GB wordt ± 150 MB</span></div>
             </div>
             <div class="mem" data-k="dict thuis">
               <div class="art"><div class="dictart">Hoi Ruben, de kozijnen aan de achterkant kunnen volgende week geplaatst worden, als het droog blijft. Kun je laten weten of dinsdag of woensdag beter uitkomt?</div></div>
-              <div class="info"><b>Mail aan de aannemer</b><span class="m"><span class="dot" style="background:var(--l-thuis)"></span>Thuis · 1:12 · geplakt in Mail<span class="grow"></span><span class="av g">G</span></span></div>
+              <div class="info"><b>Mail aan de aannemer</b><span class="m">1:12 · geplakt in Mail · <span class="tag" data-label="thuis">Thuis</span><span class="grow"></span><span class="av g">G</span></span></div>
             </div>
           </div></div>
           <div class="day-group"><div class="dayh">Gisteren<span>dinsdag 21 oktober</span></div>
           <div class="cards">
             <div class="mem" data-k="call werk klant" data-open="call">
-              <div class="art"><div class="callart" style="--c:var(--l-klant)" data-bars="60" data-a="var(--gideon)" data-b="var(--l-klant)"></div><span class="kind"><svg class="i sm"><use href="#i-call"/></svg></span><span class="dur">34:12</span></div>
-              <div class="info"><b>Teams-overleg Studio Vos</b><span class="m"><span class="dot" style="background:var(--l-werk)"></span><span class="dot" style="background:var(--l-klant)"></span>Werk, Studio Vos<span class="grow"></span><span class="av g">G</span></span><span class="s">Lancering schuift naar 12 november; fase 2 krijgt een eigen offerte.</span></div>
+              <div class="art"><div class="callart" data-bars="60" data-a="var(--gideon)" data-b="#5E8A6E"></div><span class="kind"><svg class="i sm"><use href="#i-call"/></svg></span><span class="dur">34:12</span></div>
+              <div class="info"><b>Teams-overleg Studio Vos</b><span class="m"><span class="tag" data-label="werk">Werk</span>, <span class="tag" data-label="klant">Studio Vos</span><span class="grow"></span><span class="av g">G</span></span><span class="s">Lancering schuift naar 12 november; fase 2 krijgt een eigen offerte.</span></div>
             </div>
             <div class="mem" data-k="video interview" data-open="joris">
               <div class="art"><div class="video"><div class="scene" style="background:radial-gradient(ellipse at 50% 120%, #6a5a40 0%, #33291c 45%, #17130d 100%)"></div><div class="person"><i class="torso" style="background:#8a6f55"></i><i class="hair" style="background:#9a8a7a"></i><i class="head"></i></div></div><span class="kind"><svg class="i sm"><use href="#i-cam"/></svg></span><span class="dur">41:37</span></div>
-              <div class="info"><b>Interview Joris Bakker</b><span class="m"><span class="dot" style="background:var(--l-interview)"></span>Interviews<span class="grow"></span><span class="av e">E</span></span><span class="s">"Brood is geduld dat je kunt eten." Twintig jaar zuurdesem in de Kerkstraat.</span></div>
+              <div class="info"><b>Interview Joris Bakker</b><span class="m"><span class="tag" data-label="interview">Interviews</span><span class="grow"></span><span class="av e">E</span></span><span class="s">"Brood is geduld dat je kunt eten." Twintig jaar zuurdesem in de Kerkstraat.</span></div>
             </div>
           </div></div>
           <div class="day-group"><div class="dayh">Vorige week</div>
           <div class="cards">
             <div class="mem" data-k="call thuis">
-              <div class="art"><div class="callart" style="--c:var(--l-thuis)" data-bars="40" data-a="var(--eva)" data-b="var(--l-thuis)"></div><span class="kind"><svg class="i sm"><use href="#i-call"/></svg></span><span class="dur">6:02</span></div>
-              <div class="info"><b>Terugbelafspraak huisarts</b><span class="m"><span class="dot" style="background:var(--l-thuis)"></span>Thuis<span class="grow"></span><span class="av e">E</span></span><span class="s">Uitslag goed, controle over drie maanden.</span></div>
+              <div class="art"><div class="callart" data-bars="40" data-a="var(--eva)" data-b="#8C7F70"></div><span class="kind"><svg class="i sm"><use href="#i-call"/></svg></span><span class="dur">6:02</span></div>
+              <div class="info"><b>Terugbelafspraak huisarts</b><span class="m"><span class="tag" data-label="thuis">Thuis</span><span class="grow"></span><span class="av e">E</span></span><span class="s">Uitslag goed, controle over drie maanden.</span></div>
             </div>
             <div class="mem" data-k="dict ideeen">
               <div class="art"><div class="dictart">Onder het schuine dak, drie vakken diep, met schuifdeuren zodat het stof eraf blijft. Hout van de oude vloer hergebruiken.</div></div>
-              <div class="info"><b>Idee: boekenkast op zolder</b><span class="m"><span class="dot" style="background:var(--l-ideeen)"></span>Ideeën · 0:48<span class="grow"></span><span class="av g">G</span></span></div>
+              <div class="info"><b>Idee: boekenkast op zolder</b><span class="m">0:48 · <span class="tag" data-label="ideeen">Ideeën</span><span class="grow"></span><span class="av g">G</span></span></div>
             </div>
           </div></div>
         </div>
       </div>
     </div>
     </div></div>
-    <p class="note"><b>Eén scherm, geen kolommen.</b> De vier knoppen starten meteen (met 3, 2, 1 aftellen); rechtsklik op een knop kiest een andere microfoon of camera. Filters zijn knopjes: één soort tegelijk, labels stapelen. Klik op <b>Interview Femke de Wit</b>, <b>Interview Joris Bakker</b> of <b>Teams-overleg Studio Vos</b> om ze te openen, of op een filter.</p>
+    <p class="note"><b>Eén scherm, geen kolommen.</b> De vier knoppen starten meteen (met 3, 2, 1 aftellen); rechtsklik op een knop kiest een andere microfoon of camera. Soort is een knopje; labels zitten stil in het menu <b>Label</b> en staan als grijze tekst op de kaarten. Klik op zo'n label om erop te filteren. Klik op <b>Interview Femke de Wit</b>, <b>Interview Joris Bakker</b> of <b>Teams-overleg Studio Vos</b> om ze te openen, of op een filter.</p>
   </div>
 
   <!-- 2. Memory view ------------------------------------------------------->
@@ -629,7 +650,7 @@ h2.sec { font-size: 20px; margin-top: 40px; }
     <div class="mac darkwin" style="height:640px">
       <div class="tb"><span class="lights"><i></i><i></i><i></i></span><span class="title">Pensieve</span><span class="sub">Video</span></div>
       <div class="stagev">
-        <div class="title-chip"><b>Interview</b><span class="ed">klik om de titel te wijzigen</span><span><span class="chip"><span class="dot" style="background:var(--l-interview)"></span>Interviews</span></span></div>
+        <div class="title-chip"><b>Interview</b><span class="ed">klik om de titel te wijzigen</span><span><span class="chip">Interviews</span> <span class="chip">+</span></span></div>
         <div class="side-marks"><h4>GEMARKEERD</h4><div><span class="ts">04:10</span>Eerste oven, 2009</div><div><span class="ts">15:33</span>Mooie quote</div><div class="est">Wordt na afloop ± 280 MB plus het geluid apart. Het origineel gaat daarna weg.</div></div>
         <div class="video" id="rec-video"><div class="scene"></div><div class="person"><i class="torso"></i><i class="hair"></i><i class="head"></i></div><div class="countdown" id="countdown" style="display:none">3</div></div>
         <div class="ctlpill">
@@ -705,11 +726,11 @@ h2.sec { font-size: 20px; margin-top: 40px; }
       <div class="tb"><span class="lights"><i></i><i></i><i></i></span><span class="title">Pensieve</span><span class="sub">iCloud Drive</span><span class="grow"></span><div class="search" style="width:200px"><svg class="i sm"><use href="#i-search"/></svg>Zoek</div></div>
       <div class="fcols">
         <div class="fcol">
-          <div class="fi on"><svg class="i"><use href="#i-folder"/></svg>2026-10-22_interview-femke-de-wit<span class="dots"><i style="background:var(--l-interview)"></i></span></div>
-          <div class="fi"><svg class="i"><use href="#i-folder"/></svg>2026-10-22_demo-nieuwe-rapportage<span class="dots"><i style="background:var(--l-werk)"></i></span></div>
-          <div class="fi"><svg class="i"><use href="#i-folder"/></svg>2026-10-21_teams-overleg-studio-vos<span class="dots"><i style="background:var(--l-werk)"></i><i style="background:var(--l-klant)"></i></span></div>
-          <div class="fi"><svg class="i"><use href="#i-folder"/></svg>2026-10-21_interview-joris-bakker<span class="dots"><i style="background:var(--l-interview)"></i></span></div>
-          <div class="fi"><svg class="i"><use href="#i-folder"/></svg>2026-10-16_terugbelafspraak-huisarts<span class="dots"><i style="background:var(--l-thuis)"></i></span></div>
+          <div class="fi on"><svg class="i"><use href="#i-folder"/></svg>2026-10-22_interview-femke-de-wit</div>
+          <div class="fi"><svg class="i"><use href="#i-folder"/></svg>2026-10-22_demo-nieuwe-rapportage</div>
+          <div class="fi"><svg class="i"><use href="#i-folder"/></svg>2026-10-21_teams-overleg-studio-vos</div>
+          <div class="fi"><svg class="i"><use href="#i-folder"/></svg>2026-10-21_interview-joris-bakker</div>
+          <div class="fi"><svg class="i"><use href="#i-folder"/></svg>2026-10-16_terugbelafspraak-huisarts</div>
           <div class="fi"><svg class="i"><use href="#i-folder"/></svg>dictaten</div>
         </div>
         <div class="fcol">
@@ -796,7 +817,8 @@ ovens en twee vaste krachten.
       <li>Bij video en scherm stuurt <b>Maak transcript</b> alleen het geluid naar de server. Ondertitels (<code>.srt</code>) komen erbij.</li>
     </ul></div>
     <div class="card"><h3>Labels en filters</h3><ul>
-      <li>Labels zijn vrij, met een kleur. Die kleur kleurt ook de kaart van een gesprek. Labels worden Finder-tags op de iCloud-map en zijn doorzoekbaar via de server en MCP.</li>
+      <li>Labels zijn <b>discreet</b>: grijze tekst op de kaart en een filtermenu in de lijst, geen eigen menu-items of kleuren. Klik op een label om erop te filteren.</li>
+      <li>Labels worden Finder-tags op de iCloud-map en zijn doorzoekbaar via de server en MCP.</li>
       <li>Open vraag: mag een bot achteraf een label voorstellen, bijvoorbeeld "Studio Vos" uit de agenda?</li>
     </ul></div>
   </div>
@@ -859,20 +881,20 @@ const mems = {
     side: () => `
       <div class="bigcta" id="cta"><b>Maak transcript en samenvatting</b><span>Alleen het geluid gaat naar de server. Klaar in ± 4 minuten, met sprekers, citaten en ondertitels.</span><button onclick="runTranscript()"><svg class="i sm"><use href="#i-doc"/></svg>Maak transcript</button></div>
       <div><h3>Gemarkeerd tijdens het opnemen</h3><div class="moment"><span class="ts">04:10</span>Eerste oven, 2009</div><div class="moment"><span class="ts">15:33</span>Mooie quote over glazuur</div></div>
-      <div><h3>Labels</h3><div class="labels" style="margin:0"><span class="chip"><span class="dot" style="background:var(--l-interview)"></span>Interviews</span><span class="chip add"><svg class="i sm"><use href="#i-plus"/></svg>Label</span></div></div>
+      <div><h3>Labels</h3><div class="labels" style="margin:0"><span class="chip quiet">Interviews</span><span class="chip add"><svg class="i sm"><use href="#i-plus"/></svg>Label</span></div></div>
       <div><h3>In iCloud</h3>${fileList([['i-film', 'interview-femke-de-wit.mp4', '790 MB'], ['i-wave', 'audio.m4a', '12 MB'], ['i-trash', 'origineel.mov', '5,9 GB', true]])}<p style="font-size:12px;color:var(--text-2);margin-top:6px">Het origineel is om 10:41 verwijderd, nadat de kleine versie veilig in iCloud stond.</p></div>`
   },
   call: {
     title: 'Teams-overleg Studio Vos',
     main: () => `
-      <div class="bigwave">${bars(110, 0, 'var(--gideon)', 'var(--l-klant)')}<span class="play"><svg class="i lg fill"><use href="#i-play"/></svg></span></div>
-      ${strip(speakerBands('var(--gideon)', 'var(--l-klant)', 1.3), [[24.4], [63.6]], 30)}
-      <div class="legend"><span><i style="background:var(--gideon)"></i>Gideon</span><span><i style="background:var(--l-klant)"></i>Lotte</span><span class="grow"></span><span>10:15 / 34:12</span></div>
+      <div class="bigwave">${bars(110, 0, 'var(--gideon)', '#5E8A6E')}<span class="play"><svg class="i lg fill"><use href="#i-play"/></svg></span></div>
+      ${strip(speakerBands('var(--gideon)', '#5E8A6E', 1.3), [[24.4], [63.6]], 30)}
+      <div class="legend"><span><i style="background:var(--gideon)"></i>Gideon</span><span><i style="background:#5E8A6E"></i>Lotte</span><span class="grow"></span><span>10:15 / 34:12</span></div>
       ${lyrics([
         ['Gideon', 'var(--gideon)', '09:58', 'Dan de lancering. Wat als we het een week opschuiven, naar de twaalfde?'],
-        ['Lotte', 'var(--l-klant)', '10:06', 'Dat zou kunnen, als de teksten dan wel eind oktober bij jullie liggen.'],
+        ['Lotte', '#5E8A6E', '10:06', 'Dat zou kunnen, als de teksten dan wel eind oktober bij jullie liggen.'],
         ['Gideon', 'var(--gideon)', '10:15', 'Afgesproken: twaalf november, en na de vijfde geen nieuwe pagina\'s meer.'],
-        ['Lotte', 'var(--l-klant)', '10:24', 'Prima. Fase 2 wil ik wel apart zien, met een eigen offerte.']
+        ['Lotte', '#5E8A6E', '10:24', 'Prima. Fase 2 wil ik wel apart zien, met een eigen offerte.']
       ], 2)}`,
     side: () => `
       <div><h3>Samenvatting</h3><p>De lancering schuift naar 12 november. Fase 2 krijgt een eigen offerte; Studio Vos wil eerst de cijfers van de eerste maand zien.</p></div>
@@ -911,14 +933,31 @@ function applyFilters() {
     g.style.display = [...g.querySelectorAll('.mem')].some(m => m.style.display !== 'none') ? '' : 'none';
   });
   home.querySelectorAll('[data-kind]').forEach(p => p.classList.toggle('on', p.dataset.kind === kind));
-  home.querySelectorAll('[data-label]').forEach(p => p.classList.toggle('on', labels.has(p.dataset.label)));
+  home.querySelectorAll('.pop [data-label]').forEach(r => r.classList.toggle('on', labels.has(r.dataset.label)));
+  const names = [...home.querySelectorAll('.pop [data-label]')].filter(r => labels.has(r.dataset.label)).map(r => r.firstChild.nextSibling.textContent);
+  const btn = home.querySelector('.lblmenu');
+  btn.classList.toggle('active', labels.size > 0);
+  btn.querySelector('.lbltext').innerHTML = labels.size ? names.join(', ') + ' <span class="x" data-clear>×</span>' : 'Label';
 }
 home.querySelector('.filters').onclick = e => {
   const p = e.target.closest('.pill'); if (!p) return;
-  if (p.dataset.kind) kind = p.dataset.kind;
-  else labels.has(p.dataset.label) ? labels.delete(p.dataset.label) : labels.add(p.dataset.label);
+  kind = p.dataset.kind;
   applyFilters();
 };
+home.querySelector('.lblmenu').onclick = e => {
+  if (e.target.closest('[data-clear]')) { labels.clear(); applyFilters(); return; }
+  home.querySelector('.pop').classList.toggle('open');
+  e.currentTarget.classList.toggle('open');
+};
+home.querySelectorAll('.pop [data-label]').forEach(r => r.onclick = () => {
+  labels.has(r.dataset.label) ? labels.delete(r.dataset.label) : labels.add(r.dataset.label);
+  applyFilters();
+});
+home.querySelectorAll('.tag').forEach(t => t.onclick = e => {
+  e.stopPropagation();
+  labels.clear(); labels.add(t.dataset.label);
+  applyFilters();
+});
 home.querySelectorAll('.mem[data-open]').forEach(m => m.onclick = e => {
   goto('p-mem');
   openMem(m.dataset.open);
