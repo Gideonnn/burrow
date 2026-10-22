@@ -125,7 +125,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             onError: { model.error = $0 }
         ) { service in
             service.register(
-                "show", help: "Show a list: inbox, inbox:<address>, private, work, school, filtered, drafts, tasks, outings, archive, sent or spam.",
+                "show", help: "Show a list: inbox, inbox:<address>, private, work, school (the inbox of its first mailbox), filtered, drafts, tasks, outings, archive, sent or spam.",
                 arguments: [.init("text", "where to go")]
             ) { request in
                 try await model.show(request["text"] as? String ?? "inbox")

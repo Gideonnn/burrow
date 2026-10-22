@@ -5,6 +5,7 @@ struct SidebarView: View {
     @Environment(AppModel.self) private var model
     @State private var renaming: MailboxSummary?
     @State private var newName = ""
+    @AppStorage("hedwig.sidebar.showsMore") private var showsMore = false
 
     var body: some View {
         // The list may clear its selection (a click beside a row, a rebuilt
@@ -12,14 +13,7 @@ struct SidebarView: View {
         // highlight, so a place is only ever replaced by another place.
         List(selection: Binding(get: { model.selection }, set: { if let place = $0 { model.selection = place } })) {
             ForEach(model.mailboxGroups) { group in
-                Section(roleTitle(group.role)) {
-                    if group.mailboxes.count > 1 {
-                        NavigationLink(value: SidebarItem.role(group.role)) {
-                            Label("Alle \(roleTitle(group.role).lowercased())", systemImage: "tray.2")
-                        }
-                        .badge(group.mailboxes.reduce(0) { $0 + (model.unreadCounts[$1.id] ?? 0) })
-                        .tag(SidebarItem.role(group.role))
-                    }
+                Section(sectionTitle(group.role)) {
                     ForEach(group.mailboxes) { box in
                         NavigationLink(value: SidebarItem.inbox(mailboxId: box.id)) {
                             Label(mailboxTitle(box), systemImage: "tray")
@@ -68,18 +62,32 @@ struct SidebarView: View {
                 }
                 .badge(model.drafts.count)
                 .tag(SidebarItem.drafts)
-                NavigationLink(value: SidebarItem.folder(.sent)) {
-                    Label("Verstuurd", systemImage: "paperplane")
-                }
-                NavigationLink(value: SidebarItem.folder(.archive)) {
-                    Label("Archief", systemImage: "archivebox")
-                }
-                NavigationLink(value: SidebarItem.folder(.spam)) {
-                    Label("Spam", systemImage: "xmark.bin")
+                DisclosureGroup(isExpanded: $showsMore) {
+                    NavigationLink(value: SidebarItem.folder(.sent)) {
+                        Label("Verstuurd", systemImage: "paperplane")
+                    }
+                    .tag(SidebarItem.folder(.sent))
+                    NavigationLink(value: SidebarItem.folder(.archive)) {
+                        Label("Archief", systemImage: "archivebox")
+                    }
+                    .tag(SidebarItem.folder(.archive))
+                    NavigationLink(value: SidebarItem.folder(.spam)) {
+                        Label("Spam", systemImage: "xmark.bin")
+                    }
+                    .tag(SidebarItem.folder(.spam))
+                } label: {
+                    // Not a place itself: a click opens or closes it, like the chevron.
+                    Label("Meer", systemImage: "ellipsis.circle")
+                        .contentShape(Rectangle())
+                        .onTapGesture { withAnimation { showsMore.toggle() } }
                 }
             }
         }
         .listStyle(.sidebar)
+        // A place under Meer opened elsewhere (a link, an outing's mail) stays in view.
+        .onChange(of: model.selection, initial: true) { _, place in
+            if case .folder = place { showsMore = true }
+        }
         .alert("Naam van de mailbox", isPresented: Binding(get: { renaming != nil }, set: { if !$0 { renaming = nil } })) {
             TextField("Naam", text: $newName)
             Button("Bewaar") { if let box = renaming { rename(box) } }
@@ -151,6 +159,11 @@ struct ConnectionBadge: View {
         .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 9))
         .padding(8)
     }
+}
+
+/// The private mailboxes are simply the inbox in the sidebar; Settings keeps "Privé".
+private func sectionTitle(_ role: MailboxRole) -> String {
+    role == .private ? "Inbox" : roleTitle(role)
 }
 
 func roleTitle(_ role: MailboxRole) -> String {

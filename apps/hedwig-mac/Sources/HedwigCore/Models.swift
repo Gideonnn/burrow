@@ -10,7 +10,7 @@ public enum MailFolder: String, Codable, Sendable, CaseIterable {
     case inbox, archive, spam, trash, sent
 }
 
-/// What a mailbox is for; the sidebar groups by it and merges each group's inboxes.
+/// What a mailbox is for; the sidebar groups by it.
 public enum MailboxRole: String, Codable, Sendable, CaseIterable {
     case `private`, work, school
 }
@@ -247,13 +247,12 @@ public struct SendRequest: Codable, Sendable {
 /// Where a search looks; empty means every mailbox the key sees.
 public struct SearchScope: Encodable, Hashable, Sendable {
     public var mailboxId: String?
-    public var role: MailboxRole?
     public var folder: MailFolder?
 
     public static let everywhere = SearchScope()
 
     public var queryItems: [URLQueryItem] {
-        [("mailboxId", mailboxId), ("role", role?.rawValue), ("folder", folder?.rawValue)]
+        [("mailboxId", mailboxId), ("folder", folder?.rawValue)]
             .compactMap { name, value in value.map { URLQueryItem(name: name, value: $0) } }
     }
 }

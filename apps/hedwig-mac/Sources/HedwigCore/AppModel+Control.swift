@@ -43,7 +43,6 @@ extension AppModel {
     private var selectionName: String? {
         switch selection {
         case .inbox(let id): "inbox:\(mailbox(id)?.address ?? id)"
-        case .role(let role): role.rawValue
         case .filtered: "filtered"
         case .drafts: "drafts"
         case .tasks: "tasks"
@@ -54,8 +53,8 @@ extension AppModel {
     }
 
     /// `inbox` (the first mailbox), `inbox:<address>`, a role (`private`, `work`,
-    /// `school`: its inboxes merged), `filtered`, `drafts`, `tasks`, `outings`,
-    /// `archive`, `sent` or `spam`.
+    /// `school`: the inbox of its first mailbox), `filtered`, `drafts`, `tasks`,
+    /// `outings`, `archive`, `sent` or `spam`.
     public func show(_ place: String) async throws {
         try select(place)
         await selectionLoad?.value
@@ -69,7 +68,13 @@ extension AppModel {
         case "tasks": selection = .tasks
         case "outings": selection = .outings
         case "archive", "sent", "spam": selection = .folder(MailFolder(rawValue: place)!)
-        case "private", "work", "school": selection = .role(MailboxRole(rawValue: place)!)
+        case "private", "work", "school":
+            // The merged inbox per role is gone; older links land on a single inbox.
+            let boxes = me?.mailboxes ?? []
+            guard let box = boxes.first(where: { $0.kind.rawValue == place }) ?? boxes.first else {
+                throw ControlError("there is no mailbox")
+            }
+            selection = .inbox(mailboxId: box.id)
         default:
             guard place == "inbox" || place.hasPrefix("inbox:") else { throw ControlError("unknown place \(place)") }
             let wanted = place.dropFirst("inbox:".count)

@@ -24,13 +24,12 @@ extension APIClient {
         struct Body: Encodable {
             var question: String
             var mailboxId: String?
-            var role: MailboxRole?
             var folder: MailFolder?
             var includeLow: Bool
         }
         return try await call(
             "POST", "api/search/ai",
-            body: Body(question: question, mailboxId: scope.mailboxId, role: scope.role, folder: scope.folder, includeLow: includeLow))
+            body: Body(question: question, mailboxId: scope.mailboxId, folder: scope.folder, includeLow: includeLow))
     }
 
     /// Every mailbox this key sees, in the order the person wants them.

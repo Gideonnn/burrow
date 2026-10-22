@@ -1016,14 +1016,14 @@ textarea.field { height: auto; padding: 8px 10px; resize: none; font: inherit; w
   <h3>Sidebar rows</h3>
   <div class="spec-grid">
     <div class="card"><div class="hd">Hedwig</div><div class="bd a-hedwig" style="background:var(--sidebar);padding:8px">
-      <div class="sb-label">Inboxen</div>
-      <div class="sb-row"><svg class="i"><use href="#i-tray2"/></svg><span class="grow">Alle inboxen</span><span class="n">7</span></div>
+      <div class="sb-label">Inbox</div>
       <div class="sb-row two sel active"><svg class="i"><use href="#i-tray"/></svg><span class="grow">Gideon<small style="color:rgba(255,255,255,.8)">gideon@example.com</small></span><span class="n">4</span></div>
       <div class="sb-row two"><svg class="i"><use href="#i-tray"/></svg><span class="grow">Werk<small>gideon@studio.example.com</small></span><span class="n">3</span></div>
       <div class="sb-label">Overal</div>
       <div class="sb-row hover"><svg class="i"><use href="#i-shield"/></svg><span class="grow">Gefilterd</span><span class="badge count">5</span></div>
       <div class="sb-row"><svg class="i"><use href="#i-checklist"/></svg><span class="grow">Taken</span><span class="badge count accent" style="background:var(--warning)">1</span></div>
       <div class="sb-row disabled"><svg class="i"><use href="#i-doc"/></svg><span class="grow">Concepten</span></div>
+      <div class="sb-row"><svg class="i"><use href="#i-ellipsis"/></svg><span class="grow">Meer</span><svg class="i sm"><use href="#i-chev-r"/></svg></div>
     </div></div>
     <div class="card"><div class="hd">Pensieve</div><div class="bd a-pensieve" style="background:var(--sidebar);padding:8px">
       <div class="sb-label">Opnames</div>
@@ -1041,7 +1041,7 @@ textarea.field { height: auto; padding: 8px 10px; resize: none; font: inherit; w
       <div class="sb-row sel">geselecteerd, venster inactief</div>
       <div class="sb-row sel active">geselecteerd, venster actief</div>
       <div class="sb-row disabled">uitgeschakeld (feature uit)</div>
-      <p class="muted small" style="margin:8px 2px 0">Labels are sentence case. Counts are right-aligned secondary text; only review queues ("Gefilterd", "Taken") get a filled badge. The footer names the server and the device key.</p>
+      <p class="muted small" style="margin:8px 2px 0">Labels are sentence case. Secondary folders (Verstuurd, Archief, Spam) sit under a collapsible "Meer", collapsed by default. Counts are right-aligned secondary text; only review queues ("Gefilterd", "Taken") get a filled badge. The footer names the server and the device key.</p>
     </div></div>
   </div>
 
@@ -1393,8 +1393,7 @@ textarea.field { height: auto; padding: 8px 10px; resize: none; font: inherit; w
       </div>
       <div class="body three">
         <div class="side">
-          <div class="sb-label">Inboxen</div>
-          <div class="sb-row"><svg class="i"><use href="#i-tray2"/></svg><span class="grow">Alle inboxen</span><span class="n">7</span></div>
+          <div class="sb-label">Inbox</div>
           <div class="sb-row two"><svg class="i"><use href="#i-tray"/></svg><span class="grow">Gideon<small>gideon@example.com</small></span><span class="n">4</span></div>
           <div class="sb-row two"><svg class="i"><use href="#i-tray"/></svg><span class="grow">Werk<small>gideon@studio.example.com</small></span><span class="n">3</span></div>
           <div class="sb-row two"><svg class="i"><use href="#i-tray"/></svg><span class="grow">Samen<small>huis@example.com</small></span><span class="badge shared" style="height:16px;padding:0 5px"><svg class="i sm"><use href="#i-person2"/></svg></span></div>
@@ -1402,9 +1401,10 @@ textarea.field { height: auto; padding: 8px 10px; resize: none; font: inherit; w
           <div class="sb-row sel active"><svg class="i"><use href="#i-shield"/></svg><span class="grow">Gefilterd</span><span class="badge count" style="background:rgba(255,255,255,.25)">5</span></div>
           <div class="sb-row"><svg class="i"><use href="#i-checklist"/></svg><span class="grow">Taken</span><span class="badge count" style="background:var(--warning)">1</span></div>
           <div class="sb-row"><svg class="i"><use href="#i-doc"/></svg><span class="grow">Concepten</span><span class="n">2</span></div>
-          <div class="sb-row"><svg class="i"><use href="#i-paperplane"/></svg><span class="grow">Verstuurd</span></div>
-          <div class="sb-row"><svg class="i"><use href="#i-archive"/></svg><span class="grow">Archief</span></div>
-          <div class="sb-row"><svg class="i"><use href="#i-xmark"/></svg><span class="grow">Spam</span></div>
+          <div class="sb-row"><svg class="i"><use href="#i-ellipsis"/></svg><span class="grow">Meer</span><svg class="i sm"><use href="#i-chev-d"/></svg></div>
+          <div class="sb-row" style="padding-left:26px"><svg class="i"><use href="#i-paperplane"/></svg><span class="grow">Verstuurd</span></div>
+          <div class="sb-row" style="padding-left:26px"><svg class="i"><use href="#i-archive"/></svg><span class="grow">Archief</span></div>
+          <div class="sb-row" style="padding-left:26px"><svg class="i"><use href="#i-xmark"/></svg><span class="grow">Spam</span></div>
           <div class="sb-foot"><span class="dot ok"></span><span><b>burrow.example.nl</b>MacBook Gideon · Hedwig</span></div>
         </div>
         <div class="list">

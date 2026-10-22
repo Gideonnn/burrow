@@ -41,7 +41,6 @@ struct MessageListView: View {
     private var placeTitle: String {
         switch model.selection {
         case .inbox(let id): model.mailbox(id).map(mailboxTitle) ?? "Inbox"
-        case .role(let role): "\(roleTitle(role)) · alle inboxen"
         case .folder(.sent): "Verstuurd"
         case .folder(.archive): "Archief"
         case .folder(.spam): "Spam"

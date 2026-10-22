@@ -40,12 +40,14 @@ import Testing
         #expect(server.requests("PUT", "/api/mailboxes/order").first == #"{"ids":["mb1","w2","w1"]}"#)
     }
 
-    @Test func aRoleMergesTheInboxesOfItsMailboxesNewestFirst() async throws {
+    @Test func aRoleOpensTheInboxOfItsFirstMailbox() async throws {
         let model = model(server())
         await model.start()
         try await model.show("work")
-        #expect(model.selection == .role(.work))
-        #expect(model.messages.map(\.subject) == ["Nieuw", "Oud"])
+        #expect(model.selection == .inbox(mailboxId: "w1"))
+        #expect(model.messages.map(\.subject) == ["Oud"])
+        try await model.show("school")
+        #expect(model.selection == .inbox(mailboxId: "mb1"))
     }
 
     @Test func renamingAMailboxShowsAtOnce() async throws {

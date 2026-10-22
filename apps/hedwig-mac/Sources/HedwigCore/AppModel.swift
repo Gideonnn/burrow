@@ -3,8 +3,6 @@ import Observation
 
 public enum SidebarItem: Hashable, Sendable {
     case inbox(mailboxId: String)
-    /// The inboxes of every mailbox with this role, merged.
-    case role(MailboxRole)
     case filtered
     case drafts
     case tasks
@@ -258,12 +256,6 @@ public final class AppModel {
             switch selection {
             case .inbox(let id):
                 messages = try await api.messages(mailboxId: id, folder: .inbox)
-            case .role(let role):
-                var all: [MessageSummary] = []
-                for box in me?.mailboxes ?? [] where box.kind == role {
-                    all += try await api.messages(mailboxId: box.id, folder: .inbox, limit: 50)
-                }
-                messages = all.sorted { $0.receivedAt > $1.receivedAt }
             case .folder(let folder):
                 // "Overal" folders combine every mailbox, newest first.
                 var all: [MessageSummary] = []
@@ -403,7 +395,6 @@ public final class AppModel {
     public var placeScope: SearchScope? {
         switch selection {
         case .inbox(let id): SearchScope(mailboxId: id, folder: .inbox)
-        case .role(let role): SearchScope(role: role, folder: .inbox)
         case .folder(let folder): SearchScope(folder: folder)
         case nil: .everywhere
         default: nil
