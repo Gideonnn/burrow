@@ -45,3 +45,14 @@ Built the whole plan of 2026-10-20 (phases 1 to 7) and deployed it.
   `server` could never finish a task, and that `ensureTemplates` and the backlog query
   would have rewritten or sorted tens of thousands of rows per claim on the Celeron. All
   fixed with tests.
+
+## Winky in production, measured
+
+The production prompt (Winky's persona, the `mail-facts` skill, the message fenced as
+untrusted, the server's zod schema, `num_predict` 1,024) over the 97 messages of the
+phase 0 answer key: category 87% equal to Opus (phase 0's bare prompt: 82%), priority
+80%, all answers valid, about 5 s per message when Ollama is not shared. Most priority
+differences are Winky saying `low` where Opus says `normal`. A sharper priority text
+("low only for codes, account and system notices and plain ads; newsletters and
+receipts are normal") and "when unsure, other" instead of personal did worse on
+category (82%) and no better on priority, so the skill stayed as it was.
