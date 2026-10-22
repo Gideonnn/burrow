@@ -39,7 +39,7 @@ import Testing
         #expect(model.messages.map(\.subject) == ["Twijfel", "Zeker", "Oud"])
         #expect(model.review(for: "s3")?.unsure == true)
         #expect(model.review(for: "s1") == nil)
-        #expect(model.reviewCount(mailboxId: "mb1") == 2)
+        #expect(model.reviews(in: .spam, mailboxId: "mb1").count == 2)
     }
 
     @Test func openingSpamLeavesItUnread() async throws {

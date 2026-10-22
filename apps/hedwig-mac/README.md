@@ -35,7 +35,8 @@ and optionally `HEDWIG_OPEN` with any place `burrowctl hedwig show` takes (`filt
 - Archive, delete, spam, read and flag act at the provider, so phones see the same.
 - What the bot filtered waits for review in that mailbox's Spam or Archief, on top and
   with its reason: "Klopt" confirms, "Geen spam" or "Terug naar inbox" restores. A count
-  on the folder (and on the mailbox while it is closed) shows what still waits.
+  on Spam or Archief shows what still waits; the mailbox row shows only its unread
+  count, which the folder chevron replaces on hover or selection.
 - Spam stays unread and never loads remote images, not even on request, until you say
   "Geen spam"; then it goes back to the inbox as read.
 - "Evenementen": the household's outings, each with one status sentence; Details holds

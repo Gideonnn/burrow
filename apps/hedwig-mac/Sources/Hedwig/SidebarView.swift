@@ -64,20 +64,21 @@ struct SidebarView: View {
 
     private func mailboxRow(_ box: MailboxSummary, in group: AppModel.MailboxGroup) -> some View {
         let open = isOpen(box.id)
-        let waiting = model.reviewCount(mailboxId: box.id)
+        let unread = model.unreadCounts[box.id] ?? 0
+        // Folders are rarely needed, so the toggle only shows on hover or for the open mailbox.
+        let showsToggle = hovered == box.id || model.selection?.mailboxId == box.id
         return NavigationLink(value: SidebarItem.inbox(mailboxId: box.id)) {
             HStack(spacing: 6) {
                 Label(mailboxTitle(box), systemImage: "tray")
                 Spacer(minLength: 0)
-                if !open, waiting > 0 {
-                    Label("\(waiting)", systemImage: "checkmark.shield")
-                        .labelStyle(.titleAndIcon)
-                        .font(.caption2)
+                // One trailing slot: the unread count, or the toggle in its place.
+                // Both stay laid out, so the row keeps its width when they swap.
+                ZStack(alignment: .trailing) {
+                    Text(unread > 0 ? "\(unread)" : "")
+                        .monospacedDigit()
                         .foregroundStyle(.secondary)
-                        .help("\(waiting) te controleren in Archief, Concepten of Spam")
-                }
-                // Folders are rarely needed, so the toggle only shows on hover or for the open mailbox.
-                if hovered == box.id || model.selection?.mailboxId == box.id {
+                        .opacity(showsToggle ? 0 : 1)
+                        .accessibilityHidden(showsToggle || unread == 0)
                     Button { toggle(box) } label: {
                         Image(systemName: "chevron.right")
                             .rotationEffect(.degrees(open ? 90 : 0))
@@ -88,6 +89,9 @@ struct SidebarView: View {
                     .font(.caption2.weight(.semibold))
                     .foregroundStyle(.secondary)
                     .help(open ? "Verberg mappen" : "Toon Archief, Verstuurd, Concepten en Spam")
+                    .opacity(showsToggle ? 1 : 0)
+                    .allowsHitTesting(showsToggle)
+                    .accessibilityHidden(!showsToggle)
                 }
             }
         }
@@ -95,7 +99,6 @@ struct SidebarView: View {
             if inside { hovered = box.id } else if hovered == box.id { hovered = nil }
         }
         .help(box.address)
-        .badge(model.unreadCounts[box.id] ?? 0)
         .contextMenu {
             let index = group.mailboxes.firstIndex(of: box) ?? 0
             Button(open ? "Verberg mappen" : "Toon mappen") { toggle(box) }

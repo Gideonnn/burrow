@@ -372,11 +372,6 @@ public final class AppModel {
         filtered.filter { $0.message.mailboxId == mailboxId && $0.message.folder == folder }
     }
 
-    /// Filtered mail and prepared drafts waiting in a mailbox's folders.
-    public func reviewCount(mailboxId: String) -> Int {
-        filtered.count { $0.message.mailboxId == mailboxId } + drafts(in: mailboxId).count
-    }
-
     public func drafts(in mailboxId: String) -> [Draft] {
         drafts.filter { $0.mailboxId == mailboxId }
     }
