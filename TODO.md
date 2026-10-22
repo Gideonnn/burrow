@@ -165,3 +165,16 @@ forks open) and add `LICENSE`.
 50,000 messages on a MacBook, slower on Dobby and per keystroke.
 **Scope:** a migration with triggers, the search query and ranking; half a day. Only once
 search feels slow.
+
+## A faster server start
+
+**What:** the server takes 7 to 8 s from `systemctl restart` to answering `/health` on
+Dobby; cloudflared answers 502 for that long. About 2.5 s is loading modules (most of it
+Node resolving `package.json` files through pnpm's `node_modules`; `dist/cli.js` alone
+takes as long), about 1 s more is the rest of a fresh start, and the remaining 3 to 4 s
+comes with the real 600 MB database. Profile `dist/main.js` with `--cpu-prof` against a
+copy of the database, then consider bundling the dependencies into the tsup build
+(better-sqlite3 stays external) and moving slow startup work after `serve`.
+**Why:** every deploy is a gap for the apps; they now retry quietly, but agents and MCP
+clients still see errors.
+**Scope:** an hour to profile, a few hours to fix.
