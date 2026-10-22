@@ -195,7 +195,14 @@ struct OutingHero: View {
         }
         .mask {
             LinearGradient(
-                stops: [.init(color: .black, location: 0.5), .init(color: .black.opacity(0.6), location: 0.75), .init(color: .clear, location: 1)],
+                // Bright at the top, dim behind the title, gone into the page.
+                stops: [
+                    .init(color: .black, location: 0),
+                    .init(color: .black, location: 0.38),
+                    .init(color: .black.opacity(0.7), location: 0.58),
+                    .init(color: .black.opacity(0.35), location: 0.78),
+                    .init(color: .clear, location: 1),
+                ],
                 startPoint: .top, endPoint: .bottom)
         }
         .frame(maxWidth: .infinity, alignment: .trailing)
@@ -220,7 +227,12 @@ struct OutingHero: View {
                 }
                 .padding(.horizontal, 28)
                 .padding(.top, 10)
-                .frame(maxWidth: filled ? .infinity : 640, alignment: .leading)
+                // Over a filled picture the title stands at the bottom, where
+                // the picture has faded, like a film poster.
+                .padding(.bottom, filled ? 22 : 0)
+                .frame(
+                    maxWidth: filled ? .infinity : 640, maxHeight: .infinity,
+                    alignment: filled ? .bottomLeading : .leading)
             }
             .frame(height: height)
             .frame(maxWidth: .infinity, alignment: .leading)

@@ -147,9 +147,10 @@ the family, everything else folded behind **Details**.
   row (grey for past outings; a calm tile in the title's colours without a picture).
   The page header keeps to about 220 pt and a third of the window. A large picture (700 px
   wide or more, not taller than wide) fills the right three quarters and fades, eased over
-  most of its width, into the title on the left and into the page below; the title may run
-  over the artwork (Gideon likes that). A small or tall picture stays whole in a frame on
-  the right, never stretched; without a picture the kind's colours and symbol fill the
+  most of its width, into the title on the left and, bright at the top and dim behind the
+  title, into the page below; the date and title then stand at the bottom; the title may
+  run over the artwork (Gideon likes that). A small or tall picture stays whole in a frame
+  on the right, never stretched; without a picture the kind's colours and symbol fill the
   same space. The backdrop comes from the picture's own strong colours (`PictureColours`).
   Without a picture the same places get a gradient in the title's colours
   (`TitleColours`, the design's hash) with the kind's symbol (`Outing.kindSymbol`).
