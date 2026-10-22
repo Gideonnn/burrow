@@ -94,8 +94,9 @@ struct OutingTicketsBlock: View {
         let count = outing.tickets.count
         let links = outing.shopLinks
         let entries = TicketEntry.all(outing.tickets, previews)
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 12) {
+        // One row: what there is on the left, the codes and the shop's page on
+        // the right.
+        HStack(alignment: .center, spacing: 12) {
                 Image(systemName: count == 0 && links.isEmpty ? "ticket" : "ticket.fill")
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(count == 0 && links.isEmpty ? Color.orange : Color.pink)
@@ -104,38 +105,39 @@ struct OutingTicketsBlock: View {
                 VStack(alignment: .leading, spacing: 1) {
                     Text(title(count == 0 ? 0 : entries.count)).font(.body.weight(.medium))
                     Text(subtitle(count, links)).font(.callout).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                Spacer()
+                .layoutPriority(1)
+                Spacer(minLength: 8)
                 if model.ticketUploads > 0 { ProgressView().controlSize(.small) }
-            }
-            if count > 0 {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 12) {
-                        ForEach(Array(entries.enumerated()), id: \.element.id) { position, entry in
-                            Button { viewing = ViewingTicket(index: position) } label: {
-                                TicketCard(entry: entry, label: label(entry, position, entries))
+                ForEach(links, id: \.label) { link in
+                    Button {
+                        if let url = link.webURL { NSWorkspace.shared.open(url) }
+                    } label: {
+                        // The sentence beside it already says where; the button names the shop.
+                        Label(link.label.replacingOccurrences(of: "Kaartjes bij ", with: ""), systemImage: "arrow.up.right")
+                    }
+                    .buttonStyle(.bordered)
+                    .fixedSize()
+                    .help("Open \(link.label.lowercased()): \(link.url)")
+                }
+                if count > 0 {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(Array(entries.enumerated()), id: \.element.id) { position, entry in
+                                Button { viewing = ViewingTicket(index: position) } label: {
+                                    TicketCard(entry: entry, label: shortLabel(entry, position, entries))
+                                }
+                                .buttonStyle(TicketPressStyle())
+                                .help("\(label(entry, position, entries)): toon groot, om te scannen")
                             }
-                            .buttonStyle(TicketPressStyle())
-                            .help("Toon groot, om te scannen")
                         }
+                        .padding(.vertical, 4)
+                        .padding(.horizontal, 2)
                     }
-                    .padding(.vertical, 6)
-                    .padding(.horizontal, 2)
+                    .defaultScrollAnchor(.trailing)
+                    .frame(maxWidth: CGFloat(entries.count) * (TicketCard.size.width + 8) + 4)
                 }
-            }
-            if !links.isEmpty {
-                HStack(spacing: 8) {
-                    ForEach(links, id: \.label) { link in
-                        Button {
-                            if let url = link.webURL { NSWorkspace.shared.open(url) }
-                        } label: {
-                            Label(link.label, systemImage: "arrow.up.right.square")
-                        }
-                        .buttonStyle(.bordered)
-                        .help(link.url)
-                    }
-                }
-            }
         }
         .padding(12)
         .background(.quaternary.opacity(0.3), in: RoundedRectangle(cornerRadius: 12))
@@ -156,14 +158,20 @@ struct OutingTicketsBlock: View {
         entry.ticket.holder ?? (entries.count == 1 ? "Kaartje" : "Kaartje \(position + 1)/\(entries.count)")
     }
 
+    /// Under a small card: the holder's first name, or "1/2".
+    private func shortLabel(_ entry: TicketEntry, _ position: Int, _ entries: [TicketEntry]) -> String {
+        if let holder = entry.ticket.holder { return holder.split(separator: " ").first.map(String.init) ?? holder }
+        return entries.count == 1 ? "Kaartje" : "\(position + 1)/\(entries.count)"
+    }
+
     private func title(_ count: Int) -> String {
         if count > 0 { return "\(count) \(count == 1 ? "kaartje" : "kaartjes") bewaard" }
         return outing.shopSentence ?? "Nog geen kaarten"
     }
 
     private func subtitle(_ count: Int, _ links: [OutingTicketLink]) -> String {
-        if count > 0 { return "Klik op een kaartje om de code groot te tonen" }
-        if !links.isEmpty { return "Open de pagina om ze te tonen, of sleep een kaart hierheen" }
+        if count > 0 { return "Klik op een code om hem groot te tonen" }
+        if !links.isEmpty { return "Open hun pagina, of sleep een kaartje hierheen" }
         return "Sleep ze hierheen (pdf, Wallet-pas of screenshot)"
     }
 }
@@ -202,9 +210,9 @@ private struct TicketCard: View {
     let entry: TicketEntry
     let label: String
 
-    static let size = CGSize(width: 118, height: 146)
-    static let footer: CGFloat = 32
-    static let codeSide: CGFloat = 86
+    static let size = CGSize(width: 76, height: 96)
+    static let footer: CGFloat = 22
+    static let codeSide: CGFloat = 60
 
     var body: some View {
         VStack(spacing: 0) {
@@ -218,7 +226,7 @@ private struct TicketCard: View {
             Line()
                 .stroke(Color.secondary.opacity(0.35), style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
                 .frame(height: 1)
-                .padding(.horizontal, 10)
+                .padding(.horizontal, 8)
                 .offset(y: -Self.footer)
         }
         .shadow(color: .black.opacity(scheme == .dark ? 0.4 : 0.14), radius: 6, y: 3)
@@ -241,19 +249,17 @@ private struct TicketCard: View {
                         .scaledToFit()
                         .frame(width: Self.codeSide, height: Self.codeSide)
                 } else {
-                    Image(systemName: "wallet.pass").font(.system(size: 28, weight: .light)).foregroundStyle(.secondary)
+                    Image(systemName: "wallet.pass").font(.system(size: 20, weight: .light)).foregroundStyle(.secondary)
                 }
             }
         case let .code(code):
             Color.white.overlay { CodeView(code: code, side: Self.codeSide) }
         case .file:
             Color.secondary.opacity(0.1).overlay {
-                VStack(spacing: 6) {
-                    Image(systemName: entry.ticket.contentType == "application/pdf" ? "doc.richtext" : "photo")
-                        .font(.system(size: 30, weight: .light))
-                    Text("Geen code gevonden").font(.caption2)
-                }
-                .foregroundStyle(.secondary)
+                Image(systemName: entry.ticket.contentType == "application/pdf" ? "doc.richtext" : "photo")
+                    .font(.system(size: 22, weight: .light))
+                    .foregroundStyle(.secondary)
+                    .help("Geen code gevonden in \(entry.ticket.name)")
             }
         case .loading:
             Color.secondary.opacity(0.1).overlay { ProgressView().controlSize(.small) }
@@ -262,13 +268,13 @@ private struct TicketCard: View {
 
     private var footer: some View {
         HStack(spacing: 6) {
-            Text(label).font(.caption.weight(.semibold)).lineLimit(1)
+            Text(label).font(.caption2.weight(.semibold)).lineLimit(1)
             Spacer(minLength: 0)
             if entry.ticket.personalised {
                 Image(systemName: "checkmark.seal.fill").foregroundStyle(.green).help("Op naam gezet")
             }
         }
-        .padding(.horizontal, 10)
+        .padding(.horizontal, 8)
         .frame(height: Self.footer)
     }
 }
