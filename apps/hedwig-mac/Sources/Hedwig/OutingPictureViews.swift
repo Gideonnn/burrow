@@ -161,6 +161,10 @@ struct OutingHero: View {
     @State private var dropping = false
     @State private var column: CGFloat = 584
     @State private var pane: CGFloat = 800
+    /// Placing the picture: the frame being edited, and where a drag or a
+    /// pinch started.
+    @State private var editing: PictureFrame?
+    @State private var gestureStart: PictureFrame?
 
     /// Large and not tall: worth filling two thirds of the header with.
     static func fills(_ picture: OutingPicture) -> Bool {
@@ -169,17 +173,63 @@ struct OutingHero: View {
 
     /// The picture, or the kind's colours without one, over the right two
     /// thirds, fading to the left into the title and to the bottom into the page.
+    private var artBox: CGSize { CGSize(width: pane * 0.74, height: height) }
+
     private func fadedArt(_ picture: OutingPicture?) -> some View {
         Group {
             if let picture {
-                picture.swiftUI.resizable().scaledToFill()
+                let image = CGSize(width: picture.width, height: picture.height)
+                let placed = (editing ?? outing.image?.frame ?? .centred).layout(image: image, box: artBox)
+                picture.swiftUI.resizable()
+                    .frame(width: placed.size.width, height: placed.size.height)
+                    .offset(x: placed.origin.x, y: placed.origin.y)
+                    .frame(width: artBox.width, height: artBox.height, alignment: .topLeading)
             } else {
                 OutingArtFallback(outing: outing, symbolSize: maxArt * 0.4)
             }
         }
-        .frame(width: pane * 0.74, height: height)
+        .frame(width: artBox.width, height: artBox.height)
         .clipped()
-        .mask {
+        // While placing, the whole box shows, so you see what you frame.
+        .mask { editing == nil ? AnyView(horizontalFade) : AnyView(Color.black) }
+        .mask { editing == nil ? AnyView(verticalFade) : AnyView(Color.black) }
+        .overlay {
+            if editing != nil {
+                RoundedRectangle(cornerRadius: 2).strokeBorder(.white.opacity(0.7), style: StrokeStyle(lineWidth: 1, dash: [5]))
+            }
+        }
+        .contentShape(Rectangle())
+        .gesture(placing(picture))
+        .onHover { inside in
+            guard editing != nil else { return }
+            if inside { NSCursor.openHand.push() } else { NSCursor.pop() }
+        }
+        .frame(maxWidth: .infinity, alignment: .trailing)
+        .allowsHitTesting(editing != nil)
+    }
+
+    private func placing(_ picture: OutingPicture?) -> some Gesture {
+        let image = CGSize(width: picture?.width ?? 1, height: picture?.height ?? 1)
+        let drag = DragGesture(minimumDistance: 1)
+            .onChanged { value in
+                guard let current = editing else { return }
+                let start = gestureStart ?? current
+                gestureStart = start
+                editing = start.dragged(by: value.translation, image: image, box: artBox)
+            }
+            .onEnded { _ in gestureStart = nil }
+        let pinch = MagnifyGesture()
+            .onChanged { value in
+                guard let current = editing else { return }
+                let start = gestureStart ?? current
+                gestureStart = start
+                editing = start.zoomed(to: start.zoom * value.magnification, image: image, box: artBox)
+            }
+            .onEnded { _ in gestureStart = nil }
+        return drag.simultaneously(with: pinch)
+    }
+
+    private var horizontalFade: some View {
             // An eased ramp over most of the width, so there is no visible edge.
             LinearGradient(
                 stops: [
@@ -192,8 +242,9 @@ struct OutingHero: View {
                     .init(color: .black, location: 0.82),
                 ],
                 startPoint: .leading, endPoint: .trailing)
-        }
-        .mask {
+    }
+
+    private var verticalFade: some View {
             LinearGradient(
                 // Bright at the top, dim behind the title, gone into the page.
                 stops: [
@@ -204,9 +255,6 @@ struct OutingHero: View {
                     .init(color: .clear, location: 1),
                 ],
                 startPoint: .top, endPoint: .bottom)
-        }
-        .frame(maxWidth: .infinity, alignment: .trailing)
-        .allowsHitTesting(false)
     }
 
     private var canOrganize: Bool { model.me?.can(.organize) == true }
@@ -233,13 +281,19 @@ struct OutingHero: View {
                 .frame(
                     maxWidth: filled ? .infinity : 640, maxHeight: .infinity,
                     alignment: filled ? .bottomLeading : .leading)
+                .opacity(editing == nil ? 1 : 0)
+                .allowsHitTesting(editing == nil)
             }
             .frame(height: height)
             .frame(maxWidth: .infinity, alignment: .leading)
             .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { pane = $0; column = max(200, min(640, $0) - 56) }
-            .overlay(alignment: .top) { controls }
+            .overlay(alignment: .top) { controls(placeable: filled && picture != nil) }
+            .overlay(alignment: .leading) {
+                if let picture, editing != nil { placingBar(picture) }
+            }
             .overlay { dropTarget }
         }
+        .onChange(of: outing.id) { editing = nil }
         .clipped()
         .onHover { hovering = $0 }
         .onDrop(of: PastedContents.dropTypes, isTargeted: $dropping) { providers in
@@ -302,8 +356,8 @@ struct OutingHero: View {
     }
 
     @ViewBuilder
-    private var controls: some View {
-        if canOrganize {
+    private func controls(placeable: Bool) -> some View {
+        if canOrganize, editing == nil {
             HStack(spacing: 8) {
                 if hovering {
                     Text("Plak of sleep een afbeelding")
@@ -311,6 +365,13 @@ struct OutingHero: View {
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
+                if hovering, placeable {
+                    Button { editing = outing.image?.frame ?? .centred } label: {
+                        Label("Aanpassen", systemImage: "crop")
+                    }
+                    .buttonStyle(HeroPillStyle())
+                    .help("Schuif de afbeelding op zijn plek of zoom in")
+                }
                 if hovering || model.pictureBusy.contains(outing.id) {
                     Button(action: pick) {
                         Label(outing.image == nil ? "Kies een afbeelding" : "Andere afbeelding", systemImage: "photo")
@@ -323,6 +384,38 @@ struct OutingHero: View {
             }
             .padding(12)
         }
+    }
+
+    /// Zoom, back to the middle, and keep or drop what was placed.
+    private func placingBar(_ picture: OutingPicture) -> some View {
+        let image = CGSize(width: picture.width, height: picture.height)
+        let zoom = Binding<Double>(
+            get: { editing?.zoom ?? 1 },
+            set: { editing = editing?.zoomed(to: $0, image: image, box: artBox) })
+        // In the title's place, left of the picture, so it hides none of it.
+        return VStack(alignment: .leading, spacing: 10) {
+            Text("Afbeelding aanpassen").font(.headline)
+            Text("Sleep de afbeelding of knijp om te zoomen.").font(.caption).foregroundStyle(.secondary)
+                .frame(width: 170, alignment: .leading)
+                .fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: 6) {
+                Image(systemName: "minus.magnifyingglass").foregroundStyle(.secondary)
+                Slider(value: zoom, in: PictureFrame.zooms).frame(width: 120)
+                Image(systemName: "plus.magnifyingglass").foregroundStyle(.secondary)
+            }
+            HStack(spacing: 6) {
+                Button("Midden") { editing = .centred }
+                Button("Annuleer") { editing = nil }.keyboardShortcut(.cancelAction)
+                Button("Gereed") {
+                    let frame = editing
+                    editing = nil
+                    Task { await model.setPictureFrame(frame == .centred ? nil : frame, for: outing.id) }
+                }
+                .keyboardShortcut(.defaultAction)
+            }
+        }
+        .controlSize(.small)
+        .padding(.leading, 28)
     }
 
     @ViewBuilder

@@ -97,6 +97,8 @@ public struct OutingImage: Codable, Hashable, Sendable {
     public var source: Source
     public var contentType: String
     public var updatedAt: Date
+    /// How someone placed it in the header; nil is centred.
+    public var frame: PictureFrame?
 }
 
 /// A picture the server found in the outing's mail or on its website.

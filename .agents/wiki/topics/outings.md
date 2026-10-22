@@ -152,6 +152,10 @@ the family, everything else folded behind **Details**.
   run over the artwork (Gideon likes that). A small or tall picture stays whole in a frame
   on the right, never stretched; without a picture the kind's colours and symbol fill the
   same space. The backdrop comes from the picture's own strong colours (`PictureColours`).
+  Aanpassen (on hover) places a filled picture: drag and pinch or the zoom slider, Midden,
+  Annuleer, Gereed; the frame (`PictureFrame`: the picture's point in the middle and a
+  zoom of 1 to 4, never an empty edge) is saved as `imageFrame` on the outing for the
+  household and reset when the picture changes.
   Without a picture the same places get a gradient in the title's colours
   (`TitleColours`, the design's hash) with the kind's symbol (`Outing.kindSymbol`).
   Details › Afbeelding has

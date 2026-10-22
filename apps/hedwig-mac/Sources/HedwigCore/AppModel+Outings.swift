@@ -120,6 +120,14 @@ extension AppModel {
         await change { try await $0.updateOuting(id: id, patch) }
     }
 
+    /// Places the outing's picture in the header for everyone; nil centres it.
+    public func setPictureFrame(_ frame: PictureFrame?, for id: String) async {
+        let value: JSONValue = frame.map {
+            .object(["x": .number($0.x), "y": .number($0.y), "zoom": .number($0.zoom)])
+        } ?? .null
+        await updateOuting(id, ["imageFrame": value])
+    }
+
     public func setTask(_ task: OutingTask, done: Bool, in outingId: String) async {
         await change { try await $0.setOutingTask(outingId: outingId, taskId: task.id, done: done) }
     }
