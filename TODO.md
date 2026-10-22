@@ -35,9 +35,21 @@ Vandaag strip and EventKit free/busy on the Mac; parcel, invoice and trip from s
 templates, Winky's optional card and the newsletter card.
 **Why:** a meeting, code or parcel mail is read for one fact and one action. Agreed
 (22 Oct 2026): an invite is answered only by a click in the card, an invite with a short
-organiser note may replace the mail, the strip is called Vandaag, and cards may use the
-Mac's calendars until Burrow has its own calendar, which the stored invites seed.
+organiser note may replace the mail, the strip is called Vandaag. Free/busy and RSVP use
+the calendars synced to Dobby (next entry), not EventKit.
 **Scope:** step 2 is about two days, the others a day each.
+
+## Calendars on Dobby (Weasley Clock, first step)
+
+**What:** the plan in `docs/plans/2026-10-22-calendars.md` and the design in
+`docs/design/weasley-clock.html`: Mail, Agenda and Contacten switches when connecting an
+account (never notes), calendar sync for Google, Microsoft and CalDAV with shared
+calendars stored once, notices to the other members when someone adds or moves an event
+in a shared calendar, and calendar tools and rights for bots.
+**Why:** Gideon wants the shared household calendar to tell him what the other added, as
+iCloud family calendars did, and to add events by asking a bot; the cards need free/busy.
+The store is the start of Burrow's own calendar.
+**Scope:** about five days in four phases; Google first.
 
 ## Angela's Mac
 

@@ -887,7 +887,7 @@ table.t tr:last-child td { border-bottom: 0; }
     <div class="card"><h4>Vandaag, and later</h4><ul>
       <li><b>Vandaag</b> sits on top of Alle inboxen and each own inbox: today's meetings and calendar items, today's parcels and bills due within a week, one line each, sorted by time. A meeting gets its countdown and Deelnemen; a click opens the mail, or Agenda for an item without mail. It folds away, and is gone when empty.</li>
       <li>A notification one minute before a meeting with <i>Deelnemen</i> on it, also from the menu bar.</li>
-      <li>Hand-offs when the apps from the design system exist: Pakket to Errol, Reis to Knight Bus, Factuur to Gringotts, Afspraak to the Weasley Clock. The card stays Hedwig's small version.</li>
+      <li>Hand-offs when the apps from the design system exist: Pakket to Errol, Reis to Knight Bus, Factuur to Gringotts. The card stays Hedwig's small version.</li>
     </ul></div>
   </div>
 </section>
@@ -917,14 +917,14 @@ table.t tr:last-child td { border-bottom: 0; }
 </section>
 
 <section class="sec" id="calendar">
-  <h2><span class="num">7</span>Calendars, before Burrow has its own</h2>
-  <p class="intro">Burrow will get its own calendar later. Until then cards use the calendars the Mac already knows, read through EventKit with one permission prompt, so iCloud, Google and Exchange all count without new provider logins on the server.</p>
+  <h2><span class="num">7</span>Calendars</h2>
+  <p class="intro">Cards read the calendars Burrow syncs to Dobby from the same accounts as the mail (Mail, Agenda and Contacten switches at connect time); see the <a href="weasley-clock.html">calendar design</a> and <code>docs/plans/2026-10-22-calendars.md</code>.</p>
   <div class="grid g3">
     <div class="card"><h4>Free or not</h4><p class="muted small" style="margin:0">An invite shows <i>Je agenda is vrij</i> or <i>Overlapt met Lunch met Bram</i> before you answer, and <i>Staat in je agenda</i> after.</p></div>
     <div class="card"><h4>Vandaag</h4><p class="muted small" style="margin:0">Calendar items without a mail stand in the strip next to the mail ones, with Deelnemen when the item has a meeting link.</p></div>
     <div class="card"><h4>In agenda</h4><p class="muted small" style="margin:0">A trip, or an invite you got as a plain mail, goes into a calendar of your choice in one click; the item links back to the mail.</p></div>
   </div>
-  <p class="muted small" style="margin-top:12px">The server already keeps every invite it parses (UID, times, link, your answer). That store is the seed of Burrow's own calendar; when the calendar exists it replaces EventKit as the source and the cards stay the same.</p>
+  <p class="muted small" style="margin-top:12px">The server already keeps every invite it parses (UID, times, link, your answer). With a synced calendar, Ja / Misschien / Nee goes through the provider's own respond call, so your calendar and the organiser both update.</p>
 </section>
 
 <section class="sec" id="build">
@@ -933,7 +933,7 @@ table.t tr:last-child td { border-bottom: 0; }
   <table class="t">
     <tr><th style="width:40px">#</th><th>Step</th><th>Scope</th></tr>
     <tr><td>1</td><td><b>Contract and storage.</b> <code>messageCard</code> in contracts as a zod union per type; a <code>message_cards</code> row per message with type, data, source, placement, <code>until</code> and a group key (event UID, track code).</td><td>Server, small</td></tr>
-    <tr><td>2</td><td><b>Afspraak and Code.</b> An iCalendar parser on stored messages, the code card from the rules, the Mac view with a SwiftUI <code>TimelineView</code> for the countdown, the list line, the <kbd>O</kbd> bar, Vandaag, and EventKit for free or busy.</td><td>Server and Mac, the main step</td></tr>
+    <tr><td>2</td><td><b>Afspraak and Code.</b> An iCalendar parser on stored messages, the code card from the rules, the Mac view with a SwiftUI <code>TimelineView</code> for the countdown, the list line, the <kbd>O</kbd> bar, Vandaag, and free or busy from the synced calendars.</td><td>Server and Mac, the main step</td></tr>
     <tr><td>3</td><td><b>Pakket, Factuur and Reis from schema.org,</b> merging by group key, the IBAN check against earlier bills.</td><td>Server, medium</td></tr>
     <tr><td>4</td><td><b>Templates and Winky.</b> The template field map, Winky's optional <code>card</code>, the newsletter card, one-click unsubscribe.</td><td>Server and skills, medium</td></tr>
   </table>
@@ -1111,7 +1111,7 @@ const EV = {
 function setEvent(k) { const e = EV[k]; Object.assign(MEETING, { start: e.start, end: e.start + 45 * MIN, cancelled: !!e.cancelled }); }
 setEvent('4m');
 
-// What the Mac's calendars hold today (EventKit until Burrow has its own calendar).
+// What the synced calendars hold today.
 const CAL = [
   { title: 'Lunch met Bram', cal: 'Werk', start: t0 + 2 * HOUR + 30 * MIN, end: t0 + 3 * HOUR + 30 * MIN },
   { title: 'Tandarts Sam', cal: 'Gezin', start: at(16, 30), end: at(17, 0) },
