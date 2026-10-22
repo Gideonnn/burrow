@@ -5,6 +5,7 @@ import type {
   BackfillPage,
   MailProviderClient,
   OutgoingMessage,
+  ProviderAttachment,
   ProviderMessage,
   SyncResult,
 } from './provider';
@@ -59,6 +60,18 @@ export type GraphMessage = {
   internetMessageId?: string;
   internetMessageHeaders?: { name: string; value: string }[];
 };
+
+type GraphAttachment = {
+  '@odata.type': string;
+  id: string;
+  name?: string | null;
+  contentType?: string | null;
+  size?: number;
+  isInline?: boolean;
+  contentBytes?: string;
+};
+
+const FILE_ATTACHMENT = '#microsoft.graph.fileAttachment';
 
 type DeltaPage = {
   value: (GraphMessage | { id: string; '@removed': object })[];
@@ -314,6 +327,43 @@ export class GraphClient implements MailProviderClient {
         saveToSentItems: true,
       }),
     });
+  }
+
+  // Only file attachments: an attached Outlook item or a OneDrive link has no
+  // bytes of its own to download.
+  async attachments(providerId: string): Promise<ProviderAttachment[]> {
+    const found: ProviderAttachment[] = [];
+    let url: string | undefined =
+      `/messages/${providerId}/attachments?$select=id,name,contentType,size,isInline`;
+    while (url) {
+      const page: { value: GraphAttachment[]; '@odata.nextLink'?: string } =
+        await this.api(url);
+      for (const a of page.value) {
+        if (a['@odata.type'] !== FILE_ATTACHMENT) continue;
+        found.push({
+          id: a.id,
+          name: a.name || 'attachment',
+          contentType: a.contentType || 'application/octet-stream',
+          size: a.size ?? 0,
+          inline: a.isInline ?? false,
+        });
+      }
+      url = page['@odata.nextLink'];
+    }
+    return found;
+  }
+
+  async attachment(
+    providerId: string,
+    attachmentId: string,
+  ): Promise<Uint8Array> {
+    const a = await this.api<GraphAttachment>(
+      `/messages/${providerId}/attachments/${encodeURIComponent(attachmentId)}`,
+    );
+    if (a['@odata.type'] !== FILE_ATTACHMENT || a.contentBytes === undefined) {
+      throw new Error('only file attachments can be downloaded');
+    }
+    return Buffer.from(a.contentBytes, 'base64');
   }
 }
 

@@ -280,3 +280,101 @@ describe('GraphClient', () => {
     expect(reply?.body).toMatchObject({ comment: 'Akkoord' });
   });
 });
+
+// The shapes of GET /me/messages/{id}/attachments and of one attachment,
+// as Graph answers them. Ids are URL-safe base64 with padding.
+const PDF_ID = 'AAMkADA1-attachment_1=';
+const LOGO_ID = 'AAMkADA1-attachment_2=';
+const GRAPH_ATTACHMENTS = [
+  {
+    '@odata.type': '#microsoft.graph.fileAttachment',
+    '@odata.mediaContentType': 'application/pdf',
+    id: PDF_ID,
+    name: 'offerte.pdf',
+    contentType: 'application/pdf',
+    size: 9,
+    isInline: false,
+  },
+  {
+    '@odata.type': '#microsoft.graph.fileAttachment',
+    id: LOGO_ID,
+    name: 'image001.png',
+    contentType: 'image/png',
+    size: 4,
+    isInline: true,
+  },
+  {
+    '@odata.type': '#microsoft.graph.itemAttachment',
+    id: 'AAMkADA1-attachment_3=',
+    name: 'Doorgestuurd: planning',
+    contentType: null,
+    size: 18_000,
+    isInline: false,
+  },
+  {
+    '@odata.type': '#microsoft.graph.referenceAttachment',
+    id: 'AAMkADA1-attachment_4=',
+    name: 'Begroting.xlsx',
+    contentType: null,
+    size: 600,
+    isInline: false,
+  },
+];
+
+function graphAttachments() {
+  const paths: string[] = [];
+  const fetchFn = async (input: string | URL | Request) => {
+    const url = new URL(String(input));
+    const path = decodeURIComponent(url.pathname.replace('/v1.0/me', ''));
+    paths.push(url.pathname + url.search);
+    if (path === '/messages/m1/attachments') {
+      return Response.json({ value: GRAPH_ATTACHMENTS });
+    }
+    if (path === `/messages/m1/attachments/${PDF_ID}`) {
+      return Response.json({
+        ...GRAPH_ATTACHMENTS[0],
+        contentBytes: Buffer.from('%PDF-1.4!').toString('base64'),
+      });
+    }
+    return Response.json(
+      { error: { code: 'ErrorItemNotFound' } },
+      { status: 404 },
+    );
+  };
+  return {
+    client: new GraphClient(
+      { accessToken: async () => 'token' },
+      fetchFn as typeof fetch,
+    ),
+    paths,
+  };
+}
+
+describe('GraphClient attachments', () => {
+  it('lists file attachments, inline images included, and leaves out items and links', async () => {
+    const { client } = graphAttachments();
+    expect(await client.attachments('m1')).toEqual([
+      {
+        id: PDF_ID,
+        name: 'offerte.pdf',
+        contentType: 'application/pdf',
+        size: 9,
+        inline: false,
+      },
+      {
+        id: LOGO_ID,
+        name: 'image001.png',
+        contentType: 'image/png',
+        size: 4,
+        inline: true,
+      },
+    ]);
+  });
+
+  it('downloads the content bytes of one file attachment', async () => {
+    const { client, paths } = graphAttachments();
+    const data = await client.attachment('m1', PDF_ID);
+    expect(Buffer.from(data).toString()).toBe('%PDF-1.4!');
+    expect(paths.at(-1)).toContain(encodeURIComponent(PDF_ID));
+  });
+});

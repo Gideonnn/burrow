@@ -301,3 +301,114 @@ describe('JmapClient', () => {
     expect(await client(fakeJmap()).address()).toBe('owner@example.com');
   });
 });
+
+// Email/get with the attachments property, and the session's download
+// template, in the shapes Fastmail answers with.
+const JMAP_ATTACHMENTS = [
+  {
+    partId: '3',
+    blobId: 'G6f1c2a7d9e',
+    size: 9,
+    name: 'offerte 2026.pdf',
+    type: 'application/pdf',
+    disposition: 'attachment',
+    cid: null,
+  },
+  {
+    partId: '4',
+    blobId: 'G0b8e44f1aa',
+    size: 4,
+    name: 'logo.png',
+    type: 'image/png',
+    disposition: 'inline',
+    cid: 'logo@example.nl',
+  },
+];
+
+function jmapAttachments() {
+  const downloads: string[] = [];
+  const calls: [string, Record<string, any>, string][] = [];
+  const fetchFn = async (
+    input: string | URL | Request,
+    init: RequestInit = {},
+  ) => {
+    const url = String(input);
+    if (url.endsWith('/session')) {
+      return Response.json({
+        apiUrl: 'https://jmap.example/api',
+        downloadUrl:
+          'https://jmap.example/download/{accountId}/{blobId}/{name}?type={type}',
+        username: 'owner@example.com',
+        primaryAccounts: { 'urn:ietf:params:jmap:mail': 'acc-1' },
+      });
+    }
+    if (url.startsWith('https://jmap.example/download/')) {
+      downloads.push(url);
+      return new Response('%PDF-1.4!');
+    }
+    const body = JSON.parse(String(init.body));
+    calls.push(...body.methodCalls);
+    const [, args, tag] = body.methodCalls[0];
+    const found = args.ids.includes('e1');
+    return Response.json({
+      methodResponses: [
+        [
+          'Email/get',
+          {
+            state: '9',
+            list: found ? [{ id: 'e1', attachments: JMAP_ATTACHMENTS }] : [],
+            notFound: found ? [] : args.ids,
+          },
+          tag,
+        ],
+      ],
+    });
+  };
+  return {
+    client: new JmapClient(
+      'fmu1-token',
+      fetchFn as typeof fetch,
+      'https://jmap.example/session',
+    ),
+    downloads,
+    calls,
+  };
+}
+
+describe('JmapClient attachments', () => {
+  it('lists attachments by part, inline images included', async () => {
+    const { client, calls } = jmapAttachments();
+    expect(await client.attachments('e1')).toEqual([
+      {
+        id: '3',
+        name: 'offerte 2026.pdf',
+        contentType: 'application/pdf',
+        size: 9,
+        inline: false,
+      },
+      {
+        id: '4',
+        name: 'logo.png',
+        contentType: 'image/png',
+        size: 4,
+        inline: true,
+      },
+    ]);
+    expect(calls[0]?.[1].properties).toEqual(['id', 'attachments']);
+  });
+
+  it('downloads the blob through the session download template', async () => {
+    const { client, downloads } = jmapAttachments();
+    const data = await client.attachment('e1', '3');
+    expect(Buffer.from(data).toString()).toBe('%PDF-1.4!');
+    expect(downloads).toEqual([
+      'https://jmap.example/download/acc-1/G6f1c2a7d9e/offerte%202026.pdf?type=application%2Fpdf',
+    ]);
+  });
+
+  it('refuses a part that is not an attachment of the email', async () => {
+    const { client } = jmapAttachments();
+    await expect(client.attachment('e1', '1')).rejects.toThrow();
+    await expect(client.attachments('gone')).rejects.toThrow();
+  });
+});

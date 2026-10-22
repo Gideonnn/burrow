@@ -1,10 +1,12 @@
 import type { Address, MailFolder, ServerOp } from '@burrow/contracts';
 import { htmlToText } from './html';
+import { isInline } from './mime';
 import type { Fetch } from './oauth';
 import type {
   BackfillPage,
   MailProviderClient,
   OutgoingMessage,
+  ProviderAttachment,
   ProviderMessage,
   SyncResult,
 } from './provider';
@@ -63,7 +65,22 @@ export type JmapEmail = {
   'header:List-Unsubscribe:asText'?: string | null;
 };
 
-type Session = { apiUrl: string; accountId: string; username: string };
+type AttachmentPart = {
+  partId: string;
+  blobId: string;
+  size: number;
+  name: string | null;
+  type: string;
+  disposition: string | null;
+  cid: string | null;
+};
+
+type Session = {
+  apiUrl: string;
+  downloadUrl?: string;
+  accountId: string;
+  username: string;
+};
 type Invocation = [string, Record<string, unknown>, string];
 
 export class JmapError extends Error {
@@ -94,6 +111,7 @@ export class JmapClient implements MailProviderClient {
       if (!res.ok) throw new Error(`JMAP session failed: ${res.status}`);
       const body = (await res.json()) as {
         apiUrl: string;
+        downloadUrl?: string;
         username: string;
         primaryAccounts: Record<string, string>;
       };
@@ -101,6 +119,7 @@ export class JmapClient implements MailProviderClient {
       if (!accountId) throw new Error('this token has no mail access');
       this.session = {
         apiUrl: body.apiUrl,
+        downloadUrl: body.downloadUrl,
         accountId,
         username: body.username,
       };
@@ -397,6 +416,71 @@ export class JmapClient implements MailProviderClient {
     const notCreated =
       r.get('x')?.notCreated?.s ?? r.get('e')?.notCreated?.draft;
     if (notCreated) throw new Error(`sending refused: ${notCreated.type}`);
+  }
+
+  async attachments(providerId: string): Promise<ProviderAttachment[]> {
+    return (await this.attachmentParts(providerId)).map((p) => ({
+      id: p.partId,
+      name: p.name || 'attachment',
+      contentType: p.type || 'application/octet-stream',
+      size: p.size,
+      inline: isInline(p.disposition, p.cid),
+    }));
+  }
+
+  // The listed id is the partId, so two identical files on one message (one
+  // blob) still get their own id.
+  async attachment(
+    providerId: string,
+    attachmentId: string,
+  ): Promise<Uint8Array> {
+    const part = (await this.attachmentParts(providerId)).find(
+      (p) => p.partId === attachmentId,
+    );
+    if (!part) throw new Error(`no attachment ${attachmentId} on this email`);
+    const { downloadUrl, accountId } = await this.getSession();
+    if (!downloadUrl) throw new Error('this JMAP server offers no downloads');
+    const values: Record<string, string> = {
+      accountId,
+      blobId: part.blobId,
+      name: part.name || 'attachment',
+      type: part.type || 'application/octet-stream',
+    };
+    const url = downloadUrl.replace(/\{(\w+)\}/g, (all, key: string) =>
+      key in values ? encodeURIComponent(values[key]!) : all,
+    );
+    const res = await this.fetchFn(url, {
+      headers: { authorization: `Bearer ${this.token}` },
+    });
+    if (!res.ok) throw new Error(`JMAP download failed: ${res.status}`);
+    return new Uint8Array(await res.arrayBuffer());
+  }
+
+  private async attachmentParts(providerId: string): Promise<AttachmentPart[]> {
+    const r = await this.call([
+      [
+        'Email/get',
+        {
+          ids: [providerId],
+          properties: ['id', 'attachments'],
+          bodyProperties: [
+            'partId',
+            'blobId',
+            'size',
+            'name',
+            'type',
+            'disposition',
+            'cid',
+          ],
+        },
+        'a',
+      ],
+    ]);
+    const email = r.get('a')!.list[0] as
+      | { attachments?: AttachmentPart[] }
+      | undefined;
+    if (!email) throw new Error(`no email ${providerId} at the provider`);
+    return email.attachments ?? [];
   }
 }
 

@@ -32,6 +32,16 @@ export type ProviderMessage = {
   };
 };
 
+// A file on a message, listed without its content. The id stays the same
+// between calls for the same message, so it can go into a URL.
+export type ProviderAttachment = {
+  id: string;
+  name: string;
+  contentType: string;
+  size: number;
+  inline: boolean;
+};
+
 export type SyncResult = {
   upserts: ProviderMessage[];
   removed: string[];
@@ -61,6 +71,9 @@ export interface MailProviderClient {
   backfill(page: string | null): Promise<BackfillPage>;
   apply(providerId: string, ops: ServerOp[]): Promise<void>;
   send(message: OutgoingMessage): Promise<void>;
+  // Fetched from the provider on demand; Burrow never stores attachments.
+  attachments(providerId: string): Promise<ProviderAttachment[]>;
+  attachment(providerId: string, attachmentId: string): Promise<Uint8Array>;
 }
 
 // Credentials as stored (encrypted) per mailbox.

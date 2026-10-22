@@ -34,3 +34,12 @@ export function buildMime(message: OutgoingMessage, now = new Date()): string {
     .replace(/.{76}/g, '$&\r\n');
   return `${headers.map(([k, v]) => `${k}: ${v}`).join('\r\n')}\r\n\r\n${body}\r\n`;
 }
+
+// Shown inside the HTML body: the part has a Content-ID the body can refer to
+// and is not explicitly marked as an attachment.
+export function isInline(
+  disposition: string | null | undefined,
+  contentId: string | null | undefined,
+): boolean {
+  return Boolean(contentId) && !/^\s*attachment\b/i.test(disposition ?? '');
+}

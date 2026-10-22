@@ -16,6 +16,16 @@ take turns per mailbox (`MailService.busy`), so two clients never refresh one OA
 at once. Search covers whatever is on the server, so the archive is searchable as soon as
 its pages are in.
 
+## Attachments
+
+Hedwig never stores attachments. `GET /api/messages/:id/attachments` asks the provider for
+the list each time and `GET /api/messages/:id/attachments/:attachmentId` passes one file
+through, as a download (`content-disposition: attachment`, `nosniff`, a sandbox CSP),
+capped at 25 MB (413 above). Both need `read`, follow the message's visibility (404) and
+refuse facts-only keys (403). An attachment id is stable for the same message, so it can
+go in a URL; inline images (a Content-ID, not marked as attachment) come with
+`inline: true`. Per provider below.
+
 ## Connecting an account
 
 OAuth providers (Gmail, Microsoft) connect in three steps, so neither the password nor
@@ -54,6 +64,11 @@ through `messages.list` without a label, which leaves out spam and trash. Server
 operations become one `messages.modify` call per message; missing user labels are
 created on first use.
 
+Attachments are the parts with a filename in `messages.get?format=full`. Gmail hands out
+a new `body.attachmentId` with every `messages.get`, so the listed id is the part's
+`partId`; a download fetches the message again for the current attachmentId, then
+`messages.attachments.get`. A forwarded message is one attachment, not its parts.
+
 ## Microsoft (Outlook.com and Microsoft 365)
 
 1. In the Microsoft Entra admin center, register an application with supported account
@@ -77,6 +92,11 @@ itself (the list cannot filter on folder next to that ordering); old mail has no
 which only come per message. Mail in other folders than Inbox and Junk is not tracked
 after it is in, so a later change there does not reach Hedwig.
 
+Attachments come from `/me/messages/{id}/attachments` (selected without `contentBytes`);
+only `fileAttachment`s are listed, since an attached Outlook item or a OneDrive link has
+no bytes of its own. A download reads the attachment's `contentBytes`. Graph's `size`
+includes metadata, so the downloaded byte count is the real size.
+
 ## Fastmail (JMAP)
 
 Fastmail only offers OAuth to registered partner apps, so a person creates an API token:
@@ -90,3 +110,7 @@ state, starting over when the server answers `cannotCalculateChanges`. Backfill 
 position through every mailbox but junk, trash and drafts (`inMailboxOtherThan`). Labels are JMAP
 keywords (non-`$`); moves replace `mailboxIds` with the target role's mailbox. Sending
 creates a draft and an `EmailSubmission` that files it under Sent on success.
+
+Attachments are the email's `attachments` property from `Email/get`; the id is the
+`partId` (two identical files share a blobId). A download looks up the part's blobId and
+fetches it through the session's `downloadUrl` template with the API token.

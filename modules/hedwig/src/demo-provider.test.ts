@@ -23,4 +23,31 @@ describe('DemoProvider', () => {
     expect((await demo.sync(cursor)).upserts).toEqual([]);
     expect(demo.messages.get(upserts[0]!.providerId)?.folder).toBe('archive');
   });
+
+  it('gives every demo message that says it has attachments files to download', async () => {
+    for (const seed of DEMO_SEEDS) {
+      const demo = new DemoProvider(seed, 'demo@example.com');
+      for (const m of (await demo.sync(null)).upserts) {
+        const files = await demo.attachments(m.providerId);
+        expect(files.length > 0).toBe(m.hasAttachments);
+        for (const file of files) {
+          const data = await demo.attachment(m.providerId, file.id);
+          expect(data.byteLength).toBe(file.size);
+          if (file.contentType === 'application/pdf') {
+            const text = Buffer.from(data).toString('latin1');
+            expect(text.startsWith('%PDF-1.4')).toBe(true);
+            const xref = Number(text.match(/startxref\n(\d+)/)?.[1]);
+            expect(text.slice(xref, xref + 4)).toBe('xref');
+          }
+        }
+      }
+    }
+    const invoices = new DemoProvider('invoices', 'demo@example.com');
+    const invoice = [...invoices.messages.values()].find((m) =>
+      m.subject.includes('factuur'),
+    )!;
+    expect(await invoices.attachments(invoice.providerId)).toMatchObject([
+      { name: 'factuur-oktober.pdf', contentType: 'application/pdf' },
+    ]);
+  });
 });

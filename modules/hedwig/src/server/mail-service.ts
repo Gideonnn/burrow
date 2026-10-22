@@ -1,4 +1,5 @@
 import type {
+  AttachmentSummary,
   MessageDetail,
   MessageFacts,
   MessageSummary,
@@ -7,7 +8,11 @@ import type {
 } from '@burrow/contracts';
 import type { Db, EventBus } from '@burrow/platform';
 import { and, eq, inArray } from 'drizzle-orm';
-import type { MailProviderClient, ProviderMessage } from '../provider';
+import type {
+  MailProviderClient,
+  ProviderAttachment,
+  ProviderMessage,
+} from '../provider';
 import { applyOps } from '../server-ops';
 import { mailboxes, messages } from './schema';
 
@@ -16,6 +21,11 @@ export type MessageRow = typeof messages.$inferSelect;
 export type ClientFor = (mailbox: MailboxRow) => MailProviderClient;
 
 export class MailError extends Error {}
+export class MailNotFoundError extends MailError {}
+export class AttachmentTooLargeError extends MailError {}
+
+// Attachments pass through the server's memory on their way to the client.
+const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024;
 
 export type MailEvent = {
   type: 'message.new' | 'message.changed' | 'message.removed';
@@ -203,6 +213,43 @@ export class MailService {
     return updated;
   }
 
+  // Fetched from the provider every time; Burrow does not keep attachments.
+  async attachments(messageId: string): Promise<AttachmentSummary[]> {
+    const { row, box } = this.located(messageId);
+    const list = await this.clientFor(box).attachments(row.providerId);
+    return list.map(toAttachmentSummary);
+  }
+
+  async attachment(
+    messageId: string,
+    attachmentId: string,
+  ): Promise<{ meta: AttachmentSummary; data: Uint8Array }> {
+    const { row, box } = this.located(messageId);
+    const client = this.clientFor(box);
+    const found = (await client.attachments(row.providerId)).find(
+      (a) => a.id === attachmentId,
+    );
+    if (!found) throw new MailNotFoundError('unknown attachment');
+    const tooLarge = () =>
+      new AttachmentTooLargeError(
+        `${found.name} is larger than 25 MB; open it in the webmail`,
+      );
+    if (found.size > MAX_ATTACHMENT_BYTES) throw tooLarge();
+    const data = await client.attachment(row.providerId, attachmentId);
+    if (data.byteLength > MAX_ATTACHMENT_BYTES) throw tooLarge();
+    // Graph's size counts the attachment's metadata too; the bytes are exact.
+    return {
+      meta: { ...toAttachmentSummary(found), size: data.byteLength },
+      data,
+    };
+  }
+
+  private located(messageId: string) {
+    const row = this.message(messageId);
+    if (!row) throw new MailNotFoundError('unknown message');
+    return { row, box: this.mailbox(row.mailboxId)! };
+  }
+
   // Only keys that see the mailbox hear about its messages.
   private emit(data: MailEvent) {
     this.events.emit({
@@ -254,6 +301,16 @@ function columnsFrom(m: ProviderMessage) {
     labels: m.labels,
     hasAttachments: m.hasAttachments,
     headers: m.headers,
+  };
+}
+
+function toAttachmentSummary(a: ProviderAttachment): AttachmentSummary {
+  return {
+    id: a.id,
+    name: a.name,
+    contentType: a.contentType,
+    size: Math.max(0, Math.round(a.size)),
+    inline: a.inline,
   };
 }
 

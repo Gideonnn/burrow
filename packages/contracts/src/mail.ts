@@ -42,6 +42,17 @@ export const messageDetail = messageSummary.extend({
 });
 export type MessageDetail = z.infer<typeof messageDetail>;
 
+// A file on a message. The server fetches it from the provider when asked and
+// never stores it; the id stays the same for the same message.
+export const attachmentSummary = z.object({
+  id: z.string(),
+  name: z.string(),
+  contentType: z.string(),
+  size: z.number().int().nonnegative(),
+  inline: z.boolean(),
+});
+export type AttachmentSummary = z.infer<typeof attachmentSummary>;
+
 // Operations on a message at its provider. The server applies them through
 // the provider API so phones see the same state as Hedwig.
 export const serverOp = z.discriminatedUnion('op', [

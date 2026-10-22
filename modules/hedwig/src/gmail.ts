@@ -1,12 +1,13 @@
 import type { MailFolder, ServerOp } from '@burrow/contracts';
 import { parseAddress, parseAddressList } from './addresses';
 import { decodeEntities, htmlToText } from './html';
-import { buildMime } from './mime';
+import { buildMime, isInline } from './mime';
 import { bearerJson, type Fetch, HttpError, type OAuthSession } from './oauth';
 import type {
   BackfillPage,
   MailProviderClient,
   OutgoingMessage,
+  ProviderAttachment,
   ProviderMessage,
   SyncResult,
 } from './provider';
@@ -16,6 +17,7 @@ const INITIAL_MESSAGES = 100;
 const BACKFILL_PAGE = 100;
 
 type GmailPart = {
+  partId?: string;
   mimeType?: string;
   filename?: string;
   headers?: { name: string; value: string }[];
@@ -229,6 +231,38 @@ export class GmailClient implements MailProviderClient {
       }),
     });
   }
+
+  async attachments(providerId: string): Promise<ProviderAttachment[]> {
+    const raw = await this.api<GmailMessage>(
+      `/messages/${providerId}?format=full`,
+    );
+    return attachmentParts(raw).map((p) => p.attachment);
+  }
+
+  // Gmail hands out a new attachmentId with every messages.get, so the listed
+  // id is the partId and the current attachmentId is looked up here.
+  async attachment(
+    providerId: string,
+    attachmentId: string,
+  ): Promise<Uint8Array> {
+    const raw = await this.api<GmailMessage>(
+      `/messages/${providerId}?format=full`,
+    );
+    const found = attachmentParts(raw).find(
+      (p) => p.attachment.id === attachmentId,
+    );
+    if (!found)
+      throw new Error(`no attachment ${attachmentId} on this message`);
+    const { body } = found.part;
+    const data = body?.attachmentId
+      ? (
+          await this.api<{ data: string }>(
+            `/messages/${providerId}/attachments/${encodeURIComponent(body.attachmentId)}`,
+          )
+        ).data
+      : (body?.data ?? '');
+    return Buffer.from(data, 'base64url');
+  }
 }
 
 export function parseGmailMessage(
@@ -281,6 +315,34 @@ function folderFor(labelIds: string[]): MailFolder {
   if (labelIds.includes('INBOX')) return 'inbox';
   if (labelIds.includes('SENT')) return 'sent';
   return 'archive';
+}
+
+// The same parts walkParts counts as attachments, so the list matches
+// hasAttachments. A forwarded message is one attachment, not its contents.
+function attachmentParts(raw: GmailMessage) {
+  const found: { part: GmailPart; attachment: ProviderAttachment }[] = [];
+  const visit = (part: GmailPart | undefined) => {
+    if (!part) return;
+    if (part.filename && (part.body?.attachmentId || part.body?.size)) {
+      const header = (name: string) =>
+        part.headers?.find((h) => h.name.toLowerCase() === name)?.value;
+      found.push({
+        part,
+        attachment: {
+          // Only a message that is nothing but the file has an empty partId.
+          id: part.partId || '0',
+          name: part.filename,
+          contentType: part.mimeType || 'application/octet-stream',
+          size: part.body?.size ?? 0,
+          inline: isInline(header('content-disposition'), header('content-id')),
+        },
+      });
+      return;
+    }
+    for (const p of part.parts ?? []) visit(p);
+  };
+  visit(raw.payload);
+  return found;
 }
 
 function walkParts(

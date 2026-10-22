@@ -1,9 +1,45 @@
-import { FakeProvider } from './fake-provider';
+import { type FakeAttachment, FakeProvider } from './fake-provider';
 import type { ProviderMessage } from './provider';
 
-type Seed = Partial<ProviderMessage> & { subject: string; minutesAgo: number };
+type Seed = Partial<ProviderMessage> & {
+  subject: string;
+  minutesAgo: number;
+  attachments?: FakeAttachment[];
+};
 
 const p = (...paragraphs: string[]) => paragraphs.join('\n\n');
+
+// A one-page PDF with one line of ASCII text; the xref offsets are counted so
+// a viewer opens it without repairing.
+function pdf(name: string, text: string): FakeAttachment {
+  const content = `BT /F1 18 Tf 72 760 Td (${text}) Tj ET`;
+  const objects = [
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>',
+    `<< /Length ${content.length} >>\nstream\n${content}\nendstream`,
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+  ];
+  let out = '%PDF-1.4\n';
+  const offsets = objects.map((body, i) => {
+    const at = out.length;
+    out += `${i + 1} 0 obj\n${body}\nendobj\n`;
+    return at;
+  });
+  const xref = out.length;
+  out += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  out += offsets
+    .map((o) => `${String(o).padStart(10, '0')} 00000 n \n`)
+    .join('');
+  out += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+  return { name, contentType: 'application/pdf', data: out };
+}
+
+// One grey pixel.
+const PHOTO = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAAAAAA6fptVAAAACklEQVR4nGNoAAAAggCBd81ytgAAAABJRU5ErkJggg==',
+  'base64',
+);
 
 // Invented households mail for demos and for developing the clients without a
 // real account. Every person, company and address here is made up.
@@ -19,7 +55,9 @@ const SEEDS: Record<string, Seed[]> = {
         'Groet,\nSanne',
       ),
       minutesAgo: 70,
-      hasAttachments: true,
+      attachments: [
+        pdf('planning-week-45.pdf', 'Planning aansluitingen Noord, week 45'),
+      ],
     },
     {
       subject: 'INC0042188 aan jou toegewezen: storing kast Noord',
@@ -80,7 +118,9 @@ const SEEDS: Record<string, Seed[]> = {
       from: { name: 'Bas Janssen', email: 'bas@example.nl' },
       bodyText:
         "Hé! Hierbij de foto's van zaterdag. Die van de vuurtoren is echt goed gelukt. Groet, Bas",
-      hasAttachments: true,
+      attachments: [
+        { name: 'vuurtoren.png', contentType: 'image/png', data: PHOTO },
+      ],
       minutesAgo: 1400,
     },
   ],
@@ -90,7 +130,9 @@ const SEEDS: Record<string, Seed[]> = {
       from: { name: 'Mailhost', email: 'billing@mailhost.example' },
       bodyText:
         'Your invoice for October is attached. Amount: $5.00, charged to your card.',
-      hasAttachments: true,
+      attachments: [
+        pdf('factuur-oktober.pdf', 'Mailhost - factuur oktober - $5.00'),
+      ],
       minutesAgo: 4000,
     },
     {

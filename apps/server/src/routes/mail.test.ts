@@ -1,4 +1,8 @@
-import { messageDetail, messageSummary } from '@burrow/contracts';
+import {
+  attachmentSummary,
+  messageDetail,
+  messageSummary,
+} from '@burrow/contracts';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { testHousehold } from '../testing';
@@ -179,5 +183,120 @@ describe('send', () => {
       }),
     });
     expect(res.status).toBe(404);
+  });
+});
+
+describe('attachments', () => {
+  const LOGO = 'AAMk/logo+1=';
+
+  async function withFiles(h: ReturnType<typeof setup>, token: string) {
+    h.provider(h.home.id).deliver({
+      subject: 'Offerte',
+      attachments: [
+        {
+          name: 'offerte 2026 (één).pdf',
+          contentType: 'application/pdf',
+          data: '%PDF-1.4!',
+        },
+        {
+          id: LOGO,
+          name: 'logo.png',
+          contentType: 'image/png',
+          inline: true,
+          data: 'PNG!',
+        },
+        { name: 'scan.tiff', contentType: 'image/tiff', size: 30e6, data: '' },
+      ],
+    });
+    const [message] = await syncAndList(h, token, h.home.id);
+    return message!.id;
+  }
+
+  it('lists the files of a message without their content', async () => {
+    const h = setup();
+    const token = h.key(h.gideon.id, ['read']);
+    const id = await withFiles(h, token);
+    const res = await h.call(token, `/api/messages/${id}/attachments`);
+    expect(z.array(attachmentSummary).parse(await res.json())).toEqual([
+      {
+        id: 'att1',
+        name: 'offerte 2026 (één).pdf',
+        contentType: 'application/pdf',
+        size: 9,
+        inline: false,
+      },
+      {
+        id: LOGO,
+        name: 'logo.png',
+        contentType: 'image/png',
+        size: 4,
+        inline: true,
+      },
+      {
+        id: 'att3',
+        name: 'scan.tiff',
+        contentType: 'image/tiff',
+        size: 30e6,
+        inline: false,
+      },
+    ]);
+  });
+
+  it('downloads one as a file the browser will not render', async () => {
+    const h = setup();
+    const token = h.key(h.gideon.id, ['read']);
+    const id = await withFiles(h, token);
+    const res = await h.call(token, `/api/messages/${id}/attachments/att1`);
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe('%PDF-1.4!');
+    expect(res.headers.get('content-type')).toBe('application/pdf');
+    expect(res.headers.get('content-disposition')).toBe(
+      "attachment; filename*=UTF-8''offerte%202026%20%28%C3%A9%C3%A9n%29.pdf",
+    );
+    expect(res.headers.get('x-content-type-options')).toBe('nosniff');
+
+    const logo = await h.call(
+      token,
+      `/api/messages/${id}/attachments/${encodeURIComponent(LOGO)}`,
+    );
+    expect(await logo.text()).toBe('PNG!');
+  });
+
+  it('refuses a file above 25 MB without downloading it', async () => {
+    const h = setup();
+    const token = h.key(h.gideon.id, ['read']);
+    const id = await withFiles(h, token);
+    const res = await h.call(token, `/api/messages/${id}/attachments/att3`);
+    expect(res.status).toBe(413);
+    expect(await res.text()).toContain('25 MB');
+  });
+
+  it('answers 404 for another person’s message and an unknown file', async () => {
+    const h = setup();
+    const id = await withFiles(h, h.key(h.gideon.id, ['read']));
+    const eva = h.key(h.eva.id, ['read']);
+    for (const path of ['attachments', 'attachments/att1']) {
+      expect((await h.call(eva, `/api/messages/${id}/${path}`)).status).toBe(
+        404,
+      );
+    }
+    const gideon = h.key(h.gideon.id, ['read']);
+    expect(
+      (await h.call(gideon, `/api/messages/${id}/attachments/nope`)).status,
+    ).toBe(404);
+    expect(
+      (await h.call(gideon, '/api/messages/nope/attachments')).status,
+    ).toBe(404);
+  });
+
+  it('are content, so a facts-only key gets 403', async () => {
+    const h = setup();
+    const id = await withFiles(h, h.key(h.gideon.id, ['read']));
+    const facts = h.key(h.gideon.id, ['read'], null, true);
+    for (const path of ['attachments', 'attachments/att1']) {
+      expect((await h.call(facts, `/api/messages/${id}/${path}`)).status).toBe(
+        403,
+      );
+    }
   });
 });

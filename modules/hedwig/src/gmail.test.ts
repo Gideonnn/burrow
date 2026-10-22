@@ -306,3 +306,130 @@ describe('GmailClient', () => {
     expect(api.tokenRefreshes).toBe(1);
   });
 });
+
+// A message as messages.get returns it with format=full: every part has a
+// partId, and the attachmentId is different on every call.
+function withAttachments(issue: (partId: string) => string): GmailMessage {
+  return {
+    id: 'att',
+    threadId: 't-att',
+    labelIds: ['INBOX'],
+    payload: {
+      partId: '',
+      mimeType: 'multipart/mixed',
+      filename: '',
+      headers: [{ name: 'Subject', value: 'Offerte en logo' }],
+      body: { size: 0 },
+      parts: [
+        {
+          partId: '0',
+          mimeType: 'multipart/related',
+          filename: '',
+          body: { size: 0 },
+          parts: [
+            {
+              partId: '0.0',
+              mimeType: 'text/html',
+              filename: '',
+              body: { size: 31, data: b64('<img src="cid:logo@example.com">') },
+            },
+            {
+              partId: '0.1',
+              mimeType: 'image/png',
+              filename: 'logo.png',
+              headers: [
+                { name: 'Content-Type', value: 'image/png; name="logo.png"' },
+                {
+                  name: 'Content-Disposition',
+                  value: 'inline; filename="logo.png"',
+                },
+                { name: 'Content-ID', value: '<logo@example.com>' },
+              ],
+              body: { attachmentId: issue('0.1'), size: 4 },
+            },
+          ],
+        },
+        {
+          partId: '1',
+          mimeType: 'application/pdf',
+          filename: 'offerte 2026 (def).pdf',
+          headers: [
+            { name: 'Content-Type', value: 'application/pdf' },
+            {
+              name: 'Content-Disposition',
+              value: 'attachment; filename="offerte 2026 (def).pdf"',
+            },
+          ],
+          body: { attachmentId: issue('1'), size: 9 },
+        },
+      ],
+    },
+  };
+}
+
+function gmailAttachments() {
+  const issued = new Map<string, string>();
+  const contents: Record<string, string> = { '0.1': 'PNG!', '1': '%PDF-1.4!' };
+  const requests: string[] = [];
+  const fetchFn = async (input: string | URL | Request) => {
+    const url = new URL(String(input));
+    const path = url.pathname.replace('/gmail/v1/users/me', '');
+    requests.push(path);
+    if (path === '/messages/att') {
+      return Response.json(
+        withAttachments((partId) => {
+          const id = `ANGjdJ-${issued.size + 1}`;
+          issued.set(id, partId);
+          return id;
+        }),
+      );
+    }
+    const part = issued.get(path.replace('/messages/att/attachments/', ''));
+    if (part) {
+      return Response.json({
+        size: contents[part]!.length,
+        data: b64(contents[part]!),
+      });
+    }
+    return Response.json({ error: 'not found' }, { status: 404 });
+  };
+  return {
+    client: new GmailClient(
+      { accessToken: async () => 'token' },
+      fetchFn as typeof fetch,
+    ),
+    requests,
+  };
+}
+
+describe('GmailClient attachments', () => {
+  it('lists files and inline images by part, with ids that stay the same between calls', async () => {
+    const { client } = gmailAttachments();
+    const first = await client.attachments('att');
+    expect(first).toEqual([
+      {
+        id: '0.1',
+        name: 'logo.png',
+        contentType: 'image/png',
+        size: 4,
+        inline: true,
+      },
+      {
+        id: '1',
+        name: 'offerte 2026 (def).pdf',
+        contentType: 'application/pdf',
+        size: 9,
+        inline: false,
+      },
+    ]);
+    expect(await client.attachments('att')).toEqual(first);
+  });
+
+  it('downloads a part through the attachment id Gmail hands out right now', async () => {
+    const { client, requests } = gmailAttachments();
+    await client.attachments('att');
+    const data = await client.attachment('att', '1');
+    expect(Buffer.from(data).toString()).toBe('%PDF-1.4!');
+    expect(requests.at(-1)).toBe('/messages/att/attachments/ANGjdJ-4');
+  });
+});

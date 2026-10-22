@@ -1,4 +1,5 @@
 import {
+  type AttachmentSummary,
   aiSearchRequest,
   createDraftRequest,
   mailFolder,
@@ -27,7 +28,9 @@ import { createDraft, deleteDraft, DraftError, listDrafts } from './drafts';
 import { factsFor, forKey, summaries } from './facts/store';
 import type { InsightsService } from './insights';
 import {
+  AttachmentTooLargeError,
   MailError,
+  MailNotFoundError,
   type MailService,
   toDetail,
   toSummary,
@@ -225,6 +228,40 @@ export function hedwigRoutes({
           toDetail(row, factsFor(c.var.db, [row.id]).get(row.id) ?? null),
         );
       })
+      .get('/messages/:id/attachments', requireRight('read'), async (c) => {
+        const row = mail.message(c.req.param('id'));
+        if (!row || !canSeeMailbox(c.var.access, row.mailboxId)) {
+          throw notFound();
+        }
+        contentAllowed(c.var.access);
+        return c.json<AttachmentSummary[]>(
+          await attachmentCall(() => mail.attachments(row.id)),
+        );
+      })
+      // Served as a download, never rendered: an attachment is untrusted and
+      // would otherwise run on the server's own origin.
+      .get(
+        '/messages/:id/attachments/:attachmentId',
+        requireRight('read'),
+        async (c) => {
+          const row = mail.message(c.req.param('id'));
+          if (!row || !canSeeMailbox(c.var.access, row.mailboxId)) {
+            throw notFound();
+          }
+          contentAllowed(c.var.access);
+          const { meta, data } = await attachmentCall(() =>
+            mail.attachment(row.id, c.req.param('attachmentId')),
+          );
+          // Provider bytes are never shared memory; Hono only takes plain buffers.
+          return c.body(data as Uint8Array<ArrayBuffer>, 200, {
+            'content-type': safeContentType(meta.contentType),
+            'content-length': String(data.byteLength),
+            'content-disposition': `attachment; filename*=UTF-8''${encodeFilename(meta.name)}`,
+            'x-content-type-options': 'nosniff',
+            'content-security-policy': "sandbox; default-src 'none'",
+          });
+        },
+      )
       .post(
         '/messages/:id/actions',
         requireRight('organize'),
@@ -370,4 +407,33 @@ async function providerCall<T>(call: () => Promise<T>): Promise<T> {
       message: `the mail provider refused: ${(error as Error).message}`,
     });
   }
+}
+
+async function attachmentCall<T>(call: () => Promise<T>): Promise<T> {
+  try {
+    return await providerCall(call);
+  } catch (error) {
+    if (error instanceof MailNotFoundError) throw notFound();
+    if (error instanceof AttachmentTooLargeError) {
+      throw new HTTPException(413, { message: error.message });
+    }
+    throw error;
+  }
+}
+
+// The provider's word goes into a response header, so anything that is not a
+// plain type/subtype becomes a generic download.
+function safeContentType(type: string): string {
+  return /^[\w!#$&^.+-]+\/[\w!#$&^.+-]+$/.test(type)
+    ? type.toLowerCase()
+    : 'application/octet-stream';
+}
+
+// RFC 5987: encodeURIComponent leaves ' ( ) * as they are, which a header
+// parameter may not.
+function encodeFilename(name: string): string {
+  return encodeURIComponent(name).replace(
+    /['()*]/g,
+    (ch) => `%${ch.charCodeAt(0).toString(16).toUpperCase()}`,
+  );
 }
