@@ -37,6 +37,15 @@ the Mac card offers **Bewaar**, which posts the suggestion with `messageId` and
 `attachmentIds`: the outing, the mail linked, the attachments copied as tickets and,
 with a deadline, the item "Kaarten op naam zetten".
 
+**Enriching** (`enrich`): after an outing is made or gets a mail, and for every outing
+at start, Hedwig looks in every household mailbox for mail of up to 400 days before the
+night that names it (the title's first words, or the order number) and has Haiku read
+up to 25. Mail that Haiku reads as `tickets`, `addon` or `info` (times, route, "final
+info") for the same event is linked; newsletters and presales are not. The readings fill
+only empty fields (venue, place, organiser, kind, order number, website, doors, end) and
+give a day without a time its time; what someone typed stays. Then the picture is
+picked. Angela's mail joins in once her mailbox is connected.
+
 ## What an outing holds
 
 - **Tickets** on disk under `<data>/files/hedwig/outings/<id>/`, from a mail attachment or

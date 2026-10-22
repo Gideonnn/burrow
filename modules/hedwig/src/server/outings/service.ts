@@ -18,7 +18,7 @@ import {
   type Platform,
   people,
 } from '@burrow/platform';
-import { and, asc, desc, eq, gt, isNull, like, or } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, like, lt, or } from 'drizzle-orm';
 import { z } from 'zod';
 import { factsFor } from '../facts/store';
 import type { MailService, MessageRow } from '../mail-service';
@@ -68,6 +68,8 @@ const ORDER_SUBJECTS = [
 ];
 const ARCHIVE_DAYS = 400;
 const ARCHIVE_MAX = 300;
+// Mails per outing worth a look when it is enriched.
+const ENRICH_MAX = 25;
 
 const iso = (d: Date | null) => d?.toISOString() ?? null;
 const at = (s: string | null | undefined) =>
@@ -77,6 +79,7 @@ const at = (s: string | null | undefined) =>
 // them. Only the mails linked to an outing stay private to their mailbox.
 export class OutingsService {
   private readonly reading = new Map<string, Promise<OutingRead | null>>();
+  private readonly enriching = new Map<string, Promise<void>>();
   private readonly readerOn: boolean;
   readonly pictures: OutingPictures;
 
@@ -209,7 +212,7 @@ export class OutingsService {
         );
       }
     }
-    if (message || fields.url) void this.pictures.pickSoon(id);
+    if (message || fields.url) void this.enrich(id);
     this.changed(id);
     return this.get(access, id);
   }
@@ -461,7 +464,7 @@ export class OutingsService {
       .onConflictDoNothing()
       .run();
     this.touch(access, id);
-    void this.pictures.pickSoon(id);
+    void this.enrich(id);
     this.changed(id);
     return this.get(access, id);
   }
@@ -516,8 +519,8 @@ export class OutingsService {
         void this.pictures.pickSoon(existing);
         continue;
       }
-      // A locker or parking spot alone is no outing.
-      if (read?.about === 'addon') continue;
+      // A locker or practical info alone is no outing.
+      if (read?.about === 'addon' || read?.about === 'info') continue;
       const attachments = message.hasAttachments
         ? await this.o.mail.attachments(id).catch(() => [])
         : [];
@@ -571,9 +574,8 @@ export class OutingsService {
     for (const o of this.o.platform.db
       .select({ id: outings.id })
       .from(outings)
-      .where(and(gt(outings.startsAt, now), isNull(outings.imageType)))
       .all()) {
-      await this.pictures.pickSoon(o.id);
+      await this.enrich(o.id);
     }
     return ids.length;
   }
@@ -647,8 +649,106 @@ export class OutingsService {
     return rows.find(
       (o) =>
         (orderNumber && o.orderNumber === orderNumber) ||
-        (sameName(o.title, title) && day(o.startsAt) === day(startsAt)),
+        (sameEvent(o.title, title) && day(o.startsAt) === day(startsAt)),
     )?.id;
+  }
+
+  // Mails about the same night in every mailbox of the household: the
+  // order, reminders, lockers and practical info. Haiku reads each once; what
+  // they say fills what the outing still misses, never what someone typed.
+  enrich(id: string): Promise<void> {
+    let run = this.enriching.get(id);
+    if (!run) {
+      run = this.enrichNow(id)
+        .catch((error: Error) =>
+          console.error(
+            `hedwig: enriching outing ${id} failed: ${error.message}`,
+          ),
+        )
+        .finally(() => this.enriching.delete(id));
+      this.enriching.set(id, run);
+    }
+    return run;
+  }
+
+  private async enrichNow(id: string) {
+    const row = this.db.select().from(outings).where(eq(outings.id, id)).get();
+    if (!row) return;
+    const phrase = searchPhrase(row.title);
+    const linked = new Set(
+      this.db
+        .select({ id: outingMessages.messageId })
+        .from(outingMessages)
+        .where(eq(outingMessages.outingId, id))
+        .all()
+        .map((r) => r.id),
+    );
+    if (this.readerOn && phrase) {
+      const day = 86_400_000;
+      const t = row.startsAt.getTime();
+      const candidates = this.db
+        .select({ id: messages.id })
+        .from(messages)
+        .where(
+          and(
+            gt(messages.receivedAt, new Date(t - 400 * day)),
+            lt(messages.receivedAt, new Date(t + 14 * day)),
+            or(
+              like(messages.subject, `%${phrase}%`),
+              like(messages.bodyText, `%${phrase}%`),
+              row.orderNumber
+                ? like(messages.bodyText, `%${row.orderNumber}%`)
+                : undefined,
+            ),
+          ),
+        )
+        .orderBy(desc(messages.receivedAt))
+        .limit(ENRICH_MAX)
+        .all()
+        .map((r) => r.id)
+        .filter((m) => !linked.has(m));
+      for (const messageId of candidates) {
+        const message = this.o.mail.message(messageId);
+        if (!message || this.isSensitive(messageId)) continue;
+        const read = await this.read(message);
+        if (
+          !read ||
+          !['tickets', 'addon', 'info'].includes(read.about) ||
+          !read.title ||
+          !sameEvent(read.title, row.title)
+        )
+          continue;
+        this.db
+          .insert(outingMessages)
+          .values({ outingId: id, messageId })
+          .onConflictDoNothing()
+          .run();
+        linked.add(messageId);
+      }
+    }
+    const reads = (
+      await Promise.all(
+        [...linked].map((m) => {
+          const message = this.o.mail.message(m);
+          return message && !this.isSensitive(m) ? this.read(message) : null;
+        }),
+      )
+    ).filter((r): r is OutingRead => Boolean(r));
+    const fill = fillFrom(row, reads);
+    if (Object.keys(fill).length) {
+      const merged = { ...row, ...fill };
+      this.db
+        .update(outings)
+        .set({ ...fill, searchText: searchText(merged) })
+        .where(eq(outings.id, id))
+        .run();
+    }
+    await this.pictures.pickSoon(id);
+    this.changed(id);
+  }
+
+  private isSensitive(messageId: string) {
+    return Boolean(factsFor(this.db, [messageId]).get(messageId)?.sensitive);
   }
 
   // What Hedwig itself may do in a mailbox's owner's name.
@@ -905,17 +1005,114 @@ function inputOf(message: MessageRow) {
   };
 }
 
-// "Welcome To The 90s 2026" and "Welcome To The 90's" are the same night.
-function sameName(a: string, b: string) {
+function asOutingError(error: unknown): never {
+  if (error instanceof PictureError) throw new OutingError(error.message);
+  throw error;
+}
+
+// One event under two names: "Hoge Bomen Festival 2026 - De Finale" and
+// "Hoge Bomen Festival", or "Welcome To The 90s 2026" and "Welcome To The 90's".
+function sameEvent(a: string, b: string) {
   const plain = (s: string) =>
     s
       .toLowerCase()
       .replace(/\b(19|20)\d{2}\b/g, '')
       .replace(/[^\p{L}\p{N}]+/gu, '');
-  return plain(a) === plain(b);
+  const [x, y] = [plain(a), plain(b)];
+  return Boolean(x && y) && (x.includes(y) || y.includes(x));
 }
 
-function asOutingError(error: unknown): never {
-  if (error instanceof PictureError) throw new OutingError(error.message);
-  throw error;
+// The start of a title to find other mails about it by: "Hoge Bomen Festival
+// 2026 - De Finale" searches "Hoge Bomen Festival".
+function searchPhrase(title: string) {
+  const head = title.split(/\s[-|:–]\s/)[0]!;
+  const words = head
+    .split(/\s+/)
+    .map((w) => w.replace(/[^\p{L}\p{N}].*$/u, ''))
+    .filter((w) => w && !/^(19|20)\d{2}$/.test(w));
+  const out: string[] = [];
+  for (const w of words) {
+    out.push(w);
+    if (out.length >= 2 && out.join('').length >= 10) break;
+    if (out.length >= 4) break;
+  }
+  const phrase = out.join(' ');
+  return phrase.length >= 5 ? phrase : null;
+}
+
+// What the readings of an outing's mails add to it: only empty fields, and a
+// time for a day without one.
+function fillFrom(row: OutingRow, reads: OutingRead[]) {
+  const first = <T>(pick: (r: OutingRead) => T | null) => {
+    for (const r of reads) {
+      const v = pick(r);
+      if (v) return v;
+    }
+    return null;
+  };
+  const sameDay = (r: OutingRead) =>
+    r.title && sameEvent(r.title, row.title) ? r : null;
+  const time = (value: string | null) =>
+    value && value.length > 10 && !Number.isNaN(new Date(value).getTime())
+      ? new Date(value)
+      : null;
+  const fill: Partial<OutingRow> = {};
+  const set = <K extends keyof OutingRow>(
+    key: K,
+    value: OutingRow[K] | null,
+  ) => {
+    if (row[key] == null && value != null) fill[key] = value as OutingRow[K];
+  };
+  set(
+    'venue',
+    first((r) => r.venue),
+  );
+  set(
+    'address',
+    first((r) => r.city),
+  );
+  set(
+    'organiser',
+    first((r) => r.organiser),
+  );
+  set(
+    'kind',
+    first((r) => r.kind),
+  );
+  set(
+    'orderNumber',
+    first((r) => r.orderNumber),
+  );
+  set(
+    'url',
+    first((r) =>
+      r.website && /^https?:\/\//.test(r.website) ? r.website : null,
+    ),
+  );
+  const day = row.startsAt.toDateString();
+  set(
+    'doorsAt',
+    first((r) => {
+      const d = time(sameDay(r)?.doorsAt ?? null);
+      return d && d.toDateString() === day ? d : null;
+    }),
+  );
+  set(
+    'endsAt',
+    first((r) => {
+      const d = time(sameDay(r)?.endsAt ?? null);
+      return d && d > row.startsAt ? d : null;
+    }),
+  );
+  if (row.allDay) {
+    const start = first((r) => {
+      const d = time(sameDay(r)?.startsAt ?? null);
+      return d && d.toDateString() === day ? d : null;
+    });
+    if (start) {
+      fill.startsAt = start;
+      fill.allDay = false;
+    }
+  }
+  return fill;
 }

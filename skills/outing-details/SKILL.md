@@ -16,6 +16,8 @@ Answer:
     email carries them.
   - "addon": something booked for an event that is not entry itself: a locker,
     parking, camping spot, shuttle bus.
+  - "info": practical information for people who already have tickets: times,
+    timetable, route, parking, what to bring, "final info", "one week to go".
   - "announcement": a presale, newsletter, voucher code or invitation to buy tickets.
   - "other": not about an outing.
 - `title`: the event's own name as the organiser writes it ("Neon Nineties"), never the

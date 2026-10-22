@@ -166,9 +166,10 @@ const localTime = z
   .nullable();
 export const outingRead = z.object({
   // tickets: an order or tickets the recipient has; addon: a locker, parking
-  // or camping spot for an event; announcement: a presale, newsletter or
+  // or camping spot for an event; info: practical information for ticket
+  // holders (times, route, final info); announcement: a presale, newsletter or
   // invitation to buy; other: not about an outing.
-  about: z.enum(['tickets', 'addon', 'announcement', 'other']),
+  about: z.enum(['tickets', 'addon', 'info', 'announcement', 'other']),
   title: z.string().max(120).nullable(),
   kind: z.string().max(40).nullable(),
   startsAt: localTime,

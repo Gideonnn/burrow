@@ -549,6 +549,50 @@ describe('outings', () => {
     expect(chosen.image?.source).toBe('website');
   });
 
+  it('fills an outing from the other mails about that night, not from news', async () => {
+    const s = setup();
+    await s.deliver({
+      from: { name: 'Neon Events', email: 'info@neonevents.example.com' },
+      subject: 'Final info - Neon Nineties',
+      bodyText: 'Deuren open om 20:00 in de Voorbeeldhal.',
+      receivedAt: new Date('2027-05-06T10:00:00Z'),
+    });
+    await s.deliver({
+      from: { name: 'Neon Events', email: 'info@neonevents.example.com' },
+      subject: 'Neon Nineties: de line-up',
+      bodyText: 'Bekijk de line-up.',
+      receivedAt: new Date('2027-03-01T10:00:00Z'),
+    });
+    s.decisions.push(
+      read({ venue: null, city: null }),
+      read({
+        about: 'info',
+        doorsAt: '2027-05-13T20:00',
+        endsAt: '2027-05-14T02:00',
+        venue: 'Voorbeeldhal',
+        city: 'Voorbeeldstad',
+        website: 'https://neon.example.com',
+      }),
+      read({ about: 'announcement' }),
+    );
+    const claimed = await s.deliver(CLAIMED);
+    await vi.waitFor(async () => {
+      const [made] = outingsResponse.parse(
+        await (await s.send(s.token, 'GET', '/api/outings')).json(),
+      );
+      expect(made).toMatchObject({
+        venue: 'Voorbeeldhal',
+        address: 'Voorbeeldstad',
+        url: 'https://neon.example.com',
+      });
+      expect(made!.doorsAt).not.toBeNull();
+      expect(made!.endsAt).not.toBeNull();
+      expect(made!.mails).toHaveLength(2);
+      expect(made!.mails.map((m) => m.id)).toContain(claimed);
+    });
+    expect(s.decisions).toHaveLength(0);
+  });
+
   it('finds order mails for nights still to come in the archive', async () => {
     const s = setup();
     s.provider(s.home.id).deliver({
