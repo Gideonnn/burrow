@@ -3,9 +3,9 @@
 The server runs on Dobby (Ubuntu, x86_64) as a systemd **user** service, without Docker
 or sudo: `infra/dobby/install.sh` builds the checkout in `~/burrow`, writes the settings
 once, installs `burrow.service`, a nightly backup timer and, once a token exists, the
-Cloudflare Tunnel, then waits for `/health`. From the Mac, `pnpm server:deploy`
-(`infra/dobby/deploy.sh`) moves Dobby's checkout to `origin/main` over SSH and runs the
-install again. Every step is safe to repeat.
+Cloudflare Tunnel, then waits for `/health` (and for port 4718 when Access is set). From
+the Mac, `pnpm server:deploy` (`infra/dobby/deploy.sh`) moves Dobby's checkout to
+`origin/main` over SSH and runs the install again. Every step is safe to repeat.
 
 ## What lives where on Dobby
 
@@ -56,7 +56,9 @@ Setup, in this order so the hostname is never open without a login:
    `~/.config/burrow/tunnel.env` (mode 600). That file is separate so the server and
    its agents never see the token.
 5. **Rerun the install.** It downloads `cloudflared` into `~/.local/bin` and runs it as
-   `burrow-tunnel.service`.
+   `burrow-tunnel.service`. Later installs restart it only when its unit, `cloudflared` or
+   `tunnel.env` changed (a hash in `~/.local/state/burrow/tunnel.stamp`) or when it is not
+   running; an unchanged tunnel is left alone.
 6. **Clients:** Hedwig's server address and MCP URLs become `https://<public hostname>`.
 
 Cloudflare terminates TLS, so it can read the traffic that passes through the tunnel,
@@ -87,6 +89,12 @@ well. `BURROW_CONTACT_EMAIL` in the settings fills in the contact on them.
 
 ## Traps
 
+- Restarting the tunnel makes Cloudflare answer 530 (error 1033) until cloudflared has
+  reconnected: up to its grace period, which open requests such as Hedwig's live stream
+  always fill. Deploys used to restart it every time; now only a changed tunnel restarts,
+  with `--grace-period 5s`. A server restart still gives a second or two of 502; the Mac
+  apps retry both quietly and show it in the sidebar's connection dot. See the
+  [diary](../diary/2026-10-22-deploys-restarted-the-tunnel.md).
 - Rebuilding used to nest `dist/migrations/migrations`, and the restarted server could
   not find its migrations. The build now replaces the folder, and CI builds twice.
 - An Access login is not enough for `/api`: the server still wants a key, so a browser

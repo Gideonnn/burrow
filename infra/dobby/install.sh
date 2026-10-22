@@ -14,7 +14,8 @@
 #   4. installs and (re)starts the burrow.service and the nightly backup timer;
 #   5. runs the Cloudflare Tunnel as burrow-tunnel.service once the tunnel
 #      settings hold TUNNEL_TOKEN (installs cloudflared into ~/.local/bin
-#      when missing);
+#      when missing), restarting it only when its unit, cloudflared or the
+#      token file changed;
 #   6. installs ffmpeg and ffprobe into ~/.local/bin when missing, for
 #      Pensieve (a static build, checked against its published SHA-256).
 #
@@ -148,11 +149,20 @@ systemctl --user restart burrow.service
 systemctl --user start burrow-backup.timer
 
 say "waiting for the server"
-for _ in $(seq 1 30); do health >/dev/null && break; sleep 1; done
+started=$SECONDS
+for _ in $(seq 1 150); do health >/dev/null && break; sleep 0.2; done
 health >/dev/null || fail "the server did not start; see: tail -n 50 $LOG_DIR/server.log"
+# The tunnel's port answers only with a login or a key; any HTTP status means it listens.
+if grep -q '^CLOUDFLARE_ACCESS_AUD=..*' "$ENV_FILE"; then
+  for _ in $(seq 1 50); do
+    [ "$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$TUNNEL_PORT/health")" != 000 ] && break
+    sleep 0.2
+  done
+fi
+echo "  answering after $((SECONDS - started))s"
 
 if grep -q '^TUNNEL_TOKEN=..*' "$TUNNEL_ENV" 2>/dev/null; then
-  say "running the Cloudflare Tunnel"
+  say "checking the Cloudflare Tunnel"
   if ! command -v cloudflared >/dev/null; then
     case "$(uname -m)" in
       x86_64) arch=amd64 ;;
@@ -166,14 +176,19 @@ if grep -q '^TUNNEL_TOKEN=..*' "$TUNNEL_ENV" 2>/dev/null; then
   fi
   grep -q '^CLOUDFLARE_ACCESS_AUD=..*' "$ENV_FILE" ||
     echo "  CLOUDFLARE_ACCESS_TEAM and _AUD are empty in $ENV_FILE: nothing listens on $TUNNEL_PORT yet"
-  cat > "$UNIT_DIR/burrow-tunnel.service" <<EOF
+  # Restarting the tunnel makes Cloudflare answer 530 until it is back, so it
+  # only restarts when its unit, cloudflared or the token file changed.
+  tunnel_unit="$UNIT_DIR/burrow-tunnel.service"
+  stamp="$LOG_DIR/tunnel.stamp"
+  next_unit="$(mktemp)"
+  cat > "$next_unit" <<EOF
 [Unit]
 Description=Cloudflare Tunnel to the Burrow server
 After=network-online.target burrow.service
 
 [Service]
 EnvironmentFile=$TUNNEL_ENV
-ExecStart=$(command -v cloudflared) tunnel --no-autoupdate run
+ExecStart=$(command -v cloudflared) tunnel --no-autoupdate --grace-period 5s run
 StandardOutput=append:$LOG_DIR/tunnel.log
 StandardError=append:$LOG_DIR/tunnel.log
 Restart=always
@@ -182,10 +197,23 @@ RestartSec=5
 [Install]
 WantedBy=default.target
 EOF
-  systemctl --user daemon-reload
+  # Only hashes: the token itself is never printed or stored elsewhere.
+  wanted="$(cat "$next_unit" "$(command -v cloudflared)" "$TUNNEL_ENV" | sha256sum | cut -d' ' -f1)"
+  if cmp -s "$next_unit" "$tunnel_unit"; then
+    rm -f "$next_unit"
+  else
+    chmod 644 "$next_unit"
+    mv "$next_unit" "$tunnel_unit"
+    systemctl --user daemon-reload
+  fi
   systemctl --user enable burrow-tunnel.service >/dev/null 2>&1
-  systemctl --user restart burrow-tunnel.service
-  echo "  started; log: $LOG_DIR/tunnel.log"
+  if [ "$wanted" != "$(cat "$stamp" 2>/dev/null)" ] || ! systemctl --user is-active --quiet burrow-tunnel.service; then
+    systemctl --user restart burrow-tunnel.service
+    echo "$wanted" > "$stamp"
+    echo "  (re)started; log: $LOG_DIR/tunnel.log"
+  else
+    echo "  unchanged and running, left alone"
+  fi
 fi
 
 echo
