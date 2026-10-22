@@ -242,14 +242,18 @@ public final class AppModel {
 
     /// Catches up on what changed while the server was away.
     func reconnected() async {
-        guard me != nil else { return await start() }
+        if me == nil {
+            await start()
+            guard me != nil else { return }
+        } else {
+            await refreshCounts()
+            await refreshFiltered()
+            await refreshDrafts()
+            await refreshTasks()
+            await refreshOutings()
+        }
         if !isSearching { await loadSelection(keepSelection: true) }
         if selectedMessageId != detail?.id { await openSelected() }
-        await refreshCounts()
-        await refreshFiltered()
-        await refreshDrafts()
-        await refreshTasks()
-        await refreshOutings()
     }
 
     // MARK: Lists

@@ -14,6 +14,7 @@ import Testing
             down.value ? (530, Self.tunnelDown) : (200, "[\(Fixture.message("m1", subject: "Eerste"))]")
         }
         server.on("GET", "/api/messages/m1", json: Fixture.message("m1", subject: "Eerste"))
+        server.on("POST", "/api/messages/m1/actions", json: Fixture.message("m1", subject: "Eerste", unread: false))
         let client = server.client()
         let model = AppModel(
             store: ConnectionStore(service: "app.burrow.hedwig.tests"),
@@ -21,8 +22,7 @@ import Testing
             connection: Connection(serverURL: URL(string: "http://burrow.test")!, token: "bk_test"),
             reachability: ServerReachability(delays: [.milliseconds(20)]))
         model.selection = .inbox(mailboxId: "mb1")
-
-        await model.loadSelection()
+        await model.selectionLoad?.value
         #expect(model.error == nil)
         #expect(!model.reachability.isReachable)
 
