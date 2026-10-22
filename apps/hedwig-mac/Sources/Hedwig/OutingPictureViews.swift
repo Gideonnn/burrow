@@ -164,6 +164,10 @@ struct OutingHero: View {
     /// Placing the picture: the frame being edited, and where a drag or a
     /// pinch started.
     @State private var editing: PictureFrame?
+    /// Renaming the outing, and the new name being typed.
+    @State private var renaming = false
+    @State private var draftTitle = ""
+    @FocusState private var titleFocused: Bool
     @State private var gestureStart: PictureFrame?
 
     /// Large and not tall: worth filling two thirds of the header with.
@@ -293,7 +297,10 @@ struct OutingHero: View {
             }
             .overlay { dropTarget }
         }
-        .onChange(of: outing.id) { editing = nil }
+        .onChange(of: outing.id) {
+            editing = nil
+            renaming = false
+        }
         .clipped()
         .onHover { hovering = $0 }
         .onDrop(of: PastedContents.dropTypes, isTargeted: $dropping) { providers in
@@ -332,16 +339,54 @@ struct OutingHero: View {
         }
     }
 
+    private var titleSize: CGFloat { outing.title.count > 30 ? 21 : 26 }
+
+    private func startRenaming() {
+        draftTitle = outing.title
+        renaming = true
+    }
+
+    private func saveTitle() {
+        guard renaming else { return }
+        renaming = false
+        let title = draftTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !title.isEmpty, title != outing.title else { return }
+        Task { await model.updateOuting(outing.id, ["title": .string(title)]) }
+    }
+
     private var titleBlock: some View {
         HStack(alignment: .center, spacing: 14) {
             GlassDateTile(date: outing.startsAt)
             VStack(alignment: .leading, spacing: 6) {
-                Text(outing.title)
-                    .font(.system(size: outing.title.count > 30 ? 21 : 26, weight: .bold))
-                    .lineLimit(3)
-                    .minimumScaleFactor(0.75)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .textSelection(.enabled)
+                if renaming {
+                    TextField("Naam", text: $draftTitle)
+                        .textFieldStyle(.plain)
+                        .font(.system(size: titleSize, weight: .bold))
+                        .focused($titleFocused)
+                        .padding(.horizontal, 6).padding(.vertical, 2)
+                        .background(.primary.opacity(0.1), in: RoundedRectangle(cornerRadius: 6))
+                        .padding(.horizontal, -6)
+                        .onSubmit(saveTitle)
+                        .onExitCommand { renaming = false }
+                        // Focus only takes once the field is in the window.
+                        .task {
+                            try? await Task.sleep(for: .milliseconds(60))
+                            titleFocused = true
+                        }
+                        .onChange(of: titleFocused) { if !titleFocused { saveTitle() } }
+                } else {
+                    Text(outing.title)
+                        .font(.system(size: titleSize, weight: .bold))
+                        .lineLimit(3)
+                        .minimumScaleFactor(0.75)
+                        .fixedSize(horizontal: false, vertical: true)
+                        // Double-click renames; no icon on hover.
+                        .onTapGesture(count: 2) { if canOrganize { startRenaming() } }
+                        .contextMenu {
+                            Button("Wijzig naam", action: startRenaming).disabled(!canOrganize)
+                        }
+                        .help(canOrganize ? "Dubbelklik om de naam te wijzigen" : "")
+                }
                 if let kind = outing.kind {
                     Text(kind)
                         .font(.caption.weight(.semibold))
@@ -358,31 +403,30 @@ struct OutingHero: View {
     @ViewBuilder
     private func controls(placeable: Bool) -> some View {
         if canOrganize, editing == nil {
-            HStack(spacing: 8) {
-                if hovering {
-                    Text("Plak of sleep een afbeelding")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+            // Quiet icons, only while the pointer is over the header.
+            HStack(spacing: 6) {
                 Spacer()
-                if hovering, placeable {
-                    Button { editing = outing.image?.frame ?? .centred } label: {
-                        Label("Aanpassen", systemImage: "crop")
-                    }
-                    .buttonStyle(HeroPillStyle())
-                    .help("Schuif de afbeelding op zijn plek of zoom in")
-                }
-                if hovering || model.pictureBusy.contains(outing.id) {
-                    Button(action: pick) {
-                        Label(outing.image == nil ? "Kies een afbeelding" : "Andere afbeelding", systemImage: "photo")
-                    }
-                    .buttonStyle(HeroPillStyle())
-                }
                 if model.pictureBusy.contains(outing.id) {
                     ProgressView().controlSize(.small).tint(.white)
                 }
+                if hovering, placeable {
+                    Button { editing = outing.image?.frame ?? .centred } label: {
+                        Image(systemName: "crop")
+                    }
+                    .buttonStyle(HeroIconStyle())
+                    .help("Afbeelding verschuiven of inzoomen")
+                    .accessibilityLabel("Aanpassen")
+                }
+                if hovering {
+                    Button(action: pick) {
+                        Image(systemName: "photo")
+                    }
+                    .buttonStyle(HeroIconStyle())
+                    .help(outing.image == nil ? "Kies een afbeelding, of plak of sleep er een" : "Andere afbeelding, of plak of sleep er een")
+                    .accessibilityLabel(outing.image == nil ? "Kies een afbeelding" : "Andere afbeelding")
+                }
             }
-            .padding(12)
+            .padding(10)
         }
     }
 
@@ -455,14 +499,14 @@ private struct GlassDateTile: View {
     }
 }
 
-private struct HeroPillStyle: ButtonStyle {
+private struct HeroIconStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 12.5, weight: .medium))
-            .foregroundStyle(.white)
-            .padding(.horizontal, 11)
-            .frame(height: 28)
-            .background(.black.opacity(configuration.isPressed ? 0.7 : 0.58), in: Capsule())
+            .font(.system(size: 11.5, weight: .semibold))
+            .foregroundStyle(.white.opacity(0.9))
+            .frame(width: 26, height: 26)
+            .background(.black.opacity(configuration.isPressed ? 0.55 : 0.32), in: Circle())
+            .contentShape(Circle())
     }
 }
 
