@@ -141,9 +141,9 @@ the family, everything else folded behind **Details**.
 - **Picture** (design `docs/design/hedwig-event-images.html`, views in
   `Sources/Hedwig/OutingPictureViews.swift`): a 44 pt thumbnail at the end of each list
   row (grey for past outings; a calm tile in the title's colours without a picture).
-  The page header keeps to about 200 pt and a third of the window: the picture whole on
-  the left (at most 160 pt high and 45 % wide, small ones at their own size, never
-  stretched), the date, title and kind beside it, on a gradient of the picture's own
+  The page header keeps to about 200 pt and a third of the window: the date, title and kind
+  on the left and the picture whole on the right (Gideon's choice; at most 160 pt high
+  and 45 % wide, small ones at their own size, never stretched), on a gradient of the picture's own
   strong colours (`PictureColours`; light behind black text, deep behind white) that
   fades into the page. Text never sits on the artwork, which usually carries its own; a
   blurred copy as backdrop was tried and smeared dark artwork into grey.

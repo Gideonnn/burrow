@@ -146,7 +146,7 @@ struct OutingArtFallback: View {
 // MARK: The top of the page
 
 /// The top of the page, Apple TV style: the picture whole on a blurred wash
-/// of itself, with the date and title below it, never on the artwork.
+/// of itself, the date and title beside it on the left, never on the artwork.
 /// Pasting or dropping a picture or a link here sets it.
 struct OutingHero: View {
     @Environment(AppModel.self) private var model
@@ -165,18 +165,19 @@ struct OutingHero: View {
     var body: some View {
         OutingPictureReader(outing: outing) { picture in
             HStack(alignment: .center, spacing: 22) {
-                artwork(picture)
                 titleBlock
                 Spacer(minLength: 0)
+                artwork(picture)
             }
             .padding(.horizontal, 28)
             .padding(.top, 28)
             .padding(.bottom, 18)
             .frame(maxWidth: 640, alignment: .leading)
+            // Over the content column, so the picture button sits by the picture.
+            .overlay(alignment: .top) { controls }
             .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { column = max(200, $0 - 56) }
             .frame(maxWidth: .infinity, alignment: .leading)
             .background { HeroBackdrop(outing: outing, picture: picture) }
-            .overlay(alignment: .topLeading) { controls }
             .overlay { dropTarget }
         }
         .clipped()
@@ -188,8 +189,8 @@ struct OutingHero: View {
         }
     }
 
-    /// The picture whole, beside the title: at most `maxArt` high and 45 % of
-    /// the width; small ones stay sharp at their own size.
+    /// The picture whole, right of the title: at most `maxArt` high and 45 %
+    /// of the width; small ones stay sharp at their own size.
     @ViewBuilder
     private func artwork(_ picture: OutingPicture?) -> some View {
         let maxWidth = column * 0.45
@@ -244,6 +245,12 @@ struct OutingHero: View {
     private var controls: some View {
         if canOrganize {
             HStack(spacing: 8) {
+                if hovering {
+                    Text("Plak of sleep een afbeelding")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
                 if hovering || model.pictureBusy.contains(outing.id) {
                     Button(action: pick) {
                         Label(outing.image == nil ? "Kies een afbeelding" : "Andere afbeelding", systemImage: "photo")
@@ -252,12 +259,6 @@ struct OutingHero: View {
                 }
                 if model.pictureBusy.contains(outing.id) {
                     ProgressView().controlSize(.small).tint(.white)
-                }
-                Spacer()
-                if hovering {
-                    Text("Plak of sleep een afbeelding")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
                 }
             }
             .padding(12)
