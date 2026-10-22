@@ -79,10 +79,11 @@ struct OutingLineupCard: View {
     }
 
     private var footer: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
             if let note = lineup.note, !note.isEmpty {
                 Text(note).italic().foregroundStyle(.secondary)
             }
+            Spacer(minLength: 0)
             HStack(spacing: 6) {
                 Text(lineup.updatedText())
                 if let host = lineup.sourceHost, let url = lineup.sourceURL {
