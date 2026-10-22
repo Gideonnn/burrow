@@ -79,6 +79,9 @@ public final class AppModel {
     public var showsOutingDetails = false
     /// Tickets being uploaded right now.
     public internal(set) var ticketUploads = 0
+    /// Outings whose picture is being changed right now.
+    public internal(set) var pictureBusy: Set<String> = []
+    @ObservationIgnored let pictureCache = OutingPictureCache()
     /// Everyone in the household, for Wie and the ticket holders.
     public internal(set) var people: [Person] = []
     /// Called whenever the outings change; the app reschedules its reminders.
