@@ -8,6 +8,8 @@ export type DetectInput = {
   receivedAt: Date;
   // ISO days from the mail facts, when there are any.
   dates?: string[];
+  // Whether the mail has attachments, before they are fetched.
+  hasAttachments?: boolean;
   attachments: {
     id: string;
     name: string;
@@ -35,6 +37,10 @@ const SHOPS: [RegExp, string][] = [
   // Lockers at festivals: not a ticket, but part of the night.
   [/eventsafe/, 'Eventsafe'],
 ];
+
+// Attachments that come with tickets but are none.
+const NOT_TICKETS =
+  /terms|voorwaarden|conditions|invoice|factuur|receipt|kwitantie|privacy|bon\b/i;
 
 const TICKET_WORDS =
   /\b(e-?tickets?|tickets?|kaarten|kaartjes|toegangsbewijs|entreebewijs|polsband)\b/i;
@@ -114,8 +120,8 @@ export function detectOuting(input: DetectInput): Detected {
     `${input.subject} ${text.slice(0, 3000)}`,
   );
 
-  const title =
-    event?.name ?? titleFromSubject(input.subject) ?? input.subject.trim();
+  const fromSubject = titleFromSubject(input.subject);
+  const title = event?.name ?? fromSubject ?? input.subject.trim();
   const startsAt =
     date(event?.startDate) ?? firstFutureDate(text, input.receivedAt);
   const kind =
@@ -132,10 +138,11 @@ export function detectOuting(input: DetectInput): Detected {
     .filter(
       (a) =>
         !a.inline &&
+        !NOT_TICKETS.test(a.name) &&
         (a.contentType === 'application/pdf' ||
           a.contentType === 'application/vnd.apple.pkpass' ||
           /\.(pdf|pkpass)$/i.test(a.name) ||
-          a.contentType.startsWith('image/')),
+          (a.contentType.startsWith('image/') && a.size >= 10_000)),
     )
     .map(({ id, name, contentType, size }) => ({
       id,
@@ -146,7 +153,9 @@ export function detectOuting(input: DetectInput): Detected {
 
   const confidence: Detected['confidence'] = event
     ? 'structured'
-    : shop || (ticketish && (startsAt || tickets.length))
+    : shop ||
+        fromSubject ||
+        (ticketish && (startsAt || tickets.length || input.hasAttachments))
       ? 'likely'
       : 'none';
   const venue = event?.venue ?? null;

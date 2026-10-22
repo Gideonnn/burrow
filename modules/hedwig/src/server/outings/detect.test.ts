@@ -9,6 +9,50 @@ const base = {
 };
 
 describe('detectOuting', () => {
+  it('reads a ticket mail with attachments but no date it knows as likely, and leaves out the paperwork', () => {
+    const input = {
+      ...base,
+      subject: 'Your ticket for Neon Nineties',
+      bodyText: 'Je e-ticket zit in de bijlage. Tot zaterdag!',
+      hasAttachments: true,
+    };
+    expect(detectOuting(input).confidence).toBe('likely');
+    const found = detectOuting({
+      ...input,
+      attachments: [
+        {
+          id: '1',
+          name: 'ticket.pdf',
+          contentType: 'application/pdf',
+          size: 90_000,
+          inline: false,
+        },
+        {
+          id: '2',
+          name: 'Terms_of_use.pdf',
+          contentType: 'application/pdf',
+          size: 90_000,
+          inline: false,
+        },
+        {
+          id: '3',
+          name: 'Invoice.pdf',
+          contentType: 'application/pdf',
+          size: 90_000,
+          inline: false,
+        },
+        {
+          id: '4',
+          name: 'Mobile_ticket_1.png',
+          contentType: 'image/png',
+          size: 569,
+          inline: false,
+        },
+      ],
+    });
+    expect(found.tickets.map((t) => t.name)).toEqual(['ticket.pdf']);
+  });
+
   it('takes the name from a subject about tickets for it', () => {
     const found = detectOuting({
       ...base,
@@ -17,6 +61,7 @@ describe('detectOuting', () => {
       bodyText: 'Je tickets zijn op naam gezet.',
     });
     expect(found.title).toBe('Neon Nineties');
+    expect(found.confidence).toBe('likely');
   });
 
   it('reads a schema.org event reservation', () => {

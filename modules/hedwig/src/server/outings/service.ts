@@ -900,6 +900,7 @@ function inputOf(message: MessageRow) {
     bodyText: message.bodyText,
     bodyHtml: message.bodyHtml,
     receivedAt: message.receivedAt,
+    hasAttachments: message.hasAttachments,
     attachments: [],
   };
 }
