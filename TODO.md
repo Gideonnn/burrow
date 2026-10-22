@@ -27,6 +27,18 @@ minutes, for kinds where a small model is good enough (agreed, not built).
 was built" section.
 **Scope:** a day each for (1) and (2), an hour for (3).
 
+## Hedwig cards
+
+**What:** build the cards from `docs/design/hedwig-cards.html` in its four steps: the
+`messageCard` contract and a `message_cards` row; the meeting and code cards with the
+Vandaag strip and EventKit free/busy on the Mac; parcel, invoice and trip from schema.org;
+templates, Winky's optional card and the newsletter card.
+**Why:** a meeting, code or parcel mail is read for one fact and one action. Agreed
+(22 Oct 2026): an invite is answered only by a click in the card, an invite with a short
+organiser note may replace the mail, the strip is called Vandaag, and cards may use the
+Mac's calendars until Burrow has its own calendar, which the stored invites seed.
+**Scope:** step 2 is about two days, the others a day each.
+
 ## Angela's Mac
 
 **What:** install Hedwig and Pensieve on Angela's Mac (once by hand, then they update

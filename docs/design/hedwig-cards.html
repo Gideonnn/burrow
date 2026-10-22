@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="color-scheme" content="light dark" />
-<title>Hedwig · kaarten · ontwerp v1</title>
+<title>Hedwig · kaarten · ontwerp v2</title>
 <style>
 /* Tokens and components copied from burrow-design-system.html (v2). */
 /* ---------------------------------------------------------------------------
@@ -737,6 +737,25 @@ textarea.field { height: auto; padding: 8px 10px; resize: none; font: inherit; w
 .mc.ended .tile { background: var(--surface-2); color: var(--text-3); }
 .mc .strike { text-decoration: line-through; color: var(--text-3); }
 
+.today { border-bottom: 1px solid var(--line); background: var(--surface-2); }
+.today .th { display: flex; align-items: center; gap: 6px; padding: 8px 12px 4px; font-size: 12px; font-weight: 700; color: var(--text); cursor: pointer; }
+.today .th .n { font-weight: 500; color: var(--text-2); }
+.today .th .grow { flex: 1; }
+.today .th svg { color: var(--text-3); transition: transform 120ms; }
+.today.shut .th svg { transform: rotate(-90deg); }
+.today.shut .ti { display: none; }
+.today .ti { display: grid; grid-template-columns: 18px 1fr auto; gap: 8px; align-items: center; padding: 5px 12px; font-size: 12.5px; cursor: pointer; }
+.today .ti:last-child { padding-bottom: 9px; }
+.today .ti:hover { background: var(--hover); }
+.today .ti svg { color: var(--k); }
+.today .ti .w { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.today .ti .w small { color: var(--text-2); margin-left: 4px; }
+.today .ti .r { font-size: 12px; color: var(--text-2); font-variant-numeric: tabular-nums; display: flex; gap: 6px; align-items: center; }
+.today .ti .r.now { color: var(--k); font-weight: 600; }
+.today .ti .btn.sm { height: 20px; }
+.today .ti.past { opacity: 0.5; }
+.mc .cal { display: flex; gap: 6px; align-items: center; font-size: 12.5px; }
+.mc .cal.free { color: var(--success); } .mc .cal.clash { color: var(--warning); }
 .orig-bar { display: flex; align-items: center; gap: 8px; border: 1px dashed var(--line-strong); border-radius: 10px; padding: 8px 12px; color: var(--text-2); font-size: 12.5px; cursor: pointer; }
 .orig-bar:hover { background: var(--hover); }
 .orig-bar .grow { flex: 1; }
@@ -774,8 +793,8 @@ table.t tr:last-child td { border-bottom: 0; }
 </svg>
 
 <header class="topbar">
-  <div class="brand">Hedwig · kaarten <span class="muted" style="font-weight:400">ontwerp v1</span></div>
-  <nav><a href="#demo">Demo</a><a href="#types">Types</a><a href="#placement">Boven of in plaats van</a><a href="#states">Alle staten</a><a href="#list">In de lijst</a><a href="#data">Data en veiligheid</a><a href="#build">Bouwen</a></nav>
+  <div class="brand">Hedwig · kaarten <span class="muted" style="font-weight:400">ontwerp v2</span></div>
+  <nav><a href="#demo">Demo</a><a href="#types">Types</a><a href="#placement">Boven of in plaats van</a><a href="#states">Alle staten</a><a href="#list">In de lijst</a><a href="#data">Data en veiligheid</a><a href="#calendar">Agenda</a><a href="#build">Bouwen</a></nav>
   <div class="seg" id="theme-seg"><button data-theme-pick="auto" class="on">Auto</button><button data-theme-pick="light">Light</button><button data-theme-pick="dark">Dark</button></div>
 </header>
 
@@ -784,6 +803,7 @@ table.t tr:last-child td { border-bottom: 0; }
   <h1>Kaarten in Hedwig</h1>
   <p class="lead">Some mail is really a thing: a meeting, a login code, a parcel, a bill, a flight. For those, Hedwig shows a <b>card</b> (kaart) with the few facts that matter and the one action you came for, such as <i>Deelnemen</i> with a countdown. Automated mail can show the card instead of the message; the original is always one click away.</p>
   <div class="meta"><span>22 October 2026</span><span>·</span><span>Invented senders and data</span><span>·</span><span>UI text Dutch, notes English</span></div>
+  <p class="muted small" style="margin-top:10px">v2 after Gideon's answers: an invite is only answered by a click in the card, never automatically; an invite with a short note from the organiser still replaces the mail, with the note quoted; the strip on top of the list is called Vandaag; cards may use the calendars now.</p>
 </div>
 
 <section class="sec" id="demo">
@@ -819,7 +839,7 @@ table.t tr:last-child td { border-bottom: 0; }
       <div class="detail" id="detail"></div>
     </div>
   </div>
-  <p class="scr-note"><b>Notes.</b> The card sits between the header and the mail, where Hedwig shows the summary today; the summary line moves into the card's footer when there is a card. In <i>Automatisch</i> the invite, the code, the parcel and the newsletter replace their mail (the dashed bar opens the original, key <kbd>O</kbd>; Noor's one line is quoted in the card); the bill and the flight sit above it; Sanne's personal mail gets no card at all.</p>
+  <p class="scr-note"><b>Notes.</b> The card sits between the header and the mail, where Hedwig shows the summary today; the summary line moves into the card's footer when there is a card. In <i>Automatisch</i> the invite, the code, the parcel and the newsletter replace their mail (the dashed bar opens the original, key <kbd>O</kbd>; Noor's one line is quoted in the card); the bill and the flight sit above it; Sanne's personal mail gets no card at all. <b>Vandaag</b> on top of the list gathers the meeting, the two calendar items, the parcel and the bill due this week; it folds away and disappears when there is nothing.</p>
 </section>
 
 <section class="sec" id="types">
@@ -827,7 +847,7 @@ table.t tr:last-child td { border-bottom: 0; }
   <p class="intro">Each type maps onto categories Hedwig already gives every message. A card shows only what it can read with certainty; a field it cannot read is left out, never guessed.</p>
   <table class="t">
     <tr><th style="width:150px">Kaart</th><th>Herkend aan</th><th>Wat de kaart toont</th><th>De hoofdactie</th><th style="width:130px">Standaard</th></tr>
-    <tr><td><b>Afspraak</b><br><span class="muted small">appointment, work</span></td><td>An iCalendar part (<code>text/calendar</code>, invite, update or cancel). Teams, Zoom, Meet and Webex links in it.</td><td>Time with countdown, place or meeting, organiser, the organiser's own note, dial-in. Updates show the old time struck through.</td><td><b>Deelnemen</b> (from 15 min before), RSVP before that</td><td>In plaats van, with the organiser's note quoted; boven when the mail says more</td></tr>
+    <tr><td><b>Afspraak</b><br><span class="muted small">appointment, work</span></td><td>An iCalendar part (<code>text/calendar</code>, invite, update or cancel). Teams, Zoom, Meet and Webex links in it.</td><td>Time with countdown, place or meeting, organiser, the organiser's own note, dial-in. Updates show the old time struck through.</td><td><b>Deelnemen</b> (from 15 min before), before that Ja / Misschien / Nee and whether your calendar is free</td><td>In plaats van, with the organiser's note quoted; boven when the mail says more</td></tr>
     <tr><td><b>Code</b><br><span class="muted small">code</span></td><td>The rules that already set category <code>code</code>, plus "geldig voor 10 minuten".</td><td>The code, large, with its expiry.</td><td><b>Kopieer</b> (<kbd>⌘C</kbd>)</td><td>In plaats van</td></tr>
     <tr><td><b>Pakket</b><br><span class="muted small">order, shipping</span></td><td>schema.org <code>ParcelDelivery</code>/<code>Order</code> in the HTML, a template, or Winky.</td><td>Delivery window, steps, track code; all mails about one track code merge into one timeline.</td><td><b>Volg pakket</b></td><td>In plaats van</td></tr>
     <tr><td><b>Factuur</b><br><span class="muted small">invoice</span></td><td>Amount and due date in the facts; IBAN and reference from the mail.</td><td>Amount, due date countdown, payee, IBAN check against earlier bills.</td><td><b>Verwerk factuur</b> (the existing task); never pay</td><td>Boven</td></tr>
@@ -864,8 +884,8 @@ table.t tr:last-child td { border-bottom: 0; }
   <p class="intro">A card adds one quiet line to its row with the time-bound fact, so the inbox shows what is next without opening anything. The line turns the card's colour when it needs you now, and a meeting gets a small <i>Deelnemen</i> button right in the row. A code row never shows the code.</p>
   <div class="grid g2">
     <div class="mac a-hedwig short" style="height:auto;grid-template-rows:auto;max-width:380px;margin:0"><div class="list" id="list-specimen" style="border-right:0"></div></div>
-    <div class="card"><h4>Later, in the same spirit</h4><ul>
-      <li><b>Straks</b> at the top of Alle inboxen: the next meeting, today's parcels and bills due this week, each a one-line card. Hidden when empty.</li>
+    <div class="card"><h4>Vandaag, and later</h4><ul>
+      <li><b>Vandaag</b> sits on top of Alle inboxen and each own inbox: today's meetings and calendar items, today's parcels and bills due within a week, one line each, sorted by time. A meeting gets its countdown and Deelnemen; a click opens the mail, or Agenda for an item without mail. It folds away, and is gone when empty.</li>
       <li>A notification one minute before a meeting with <i>Deelnemen</i> on it, also from the menu bar.</li>
       <li>Hand-offs when the apps from the design system exist: Pakket to Errol, Reis to Knight Bus, Factuur to Gringotts, Afspraak to the Weasley Clock. The card stays Hedwig's small version.</li>
     </ul></div>
@@ -885,7 +905,7 @@ table.t tr:last-child td { border-bottom: 0; }
     <div class="card"><h4>Buttons</h4><ul>
       <li>A button only opens a URL that is literally in the mail; the server checks it. The domain is printed on the button.</li>
       <li><i>Deelnemen</i> only for known meeting hosts (Teams, Zoom, Meet, Webex, Whereby). Any other link is <i>Open link</i> with its domain.</li>
-      <li>RSVP sends an iCalendar reply from your mailbox; that is a send by you, with the recipient shown. Bots never answer invites.</li>
+      <li>Ja, Misschien or Nee sends an iCalendar reply from your mailbox, only when you click it in the card. Nothing answers an invite on its own: no auto reply, no bot.</li>
       <li>No pay button, ever. The bill card copies IBAN and reference and opens the existing <i>factuur verwerken</i> task.</li>
     </ul></div>
     <div class="card"><h4>Trust</h4><ul>
@@ -896,13 +916,24 @@ table.t tr:last-child td { border-bottom: 0; }
   </div>
 </section>
 
+<section class="sec" id="calendar">
+  <h2><span class="num">7</span>Calendars, before Burrow has its own</h2>
+  <p class="intro">Burrow will get its own calendar later. Until then cards use the calendars the Mac already knows, read through EventKit with one permission prompt, so iCloud, Google and Exchange all count without new provider logins on the server.</p>
+  <div class="grid g3">
+    <div class="card"><h4>Free or not</h4><p class="muted small" style="margin:0">An invite shows <i>Je agenda is vrij</i> or <i>Overlapt met Lunch met Bram</i> before you answer, and <i>Staat in je agenda</i> after.</p></div>
+    <div class="card"><h4>Vandaag</h4><p class="muted small" style="margin:0">Calendar items without a mail stand in the strip next to the mail ones, with Deelnemen when the item has a meeting link.</p></div>
+    <div class="card"><h4>In agenda</h4><p class="muted small" style="margin:0">A trip, or an invite you got as a plain mail, goes into a calendar of your choice in one click; the item links back to the mail.</p></div>
+  </div>
+  <p class="muted small" style="margin-top:12px">The server already keeps every invite it parses (UID, times, link, your answer). That store is the seed of Burrow's own calendar; when the calendar exists it replaces EventKit as the source and the cards stay the same.</p>
+</section>
+
 <section class="sec" id="build">
-  <h2><span class="num">7</span>Building it</h2>
+  <h2><span class="num">8</span>Building it</h2>
   <p class="intro">Rough order, each step useful on its own.</p>
   <table class="t">
     <tr><th style="width:40px">#</th><th>Step</th><th>Scope</th></tr>
     <tr><td>1</td><td><b>Contract and storage.</b> <code>messageCard</code> in contracts as a zod union per type; a <code>message_cards</code> row per message with type, data, source, placement, <code>until</code> and a group key (event UID, track code).</td><td>Server, small</td></tr>
-    <tr><td>2</td><td><b>Afspraak and Code.</b> An iCalendar parser on stored messages, the code card from the rules, and the Mac view with a SwiftUI <code>TimelineView</code> for the countdown, the list line and the <kbd>O</kbd> bar.</td><td>Server and Mac, the main step</td></tr>
+    <tr><td>2</td><td><b>Afspraak and Code.</b> An iCalendar parser on stored messages, the code card from the rules, the Mac view with a SwiftUI <code>TimelineView</code> for the countdown, the list line, the <kbd>O</kbd> bar, Vandaag, and EventKit for free or busy.</td><td>Server and Mac, the main step</td></tr>
     <tr><td>3</td><td><b>Pakket, Factuur and Reis from schema.org,</b> merging by group key, the IBAN check against earlier bills.</td><td>Server, medium</td></tr>
     <tr><td>4</td><td><b>Templates and Winky.</b> The template field map, Winky's optional <code>card</code>, the newsletter card, one-click unsubscribe.</td><td>Server and skills, medium</td></tr>
   </table>
@@ -987,9 +1018,10 @@ function eventCard(c, now) {
   } else {
     const today = c.start - now < DAY;
     middle = `<div class="hero"><span class="big">${fmtTime(c.start)}</span><span class="rel">${fmtDay(c.start, now)} tot ${fmtTime(c.end)} · over ${rel(c.start - now)}</span></div>
-      <div class="acts">${c.answer ? `<span class="rsvp">${ic('check')}Je hebt <b style="color:var(--text)">${c.answer}</b> gezegd</span><button class="btn sm ghost" data-rsvp="">Wijzig</button>` : `<span class="rsvp">Ga je?</span><button class="btn sm" data-rsvp="ja">Ja</button><button class="btn sm" data-rsvp="misschien">Misschien</button><button class="btn sm" data-rsvp="nee">Nee</button>`}<span class="grow"></span>${today ? join(false) : ''}</div>`;
+      <div class="acts">${c.answer ? `<span class="rsvp">${ic('check')}Je hebt <b style="color:var(--text)">${c.answer}</b> gezegd</span><button class="btn sm ghost" data-rsvp="">Wijzig</button>` : `<span class="rsvp" title="Je antwoord gaat pas weg als je klikt">Ga je?</span><button class="btn sm" data-rsvp="ja">Ja</button><button class="btn sm" data-rsvp="misschien">Misschien</button><button class="btn sm" data-rsvp="nee">Nee</button>`}<span class="grow"></span>${today ? join(false) : ''}</div>`;
   }
   return `<div class="mc t-event ${s}">${head()}<div class="bd">${middle}
+    ${s === 'later' ? calLine(c, now) : ''}
     ${c.note ? `<div class="note"><b>${esc(c.organiser)}:</b> ${esc(c.note)}</div>` : ''}
     <dl class="kv"><dt>Organisator</dt><dd>${esc(c.organiser)}</dd><dt>Deelnemers</dt><dd>${esc(c.people)}</dd>${c.dial ? `<dt>Inbellen</dt><dd><span class="mono">${esc(c.dial)}</span>${copyBtn('Nummer')}</dd>` : ''}${c.moved ? `<dt>Verplaatst</dt><dd><span class="strike">${esc(c.moved)}</span></dd>` : ''}</dl>
   </div>${ft}</div>`;
@@ -1079,6 +1111,19 @@ const EV = {
 function setEvent(k) { const e = EV[k]; Object.assign(MEETING, { start: e.start, end: e.start + 45 * MIN, cancelled: !!e.cancelled }); }
 setEvent('4m');
 
+// What the Mac's calendars hold today (EventKit until Burrow has its own calendar).
+const CAL = [
+  { title: 'Lunch met Bram', cal: 'Werk', start: t0 + 2 * HOUR + 30 * MIN, end: t0 + 3 * HOUR + 30 * MIN },
+  { title: 'Tandarts Sam', cal: 'Gezin', start: at(16, 30), end: at(17, 0) },
+];
+const clash = (c) => CAL.find((e) => e.start < c.end && e.end > c.start);
+function calLine(c, now) {
+  if (c.answer === 'ja') return `<span class="cal free">${ic('check')}Staat in je agenda Werk</span>`;
+  const x = clash(c);
+  return x ? `<span class="cal clash">${ic('warn')}Overlapt met ${esc(x.title)}, ${fmtTime(x.start)} tot ${fmtTime(x.end)} (${esc(x.cal)})</span>`
+           : `<span class="cal free">${ic('check')}Je agenda is vrij</span>`;
+}
+
 const ORIG = {
   meeting: `<p>Hoi allemaal,</p><p>Neem je de releaseplanning van 3 november mee?</p><p>Noor</p><hr><p><b>Microsoft Teams-vergadering</b></p><p>Deelnemen op je computer, mobiele app of apparaat in de ruimte<br><a href="#">Klik hier om deel te nemen aan de vergadering</a></p><p>Vergaderings-ID: 123 456 789 012<br>Wachtwoordcode: aB3cD4</p><p>Of bel in (alleen audio)<br>+31 20 000 0000,,123456789# Nederland, Amsterdam</p><p class="faint">Meer informatie | Opties voor vergadering</p>`,
   code: `<div class="banner-img" style="background:#2b5f8a">Bank Voorbeeld</div><p>Beste klant,</p><p>Gebruik deze code om in te loggen:</p><p style="font-size:24px;font-weight:700;letter-spacing:4px">482913</p><p>De code is 10 minuten geldig. Heb je niet geprobeerd in te loggen? Neem dan contact met ons op.</p><p class="faint">Dit is een automatisch bericht. U kunt niet antwoorden op deze e-mail.</p>`,
@@ -1093,11 +1138,38 @@ const MAILS = [
   { id: 'm1', from: 'Noor de Vries', email: 'noor@studio.example.com', to: 'gideon@studio.example.com', subject: 'Weekstart team Noorderlicht', when: '08:10', card: MEETING, place: 'replace', orig: 'meeting', unread: true, p: '#7A6A5A' },
   { id: 'm2', from: 'Bank Voorbeeld', email: 'noreply@bank.example.nl', to: 'gideon@example.com', subject: 'Je inlogcode', when: fmtTime(t0 - MIN), card: { type: 'code', service: 'Bank Voorbeeld', code: '482 913', valid: 10 * MIN, until: t0 + 9 * MIN }, place: 'replace', orig: 'code', unread: true, p: '#2b5f8a' },
   { id: 'm3', from: 'Pakketdienst Voorbeeld', email: 'noreply@pakketdienst.example.com', to: 'gideon@example.com', subject: 'Je pakket komt vandaag tussen 14:15 en 16:45', when: '07:31', card: { type: 'parcel', carrier: 'Pakketdienst Voorbeeld', title: 'Bestelling bij Fietsenwinkel Pedaal', window: '14:15 tot 16:45', today: true, step: 2, track: '3SVBD1234567', items: 'Regenjas, maat L', address: 'Voorbeeldlaan 4', domain: 'pakketdienst.example.com' }, place: 'replace', orig: 'parcel', unread: true, p: '#e07b00' },
-  { id: 'm4', from: 'Energie Voorbeeld', email: 'facturen@energie.example.nl', to: 'gideon@example.com', subject: 'Je factuur van oktober', when: 'Gisteren', card: { type: 'invoice', payee: 'Energie Voorbeeld', period: 'oktober 2026', amount: '€ 84,20', due: t0 + 9 * DAY, iban: 'NL91 ABNA 0417 1643 00', ref: '7001 2345 6789', pdf: 'factuur-2026-10.pdf', domain: 'energie.example.nl' }, place: 'above', orig: 'invoice', unread: true, p: '#85660F' },
+  { id: 'm4', from: 'Energie Voorbeeld', email: 'facturen@energie.example.nl', to: 'gideon@example.com', subject: 'Je factuur van oktober', when: 'Gisteren', card: { type: 'invoice', payee: 'Energie Voorbeeld', period: 'oktober 2026', amount: '€ 84,20', due: t0 + 5 * DAY, iban: 'NL91 ABNA 0417 1643 00', ref: '7001 2345 6789', pdf: 'factuur-2026-10.pdf', domain: 'energie.example.nl' }, place: 'above', orig: 'invoice', unread: true, p: '#85660F' },
   { id: 'm5', from: 'Voorbeeld Airlines', email: 'booking@voorbeeldair.example.com', to: 'gideon@example.com', subject: 'Je boeking K7Q2ZP naar Lissabon', when: 'ma', card: { type: 'trip', flight: 'VB 1234', title: 'Amsterdam naar Lissabon', from: 'AMS', to: 'LIS', fromCity: 'Amsterdam', toCity: 'Lissabon', dep: at(7, 25, 9), arr: at(9, 50, 9), checkin: at(7, 25, 7), pnr: 'K7Q2ZP', pax: 'Gideon, Sanne', domain: 'voorbeeldair.example.com' }, place: 'above', orig: 'trip', unread: true, p: '#3a3f9a' },
   { id: 'm6', from: 'Fietsenwinkel Pedaal', email: 'nieuws@pedaal.example.com', to: 'gideon@example.com', subject: 'Herfstdeals op regenkleding', when: 'ma', card: { type: 'digest', sender: 'Fietsenwinkel Pedaal', title: 'Herfstdeals op regenkleding', points: ['20% korting op regenkleding tot en met 31 oktober.', 'Gratis bezorging boven 50 euro.', 'Zaterdag 1 november gratis bandencheck in de winkel.'], links: [['Shop de collectie', 'pedaal.example.com'], ['Fietsverlichting', 'pedaal.example.com'], ['Bandencheck reserveren', 'afspraak.example.nl']], domain: 'pedaal.example.com' }, place: 'replace', orig: 'digest', unread: true, summary: '20% korting op regenkleding tot en met 31 oktober.', p: '#5a7a3a' },
   { id: 'm7', from: 'Sanne Jansen', email: 'sanne@example.nl', to: 'gideon@example.com', subject: 'Etentje zaterdag?', when: 'zo', card: null, orig: 'personal', unread: false, summary: 'Sanne nodigt jullie uit voor zaterdag rond zes uur, kinderen welkom.', p: '#8A4FA3' },
 ];
+
+/* ---- Vandaag: what needs you today, across mail and calendars ---- */
+let todayOpen = true;
+function todayItems(now) {
+  const end = new Date(now); end.setHours(23, 59, 59, 999);
+  const items = [];
+  const m = MEETING;
+  if (!m.cancelled && m.end > now && m.start <= end.getTime()) items.push({ at: m.start, k: 'hedwig', icon: 'video', title: m.title, sub: 'Teams', id: 'm1', r: () => {
+    const s = eventState(m, now);
+    if (s === 'live') return [`Bezig`, true, true];
+    if (s === 'soon') return [mmss(m.start - now), true, true];
+    return [fmtTime(m.start), false, false];
+  } });
+  CAL.forEach((e) => { if (e.end > now - HOUR && e.start <= end.getTime()) items.push({ at: e.start, k: 'clock', icon: 'calendar', title: e.title, sub: e.cal, past: e.end < now, r: () => [`${fmtTime(e.start)}`, false, false] }); });
+  const parcel = MAILS[2].card;
+  if (parcel.today && parcel.step < 3) items.push({ at: at(14, 15), k: 'clock', icon: 'box', title: 'Pakket Pedaal', sub: 'bezorging', id: 'm3', r: () => ['14:15 tot 16:45', false, false] });
+  const bill = MAILS[3].card;
+  if (bill.due - now < 7 * DAY) items.push({ at: Infinity, k: 'gringotts', icon: 'coin', title: `${bill.amount} ${bill.payee}`, sub: 'deze week', id: 'm4', r: () => [`voor ${fmtDay(bill.due, now).toLowerCase()}`, false, false] });
+  return items.sort((a, b) => a.at - b.at);
+}
+function renderToday(now) {
+  if (mode === 'off') return '';
+  const items = todayItems(now);
+  if (!items.length) return '';
+  return `<div class="today ${todayOpen ? '' : 'shut'}"><div class="th" data-today="1">${ic('chev-d')}Vandaag<span class="n">${items.length}</span><span class="grow"></span></div>
+    ${items.map((i) => { const [txt, hot, join] = i.r(); return `<div class="ti ${i.past ? 'past' : ''}" style="--k:var(--${i.k})" ${i.id ? `data-id="${i.id}"` : `data-toast="Opent in Agenda"`}>${ic(i.icon)}<span class="w">${esc(i.title)}<small>${esc(i.sub)}</small></span><span class="r ${hot ? 'now' : ''}">${txt}${join ? `<button class="btn sm" data-toast="Opent Microsoft Teams">Deelnemen</button>` : ''}</span></div>`; }).join('')}</div>`;
+}
 
 /* ---- app state ---- */
 let sel = 'm1', mode = 'auto';
@@ -1106,7 +1178,7 @@ const initials = (n) => n.split(/\s+/).slice(0, 2).map((w) => w[0]).join('');
 function placement(m) { if (!m.card || mode === 'off') return 'none'; return mode === 'above' ? 'above' : m.place; }
 
 function renderList(now) {
-  document.getElementById('list').innerHTML = MAILS.map((m) => `<div class="row ${m.unread ? 'unread' : ''} ${m.id === sel ? 'sel active' : ''}" data-id="${m.id}"><span class="udot"></span><div>
+  document.getElementById('list').innerHTML = renderToday(now) + MAILS.map((m) => `<div class="row ${m.unread ? 'unread' : ''} ${m.id === sel ? 'sel active' : ''}" data-id="${m.id}"><span class="udot"></span><div>
     <div class="l1"><b>${esc(m.from)}</b><span class="when">${esc(m.when)}</span></div><div class="l2">${esc(m.subject)}</div>
     ${(m.card && mode !== 'off' && liveLine(m.card, now)) || `<div class="l3" style="-webkit-line-clamp:1">${esc(m.summary || '')}</div>`}</div></div>`).join('');
 }
@@ -1130,6 +1202,7 @@ function renderDetail(now) {
 const now0 = t0;
 const CAT = [
   ['Afspraak · ruim van tevoren, nog niet beantwoord', 'event', { ...MEETING, start: t0 + 3 * DAY, end: t0 + 3 * DAY + 45 * MIN, cancelled: false, note: null }],
+  ['Afspraak · vandaag, overlapt met je agenda', 'event', { ...MEETING, start: t0 + 2 * HOUR + 10 * MIN, end: t0 + 2 * HOUR + 55 * MIN, cancelled: false, note: null }],
   ['Afspraak · vandaag, beantwoord, verplaatst', 'event', { ...MEETING, start: t0 + 2 * HOUR, end: t0 + 2 * HOUR + 45 * MIN, cancelled: false, answer: 'ja', moved: 'ma 10:00 tot 10:45', note: null }],
   ['Afspraak · laatste 15 minuten', 'event', { ...MEETING, start: t0 + 6 * MIN + 30e3, end: t0 + 51 * MIN, cancelled: false }],
   ['Afspraak · bezig', 'event', { ...MEETING, start: t0 - 12 * MIN, end: t0 + 33 * MIN, cancelled: false, note: null }],
@@ -1168,10 +1241,11 @@ setInterval(renderAll, 1000);
 /* ---- interaction ---- */
 function toast(t) { const el = document.getElementById('toast'); el.textContent = t; el.classList.add('on'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('on'), 1600); }
 document.addEventListener('click', (e) => {
-  const b = e.target.closest('[data-toast],[data-id],[data-orig],[data-ev],[data-mode],[data-rsvp]');
+  const b = e.target.closest('[data-toast],[data-id],[data-orig],[data-ev],[data-mode],[data-rsvp],[data-today]');
   if (!b) return;
   if (b.dataset.toast) { e.preventDefault(); e.stopPropagation(); toast(b.dataset.toast); return; }
-  if (b.dataset.rsvp !== undefined) { MEETING.answer = b.dataset.rsvp || null; if (b.dataset.rsvp) toast(`Antwoord "${b.dataset.rsvp}" verstuurd naar Noor de Vries`); }
+  if (b.dataset.rsvp !== undefined) { MEETING.answer = b.dataset.rsvp || null; if (b.dataset.rsvp) toast(`Jouw antwoord "${b.dataset.rsvp}" is verstuurd naar Noor de Vries`); }
+  if (b.dataset.today) todayOpen = !todayOpen;
   if (b.dataset.id) { sel = b.dataset.id; MAILS.find((m) => m.id === sel).unread = false; }
   if (b.dataset.orig) { open.has(b.dataset.orig) ? open.delete(b.dataset.orig) : open.add(b.dataset.orig); }
   if (b.dataset.ev) { setEvent(b.dataset.ev); sel = 'm1'; document.querySelectorAll('[data-ev]').forEach((x) => x.classList.toggle('on', x === b)); }
