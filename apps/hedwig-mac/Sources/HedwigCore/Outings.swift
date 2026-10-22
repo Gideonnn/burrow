@@ -59,6 +59,8 @@ public struct Outing: Codable, Hashable, Identifiable, Sendable {
     public var notes: String
     public var aliases: [String]
     public var inCalendar: Bool
+    /// Optional, so a server without pictures still decodes.
+    public var image: OutingImage?
     public var attendees: [PersonRef]
     public var tickets: [OutingTicket]
     public var tasks: [OutingTask]
@@ -76,6 +78,43 @@ public struct Outing: Codable, Hashable, Identifiable, Sendable {
     /// The checklist without the old "In de agenda zetten" items: calendar
     /// sync is automatic, so nobody ticks that by hand.
     public var checklist: [OutingTask] { tasks.filter { $0.kind != .calendar } }
+}
+
+public struct OutingImage: Codable, Hashable, Sendable {
+    public enum Source: String, Codable, Sendable {
+        case mail, website, upload
+
+        // A source a newer server adds must not hide every outing.
+        public init(from decoder: Decoder) throws {
+            self = Source(rawValue: try decoder.singleValueContainer().decode(String.self)) ?? .upload
+        }
+    }
+
+    public var source: Source
+    public var contentType: String
+    public var updatedAt: Date
+}
+
+/// A picture the server found in the outing's mail or on its website.
+public struct OutingImageOption: Codable, Hashable, Identifiable, Sendable {
+    public var id: String
+    public var source: OutingImage.Source
+}
+
+/// Body of PUT /api/outings/:id/image.
+public enum SetOutingImageRequest: Encodable, Equatable, Sendable {
+    case option(String)
+    case upload(String)
+    case link(URL)
+
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.singleValueContainer()
+        switch self {
+        case .option(let id): try c.encode(["optionId": id])
+        case .upload(let id): try c.encode(["uploadId": id])
+        case .link(let url): try c.encode(["url": url.absoluteString])
+        }
+    }
 }
 
 /// What Hedwig read from a mail before it becomes an outing.
@@ -225,10 +264,41 @@ extension APIClient {
         try await call("DELETE", "api/outings/\(outingId)/tickets/\(ticketId)")
     }
 
-    /// The ticket's file, for Quick Look or the printer.
-    public func ticketFile(outingId: String, ticketId: String) async throws -> Data {
-        let (bytes, response) = try await session.data(for: request("GET", "api/outings/\(outingId)/tickets/\(ticketId)/file"))
+    /// The picture's bytes; `version` makes a changed picture a new URL, so
+    /// no cache hands out the old one.
+    public func outingImage(outingId: String, version: Date) async throws -> Data {
+        let v = URLQueryItem(name: "v", value: String(Int(version.timeIntervalSince1970 * 1000)))
+        return try await bytes(request("GET", "api/outings/\(outingId)/image", query: [v]))
+    }
+
+    public func outingImageOptions(outingId: String) async throws -> [OutingImageOption] {
+        struct Response: Decodable { var options: [OutingImageOption] }
+        let response: Response = try await call("GET", "api/outings/\(outingId)/image/options")
+        return response.options
+    }
+
+    /// An option's picture, fetched by the server: the Mac never loads it from outside.
+    public func outingImageOption(outingId: String, optionId: String) async throws -> Data {
+        try await bytes(request("GET", "api/outings/\(outingId)/image/options/\(optionId)"))
+    }
+
+    public func setOutingImage(outingId: String, _ body: SetOutingImageRequest) async throws -> Outing {
+        try await call("PUT", "api/outings/\(outingId)/image", body: body)
+    }
+
+    /// No picture, and Hedwig does not pick one again by itself.
+    public func deleteOutingImage(outingId: String) async throws -> Outing {
+        try await call("DELETE", "api/outings/\(outingId)/image")
+    }
+
+    private func bytes(_ request: URLRequest) async throws -> Data {
+        let (bytes, response) = try await session.data(for: request)
         try Self.check(response, bytes)
         return bytes
+    }
+
+    /// The ticket's file, for Quick Look or the printer.
+    public func ticketFile(outingId: String, ticketId: String) async throws -> Data {
+        try await bytes(request("GET", "api/outings/\(outingId)/tickets/\(ticketId)/file"))
     }
 }

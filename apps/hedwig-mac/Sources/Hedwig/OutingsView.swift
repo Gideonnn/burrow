@@ -28,7 +28,7 @@ struct OutingListView: View {
             if !model.pastOutings.isEmpty {
                 Section("Geweest") {
                     ForEach(model.pastOutings) { outing in
-                        OutingRow(outing: outing).tag(outing.id).opacity(0.6)
+                        OutingRow(outing: outing, past: true).tag(outing.id).opacity(0.6)
                     }
                 }
             }
@@ -49,6 +49,7 @@ struct OutingListView: View {
 
 private struct OutingRow: View {
     let outing: Outing
+    var past = false
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -59,6 +60,8 @@ private struct OutingRow: View {
                     .font(.subheadline).foregroundStyle(.secondary).lineLimit(1)
                 OutingStatusLine(status: outing.status())
             }
+            Spacer(minLength: 0)
+            OutingThumbnail(outing: outing, past: past).frame(maxHeight: .infinity)
         }
         .padding(.vertical, 4)
     }

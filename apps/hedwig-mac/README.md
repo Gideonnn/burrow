@@ -34,7 +34,8 @@ and optionally `HEDWIG_OPEN=filtered|drafts|outings|archive`.
 - "Gefilterd": what the bot filtered, with its reason; confirm or restore.
 - "Evenementen": the household's outings, each with one status sentence; Details holds
   times, tickets per person, mails and search words. Drop a pdf, Wallet pass or
-  screenshot on an outing to keep it as a ticket. Until Patronus exists, the Mac
+  screenshot on an outing to keep it as a ticket. Each outing shows a picture from its mail or
+  website; paste (⌘V) or drop another on the top of the page. Until Patronus exists, the Mac
   reminds of the day and of deadlines with notifications (see the
   [outings topic](../../.agents/wiki/topics/outings.md)).
 - "Concepten": drafts prepared by bots or agents through MCP, to review and send.

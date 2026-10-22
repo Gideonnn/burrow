@@ -703,6 +703,7 @@ textarea.field { height: auto; padding: 8px 10px; resize: none; font: inherit; w
 .ei-detail { overflow: auto; display: flex; flex-direction: column; flex: 1; min-height: 0; }
 .ei-hero { position: relative; height: 210px; flex: none; overflow: hidden; background: #2a2622; color: #fff; isolation: isolate; }
 .ei-hero.sm { height: 180px; }
+.ei-hero.compact { height: 120px; }
 .ei-art { position: absolute; inset: 0; background-size: cover; background-position: center 40%; }
 .ei-art.blur { overflow: hidden; }
 .ei-art.blur i { position: absolute; inset: -40px; background-size: cover; background-position: center; filter: blur(26px) saturate(1.25) brightness(.85); }
@@ -806,7 +807,6 @@ textarea.field { height: auto; padding: 8px 10px; resize: none; font: inherit; w
 .ei-note.pick { color: var(--success); font-weight: 600; }
 .ei-logo { width: 180px; height: 40px; border-radius: 4px; background: #222; color: #fff; box-shadow: 0 0 0 1px var(--line-strong); display: grid; place-items: center; font-weight: 700; letter-spacing: .12em; font-size: 13px; }
 .ei-banner { width: 100%; height: auto; display: block; border-radius: 6px; }
-.ei-socials { display: flex; gap: 8px; } .ei-socials i { width: 24px; height: 24px; border-radius: 50%; background: var(--line-strong); display: block; }
 .ei-pixel { width: 8px; height: 8px; outline: 1px dashed var(--text-3); outline-offset: 3px; display: block; margin: 4px; }
 .ei-steps { display: flex; flex-direction: column; gap: 12px; margin: 0; padding: 0; list-style: none; }
 .ei-steps li { display: grid; grid-template-columns: 30px 1fr; gap: 10px; font-size: 13px; line-height: 1.45; }
@@ -816,7 +816,6 @@ textarea.field { height: auto; padding: 8px 10px; resize: none; font: inherit; w
 .ei-cases { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
 @media (max-width: 1100px) { .ei-cases { grid-template-columns: repeat(2, minmax(0, 1fr)); } .ei-split { grid-template-columns: 1fr; } }
 .ei-case { border-radius: 12px; overflow: hidden; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow-1); }
-.ei-case .plain { height: 180px; display: flex; align-items: flex-end; padding: 18px 24px; border-bottom: 1px solid var(--line); }
 .ei-case .cap { padding: 12px 14px 14px; font-size: 12.5px; color: var(--text-2); line-height: 1.45; }
 .ei-case .cap b { display: block; font-size: 13px; color: var(--text); margin-bottom: 2px; }
 .ei-q { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
@@ -826,14 +825,14 @@ textarea.field { height: auto; padding: 8px 10px; resize: none; font: inherit; w
 
 <header class="topbar">
   <div class="brand">Hedwig · evenementen <span class="muted" style="font-weight:400">met een afbeelding</span></div>
-  <nav><a href="#page">De pagina</a><a href="#source">Waar het beeld vandaan komt</a><a href="#mail">Vanuit een mail</a><a href="#theme">Licht en donker</a><a href="#odd">Lastige afbeeldingen</a><a href="#open">Open vragen</a></nav>
+  <nav><a href="#page">De pagina</a><a href="#source">Waar het beeld vandaan komt</a><a href="#mail">Vanuit een mail</a><a href="#theme">Licht en donker</a><a href="#odd">Lastige afbeeldingen</a><a href="#open">Besloten</a></nav>
   <div class="seg"><button data-theme-pick="auto" class="on">Auto</button><button data-theme-pick="light">Light</button><button data-theme-pick="dark">Dark</button></div>
 </header>
 
 <main class="doc">
 <div class="hero">
   <h1>Evenementen met een afbeelding</h1>
-  <p class="lead">Builds on <a href="hedwig-events.html">evenementen v2</a>. Each outing gets one picture, taken from the order mail or the event's website, so you recognise it at a glance. The picture only decorates: the one status sentence, the three facts and Details stay as in v2. Nothing to set up; changing the picture lives in Details.</p>
+  <p class="lead">Builds on <a href="hedwig-events.html">evenementen v2</a>. Each outing gets one picture, taken from the order mail or the event's website, so you recognise it at a glance. The picture only decorates: the one status sentence, the three facts and Details stay as in v2. Nothing to set up; changing the picture lives in Details, and pasting (⌘V) or dropping a picture on the top of the page sets it too.</p>
   <div class="meta"><span>22 October 2026</span><span>·</span><span>Invented events, shops and venues; the pictures are drawn stand-ins</span></div>
 </div>
 
@@ -849,7 +848,7 @@ textarea.field { height: auto; padding: 8px 10px; resize: none; font: inherit; w
 
 <section class="sec" id="page">
   <h2><span class="num">1</span>De pagina</h2>
-  <p class="intro">Click the outings: <b>Neon Nineties</b> has a big mail image, <b>Zomerweide</b> one from the website, <b>Theo Voorbeeld</b> a small square poster, <b>Stille Wateren</b> a small wide banner, <b>Foute Vrijdag XL</b> nothing. Hover the picture or open <b>Details</b> to change it.</p>
+  <p class="intro">Click the outings: <b>Neon Nineties</b> has a big mail image, <b>Zomerweide</b> one from the website, <b>Theo Voorbeeld</b> a small square poster, <b>Stille Wateren</b> a small wide banner, <b>Foute Vrijdag XL</b> nothing. Hover the picture or open <b>Details</b> to change it. The list uses the thumbnail (<i>Miniatuur</i>); <i>Kleurstrook</i> stays for comparison.</p>
   <div class="theme-row">Lijst <div class="seg" id="ei-variant"><button data-variant="mini" class="on">Miniatuur</button><button data-variant="strip">Kleurstrook</button></div></div>
   <div class="mac a-hedwig ei-win">
     <div class="tb"><span class="lights"><i></i><i></i><i></i></span><span class="title">Hedwig</span><span class="sub">Evenementen</span><span class="grow"></span>
@@ -870,12 +869,12 @@ textarea.field { height: auto; padding: 8px 10px; resize: none; font: inherit; w
     </div>
     <div class="ei-modal" id="ei-modal"></div>
   </div>
-  <p class="scr-note"><b>Notes.</b> The list stays a list: a 44 px thumbnail at the end of the row, or with <i>Kleurstrook</i> only a 5 px strip in the picture's main colour; the date tile and the status sentence keep the left side. Past outings turn grey. The picture is 210 px high at the top of the page and scrolls away with it; the title sits on a dark scrim (a gradient behind the text). Dropping an image anywhere on the page still adds a <b>ticket</b> (screenshots are tickets), so your own picture goes onto the drop area under Details or in <i>Andere afbeelding</i>.</p>
+  <p class="scr-note"><b>Notes.</b> The list stays a list: a 44 px thumbnail at the end of the row, or with <i>Kleurstrook</i> only a 5 px strip in the picture's main colour; the date tile and the status sentence keep the left side. Past outings turn grey. The picture is 210 px high at the top of the page and scrolls away with it; the title sits on a dark scrim (a gradient behind the text). Dropping an image anywhere on the page still adds a <b>ticket</b> (screenshots are tickets), so your own picture goes onto the top of the page, the drop area under Details or <i>Andere afbeelding</i>. Pasting (⌘V) a picture or a link copied in Safari or a mail works in the same places. Without a picture the list shows a calm tile and the page a compact band, both in the title's colours.</p>
 </section>
 
 <section class="sec" id="source">
   <h2><span class="num">2</span>Waar de afbeelding vandaan komt</h2>
-  <p class="intro">The order mail from Kaartloket holds four images. Hedwig keeps one.</p>
+  <p class="intro">The order mail from Kaartloket holds three images. Hedwig keeps one.</p>
   <div class="ei-split">
     <div class="ei-mail">
       <div class="ei-mail-hd"><b>Je bestelling KL-48291 is gelukt</b><span>Kaartloket &lt;tickets@kaartloket.example.com&gt; · 22 okt</span></div>
@@ -883,14 +882,13 @@ textarea.field { height: auto; padding: 8px 10px; resize: none; font: inherit; w
         <div class="ei-an"><div class="ei-logo">KAARTLOKET</div><div class="ei-note"><svg class="i sm"><use href="#i-xmark"/></svg><span>Logo, 180 × 40: too small, at the top, named <code>logo</code></span></div></div>
         <div class="ei-an"><img class="ei-banner" id="ei-mail-banner" alt=""><div class="ei-note pick"><svg class="i sm"><use href="#i-check"/></svg>1200 × 630, the largest real image: gekozen</div></div>
         <div class="ei-an"><div>Bedankt voor je bestelling! <b>2x Regular</b>, Neon Nineties, do 13 mei 2027, Voorbeeldhal. Je e-tickets zitten als pdf in de bijlage.</div><span></span></div>
-        <div class="ei-an"><div class="ei-socials"><i></i><i></i><i></i></div><div class="ei-note"><svg class="i sm"><use href="#i-xmark"/></svg>Social icons, 24 × 24: too small, link to a social site</div></div>
         <div class="ei-an"><span class="ei-pixel"></span><div class="ei-note"><svg class="i sm"><use href="#i-xmark"/></svg>Tracking pixel, 1 × 1: never fetched</div></div>
       </div>
     </div>
     <div class="card">
       <h4>In this order</h4>
       <ol class="ei-steps">
-        <li><span class="ic"><svg class="i"><use href="#i-envelope"/></svg></span><span><b>De mail</b>The <code>image</code> in the schema.org event data; otherwise the largest image of at least 400 × 200 px that is not narrower than 1:5 and not named or linked like a logo, icon or social button, and not from a known tracker.</span></li>
+        <li><span class="ic"><svg class="i"><use href="#i-envelope"/></svg></span><span><b>De mail</b>The <code>image</code> in the schema.org event data; otherwise the largest image of at least 400 × 200 px that is not narrower than 1:5 and not named or linked like a logo or icon, and not from a known tracker.</span></li>
         <li><span class="ic"><svg class="i"><use href="#i-globe"/></svg></span><span><b>De website</b>The <code>og:image</code> (the picture a site offers for link previews) of the event page in the mail or in its event data.</span></li>
         <li><span class="ic"><svg class="i"><use href="#i-palette"/></svg></span><span><b>Kleuren</b>Two colours from the title, dark enough for white text, with a few soft rings.</span></li>
       </ol>
@@ -935,12 +933,12 @@ textarea.field { height: auto; padding: 8px 10px; resize: none; font: inherit; w
 </section>
 
 <section class="sec" id="open">
-  <h2><span class="num">6</span>Open vragen</h2>
+  <h2><span class="num">6</span>Besloten</h2>
   <div class="ei-q">
-    <div class="card"><h4><span class="num">A</span>Lijst: miniatuur of kleurstrook?</h4><p class="muted small">De miniatuur herken je sneller, de kleurstrook is rustiger en werkt ook bij een vage of vreemde afbeelding. Of allebei weg, en het beeld alleen op de pagina zelf?</p></div>
-    <div class="card"><h4><span class="num">B</span>Niets gevonden: kleuren of gewoon de kop?</h4><p class="muted small">Nu krijgt elk evenement zonder afbeelding een rustige kleurband, zodat de pagina's gelijk ogen. De andere keus is de kop uit v2 zonder band; dat is wat <i>Geen afbeelding</i> nu doet.</p></div>
-    <div class="card"><h4><span class="num">C</span>Afbeeldingen van buiten ophalen?</h4><p class="muted small">Een afbeelding die in de mail zelf zit kost niets. Een afbeelding van de server van de verkoper of van de website ophalen laat hen één keer zien dat iemand hem laadt (vanaf de server, niet vanaf je Mac). Mag dat, of alleen afbeeldingen die al in de mail zitten?</p></div>
-    <div class="card"><h4><span class="num">D</span>Ook in de melding op de dag?</h4><p class="muted small">De melding van 09:00 (en later Telegram) kan de afbeelding meesturen. Leuk om te herkennen, maar aan de deur moet de kaart snel te vinden zijn. Met of zonder?</p></div>
+    <div class="card"><h4><span class="num">A</span>Lijst: de miniatuur</h4><p class="muted small">Besloten: de miniatuur aan het eind van de rij, die herken je sneller. Een evenement zonder afbeelding krijgt een rustig tegeltje in de kleuren bij de titel.</p></div>
+    <div class="card"><h4><span class="num">B</span>Niets gevonden: de rustige kleurband</h4><p class="muted small">Besloten: zonder afbeelding krijgt de pagina een lage band in kleuren bij de titel, ook na <i>Geen afbeelding</i>. Zo ogen de pagina's gelijk.</p></div>
+    <div class="card"><h4><span class="num">C</span>Afbeeldingen van buiten: ja</h4><p class="muted small">Besloten: de server haalt afbeeldingen uit de mail en van de website op en bewaart een kopie. De Mac laadt ze alleen van Burrow.</p></div>
+    <div class="card"><h4><span class="num">D</span>De melding van 09:00: zonder</h4><p class="muted small">Besloten: voorlopig geen afbeelding in de melding op de dag, zodat de kaart aan de deur snel te vinden is.</p></div>
   </div>
 </section>
 </main>
@@ -1044,7 +1042,6 @@ function hero(e, c, cls = '') {
     ${cls.includes('edit') ? `<button class="ei-hero-edit" data-pick="1">${ic('photo')}Andere afbeelding</button>` : ''}
   </div>`;
 }
-const plainTop = (e) => `<div class="ei-top"><div class="ei-date lg"><small>${e.mon}</small><b>${e.day}</b></div><div><h2>${esc(e.title)}</h2><div class="sub">${esc(e.kind)}</div></div></div>`;
 const mini = (c, e) => !c ? ic('photo', 'lg') : fit(c) === 'cover' ? `<i ${bg(c, e)}></i>` : `<i class="b" ${bg(c, e)}></i><i class="contain" ${bg(c, e)}></i>`;
 const thumb = (c, e, cls = '') => `<span class="ei-thumb ${cls}" ${bg(c, e)}></span>`;
 
@@ -1077,13 +1074,13 @@ function facts(e) {
 function imageSection(e) {
   const c = current(e);
   let sub;
-  if (!c) sub = 'De kop toont alleen de datum en de titel';
+  if (!c) sub = 'De kop krijgt kleuren bij de titel';
   else if (c.art === 'gen') sub = 'Hedwig vond geen afbeelding in de mail of op de website';
   else sub = `${c.w} × ${c.h} · bewaard op de server${fit(c) === 'blur' ? ' · klein, dus scherp op eigen maat met een vage rand' : ''}`;
   return `<div><div class="ei-field" style="margin-bottom:6px">Afbeelding</div>
     <div class="ei-imgset"><span class="ei-mini">${mini(c, e)}</span><div class="grow"><b>${c ? esc(label(c)) : 'Geen afbeelding'}</b><small>${sub}</small></div>
       <div class="ei-imgacts"><button class="btn sm" data-pick="1">Andere afbeelding</button>${c ? '<button class="btn sm" data-none="1">Geen afbeelding</button>' : ''}</div></div>
-    <div class="ei-drop" data-toast="Hier losgelaten wordt het de afbeelding, geen kaart">${ic('arrowdown')}Sleep je eigen afbeelding hierheen</div></div>`;
+    <div class="ei-drop" data-toast="Hier losgelaten wordt het de afbeelding, geen kaart">${ic('arrowdown')}Plak (⌘V) of sleep hier een afbeelding of een link</div></div>`;
 }
 
 function renderDetail() {
@@ -1096,9 +1093,8 @@ function renderDetail() {
     : `<div class="ei-tix"><span class="ic warn">${ic('ticket', 'lg')}</span><span>Nog geen kaarten<small>Sleep ze hierheen (pdf, Wallet-pas of screenshot)</small></span></div>`;
   const hist = c && c.art !== 'gen' ? ` · Hedwig nam de afbeelding ${c.from === 'mail' ? 'uit de mail' : 'van de website'}` : '';
   document.getElementById('ei-detail').innerHTML = `
-    ${c ? hero(e, c, 'edit') : ''}
+    ${hero(e, c || GEN, c ? 'edit' : 'edit compact')}
     <div class="ei-content">
-      ${c ? '' : plainTop(e)}
       ${facts(e)}
       ${e.past ? '' : `<div class="ei-block"><h3>${ic('checklist')}Nog doen</h3>${todos}<div class="ei-todo" data-toast="Typ iets, bijvoorbeeld oppas regelen"><span class="c" style="border-style:dashed">${ic('plus')}</span><span class="l" style="color:var(--text-2)">Iets toevoegen</span></div></div>`}
       ${e.past ? '' : `<div class="ei-block">${tix}</div>`}
@@ -1128,8 +1124,8 @@ function renderModal() {
   const tile = (c) => `<button class="ei-cand ${c.id === pickSel ? 'on' : ''}" data-cand="${c.id}"><span class="im">${mini(c, e)}</span><span class="lb"><b>${c.art === 'gen' ? 'Kleuren' : c.from === 'mail' ? 'Uit de mail' : 'Van de website'}</b><small>${c.art === 'gen' ? 'bij de titel' : `${esc(c.who)} · ${c.w} × ${c.h}`}</small></span></button>`;
   el.innerHTML = `<div class="ei-sheet" role="dialog" aria-label="Afbeelding kiezen">
     <h3>Afbeelding voor ${esc(e.title)}</h3>
-    <p>${e.cands.length ? 'Hedwig vond deze. Kies er een, of sleep je eigen afbeelding hierheen.' : 'Hedwig vond niets in de mail of op de website. Sleep je eigen afbeelding hierheen, of houd de kleuren.'}</p>
-    <div class="ei-cands">${all.map(tile).join('')}<button class="ei-cand ${pickSel === 'none' ? 'on' : ''}" data-cand="none"><span class="im">${ic('xmark', 'lg')}</span><span class="lb"><b>Geen</b><small>alleen datum en titel</small></span></button></div>
+    <p>${e.cands.length ? 'Hedwig vond deze. Kies er een, of plak of sleep je eigen afbeelding hierheen.' : 'Hedwig vond niets in de mail of op de website. Plak of sleep je eigen afbeelding hierheen, of houd de kleuren.'}</p>
+    <div class="ei-cands">${all.map(tile).join('')}<button class="ei-cand ${pickSel === 'none' ? 'on' : ''}" data-cand="none"><span class="im">${ic('xmark', 'lg')}</span><span class="lb"><b>Geen</b><small>kleuren bij de titel</small></span></button></div>
     <div class="ei-drop" style="margin:0">${ic('arrowdown')}Sleep een afbeelding hierheen, of <a href="#" data-toast="Opent een venster om een bestand te kiezen">kies een bestand</a></div>
     <div class="ei-acts"><button class="btn" data-cancel="1">Annuleer</button><button class="btn app filled a-remembrall" data-use="1">Gebruik</button></div>
   </div>`;
@@ -1160,9 +1156,9 @@ function renderStatic() {
     [sw, sw.cands[0], 'Klein en breed, 480 × 160', 'Too small to fill 720 px without going soft. Never stretched beyond its own size; the blurred copy fills the rest.'],
     [BRIGHT, BRIGHT.cands[0], 'Heel licht, 1200 × 630', 'Sand and sky, nearly white. The scrim under the text keeps the title at 4.8:1 or better.'],
     [fv, GEN, 'Niets gevonden', 'Colours from the title: dark, calm and always the same for the same title, so it still feels like this outing.'],
-    [neonEv, null, 'Geen afbeelding gekozen', 'Back to the v2 header. Andere afbeelding in Details brings a picture back.'],
+    [neonEv, null, 'Geen afbeelding gekozen', 'The calm band in the title\'s colours, lower than a picture. Pasting or dropping a picture, or Andere afbeelding, brings one back.'],
   ];
-  document.getElementById('ei-cases').innerHTML = cases.map(([e, c, t, d]) => `<div class="ei-case">${c ? hero(e, c, 'sm') : `<div class="plain">${plainTop(e)}</div>`}<div class="cap"><b>${t}</b>${d}</div></div>`).join('');
+  document.getElementById('ei-cases').innerHTML = cases.map(([e, c, t, d]) => `<div class="ei-case">${hero(e, c || GEN, c ? 'sm' : 'sm compact')}<div class="cap"><b>${t}</b>${d}</div></div>`).join('');
 }
 
 function toast(t) { const el = document.getElementById('ei-toast'); el.textContent = t; el.classList.add('on'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('on'), 1700); }

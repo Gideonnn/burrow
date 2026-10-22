@@ -99,7 +99,20 @@ the family, everything else folded behind **Details**.
   tickets per person, linked mails (someone else's shows "Mail van …"), search words,
   history and delete.
 - **Mail card**: one line, "Staat in Evenementen · nog doen: …" with Bekijk, or Bewaar
-  for a `likely` mail.
+  for a `likely` mail. With a picture it shows its thumbnail.
+- **Picture** (design `docs/design/hedwig-event-images.html`, views in
+  `Sources/Hedwig/OutingPictureViews.swift`): a 44 pt thumbnail at the end of each list
+  row; the page opens with a 210 pt hero, title on a dark scrim. A picture under 1000 px
+  wide or squarer than 4:3 is shown sharp at its own size over a blurred copy, never
+  stretched. Without a picture the row gets a calm tile and the page a compact band in
+  colours from the title (`TitleColours`, the design's hash). Details › Afbeelding has
+  Andere afbeelding (a sheet with the server's options, previews through the server),
+  Geen afbeelding, and a drop zone with Plak. Pasting (⌘V, caught by `PasteCatcher`
+  whenever no text field is being edited) or dropping on the hero also sets it, while a
+  drop elsewhere on the page stays a ticket. `PastedPicture` decides: a copied file wins
+  over the icon Finder adds, then image bytes (TIFF and HEIC become JPEG or PNG, at most
+  8 MB), then a web link sent as `{url}`. Pictures are cached per outing and `updatedAt`
+  (`OutingPictureCache`) and fetched with `?v=`.
 
 **Reminders until Patronus**: the Mac schedules local notifications (UserNotifications,
 `Sources/Hedwig/OutingNotifications.swift`) at 09:00 on the day ("Vanavond: …"; at noon
