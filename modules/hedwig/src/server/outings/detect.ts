@@ -348,3 +348,52 @@ export function unique(values: (string | null | undefined)[]): string[] {
   }
   return out;
 }
+
+const LINK_WORDS =
+  /download|ticket|kaart|bekijk|view|wallet|claim|bestelling|order/i;
+const LINK_PATH =
+  /\/download\b|\/e?-?tickets?\b|\/order\b|personali[sz]ation|wallet|pkpass/i;
+// Whole words only: tracking links carry random tokens.
+const NOT_A_TICKET_LINK =
+  /\b(support|help|faq|adobe|reader|terms|voorwaarden|privacy|unsubscribe|afmeld\w*|uitschrijv\w*|facebook|instagram|twitter|tiktok|youtube|linkedin|contact|webversion|webversie|browser)\b|maps\./i;
+
+// Links in an order mail to the page where the shop keeps the tickets:
+// "Download je tickets", "Ticket bekijken". At most two, downloads first.
+export function ticketLinks(html: string | null): string[] {
+  if (!html) return [];
+  const found: { url: string; download: boolean }[] = [];
+  for (const m of html.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi)) {
+    const href = /\bhref\s*=\s*(?:"([^"]*)"|'([^']*)')/i.exec(m[1]!);
+    const url = (href?.[1] ?? href?.[2] ?? '').replaceAll('&amp;', '&').trim();
+    if (!/^https:\/\//i.test(url)) continue;
+    let path: string;
+    let where: string;
+    try {
+      const target = new URL(safeDecode(url));
+      path = target.pathname;
+      where = target.hostname + target.pathname;
+    } catch {
+      continue;
+    }
+    const title = /\btitle\s*=\s*"([^"]*)"/i.exec(m[1]!)?.[1] ?? '';
+    const text = `${title} ${m[2]!
+      .replace(/<img\b[^>]*\balt\s*=\s*"([^"]*)"[^>]*>/gi, ' $1 ')
+      .replace(/<[^>]+>/g, ' ')}`;
+    if (NOT_A_TICKET_LINK.test(where) || NOT_A_TICKET_LINK.test(text)) continue;
+    if (!LINK_PATH.test(path) || !LINK_WORDS.test(`${text} ${path}`)) continue;
+    if (found.some((f) => f.url === url)) continue;
+    found.push({ url, download: /download/i.test(`${text} ${path}`) });
+  }
+  return found
+    .sort((a, b) => Number(b.download) - Number(a.download))
+    .slice(0, 2)
+    .map((f) => f.url);
+}
+
+function safeDecode(url: string) {
+  try {
+    return decodeURIComponent(url);
+  } catch {
+    return url;
+  }
+}

@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { datesIn, detectOuting, personaliseDeadline } from './detect';
+import {
+  datesIn,
+  detectOuting,
+  personaliseDeadline,
+  ticketLinks,
+} from './detect';
 
 const base = {
   from: { name: 'Kaartloket', email: 'tickets@kaartloket.example.com' },
@@ -191,5 +196,22 @@ describe('dates', () => {
         new Date(),
       ),
     ).toBeNull();
+  });
+});
+
+describe('ticketLinks', () => {
+  it('finds where the shop keeps the tickets, not the help pages', () => {
+    const html = `
+    <a href="https://order.kaartloket.example.com/download/3f39"><img alt="Klik hier om je tickets te downloaden" src="x.png"></a>
+    <a href="https://kaartloket.example.com/ticket-support?utm_source=mail">Ticket support</a>
+    <a href="https://get.adobe.com/reader/">Adobe Reader</a>
+    <a href="https://track.example.com/3s/tickets.kaartloket.example.com%2Forder%2F01KR/5vk_xFAQx">Bekijk je tickets</a>
+    <a href="https://ticket.example.io">ticket.example.io</a>
+    <a href="https://www.facebook.com/kaartloket">Facebook</a>
+    <a href="http://kaartloket.example.com/download/old">Download</a>`;
+    expect(ticketLinks(html)).toEqual([
+      'https://order.kaartloket.example.com/download/3f39',
+      'https://track.example.com/3s/tickets.kaartloket.example.com%2Forder%2F01KR/5vk_xFAQx',
+    ]);
   });
 });
