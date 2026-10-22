@@ -61,6 +61,7 @@ describe('detectOuting', () => {
       bodyText: 'Je tickets zijn op naam gezet.',
     });
     expect(found.title).toBe('Neon Nineties');
+    expect(found.confidence).toBe('likely');
   });
 
   it('reads a schema.org event reservation', () => {

@@ -120,8 +120,8 @@ export function detectOuting(input: DetectInput): Detected {
     `${input.subject} ${text.slice(0, 3000)}`,
   );
 
-  const title =
-    event?.name ?? titleFromSubject(input.subject) ?? input.subject.trim();
+  const fromSubject = titleFromSubject(input.subject);
+  const title = event?.name ?? fromSubject ?? input.subject.trim();
   const startsAt =
     date(event?.startDate) ?? firstFutureDate(text, input.receivedAt);
   const kind =
@@ -154,6 +154,7 @@ export function detectOuting(input: DetectInput): Detected {
   const confidence: Detected['confidence'] = event
     ? 'structured'
     : shop ||
+        fromSubject ||
         (ticketish && (startsAt || tickets.length || input.hasAttachments))
       ? 'likely'
       : 'none';
