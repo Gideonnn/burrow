@@ -44,6 +44,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>NSPrincipalClass</key><string>NSApplication</string>
   <key>NSMicrophoneUsageDescription</key><string>Pensieve neemt jouw kant van het gesprek op.</string>
   <key>NSAudioCaptureUsageDescription</key><string>Pensieve neemt de andere kant van het gesprek op: wat de Mac afspeelt.</string>
+  <key>NSCameraUsageDescription</key><string>Pensieve neemt video op met je camera, bijvoorbeeld voor een interview.</string>
   <key>NSAppTransportSecurity</key>
   <dict><key>NSAllowsLocalNetworking</key><true/></dict>
 </dict>

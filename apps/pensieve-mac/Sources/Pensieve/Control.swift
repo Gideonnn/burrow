@@ -12,9 +12,12 @@ func controlState(_ model: PensieveModel, _ recorder: RecorderController) -> [St
         "serverReachable": model.reachability.isReachable,
         "scope": model.scope.rawValue,
         "query": model.query,
+        "kind": model.kindFilter?.rawValue ?? NSNull(),
+        "labelFilter": model.labelFilter.sorted(),
+        "labels": model.labels.map { ["name": $0.name, "count": $0.count] as [String: Any] },
         "recordings": model.recordings.prefix(50).map { r in
             [
-                "id": r.id, "title": r.title, "owner": r.owner.name, "mine": r.mine,
+                "id": r.id, "kind": r.kind.rawValue, "title": r.title, "labels": r.labels, "owner": r.owner.name, "mine": r.mine,
                 "sharedWith": r.sharedWith.map(\.name), "startedAt": iso.string(from: r.startedAt),
                 "minutes": Int((r.durationSeconds ?? 0) / 60), "status": r.status.rawValue,
                 "preview": r.preview ?? "",
@@ -23,11 +26,15 @@ func controlState(_ model: PensieveModel, _ recorder: RecorderController) -> [St
         "selectedId": model.selectedId ?? NSNull(),
         "waitingForUpload": model.pending.map(\.title),
         "recording": recorder.isRecording
-            ? ["title": recorder.title, "minutes": Int(recorder.elapsed / 60)] as [String: Any] : NSNull(),
+            ? [
+                "kind": recorder.kind.rawValue, "title": recorder.title, "minutes": Int(recorder.elapsed / 60),
+                "labels": recorder.labels, "marks": recorder.marks.marks.map { stamp($0.at) },
+            ] as [String: Any] : NSNull(),
     ]
     if let detail = model.detail {
         state["open"] = [
-            "id": detail.id, "title": detail.title, "status": detail.status.rawValue,
+            "id": detail.id, "kind": detail.kind.rawValue, "title": detail.title, "status": detail.status.rawValue,
+            "labels": detail.labels, "marks": detail.marks.map { "\(stamp($0.at)) \($0.note ?? "")".trimmingCharacters(in: .whitespaces) },
             "notes": detail.notesMarkdown ?? "", "transcriptWords": detail.transcript?.split(separator: " ").count ?? 0,
         ] as [String: Any]
     }
@@ -36,15 +43,47 @@ func controlState(_ model: PensieveModel, _ recorder: RecorderController) -> [St
 }
 
 /// Pensieve's own commands for agents. Starting a recording is the person's:
-/// an agent can stop one, but never start one. Sharing asks the person.
+/// an agent can mark or stop one, but never start one. Sharing asks the person.
 @MainActor
 func registerCommands(_ service: ControlService, model: PensieveModel, recorder: RecorderController) {
-    service.register("show", help: "Show all recordings, only your own, or those shared with you.", arguments: [.init("scope", "all, mine or shared")]) { request in
+    service.register(
+        "show", help: "Show all recordings, only your own, or those shared with you; optionally one kind and any of some labels.",
+        arguments: [
+            .init("scope", "all, mine or shared"), .init("kind", "call, video, screen, dictation or all"),
+            .init("labels", "label names separated by commas; empty for any"),
+        ]
+    ) { request in
         guard let scope = RecordingScope(rawValue: request["scope"] as? String ?? "all") else {
             throw ControlError("scope is all, mine or shared")
         }
+        let kindText = request["kind"] as? String ?? "all"
+        guard kindText == "all" || RecordingKind(rawValue: kindText) != nil else {
+            throw ControlError("kind is call, video, screen, dictation or all")
+        }
         model.scope = scope
+        model.kindFilter = RecordingKind(rawValue: kindText)
+        model.labelFilter = Set(
+            (request["labels"] as? String ?? "").split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty })
         await model.reload()
+        return controlState(model, recorder)
+    }
+    service.register(
+        "label", help: "Set your labels on a recording you can see, replacing the ones it had.",
+        arguments: [.init("id", "a recording id"), .init("labels", "label names separated by commas")]
+    ) { request in
+        let labels = (request["labels"] as? String ?? "").split(separator: ",")
+            .map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+        await model.setLabels(request["id"] as? String ?? "", labels)
+        return controlState(model, recorder)
+    }
+    service.register("transcribe", help: "Make the transcript of a stored video or screen recording; only its sound goes to the server.", arguments: [.init("id", "a recording id")]) { request in
+        await model.requestTranscript(request["id"] as? String ?? "")
+        return controlState(model, recorder)
+    }
+    service.register("mark", help: "Mark this moment of the running recording, with an optional note.", arguments: [.init("note", "what happens now")]) { request in
+        guard recorder.isRecording else { throw ControlError("nothing is being recorded") }
+        let note = (request["note"] as? String).flatMap { $0.isEmpty ? nil : $0 }
+        recorder.mark(note: note)
         return controlState(model, recorder)
     }
     service.register("search", help: "Search titles, transcripts and notes.", arguments: [.init("text", "words to look for")]) { request in

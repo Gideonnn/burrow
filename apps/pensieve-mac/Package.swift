@@ -25,7 +25,7 @@ let package = Package(
         .target(name: "PensieveCapture", swiftSettings: [.swiftLanguageMode(.v5)]),
         .executableTarget(
             name: "Pensieve",
-            dependencies: ["PensieveCore", "PensieveCapture", .product(name: "BurrowUI", package: "burrow-kit")]),
+            dependencies: ["PensieveCore", "PensieveCapture", "PensieveMedia", .product(name: "BurrowUI", package: "burrow-kit")]),
         .testTarget(name: "PensieveCoreTests", dependencies: ["PensieveCore", "PensieveMedia"]),
     ]
 )

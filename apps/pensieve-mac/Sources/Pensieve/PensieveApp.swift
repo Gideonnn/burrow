@@ -107,6 +107,7 @@ func importRecHoarder(_ model: PensieveModel) async {
 final class AppDelegate: NSObject, NSApplicationDelegate {
     @MainActor let model = PensieveModel()
     @MainActor lazy var recorder = RecorderController(model: model)
+    @MainActor lazy var dictation = DictationController(model: model)
     @MainActor lazy var services: AppServices = {
         let model = model
         return AppServices(app: "pensieve", appName: "Pensieve", api: { model.api })
