@@ -202,8 +202,9 @@ private struct TicketCard: View {
     let entry: TicketEntry
     let label: String
 
-    static let size = CGSize(width: 150, height: 206)
-    static let footer: CGFloat = 46
+    static let size = CGSize(width: 118, height: 146)
+    static let footer: CGFloat = 32
+    static let codeSide: CGFloat = 86
 
     var body: some View {
         VStack(spacing: 0) {
@@ -217,21 +218,34 @@ private struct TicketCard: View {
             Line()
                 .stroke(Color.secondary.opacity(0.35), style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
                 .frame(height: 1)
-                .padding(.horizontal, 12)
+                .padding(.horizontal, 10)
                 .offset(y: -Self.footer)
         }
         .shadow(color: .black.opacity(scheme == .dark ? 0.4 : 0.14), radius: 6, y: 3)
+        .help(entry.ticket.name)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(label)
     }
 
+    /// Only the code, on white, the same for a pass, a PDF or a picture; the
+    /// pass's own colours show when it is opened.
     @ViewBuilder
     private var face: some View {
         switch entry.face {
-        case let .pass(pass, code):
-            PassFace(pass: pass, code: code, codeSide: 92, compact: true)
+        case let .pass(_, code):
+            Color.white.overlay {
+                if let code {
+                    Image(decorative: code, scale: 1)
+                        .interpolation(.none)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: Self.codeSide, height: Self.codeSide)
+                } else {
+                    Image(systemName: "wallet.pass").font(.system(size: 28, weight: .light)).foregroundStyle(.secondary)
+                }
+            }
         case let .code(code):
-            Color.white.overlay { CodeView(code: code, side: 104) }
+            Color.white.overlay { CodeView(code: code, side: Self.codeSide) }
         case .file:
             Color.secondary.opacity(0.1).overlay {
                 VStack(spacing: 6) {
@@ -248,16 +262,13 @@ private struct TicketCard: View {
 
     private var footer: some View {
         HStack(spacing: 6) {
-            VStack(alignment: .leading, spacing: 0) {
-                Text(label).font(.callout.weight(.semibold)).lineLimit(1)
-                Text(entry.ticket.name).font(.caption2).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
-            }
+            Text(label).font(.caption.weight(.semibold)).lineLimit(1)
             Spacer(minLength: 0)
             if entry.ticket.personalised {
                 Image(systemName: "checkmark.seal.fill").foregroundStyle(.green).help("Op naam gezet")
             }
         }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, 10)
         .frame(height: Self.footer)
     }
 }
