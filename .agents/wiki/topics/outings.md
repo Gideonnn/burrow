@@ -145,12 +145,12 @@ the family, everything else folded behind **Details**.
 - **Picture** (design `docs/design/hedwig-event-images.html`, views in
   `Sources/Hedwig/OutingPictureViews.swift`): a 44 pt thumbnail at the end of each list
   row (grey for past outings; a calm tile in the title's colours without a picture).
-  The page header keeps to about 200 pt and a third of the window: the date, title and kind
-  on the left and the picture whole on the right (Gideon's choice; at most 160 pt high
-  and 45 % wide, small ones at their own size, never stretched), on a gradient of the picture's own
-  strong colours (`PictureColours`; light behind black text, deep behind white) that
-  fades into the page. Text never sits on the artwork, which usually carries its own; a
-  blurred copy as backdrop was tried and smeared dark artwork into grey.
+  The page header keeps to about 220 pt and a third of the window. A large picture (700 px
+  wide or more, not taller than wide) fills the right three quarters and fades, eased over
+  most of its width, into the title on the left and into the page below; the title may run
+  over the artwork (Gideon likes that). A small or tall picture stays whole in a frame on
+  the right, never stretched; without a picture the kind's colours and symbol fill the
+  same space. The backdrop comes from the picture's own strong colours (`PictureColours`).
   Without a picture the same places get a gradient in the title's colours
   (`TitleColours`, the design's hash) with the kind's symbol (`Outing.kindSymbol`).
   Details › Afbeelding has

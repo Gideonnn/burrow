@@ -145,8 +145,9 @@ struct OutingArtFallback: View {
 
 // MARK: The top of the page
 
-/// The top of the page, Apple TV style: the picture whole on a blurred wash
-/// of itself, the date and title beside it on the left, never on the artwork.
+/// The top of the page: a large picture fills the right two thirds and fades
+/// into the title on the left; a small or tall one stays whole in a frame on
+/// the right, where it would turn blurry or lose its top and bottom.
 /// Pasting or dropping a picture or a link here sets it.
 struct OutingHero: View {
     @Environment(AppModel.self) private var model
@@ -159,25 +160,72 @@ struct OutingHero: View {
     @State private var hovering = false
     @State private var dropping = false
     @State private var column: CGFloat = 584
+    @State private var pane: CGFloat = 800
+
+    /// Large and not tall: worth filling two thirds of the header with.
+    static func fills(_ picture: OutingPicture) -> Bool {
+        picture.width >= 700 && Double(picture.width) / Double(max(picture.height, 1)) >= 0.9
+    }
+
+    /// The picture, or the kind's colours without one, over the right two
+    /// thirds, fading to the left into the title and to the bottom into the page.
+    private func fadedArt(_ picture: OutingPicture?) -> some View {
+        Group {
+            if let picture {
+                picture.swiftUI.resizable().scaledToFill()
+            } else {
+                OutingArtFallback(outing: outing, symbolSize: maxArt * 0.4)
+            }
+        }
+        .frame(width: pane * 0.74, height: height)
+        .clipped()
+        .mask {
+            // An eased ramp over most of the width, so there is no visible edge.
+            LinearGradient(
+                stops: [
+                    .init(color: .clear, location: 0),
+                    .init(color: .black.opacity(0.06), location: 0.12),
+                    .init(color: .black.opacity(0.22), location: 0.26),
+                    .init(color: .black.opacity(0.5), location: 0.42),
+                    .init(color: .black.opacity(0.8), location: 0.58),
+                    .init(color: .black.opacity(0.95), location: 0.72),
+                    .init(color: .black, location: 0.82),
+                ],
+                startPoint: .leading, endPoint: .trailing)
+        }
+        .mask {
+            LinearGradient(
+                stops: [.init(color: .black, location: 0.5), .init(color: .black.opacity(0.6), location: 0.75), .init(color: .clear, location: 1)],
+                startPoint: .top, endPoint: .bottom)
+        }
+        .frame(maxWidth: .infinity, alignment: .trailing)
+        .allowsHitTesting(false)
+    }
 
     private var canOrganize: Bool { model.me?.can(.organize) == true }
 
+    private var height: CGFloat { maxArt + 60 }
+
     var body: some View {
         OutingPictureReader(outing: outing) { picture in
-            HStack(alignment: .center, spacing: 22) {
-                titleBlock
-                Spacer(minLength: 0)
-                artwork(picture)
+            let filled = picture.map(Self.fills) ?? (outing.image == nil)
+            ZStack(alignment: .leading) {
+                HeroBackdrop(outing: outing, picture: picture)
+                if filled { fadedArt(picture) }
+                HStack(alignment: .center, spacing: 22) {
+                    titleBlock
+                        .frame(maxWidth: filled ? max(260, pane * 0.48) : nil, alignment: .leading)
+                    Spacer(minLength: 0)
+                    if !filled { artwork(picture) }
+                }
+                .padding(.horizontal, 28)
+                .padding(.top, 10)
+                .frame(maxWidth: filled ? .infinity : 640, alignment: .leading)
             }
-            .padding(.horizontal, 28)
-            .padding(.top, 28)
-            .padding(.bottom, 18)
-            .frame(maxWidth: 640, alignment: .leading)
-            // Over the content column, so the picture button sits by the picture.
-            .overlay(alignment: .top) { controls }
-            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { column = max(200, $0 - 56) }
+            .frame(height: height)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background { HeroBackdrop(outing: outing, picture: picture) }
+            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { pane = $0; column = max(200, min(640, $0) - 56) }
+            .overlay(alignment: .top) { controls }
             .overlay { dropTarget }
         }
         .clipped()
