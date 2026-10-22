@@ -593,6 +593,88 @@ describe('outings', () => {
     expect(s.decisions).toHaveLength(0);
   });
 
+  it("reads the line-up from the festival's own pages, and drops it when asked", async () => {
+    const s = setup();
+    const site = 'https://neon.example.com';
+    s.web.set(`${site}/nl/`, {
+      contentType: 'text/html',
+      body: `<html><body><h1>Neon Nineties 2027</h1>
+        <a href="${site}/nl/line-up">Line-up</a>
+        <a href="${site}/nl/nieuws/voorbeeldband-sluit-af">Voorbeeldband sluit af</a>
+        <a href="${site}/nl/privacy">Privacy</a>
+        <a href="https://elders.example.com/nieuws/x">Elders</a></body></html>`,
+    });
+    s.web.set(`${site}/nl/nieuws/voorbeeldband-sluit-af`, {
+      contentType: 'text/html',
+      body: '<p>Voorbeeldband sluit de Main Stage af op donderdag 13 mei.</p>',
+    });
+    const made = await s.create(s.token, {
+      title: 'Neon Nineties',
+      kind: 'festival',
+      url: `${site}/nl/`,
+    });
+    const without = await s.create(s.token, { title: 'Zonder site' });
+    expect(
+      (await s.send(s.token, 'POST', `/api/outings/${without.id}/lineup`))
+        .status,
+    ).toBe(400);
+
+    s.decisions.push({
+      artists: [
+        {
+          name: 'Voorbeeldband',
+          day: '2027-05-13',
+          stage: 'Main Stage',
+          startsAt: null,
+          headliner: true,
+        },
+        {
+          name: 'voorbeeldband',
+          day: null,
+          stage: null,
+          startsAt: null,
+          headliner: false,
+        },
+      ],
+      complete: false,
+      note: 'Meer namen volgen',
+    });
+    const started = outing.parse(
+      await (
+        await s.send(s.token, 'POST', `/api/outings/${made.id}/lineup`)
+      ).json(),
+    );
+    expect(started.lineup?.status).toBe('working');
+    await vi.waitFor(async () => {
+      const now = outing.parse(
+        await (await s.send(s.token, 'GET', `/api/outings/${made.id}`)).json(),
+      );
+      expect(now.lineup?.status).toBe('ready');
+    });
+    const done = outing.parse(
+      await (await s.send(s.evaToken, 'GET', `/api/outings/${made.id}`)).json(),
+    );
+    expect(done.lineup).toMatchObject({
+      status: 'ready',
+      complete: false,
+      note: 'Meer namen volgen',
+      artists: [
+        { name: 'Voorbeeldband', stage: 'Main Stage', headliner: true },
+      ],
+      sources: [`${site}/nl/`, `${site}/nl/nieuws/voorbeeldband-sluit-af`],
+    });
+    const prompt = s.agentRequests.at(-1)!.prompt;
+    expect(prompt).toContain('<untrusted_page>');
+    expect(prompt).toContain('sluit de Main Stage af');
+
+    const removed = outing.parse(
+      await (
+        await s.send(s.token, 'DELETE', `/api/outings/${made.id}/lineup`)
+      ).json(),
+    );
+    expect(removed.lineup).toBeNull();
+  });
+
   it('finds order mails for nights still to come in the archive', async () => {
     const s = setup();
     s.provider(s.home.id).deliver({

@@ -33,6 +33,7 @@ import {
 } from '../schema';
 import { type Detected, detectOuting, ticketLinks } from './detect';
 import { type FetchPublic, fetchPublic } from './images';
+import { LineupError, OutingLineups } from './lineup';
 import { OutingPictures, PictureError } from './pictures';
 import { OUTING_SKILL, readPrompt, withRead } from './reader';
 
@@ -82,6 +83,7 @@ export class OutingsService {
   private readonly enriching = new Map<string, Promise<void>>();
   private readonly readerOn: boolean;
   readonly pictures: OutingPictures;
+  readonly lineups: OutingLineups;
 
   constructor(
     private readonly o: {
@@ -97,6 +99,12 @@ export class OutingsService {
       fetch: o.fetchPublic ?? fetchPublic,
       dir: (id) => this.dir(id),
       picked: (id) => this.changed(id),
+    });
+    this.lineups = new OutingLineups({
+      platform: o.platform,
+      fetch: o.fetchPublic ?? fetchPublic,
+      bot: o.bot,
+      changed: (id) => this.changed(id),
     });
     const { catalog } = o.platform;
     const bot = o.bot ? catalog.bots.get(o.bot) : undefined;
@@ -266,6 +274,27 @@ export class OutingsService {
 
   async clearImage(access: Access, id: string) {
     await this.pictures.clear(id).catch(asOutingError);
+    this.touch(access, id);
+    this.changed(id);
+    return this.get(access, id);
+  }
+
+  // --- the line-up --------------------------------------------------------
+
+  refreshLineup(access: Access, id: string) {
+    try {
+      void this.lineups.refresh(id);
+    } catch (error) {
+      asOutingError(error);
+    }
+    this.touch(access, id);
+    this.changed(id);
+    return this.get(access, id);
+  }
+
+  removeLineup(access: Access, id: string) {
+    this.row(id);
+    this.lineups.remove(id);
     this.touch(access, id);
     this.changed(id);
     return this.get(access, id);
@@ -955,6 +984,7 @@ export class OutingsService {
           receivedAt: m.receivedAt.toISOString(),
         };
       }),
+      lineup: lineupOf(this.lineups.get(row.id)),
       ticketLinks: access.factsOnly
         ? []
         : mails
@@ -1028,7 +1058,9 @@ function inputOf(message: MessageRow) {
 }
 
 function asOutingError(error: unknown): never {
-  if (error instanceof PictureError) throw new OutingError(error.message);
+  if (error instanceof PictureError || error instanceof LineupError) {
+    throw new OutingError(error.message);
+  }
   throw error;
 }
 
@@ -1146,4 +1178,17 @@ function linkLabel(vendor: string | null, url: string) {
     .replace(/^(www|order|shop|tickets?|account)\./, '')
     .split('.')[0]!;
   return `Kaartjes bij ${host.charAt(0).toUpperCase()}${host.slice(1)}`;
+}
+
+function lineupOf(row: ReturnType<OutingLineups['get']>) {
+  if (!row) return null;
+  return {
+    status: row.status,
+    error: row.error,
+    artists: row.artists,
+    complete: row.complete,
+    note: row.note,
+    sources: row.sources,
+    updatedAt: row.updatedAt.toISOString(),
+  };
 }

@@ -215,6 +215,20 @@ export function outingRoutes(outings: OutingsService) {
           await run(() => outings.clearImage(c.var.access, c.req.param('id'))),
         ),
       )
+      .post('/outings/:id/lineup', requireRight('organize'), async (c) =>
+        c.json(
+          await run(() =>
+            outings.refreshLineup(c.var.access, c.req.param('id')),
+          ),
+        ),
+      )
+      .delete('/outings/:id/lineup', requireRight('organize'), async (c) =>
+        c.json(
+          await run(() =>
+            outings.removeLineup(c.var.access, c.req.param('id')),
+          ),
+        ),
+      )
       .post(
         '/outings/:id/tasks',
         requireRight('organize'),

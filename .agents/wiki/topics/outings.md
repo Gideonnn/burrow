@@ -46,6 +46,14 @@ only empty fields (venue, place, organiser, kind, order number, website, doors, 
 give a day without a time its time; what someone typed stays. Then the picture is
 picked. Angela's mail joins in once her mailbox is connected.
 
+**Line-up** (`lineup.ts`, Kreacher's `festival-lineup` skill, `outing_lineups`): `POST
+/outings/:id/lineup` fetches the outing's website (`url`), its line-up or timetable
+pages and its newest news pages on the same site (at most 8, 5,000 characters each)
+and has Haiku list the acts of this edition with day, stage, time and headliner. The
+outing carries `lineup` with `status` working, ready or failed; `DELETE` removes the
+widget. Haiku has no internet on Dobby: the server fetches, through `fetchPublic`.
+Social media are not read (they need a login and block scrapers).
+
 ## What an outing holds
 
 - **Tickets** on disk under `<data>/files/hedwig/outings/<id>/`, from a mail attachment or
