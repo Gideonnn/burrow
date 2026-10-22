@@ -134,6 +134,13 @@
       "when": 1792697554757,
       "tag": "0018_outing_lineups",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "6",
+      "when": 1792699954103,
+      "tag": "0019_outing_image_frame",
+      "breakpoints": true
     }
   ]
 }

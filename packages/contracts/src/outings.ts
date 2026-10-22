@@ -69,6 +69,15 @@ const outingFields = {
   aliases: z.array(text(100).min(1)).max(20),
 };
 
+// Where an outing's picture sits in the header: the point of the picture
+// (0 to 1 from the left and the top) at the middle, and how far it is zoomed.
+export const imageFrame = z.object({
+  x: z.number().min(0).max(1),
+  y: z.number().min(0).max(1),
+  zoom: z.number().min(1).max(5),
+});
+export type ImageFrame = z.infer<typeof imageFrame>;
+
 // One act on a festival's bill, as read from its website.
 export const lineupArtist = z.object({
   name: z.string().max(120),
@@ -115,6 +124,8 @@ export const outing = z.object({
       source: z.enum(['mail', 'website', 'upload']),
       contentType: z.string(),
       updatedAt: z.iso.datetime(),
+      // How someone placed it in the header; null is centred, not zoomed.
+      frame: imageFrame.nullable(),
     })
     .nullable(),
   attendees: z.array(personRef),
@@ -164,6 +175,7 @@ export const updateOutingRequest = z
     ...outingFields,
     inCalendar: z.boolean(),
     attendeeIds: z.array(z.string()).max(20),
+    imageFrame: imageFrame.nullable(),
   })
   .partial();
 export type UpdateOutingRequest = z.infer<typeof updateOutingRequest>;

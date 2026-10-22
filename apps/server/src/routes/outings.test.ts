@@ -513,6 +513,29 @@ describe('outings', () => {
       contentType: 'image/jpeg',
     });
 
+    // Placed by hand, shared with the household; a new picture starts centred.
+    const placed = outing.parse(
+      await (
+        await s.send(s.token, 'PATCH', `/api/outings/${made.id}`, {
+          imageFrame: { x: 0.3, y: 0.7, zoom: 1.8 },
+        })
+      ).json(),
+    );
+    expect(placed.image?.frame).toEqual({ x: 0.3, y: 0.7, zoom: 1.8 });
+    expect(
+      (
+        await s.send(s.token, 'PATCH', `/api/outings/${made.id}`, {
+          imageFrame: { x: 2, y: 0, zoom: 1 },
+        })
+      ).status,
+    ).toBe(400);
+    const replaced = outing.parse(
+      await (
+        await put({ uploadId: await s.upload(s.token, png(800, 450)) })
+      ).json(),
+    );
+    expect(replaced.image?.frame).toBeNull();
+
     const none = outing.parse(
       await (
         await s.send(s.token, 'DELETE', `/api/outings/${made.id}/image`)

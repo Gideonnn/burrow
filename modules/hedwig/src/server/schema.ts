@@ -5,6 +5,7 @@ import type {
   MailboxRole,
   MailFolder,
   MailProvider,
+  ImageFrame,
   LineupArtist,
   OutingRead,
   ServerOp,
@@ -253,6 +254,7 @@ export const outings = sqliteTable(
     imageType: text('image_type'),
     imageSource: text('image_source').$type<'mail' | 'website' | 'upload'>(),
     imageAt: integer('image_at', { mode: 'timestamp_ms' }),
+    imageFrame: text('image_frame', { mode: 'json' }).$type<ImageFrame>(),
     imageOff: integer('image_off', { mode: 'boolean' })
       .notNull()
       .default(false),

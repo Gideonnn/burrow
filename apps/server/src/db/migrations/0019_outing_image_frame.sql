@@ -1,0 +1,1 @@
+ALTER TABLE `outings` ADD `image_frame` text;

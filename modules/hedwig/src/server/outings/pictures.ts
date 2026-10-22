@@ -111,6 +111,7 @@ export class OutingPictures {
         imageType: null,
         imageSource: null,
         imageAt: new Date(),
+        imageFrame: null,
         imageOff: true,
       })
       .where(eq(outings.id, id))
@@ -267,6 +268,7 @@ export class OutingPictures {
         imageType: p.contentType,
         imageSource: source,
         imageAt: new Date(),
+        imageFrame: null,
         imageOff: false,
       })
       .where(eq(outings.id, id))

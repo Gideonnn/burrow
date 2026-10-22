@@ -950,6 +950,7 @@ export class OutingsService {
               source: row.imageSource,
               contentType: row.imageType,
               updatedAt: row.imageAt.toISOString(),
+              frame: row.imageFrame ?? null,
             }
           : null,
       tickets: tickets.map((t) => ({
