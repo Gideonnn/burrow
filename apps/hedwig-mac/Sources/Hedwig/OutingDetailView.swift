@@ -69,7 +69,7 @@ struct OutingDetailView: View {
             VStack(alignment: .leading, spacing: 1) {
                 Text(count == 0 ? "Nog geen kaarten" : "\(count) \(count == 1 ? "kaart" : "kaarten") bewaard")
                     .font(.body.weight(.medium))
-                Text(count == 0 ? "Sleep ze hierheen (pdf, Wallet-pas of screenshot)" : "Komen op de dag in jullie Telegram")
+                Text(count == 0 ? "Sleep ze hierheen (pdf, Wallet-pas of screenshot)" : "Op de dag om 09:00 krijg je een melding op je Mac")
                     .font(.callout).foregroundStyle(.secondary)
             }
             Spacer()
