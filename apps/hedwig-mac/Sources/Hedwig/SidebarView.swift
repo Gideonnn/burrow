@@ -46,23 +46,28 @@ struct SidebarView: View {
                     } : nil)
                 }
             }
+            // A row with a badge is only selectable with its tag, as above.
             Section("Overal") {
                 NavigationLink(value: SidebarItem.filtered) {
                     Label("Gefilterd", systemImage: "checkmark.shield")
                 }
                 .badge(model.filtered.count)
+                .tag(SidebarItem.filtered)
                 NavigationLink(value: SidebarItem.outings) {
                     Label("Evenementen", systemImage: "ticket")
                 }
                 .badge(model.outingsBadge)
+                .tag(SidebarItem.outings)
                 NavigationLink(value: SidebarItem.tasks) {
                     Label("Taken", systemImage: "checklist")
                 }
                 .badge(model.tasksAwaitingReview)
+                .tag(SidebarItem.tasks)
                 NavigationLink(value: SidebarItem.drafts) {
                     Label("Concepten", systemImage: "doc")
                 }
                 .badge(model.drafts.count)
+                .tag(SidebarItem.drafts)
                 NavigationLink(value: SidebarItem.folder(.sent)) {
                     Label("Verstuurd", systemImage: "paperplane")
                 }
