@@ -114,6 +114,10 @@ kebab-case.
 - Never add `Co-Authored-By` or any other trailer.
 - Work on `main` and push directly after each validated commit; no feature branches or
   pull requests unless asked. Worktree agents merge their branch into `main` when done.
+- Once a change is on `main`, install it without asking so the operator sees it: run
+  `pnpm hedwig:install` (or the app's own install script) for a Mac app change and
+  `pnpm server:deploy` for a server or module change. `pnpm hedwig:release` (every Mac)
+  only when asked.
 
 ## How to explain things
 
