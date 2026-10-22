@@ -189,6 +189,17 @@ struct FakeProbe: MediaProbing {
         }
     }
 
+    @Test func savesNextToTheOriginalUnderItsHeightWithoutOverwriting() async throws {
+        let source = try original(bytes: 1_200 * MB)
+        let shrink = VideoShrink(
+            encoder: FakeEncoder(seconds: 384), probe: FakeProbe(source: VideoSource(seconds: 384, width: 3840, height: 2160, bytes: 0)))
+        let (_, options) = try await shrink.options(for: source, limit: 25 * MB)
+        #expect(options.map(\.fits) == [false, false, true])
+        for _ in 0..<2 { _ = try await shrink.shrink(source, quality: .small) }
+        let files = try FileManager.default.contentsOfDirectory(atPath: source.deletingLastPathComponent().path).sorted()
+        #expect(files == ["Presentatie aardrijkskunde.mov", "presentatie-aardrijkskunde-480p-2.mp4", "presentatie-aardrijkskunde-480p.mp4"])
+    }
+
     @Test func doesNothingWithAVideoThatAlreadyFits() async throws {
         let source = try original(bytes: 20 * MB)
         let encoder = FakeEncoder(seconds: 384)
