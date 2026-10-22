@@ -64,8 +64,9 @@ to add one: [modules](modules.md).
   `message` subject and trigger. Triage
   keeps its own durable queue (the message records its progress). See [triage](triage.md)
   and [mail providers](providers.md).
-- **Pensieve** (`modules/pensieve`): recordings uploaded by the Mac app, compressed with
-  ffmpeg, transcribed through OpenAI, notes written by the bot Kreacher. The `recording`
+- **Pensieve** (`modules/pensieve`): calls, video, screen recordings and dictations;
+  only their audio comes from the Mac app, compressed with ffmpeg, transcribed through
+  OpenAI, notes per kind written by the bot Kreacher; labels per person. The `recording`
   subject and trigger. See [Pensieve](pensieve.md).
 
 ## Clients

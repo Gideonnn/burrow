@@ -178,3 +178,25 @@ copy of the database, then consider bundling the dependencies into the tsup buil
 **Why:** every deploy is a gap for the apps; they now retry quietly, but agents and MCP
 clients still see errors.
 **Scope:** an hour to profile, a few hours to fix.
+
+## Pensieve v2: the UI on the new engine
+
+**What:** the screens of `docs/design/pensieve.html` on the engine of
+`docs/plans/2026-10-22-pensieve-v2.md`: the gallery with kind and label filters, the
+memory view (timeline from segments and marks, transcript following playback, side
+panel), the recording stage and pill with Markeer, the floating orb, the dictation HUD
+(and switching on `DictationController`), the Verklein video sheet, Settings › Labels
+and the Mac settings for video format, size cap and automatic transcripts per kind;
+pause; title and labels from the calendar once Burrow has calendars.
+**Why:** the engine landed without UI so the design can settle first.
+**Scope:** several days; the plan lists what each screen needs.
+
+## Pensieve: speakers across parts and a timestamp model after February 2027
+
+**What:** (1) feed the diarizing model clips of the speakers from part one
+(`known_speaker_names[]`, `known_speaker_references[]`) so "A" stays "A" past 20
+minutes; (2) choose a transcription model with timestamps before
+`gpt-4o-transcribe-diarize` shuts down on 2027-02-26, or align `gpt-transcribe` text
+locally.
+**Why:** speaker letters restart per part; the only timestamping model is deprecated.
+**Scope:** half a day for (1); (2) depends on what OpenAI offers.

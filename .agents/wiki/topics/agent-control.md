@@ -23,8 +23,9 @@ Every app answers `state`, `tree`, `find`, `press`, `type`, `select`, `settings`
 `set_setting`, `tasks`, `update`, `restart` and `commands`. Hedwig adds `show` (`inbox`,
 `archive`, `sent`, `spam` or `drafts` of the open mailbox, or `<place>:<address>`;
 `filtered` opens the first Spam or Archief with mail to review), `open` and `draft`
-(prepares a draft and shows it under that mailbox's Concepten); Pensieve adds `show`, `search`,
-`open`, `rename`, `redo`, `share`, `stop`, `upload` and `mirror`. `hedwigctl` is the old
+(prepares a draft and shows it under that mailbox's Concepten); Pensieve adds `show` (scope, kind,
+labels), `search`, `open`, `rename`, `redo`, `transcribe`, `label`, `mark`, `share`, `stop`,
+`upload` and `mirror`; never a start. `hedwigctl` is the old
 name of `burrowctl hedwig`.
 
 ## The runner: this Mac doing Burrow's tasks

@@ -5,7 +5,7 @@
 - [Architecture](topics/architecture.md): platform, modules, Mac apps, bots, people, keys, workers and agents.
 - [Adding a module](topics/modules.md): the checklist for a new application, server and Mac app.
 - [Login and the household](topics/login-and-household.md): device login through the browser, admins, settings, who may read what.
-- [Pensieve](topics/pensieve.md): recording, upload, compression, transcription, notes, iCloud copy, RecHoarder import.
+- [Pensieve](topics/pensieve.md): calls, video, screen and dictation; upload, compression, transcription with segments, notes per kind, labels, video on the Mac, the iCloud copy.
 - [Naming](topics/naming.md): the Harry Potter names and what each application does.
 - [Testing](topics/testing.md): tiers, red before green, quiet output.
 - [Secrets](topics/secrets.md): what is secret, where it lives, SOPS in a public repo.
