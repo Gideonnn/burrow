@@ -48,8 +48,9 @@ enum OutingMaps {
 
     static func cachedSnapshot(_ key: String) -> NSImage? { snapshots[key] }
 
-    /// The pin stands a little above the middle, clear of the label.
-    static let pinHeight: CGFloat = 0.44
+    /// Where the pin's point stands, as a share of the map's height: low
+    /// enough that the whole pin sits in the middle of the small map.
+    static let pinHeight: CGFloat = 0.66
 
     static func snapshot(_ place: OutingPlace, size: CGSize, dark: Bool) async -> NSImage? {
         let key = snapshotKey(place, size: size, dark: dark)
@@ -151,7 +152,8 @@ struct OutingMapCard: View {
     @State private var travel: String?
     @State private var landed = false
 
-    static let height: CGFloat = 196
+    static let width: CGFloat = 230
+    static let height: CGFloat = 150
 
     // Rounded up, so dragging the window does not draw a map per point.
     private var size: CGSize { CGSize(width: (width / 80).rounded(.up) * 80, height: Self.height) }
@@ -161,8 +163,7 @@ struct OutingMapCard: View {
 
     var body: some View {
         map
-            .frame(maxWidth: .infinity)
-            .frame(height: Self.height)
+            .frame(width: Self.width, height: Self.height)
             .overlay(alignment: .bottomLeading) { caption.allowsHitTesting(false) }
             .overlay(alignment: .bottomTrailing) { routeButton }
             .clipShape(RoundedRectangle(cornerRadius: 14))
@@ -213,38 +214,32 @@ struct OutingMapCard: View {
         .help("Open in Kaarten")
     }
 
+    /// Only the travel time: the place's name is already beside the map.
+    @ViewBuilder
     private var caption: some View {
-        VStack(alignment: .leading, spacing: 1) {
-            Text(label.title).font(.headline).lineLimit(1)
-            if let subtitle = label.subtitle {
-                Text(subtitle).font(.callout).foregroundStyle(.secondary).lineLimit(1)
-            }
-            if let travel {
-                Label(travel, systemImage: "car.fill")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .padding(.top, 2)
-            }
+        if let travel {
+            Label(travel, systemImage: "car.fill")
+                .font(.caption.weight(.medium))
+                .padding(.horizontal, 8).padding(.vertical, 5)
+                .background(.regularMaterial, in: Capsule())
+                .padding(8)
         }
-        .padding(.horizontal, 12).padding(.vertical, 8)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10))
-        .padding(10)
     }
 
     private var routeButton: some View {
         Button(action: openRoute) {
-            Label("Route", systemImage: "arrow.triangle.turn.up.right.diamond.fill")
-                .font(.callout.weight(.semibold))
+            Image(systemName: "arrow.triangle.turn.up.right.diamond.fill")
+                .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(.white)
-                .padding(.horizontal, 13)
-                .frame(height: 30)
-                .background(Color.pink, in: Capsule())
+                .frame(width: 30, height: 30)
+                .background(Color.pink, in: Circle())
                 .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
-                .contentShape(Capsule())
+                .contentShape(Circle())
         }
         .buttonStyle(.plain)
         .help("Route in Kaarten")
-        .padding(12)
+        .accessibilityLabel("Route")
+        .padding(8)
     }
 
     private func loadSnapshot() async {
@@ -280,8 +275,7 @@ struct OutingMapPlaceholder: View {
     var body: some View {
         RoundedRectangle(cornerRadius: 14)
             .fill(.quaternary.opacity(0.5))
-            .frame(maxWidth: .infinity)
-            .frame(height: OutingMapCard.height)
+            .frame(width: OutingMapCard.width, height: OutingMapCard.height)
             .overlay { Image(systemName: "map").font(.title2).foregroundStyle(.tertiary) }
             .accessibilityHidden(true)
     }

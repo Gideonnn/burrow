@@ -92,7 +92,8 @@ private struct OutingFacts: View {
     @State private var lookup: (key: String, place: OutingPlace?)?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        // The map sits beside the facts, small: the place's name is already in Waar.
+        HStack(alignment: .top, spacing: 20) {
             Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 12) {
                 GridRow {
                     key("Wanneer")
@@ -116,6 +117,7 @@ private struct OutingFacts: View {
                     Color.clear.frame(width: 1, height: 1)
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             if let found = mapPlace {
                 OutingMapCard(outing: outing, place: found).transition(.opacity)
             } else if lookingUp {

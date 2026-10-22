@@ -101,9 +101,11 @@ the family, everything else folded behind **Details**.
   missing tickets within 14 days, "Later: …" for a later item, "Kaarten toevoegen", or
   "Alles geregeld". Then Geweest. The logic lives in `HedwigCore/OutingStatus.swift`, so
   it is tested without a window.
-- **Waar** (`Sources/Hedwig/OutingMapCard.swift`): under Wie, a still map (`MKMapSnapshotter`, light
-  or dark) with a pin holding the picture or the kind's symbol, venue and city on a
-  material label, and Route (directions in Apple Maps); clicking the map opens the place.
+- **Waar** (`Sources/Hedwig/OutingMapCard.swift`): a small still map (230 by 150 pt,
+  `MKMapSnapshotter`, light or dark) right of Wanneer/Waar/Wie, with a pin holding the
+  picture or the kind's symbol, the travel time when known, and a round Route button
+  (directions in Apple Maps); clicking the map opens the place. No name label: Waar
+  already says it.
   `MKLocalSearch` asks "venue, address", then the address alone; `PlaceBook`
   (`HedwigCore/OutingPlaces.swift`) keeps the answers in
   `~/Library/Application Support/Hedwig/places.json` by venue and address, so a page
