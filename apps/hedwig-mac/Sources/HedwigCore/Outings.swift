@@ -67,6 +67,8 @@ public struct Outing: Codable, Hashable, Identifiable, Sendable {
     public var mails: [OutingMail]
     /// Optional, so an older server still decodes; read `shopLinks`.
     public var ticketLinks: [OutingTicketLink]?
+    /// Nil without a line-up, and from an older server.
+    public var lineup: OutingLineup?
     public var createdBy: PersonRef
     public var createdAt: Date
     public var updatedBy: PersonRef
@@ -286,6 +288,16 @@ extension APIClient {
 
     public func setOutingImage(outingId: String, _ body: SetOutingImageRequest) async throws -> Outing {
         try await call("PUT", "api/outings/\(outingId)/image", body: body)
+    }
+
+    /// Starts reading the line-up from the website; the outing says working
+    /// until `outing.changed` brings the result.
+    public func refreshLineup(outingId: String) async throws -> Outing {
+        try await call("POST", "api/outings/\(outingId)/lineup")
+    }
+
+    public func removeLineup(outingId: String) async throws -> Outing {
+        try await call("DELETE", "api/outings/\(outingId)/lineup")
     }
 
     /// No picture, and Hedwig does not pick one again by itself.

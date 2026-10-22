@@ -113,10 +113,16 @@ the family, everything else folded behind **Details**.
   location; Hedwig never asks by itself, only from the map's menu "Toon reistijd vanaf
   deze Mac". `CLGeocoder` is deprecated from macOS 26, so it is not used.
 - **Detail**, top to bottom: the header, Wanneer/Waar/Wie (click a person to toggle), the
-  map, the tickets, Nog doen with "Iets toevoegen", Details. Dropping a pdf, `.pkpass` or
+  map, the line-up, the tickets, Nog doen with "Iets toevoegen", Details. Dropping a pdf, `.pkpass` or
   image uploads it (`/api/uploads`, then `POST /api/outings/:id/tickets`). Details: every
   field, tickets per person, linked mails (someone else's shows "Mail van …"), search
   words, history and delete.
+- **Line-up** (`Sources/Hedwig/OutingLineupView.swift`, grouping in
+  `HedwigCore/OutingLineup.swift`): per day ("Vrijdag 2 juli", then "Nog geen dag"),
+  headliners large like on a poster, the rest smaller, stage and time small; the note,
+  "Bijgewerkt …" and the source host. Refresh spins while the server reads; X removes it.
+  Without a line-up an upcoming festival or concert (or any outing with a website) shows
+  "Line-up zoeken", disabled with "Voeg eerst de website toe" when there is no `url`.
 - **Tickets** (`Sources/Hedwig/OutingTicketViews.swift`): a row of Wallet-like cards, one
   per code, a notch where the stub tears, the holder (or "Kaartje 2/3") and file name
   below. A `.pkpass` shows its own colours and its code drawn from `pass.json`

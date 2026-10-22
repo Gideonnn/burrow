@@ -201,6 +201,14 @@ extension AppModel {
         }
     }
 
+    public func refreshLineup(_ outingId: String) async {
+        await change { try await $0.refreshLineup(outingId: outingId) }
+    }
+
+    public func removeLineup(_ outingId: String) async {
+        await change { try await $0.removeLineup(outingId: outingId) }
+    }
+
     /// The ticket's bytes for its preview; a failure only leaves the preview out.
     public func ticketData(_ ticket: OutingTicket, in outingId: String) async -> Data? {
         try? await api?.ticketFile(outingId: outingId, ticketId: ticket.id)

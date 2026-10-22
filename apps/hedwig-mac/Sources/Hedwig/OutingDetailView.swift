@@ -17,6 +17,11 @@ struct OutingDetailView: View {
                 OutingHero(outing: outing, maxArt: min(160, max(72, pageHeight / 3 - 46))) { picking = outing }
                 VStack(alignment: .leading, spacing: 22) {
                     OutingFacts(outing: outing)
+                    if let lineup = outing.lineup {
+                        OutingLineupCard(outing: outing, lineup: lineup)
+                    } else if !outing.isPast(), outing.offersLineup {
+                        LineupSearchButton(outing: outing)
+                    }
                     if !outing.isPast() {
                         OutingTicketsBlock(outing: outing)
                         OutingChecklist(outing: outing)
@@ -620,7 +625,7 @@ private struct DateField: View {
 }
 
 /// Chips that wrap onto the next line.
-private struct FlowLayout: Layout {
+struct FlowLayout: Layout {
     var spacing: CGFloat = 6
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
