@@ -122,50 +122,62 @@ struct OutingThumbnail: View {
     }
 }
 
+/// An outing without a picture: a rich gradient in the title's colours and
+/// the kind's symbol, wherever a picture would be.
+struct OutingArtFallback: View {
+    let outing: Outing
+    var symbolSize: CGFloat = 40
+
+    var body: some View {
+        let colours = TitleColours(title: outing.title)
+        let top = HSL(hue: colours.glow.hue, saturation: 0.62, lightness: 0.5)
+        let bottom = HSL(hue: colours.end.hue, saturation: 0.58, lightness: 0.26)
+        ZStack {
+            LinearGradient(colors: [top.color, colours.start.color, bottom.color], startPoint: .topLeading, endPoint: .bottomTrailing)
+            RadialGradient(colors: [.white.opacity(0.22), .clear], center: .topTrailing, startRadius: 0, endRadius: symbolSize * 4)
+            Image(systemName: outing.kindSymbol)
+                .font(.system(size: symbolSize, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.92))
+                .shadow(color: .black.opacity(0.25), radius: symbolSize * 0.12, y: symbolSize * 0.05)
+        }
+    }
+}
+
 // MARK: The top of the page
 
-/// The picture at the top of the page with the title over a dark scrim, or
-/// a compact band in the title's colours. Pasting or dropping a picture or
-/// a link here sets it.
+/// The top of the page, Apple TV style: the picture whole on a blurred wash
+/// of itself, with the date and title below it, never on the artwork.
+/// Pasting or dropping a picture or a link here sets it.
 struct OutingHero: View {
     @Environment(AppModel.self) private var model
     @Environment(\.colorScheme) private var scheme
     let outing: Outing
+    /// The picture's height at most; the page keeps the header to about a
+    /// third of the window.
+    var maxArt: CGFloat = 160
     let pick: () -> Void
     @State private var hovering = false
     @State private var dropping = false
+    @State private var column: CGFloat = 584
 
     private var canOrganize: Bool { model.me?.can(.organize) == true }
 
     var body: some View {
         OutingPictureReader(outing: outing) { picture in
-            let height: CGFloat = outing.image == nil ? 120 : 210
-            GeometryReader { geo in
-                ZStack(alignment: .bottomLeading) {
-                    background(picture)
-                    if outing.image != nil {
-                        LinearGradient(
-                            stops: [
-                                .init(color: .black.opacity(0.62), location: 0),
-                                .init(color: .black.opacity(0.55), location: 0.55),
-                                .init(color: .clear, location: 0.92),
-                            ],
-                            startPoint: .bottom, endPoint: .top)
-                    }
-                    HStack(alignment: .bottom, spacing: 20) {
-                        titleRow
-                        Spacer(minLength: 0)
-                        if let picture, picture.fit == .framed {
-                            poster(picture, room: CGSize(width: geo.size.width * 0.4, height: height - 36))
-                        }
-                    }
-                    .padding(EdgeInsets(top: 18, leading: 24, bottom: 18, trailing: 20))
-                }
-                .frame(width: geo.size.width, height: height)
-                .overlay(alignment: .topLeading) { controls }
-                .overlay { dropTarget }
+            HStack(alignment: .center, spacing: 22) {
+                artwork(picture)
+                titleBlock
+                Spacer(minLength: 0)
             }
-            .frame(height: height)
+            .padding(.horizontal, 28)
+            .padding(.top, 28)
+            .padding(.bottom, 18)
+            .frame(maxWidth: 640, alignment: .leading)
+            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { column = max(200, $0 - 56) }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background { HeroBackdrop(outing: outing, picture: picture) }
+            .overlay(alignment: .topLeading) { controls }
+            .overlay { dropTarget }
         }
         .clipped()
         .onHover { hovering = $0 }
@@ -176,49 +188,56 @@ struct OutingHero: View {
         }
     }
 
+    /// The picture whole, beside the title: at most `maxArt` high and 45 % of
+    /// the width; small ones stay sharp at their own size.
     @ViewBuilder
-    private func background(_ picture: OutingPicture?) -> some View {
+    private func artwork(_ picture: OutingPicture?) -> some View {
+        let maxWidth = column * 0.45
         if let picture {
-            PictureTile(picture: picture, blur: 26, sharp: false)
-                .saturation(picture.fit == .framed ? 1.25 : 1)
-                .brightness(scheme == .dark ? -0.1 : 0)
-        } else if outing.image != nil {
-            Color(white: 0.16)
+            let scale = min(1, maxWidth / CGFloat(picture.width), maxArt / CGFloat(picture.height))
+            picture.swiftUI
+                .resizable()
+                .frame(width: CGFloat(picture.width) * scale, height: CGFloat(picture.height) * scale)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(.white.opacity(0.12)))
+                .shadow(color: .black.opacity(0.28), radius: 14, y: 8)
+                .brightness(scheme == .dark ? -0.05 : 0)
         } else {
-            TitleColourArt(title: outing.title)
+            let width = min(maxArt * 1.5, maxWidth)
+            Group {
+                if outing.image != nil {
+                    RoundedRectangle(cornerRadius: 10).fill(.quaternary)
+                } else {
+                    OutingArtFallback(outing: outing, symbolSize: maxArt * 0.32)
+                }
+            }
+            .frame(width: width, height: min(maxArt, width / 1.5))
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .shadow(color: .black.opacity(0.25), radius: 14, y: 8)
         }
     }
 
-    private var titleRow: some View {
-        HStack(alignment: .bottom, spacing: 14) {
+    private var titleBlock: some View {
+        HStack(alignment: .center, spacing: 14) {
             GlassDateTile(date: outing.startsAt)
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 6) {
                 Text(outing.title)
-                    .font(.system(size: 26, weight: .bold))
-                    .foregroundStyle(.white)
-                    .shadow(color: .black.opacity(0.35), radius: 1, y: 1)
+                    .font(.system(size: outing.title.count > 30 ? 21 : 26, weight: .bold))
                     .lineLimit(3)
-                    .minimumScaleFactor(0.7)
+                    .minimumScaleFactor(0.75)
+                    .fixedSize(horizontal: false, vertical: true)
                     .textSelection(.enabled)
                 if let kind = outing.kind {
-                    Text(kind).foregroundStyle(.white.opacity(0.92))
+                    Text(kind)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 3)
+                        .background(.primary.opacity(0.08), in: Capsule())
                 }
             }
         }
         .layoutPriority(1)
-    }
-
-    /// Sharp at its own size at most, never stretched.
-    private func poster(_ picture: OutingPicture, room: CGSize) -> some View {
-        let scale = min(1, room.width / CGFloat(picture.width), room.height / CGFloat(picture.height))
-        return picture.swiftUI
-            .resizable()
-            .frame(width: CGFloat(picture.width) * scale, height: CGFloat(picture.height) * scale)
-            .clipShape(RoundedRectangle(cornerRadius: 8))
-            .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(.white.opacity(0.14)))
-            .shadow(color: .black.opacity(0.35), radius: 12, y: 8)
-            .brightness(scheme == .dark ? -0.1 : 0)
-            .frame(maxHeight: .infinity)
     }
 
     @ViewBuilder
@@ -235,11 +254,10 @@ struct OutingHero: View {
                     ProgressView().controlSize(.small).tint(.white)
                 }
                 Spacer()
-                if hovering || outing.image == nil {
+                if hovering {
                     Text("Plak of sleep een afbeelding")
                         .font(.caption)
-                        .foregroundStyle(.white.opacity(hovering ? 0.9 : 0.6))
-                        .shadow(color: .black.opacity(0.4), radius: 2)
+                        .foregroundStyle(.secondary)
                 }
             }
             .padding(12)
@@ -308,7 +326,7 @@ struct OutingPictureSection: View {
             OutingPictureReader(outing: outing) { picture in
                 HStack(spacing: 12) {
                     Group {
-                        if let picture { PictureTile(picture: picture) } else { TitleColourArt(title: outing.title, rings: false) }
+                        if let picture { PictureTile(picture: picture) } else { OutingArtFallback(outing: outing, symbolSize: 22) }
                     }
                     .frame(width: 96, height: 54)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
@@ -595,5 +613,44 @@ struct PasteCatcher: NSViewRepresentable {
             paste()
             return true
         }
+    }
+}
+
+/// The header's backdrop: the picture's own strong colours as a soft
+/// gradient fading into the page, light behind black text and deep behind
+/// white. A blurred copy would smear the artwork's dark parts into grey.
+private struct HeroBackdrop: View {
+    @Environment(\.colorScheme) private var scheme
+    let outing: Outing
+    let picture: OutingPicture?
+    @State private var colours: [HSL] = []
+
+    var body: some View {
+        let shades = PictureColours.backdrop(colours.isEmpty ? fallback : colours, dark: scheme == .dark)
+        let first = shades.first?.color ?? .clear
+        let second = shades.dropFirst().first?.color ?? first
+        let third = shades.dropFirst(2).first?.color ?? second
+        ZStack {
+            LinearGradient(colors: [first, second], startPoint: .topLeading, endPoint: .bottomTrailing)
+            RadialGradient(colors: [third, third.opacity(0)], center: .topTrailing, startRadius: 0, endRadius: 520)
+        }
+        .mask {
+            LinearGradient(
+                stops: [.init(color: .black, location: 0), .init(color: .black, location: 0.5), .init(color: .clear, location: 1)],
+                startPoint: .top, endPoint: .bottom)
+        }
+        .allowsHitTesting(false)
+        .task(id: picture.map { ObjectIdentifier($0.image) }) {
+            guard let image = picture?.image else {
+                colours = []
+                return
+            }
+            colours = await Task.detached(priority: .utility) { PictureColours.dominant(image) }.value
+        }
+    }
+
+    private var fallback: [HSL] {
+        let title = TitleColours(title: outing.title)
+        return [title.glow, title.start, title.end].map { HSL(hue: $0.hue, saturation: 0.6, lightness: 0.5) }
     }
 }

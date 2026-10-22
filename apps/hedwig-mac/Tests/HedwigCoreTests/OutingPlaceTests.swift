@@ -59,7 +59,7 @@ import Testing
     @Test func pinShowsTheKind() throws {
         #expect(try Self.outing(venue: nil, address: nil, kind: "90's party").kindSymbol == "party.popper.fill")
         #expect(try Self.outing(venue: nil, address: nil, kind: "Cabaret").kindSymbol == "theatermasks.fill")
-        #expect(try Self.outing(venue: nil, address: nil).kindSymbol == "star.fill")
+        #expect(try Self.outing(venue: nil, address: nil).kindSymbol == "ticket.fill")
     }
 
     @Test func looksUpOnceAndRemembersOnDisk() async throws {

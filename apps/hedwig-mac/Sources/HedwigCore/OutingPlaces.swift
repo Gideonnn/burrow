@@ -71,10 +71,10 @@ extension Outing {
             (["cabaret", "theater", "theatre", "toneel", "musical", "voorstelling", "comedy"], "theatermasks.fill"),
             (["film", "bioscoop", "cinema"], "film.fill"),
             (["feest", "party", "fuif"], "party.popper.fill"),
-            (["sport", "wedstrijd", "voetbal"], "sportscourt.fill"),
-            (["concert", "muziek", "music", "optreden", "dj"], "music.note"),
+            (["sport", "wedstrijd", "voetbal", "hardloop", "marathon"], "figure.run"),
+            (["concert", "muziek", "music", "optreden", "dj"], "music.mic"),
         ]
-        return symbols.first { $0.words.contains(where: kind.contains) }?.symbol ?? "star.fill"
+        return symbols.first { $0.words.contains(where: kind.contains) }?.symbol ?? "ticket.fill"
     }
 }
 

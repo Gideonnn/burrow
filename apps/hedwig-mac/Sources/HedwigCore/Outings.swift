@@ -65,6 +65,8 @@ public struct Outing: Codable, Hashable, Identifiable, Sendable {
     public var tickets: [OutingTicket]
     public var tasks: [OutingTask]
     public var mails: [OutingMail]
+    /// Optional, so an older server still decodes; read `shopLinks`.
+    public var ticketLinks: [OutingTicketLink]?
     public var createdBy: PersonRef
     public var createdAt: Date
     public var updatedBy: PersonRef

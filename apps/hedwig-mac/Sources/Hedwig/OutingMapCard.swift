@@ -186,16 +186,14 @@ struct OutingMapCard: View {
     }
 
     private var map: some View {
-        ZStack {
-            Rectangle().fill(.quaternary.opacity(0.5))
-            if let image {
-                Image(nsImage: image)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .transition(.opacity)
+        // The snapshot is a little wider than the card; as an overlay it
+        // never widens the card itself.
+        Rectangle().fill(.quaternary.opacity(0.5))
+            .overlay {
+                if let image {
+                    Image(nsImage: image).resizable().scaledToFill().transition(.opacity)
+                }
             }
-        }
         .overlay {
             if image != nil {
                 GeometryReader { geo in
@@ -236,9 +234,15 @@ struct OutingMapCard: View {
     private var routeButton: some View {
         Button(action: openRoute) {
             Label("Route", systemImage: "arrow.triangle.turn.up.right.diamond.fill")
+                .font(.callout.weight(.semibold))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 13)
+                .frame(height: 30)
+                .background(Color.pink, in: Capsule())
+                .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
+                .contentShape(Capsule())
         }
-        .buttonStyle(.borderedProminent)
-        .tint(.pink)
+        .buttonStyle(.plain)
         .help("Route in Kaarten")
         .padding(12)
     }
@@ -316,15 +320,11 @@ private struct MapPin: View {
 
     private var face: some View {
         OutingPictureReader(outing: outing) { picture in
-            if let picture {
+            // A banner cropped to a circle is a few letters; the kind says more.
+            if let picture, CGFloat(picture.width) / CGFloat(max(picture.height, 1)) < 1.5 {
                 Color.clear.overlay { picture.swiftUI.resizable().scaledToFill() }
             } else {
-                LinearGradient(colors: [Color.pink, Color(red: 0.85, green: 0.2, blue: 0.45)], startPoint: .top, endPoint: .bottom)
-                    .overlay {
-                        Image(systemName: outing.kindSymbol)
-                            .font(.system(size: 17, weight: .semibold))
-                            .foregroundStyle(.white)
-                    }
+                OutingArtFallback(outing: outing, symbolSize: 17)
             }
         }
     }

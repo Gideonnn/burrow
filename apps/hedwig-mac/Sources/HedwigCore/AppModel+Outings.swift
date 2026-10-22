@@ -201,6 +201,11 @@ extension AppModel {
         }
     }
 
+    /// The ticket's bytes for its preview; a failure only leaves the preview out.
+    public func ticketData(_ ticket: OutingTicket, in outingId: String) async -> Data? {
+        try? await api?.ticketFile(outingId: outingId, ticketId: ticket.id)
+    }
+
     /// A linked mail in Hedwig's own message view, in the list it lives in.
     public func openMail(_ id: String) async {
         guard let api else { return }

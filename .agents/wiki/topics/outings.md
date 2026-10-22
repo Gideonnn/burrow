@@ -93,7 +93,7 @@ the family, everything else folded behind **Details**.
   missing tickets within 14 days, "Later: …" for a later item, "Kaarten toevoegen", or
   "Alles geregeld". Then Geweest. The logic lives in `HedwigCore/OutingStatus.swift`, so
   it is tested without a window.
-- **Waar** (`Sources/Hedwig/OutingMapCard.swift`): a still map (`MKMapSnapshotter`, light
+- **Waar** (`Sources/Hedwig/OutingMapCard.swift`): under Wie, a still map (`MKMapSnapshotter`, light
   or dark) with a pin holding the picture or the kind's symbol, venue and city on a
   material label, and Route (directions in Apple Maps); clicking the map opens the place.
   `MKLocalSearch` asks "venue, address", then the address alone; `PlaceBook`
@@ -104,19 +104,38 @@ the family, everything else folded behind **Details**.
   25 min met de auto", `MKDirections` ETA) shows only when this Mac already allows
   location; Hedwig never asks by itself, only from the map's menu "Toon reistijd vanaf
   deze Mac". `CLGeocoder` is deprecated from macOS 26, so it is not used.
-- **Detail**: Wanneer, Waar (the map above), Wie (click a person to toggle),
-  Nog doen with "Iets toevoegen", and the tickets. Dropping a pdf, `.pkpass` or image
-  uploads it (`/api/uploads`, then `POST /api/outings/:id/tickets`). Details: every field,
-  tickets per person, linked mails (someone else's shows "Mail van …"), search words,
-  history and delete.
+- **Detail**, top to bottom: the header, Wanneer/Waar/Wie (click a person to toggle), the
+  map, the tickets, Nog doen with "Iets toevoegen", Details. Dropping a pdf, `.pkpass` or
+  image uploads it (`/api/uploads`, then `POST /api/outings/:id/tickets`). Details: every
+  field, tickets per person, linked mails (someone else's shows "Mail van …"), search
+  words, history and delete.
+- **Tickets** (`Sources/Hedwig/OutingTicketViews.swift`): a row of Wallet-like cards, one
+  per code, a notch where the stub tears, the holder (or "Kaartje 2/3") and file name
+  below. A `.pkpass` shows its own colours and its code drawn from `pass.json`
+  (`TicketPass` and a small zip reader in `HedwigCore/OutingTickets.swift`). A pdf or
+  image is searched with Vision (`HedwigCore/TicketCodes.swift`: every pdf page rendered
+  at about 2000 px, QR, Aztec, PDF417, Data Matrix and Code 128); a found code is drawn
+  again from Vision's barcode descriptor (`CIBarcodeGenerator`, the exact symbol), Code
+  128 from its text, and only cut out of the page when neither works. No code: a plain
+  file card. Codes are drawn module by module without smoothing, on white. Clicking
+  opens the code large to scan at the door; arrows step through the cards. Previews are
+  kept in memory per ticket id, never on disk. `ticketLinks` (tickets that came as a link) are
+  buttons that open the shop page, one per label; without files the block says "Je
+  kaartjes staan bij Weeztix".
 - **Mail card**: one line, "Staat in Evenementen · nog doen: …" with Bekijk, or Bewaar
   for a `likely` mail. With a picture it shows its thumbnail.
 - **Picture** (design `docs/design/hedwig-event-images.html`, views in
   `Sources/Hedwig/OutingPictureViews.swift`): a 44 pt thumbnail at the end of each list
-  row; the page opens with a 210 pt hero, title on a dark scrim. A picture under 1000 px
-  wide or squarer than 4:3 is shown sharp at its own size over a blurred copy, never
-  stretched. Without a picture the row gets a calm tile and the page a compact band in
-  colours from the title (`TitleColours`, the design's hash). Details › Afbeelding has
+  row (grey for past outings; a calm tile in the title's colours without a picture).
+  The page header keeps to about 200 pt and a third of the window: the picture whole on
+  the left (at most 160 pt high and 45 % wide, small ones at their own size, never
+  stretched), the date, title and kind beside it, on a gradient of the picture's own
+  strong colours (`PictureColours`; light behind black text, deep behind white) that
+  fades into the page. Text never sits on the artwork, which usually carries its own; a
+  blurred copy as backdrop was tried and smeared dark artwork into grey.
+  Without a picture the same places get a gradient in the title's colours
+  (`TitleColours`, the design's hash) with the kind's symbol (`Outing.kindSymbol`).
+  Details › Afbeelding has
   Andere afbeelding (a sheet with the server's options, previews through the server),
   Geen afbeelding, and a drop zone with Plak. Pasting (⌘V, caught by `PasteCatcher`
   whenever no text field is being edited) or dropping on the hero also sets it, while a

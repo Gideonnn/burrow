@@ -12,6 +12,12 @@ public struct HSL: Hashable, Sendable {
     public var saturation: Double
     public var lightness: Double
 
+    public init(hue: Double, saturation: Double, lightness: Double) {
+        self.hue = hue
+        self.saturation = saturation
+        self.lightness = lightness
+    }
+
     public var rgb: (red: Double, green: Double, blue: Double) {
         let c = (1 - abs(2 * lightness - 1)) * saturation
         let h = hue.truncatingRemainder(dividingBy: 360) / 60
@@ -224,5 +230,70 @@ public enum PictureUpload {
         guard let destination = CGImageDestinationCreateWithData(out, type.identifier as CFString, 1, nil) else { return nil }
         CGImageDestinationAddImage(destination, image, [kCGImageDestinationLossyCompressionQuality: 0.88] as CFDictionary)
         return CGImageDestinationFinalize(destination) ? out as Data : nil
+    }
+}
+
+// MARK: Backdrop colours
+
+/// The few strong colours of a picture, for a backdrop with the picture's
+/// mood but without the grey a blurred copy smears in the middle.
+public enum PictureColours {
+    /// Up to `count` colours, the most present first; grey, near black and
+    /// near white pixels do not count. A picture without colour gives one grey.
+    public static func dominant(_ image: CGImage, count: Int = 3) -> [HSL] {
+        let side = 12
+        var pixels = [UInt8](repeating: 0, count: side * side * 4)
+        let drawn = pixels.withUnsafeMutableBytes { buffer -> Bool in
+            guard let context = CGContext(
+                data: buffer.baseAddress, width: side, height: side, bitsPerComponent: 8, bytesPerRow: side * 4,
+                space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+            else { return false }
+            context.interpolationQuality = .medium
+            context.draw(image, in: CGRect(x: 0, y: 0, width: side, height: side))
+            return true
+        }
+        guard drawn else { return [] }
+        var bins: [Int: (weight: Double, r: Double, g: Double, b: Double)] = [:]
+        for i in stride(from: 0, to: pixels.count, by: 4) where pixels[i + 3] > 128 {
+            let (r, g, b) = (Double(pixels[i]) / 255, Double(pixels[i + 1]) / 255, Double(pixels[i + 2]) / 255)
+            let colour = HSL(red: r, green: g, blue: b)
+            guard colour.saturation > 0.18, (0.1...0.92).contains(colour.lightness) else { continue }
+            let bin = Int(colour.hue / 30) % 12
+            let weight = colour.saturation
+            let old = bins[bin] ?? (0, 0, 0, 0)
+            bins[bin] = (old.weight + weight, old.r + r * weight, old.g + g * weight, old.b + b * weight)
+        }
+        let strongest = bins.values.sorted { $0.weight > $1.weight }.prefix(count)
+        guard !strongest.isEmpty else { return [HSL(hue: 0, saturation: 0, lightness: 0.5)] }
+        return strongest.map { HSL(red: $0.r / $0.weight, green: $0.g / $0.weight, blue: $0.b / $0.weight) }
+    }
+
+    /// Light enough for black text in light mode, deep enough for white in dark.
+    public static func backdrop(_ colours: [HSL], dark: Bool) -> [HSL] {
+        colours.map { colour in
+            let saturation = colour.saturation < 0.05 ? 0 : min(max(colour.saturation, 0.45), 0.8)
+            return HSL(hue: colour.hue, saturation: saturation, lightness: dark ? 0.24 : 0.87)
+        }
+    }
+}
+
+extension HSL {
+    public init(red: Double, green: Double, blue: Double) {
+        let high = max(red, green, blue), low = min(red, green, blue)
+        let lightness = (high + low) / 2
+        guard high > low else {
+            self.init(hue: 0, saturation: 0, lightness: lightness)
+            return
+        }
+        let delta = high - low
+        var hue: Double =
+            switch high {
+            case red: ((green - blue) / delta).truncatingRemainder(dividingBy: 6)
+            case green: (blue - red) / delta + 2
+            default: (red - green) / delta + 4
+            }
+        hue *= 60
+        if hue < 0 { hue += 360 }
+        self.init(hue: hue, saturation: min(1, delta / (1 - abs(2 * lightness - 1))), lightness: lightness)
     }
 }

@@ -9,16 +9,17 @@ struct OutingDetailView: View {
     @Environment(AppModel.self) private var model
     @State private var dropping = false
     @State private var picking: Outing?
+    @State private var pageHeight: CGFloat = 900
 
     var body: some View {
         if let outing = model.selectedOuting {
             ScrollView {
-                OutingHero(outing: outing) { picking = outing }
+                OutingHero(outing: outing, maxArt: min(160, max(72, pageHeight / 3 - 46))) { picking = outing }
                 VStack(alignment: .leading, spacing: 22) {
                     OutingFacts(outing: outing)
                     if !outing.isPast() {
+                        OutingTicketsBlock(outing: outing)
                         OutingChecklist(outing: outing)
-                        tickets(outing)
                     }
                     detailsToggle
                     if model.showsOutingDetails {
@@ -31,6 +32,7 @@ struct OutingDetailView: View {
                 .frame(maxWidth: 640, alignment: .leading)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
+            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { pageHeight = $0 }
             .overlay {
                 if dropping {
                     RoundedRectangle(cornerRadius: 14)
@@ -55,27 +57,6 @@ struct OutingDetailView: View {
         } else {
             ContentUnavailableView("Geen evenement geselecteerd", systemImage: "ticket")
         }
-    }
-
-    private func tickets(_ outing: Outing) -> some View {
-        let count = outing.tickets.count
-        return HStack(spacing: 12) {
-            Image(systemName: count == 0 ? "ticket" : "paperplane.fill")
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(count == 0 ? Color.orange : Color.pink)
-                .frame(width: 34, height: 34)
-                .background((count == 0 ? Color.orange : Color.pink).opacity(0.14), in: RoundedRectangle(cornerRadius: 9))
-            VStack(alignment: .leading, spacing: 1) {
-                Text(count == 0 ? "Nog geen kaarten" : "\(count) \(count == 1 ? "kaart" : "kaarten") bewaard")
-                    .font(.body.weight(.medium))
-                Text(count == 0 ? "Sleep ze hierheen (pdf, Wallet-pas of screenshot)" : "Op de dag om 09:00 krijg je een melding op je Mac")
-                    .font(.callout).foregroundStyle(.secondary)
-            }
-            Spacer()
-            if model.ticketUploads > 0 { ProgressView().controlSize(.small) }
-        }
-        .padding(12)
-        .background(.quaternary.opacity(0.3), in: RoundedRectangle(cornerRadius: 12))
     }
 
     private var detailsToggle: some View {
@@ -103,40 +84,34 @@ private struct OutingFacts: View {
     @State private var lookup: (key: String, place: OutingPlace?)?
 
     var body: some View {
-        Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 12) {
-            GridRow {
-                key("Wanneer")
-                Text(OutingFormat.when(outing))
-                Color.clear.frame(width: 1, height: 1)
-            }
-            if let found = mapPlace {
-                GridRow(alignment: .top) {
-                    key("Waar")
-                    OutingMapCard(outing: outing, place: found)
-                        .transition(.opacity)
-                        .gridCellColumns(2)
+        VStack(alignment: .leading, spacing: 16) {
+            Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 12) {
+                GridRow {
+                    key("Wanneer")
+                    Text(OutingFormat.when(outing))
+                    Color.clear.frame(width: 1, height: 1)
                 }
-            } else if lookingUp {
-                GridRow(alignment: .top) {
-                    key("Waar")
-                    OutingMapPlaceholder().gridCellColumns(2)
-                }
-            } else {
                 GridRow {
                     key("Waar")
                     Text(place ?? "Nog onbekend").foregroundStyle(place == nil ? .secondary : .primary).textSelection(.enabled)
-                    if let route {
+                    // The map below has its own Route.
+                    if let route, mapPlace == nil, !lookingUp {
                         Button { NSWorkspace.shared.open(route) } label: { Label("Route", systemImage: "map") }
                             .controlSize(.small)
                     } else {
                         Color.clear.frame(width: 1, height: 1)
                     }
                 }
+                GridRow(alignment: .center) {
+                    key("Wie")
+                    people
+                    Color.clear.frame(width: 1, height: 1)
+                }
             }
-            GridRow(alignment: .center) {
-                key("Wie")
-                people
-                Color.clear.frame(width: 1, height: 1)
+            if let found = mapPlace {
+                OutingMapCard(outing: outing, place: found).transition(.opacity)
+            } else if lookingUp {
+                OutingMapPlaceholder()
             }
         }
         .task(id: outing.placeKey) {
