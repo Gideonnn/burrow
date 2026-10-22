@@ -5,6 +5,7 @@
 //   pnpm --filter @burrow/server cli add-person <name>
 //   pnpm --filter @burrow/server cli set-email <name> <email>  login through Cloudflare Access
 //   pnpm --filter @burrow/server cli create-key <name> <key name> [rights]  default: every right but admin
+//   pnpm --filter @burrow/server cli revoke-key <key id>   e.g. a key made for one job
 //   pnpm --filter @burrow/server cli list
 //   pnpm --filter @burrow/server cli generate-secret    value for BURROW_SECRET_KEY
 //   pnpm --filter @burrow/server cli seed-demo          invented household for development
@@ -16,6 +17,7 @@ import {
   createPerson,
   listKeys,
   listPeople,
+  revokeKey,
   routines,
   SecretBox,
   setPersonEmail,
@@ -90,6 +92,11 @@ switch (command) {
     console.log(
       `Key for ${person.name} [${rights.data.join(', ')}], shown once:\n\n  ${token}\n`,
     );
+    break;
+  }
+  case 'revoke-key': {
+    const revoked = revokeKey(db(), required(args[0], 'key id'));
+    console.log(`Revoked ${revoked.name}`);
     break;
   }
   case 'list': {
@@ -194,7 +201,7 @@ switch (command) {
     break;
   default:
     fail(
-      'usage: cli init <name> | add-person <name> | set-email <name> <email> | create-key <name> <key name> [rights] | list | generate-secret | seed-demo | backup <file>',
+      'usage: cli init <name> | add-person <name> | set-email <name> <email> | create-key <name> <key name> [rights] | revoke-key <key id> | list | generate-secret | seed-demo | backup <file>',
     );
 }
 

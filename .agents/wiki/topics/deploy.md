@@ -22,7 +22,7 @@ install again. Every step is safe to repeat.
 | Recordings | `~/.local/share/burrow/files/pensieve/<id>/audio.m4a` |
 
 Run the server CLI with the settings loaded through `infra/dobby/cli.sh`, e.g.
-`~/burrow/infra/dobby/cli.sh list`. A lost key cannot be recovered (only its hash is stored): make a new one with `cli.sh create-key <person> <key name> [rights]` and revoke the old one in Hedwig.
+`~/burrow/infra/dobby/cli.sh list`. A lost key cannot be recovered (only its hash is stored): make a new one with `cli.sh create-key <person> <key name> [rights]` and revoke the old one in Hedwig, or on Dobby with `cli.sh revoke-key <key id>` (ids from `list`).
 
 ## How it is reached: Cloudflare Tunnel and Access
 
