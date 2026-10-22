@@ -80,10 +80,6 @@ extension APIClient {
         let _: Empty = try await call("POST", "api/filtered/confirm", body: ["ids": ids])
     }
 
-    public func confirmAll() async throws {
-        let _: Empty = try await call("POST", "api/filtered/confirm-all")
-    }
-
     public func restore(_ id: String) async throws {
         let _: Empty = try await call("POST", "api/filtered/\(id)/restore")
     }

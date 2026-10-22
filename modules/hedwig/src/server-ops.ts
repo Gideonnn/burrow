@@ -6,13 +6,14 @@ import type {
 } from '@burrow/contracts';
 
 // What a triage decision becomes at the provider, so phones using the native
-// mail apps see the same result as Hedwig.
+// mail apps see the same result as Hedwig. Spam stays unread: it is only read
+// once the person says it is not spam.
 export function serverOpsFor(action: TriageAction): ServerOp[] {
   switch (action.kind) {
     case 'keep':
       return [];
     case 'spam':
-      return [{ op: 'moveToSpam' }, { op: 'markRead' }];
+      return [{ op: 'moveToSpam' }];
     case 'archive':
       return [{ op: 'archive' }, { op: 'markRead' }];
     case 'needs-reply':
@@ -22,8 +23,15 @@ export function serverOpsFor(action: TriageAction): ServerOp[] {
   }
 }
 
-// Undo for "restore" in the filtered review: back to the inbox and unread,
-// whatever the triage did.
+// "Geen spam" lands read, also for entries from when triage marked spam read;
+// other filtered mail goes back to the inbox unread.
+export function restoreOps(action: TriageAction, ops: ServerOp[]): ServerOp[] {
+  const back = reverseOps(ops);
+  if (action.kind !== 'spam') return back;
+  return [...back.filter((o) => o.op !== 'markUnread'), { op: 'markRead' }];
+}
+
+// Undo of a triage decision: back to the inbox and unread, whatever it did.
 export function reverseOps(ops: ServerOp[]): ServerOp[] {
   return ops.flatMap((o): ServerOp[] => {
     switch (o.op) {

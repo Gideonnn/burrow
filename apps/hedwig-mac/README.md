@@ -24,21 +24,27 @@ pnpm dev                       # http://127.0.0.1:4717
 
 Then connect Hedwig to `http://127.0.0.1:4717` with the "MacBook Gideon" key. For
 screenshots without the Keychain, start the binary with `HEDWIG_SERVER`, `HEDWIG_KEY`
-and optionally `HEDWIG_OPEN=filtered|drafts|outings|archive`.
+and optionally `HEDWIG_OPEN` with any place `burrowctl hedwig show` takes (`filtered`, `drafts`,
+`outings`, `archive`, an address).
 
 ## What it does
 
-- Per-account inboxes, the shared Sent, Archive and Spam lists, reading with HTML shown
-  without JavaScript or remote content (trackers stay blocked), replying, forwarding.
+- The sidebar's "Inbox" lists every mailbox; each opens (a small chevron on hover, or its
+  menu) to its own Archief, Verstuurd, Concepten and Spam. Reading shows HTML without
+  JavaScript or remote content (trackers stay blocked); replying, forwarding.
 - Archive, delete, spam, read and flag act at the provider, so phones see the same.
-- "Gefilterd": what the bot filtered, with its reason; confirm or restore.
+- What the bot filtered waits for review in that mailbox's Spam or Archief, on top and
+  with its reason: "Klopt" confirms, "Geen spam" or "Terug naar inbox" restores. A count
+  on the folder (and on the mailbox while it is closed) shows what still waits.
+- Spam stays unread and never loads remote images, not even on request, until you say
+  "Geen spam"; then it goes back to the inbox as read.
 - "Evenementen": the household's outings, each with one status sentence; Details holds
   times, tickets per person, mails and search words. Drop a pdf, Wallet pass or
   screenshot on an outing to keep it as a ticket. Each outing shows a picture from its mail or
   website; paste (⌘V) or drop another on the top of the page. Until Patronus exists, the Mac
   reminds of the day and of deadlines with notifications (see the
   [outings topic](../../.agents/wiki/topics/outings.md)).
-- "Concepten": drafts prepared by bots or agents through MCP, to review and send.
+- "Concepten" (per mailbox): drafts prepared by bots or agents through MCP, to review and send.
 - "Taken": what routines propose, to approve or reject. Tasks meant for this Mac run in
   `burrowctl runner` (see the [agent-control topic](../../.agents/wiki/topics/agent-control.md)),
   also while Hedwig is closed; Settings › Agent and Settings › Runners show and pause it.

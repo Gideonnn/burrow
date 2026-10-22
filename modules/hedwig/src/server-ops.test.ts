@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { applyOps, describeOp, reverseOps, serverOpsFor } from './server-ops';
+import {
+  applyOps,
+  describeOp,
+  restoreOps,
+  reverseOps,
+  serverOpsFor,
+} from './server-ops';
 
 const inbox = {
   folder: 'inbox' as const,
@@ -9,11 +15,14 @@ const inbox = {
 };
 
 describe('serverOpsFor', () => {
-  it('marks filtered mail as read so phones show no badge', () => {
-    expect(serverOpsFor({ kind: 'spam' })).toContainEqual({ op: 'markRead' });
+  it('marks archived mail as read so phones show no badge', () => {
     expect(serverOpsFor({ kind: 'archive' })).toContainEqual({
       op: 'markRead',
     });
+  });
+
+  it('leaves spam unread until the person says it is not spam', () => {
+    expect(serverOpsFor({ kind: 'spam' })).toEqual([{ op: 'moveToSpam' }]);
   });
 
   it('leaves needs-reply mail unread and flags it', () => {
@@ -26,10 +35,22 @@ describe('serverOpsFor', () => {
 });
 
 describe('reverseOps', () => {
-  it('restores filtered mail to an unread inbox message', () => {
-    for (const kind of ['spam', 'archive'] as const) {
-      const done = applyOps(inbox, serverOpsFor({ kind }));
-      expect(applyOps(done, reverseOps(serverOpsFor({ kind })))).toEqual(inbox);
+  it('restores archived mail to an unread inbox message', () => {
+    const ops = serverOpsFor({ kind: 'archive' });
+    const done = applyOps(inbox, ops);
+    expect(applyOps(done, restoreOps({ kind: 'archive' }, ops))).toEqual(inbox);
+  });
+
+  it('restores spam to the inbox as read, also when triage once marked it read', () => {
+    for (const ops of [
+      serverOpsFor({ kind: 'spam' }),
+      [{ op: 'moveToSpam' }, { op: 'markRead' }] as const,
+    ]) {
+      const done = applyOps(inbox, [...ops]);
+      expect(applyOps(done, restoreOps({ kind: 'spam' }, [...ops]))).toEqual({
+        ...inbox,
+        unread: false,
+      });
     }
   });
 

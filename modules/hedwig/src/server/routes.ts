@@ -83,7 +83,7 @@ export type HedwigRouteDeps = {
   onArrived: (messageIds: string[]) => void;
 };
 
-// Mail, drafts, the "Gefilterd" review and the bot's suggestions. Mailboxes
+// Mail, drafts, the review of filtered mail and the bot's suggestions. Mailboxes
 // and messages outside the key's scope answer 404, so a key cannot even
 // learn that they exist.
 export function hedwigRoutes({
@@ -352,7 +352,8 @@ export function hedwigRoutes({
         }
         return c.json({ deleted: true });
       })
-      // The "Gefilterd" review and the rules learned from corrections.
+      // The review of filtered mail (Hedwig shows it in Spam and Archief) and
+      // the rules learned from corrections.
       .get('/filtered', requireRight('read'), (c) =>
         c.json(triage.listFiltered(c.var.access)),
       )

@@ -8,7 +8,7 @@ import {
 import { type Access, type Platform, botRequest } from '@burrow/platform';
 import { and, desc, eq, inArray, isNull, like, lt, sql } from 'drizzle-orm';
 import { z } from 'zod';
-import { describeOp, reverseOps, serverOpsFor } from '../server-ops';
+import { describeOp, restoreOps, serverOpsFor } from '../server-ops';
 import { forKey } from './facts/store';
 import { type MailService, toSummary } from './mail-service';
 import { triagePrompt } from './prompt';
@@ -192,7 +192,10 @@ export class TriageService {
   async restore(entryId: string, access: Access): Promise<void> {
     const entry = this.reviewable(entryId, access);
     if (!entry) throw new TriageError('not found');
-    await this.o.mail.apply(entry.message.id, reverseOps(entry.log.ops));
+    await this.o.mail.apply(
+      entry.message.id,
+      restoreOps(entry.log.action, entry.log.ops),
+    );
     this.setStatus(entry.log.id, 'restored');
     const sender = entry.message.from.email;
     const text = `Keep mail from ${sender} in the inbox (it was filtered as ${entry.log.action.kind} and restored).`;

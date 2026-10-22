@@ -9,8 +9,11 @@ struct MessageListView: View {
         List(selection: $model.selectedMessageId) {
             if model.isSearching { SearchHeader(place: placeTitle) }
             ForEach(model.messages) { message in
-                MessageRow(message: message, showMailbox: model.isSearching ? model.searchScope.mailboxId == nil : !isInbox)
-                    .tag(message.id)
+                VStack(alignment: .leading, spacing: 6) {
+                    MessageRow(message: message, showMailbox: model.isSearching && model.searchScope.mailboxId == nil)
+                    if !model.isSearching, let entry = model.review(for: message.id) { ReviewLine(entry: entry) }
+                }
+                .tag(message.id)
             }
         }
         .listStyle(.inset)
@@ -24,11 +27,19 @@ struct MessageListView: View {
         .navigationTitle(title)
         .navigationSubtitle(subtitle)
         .refreshable { await model.refresh() }
+        .toolbar {
+            if !model.isSearching, !openReviews.isEmpty {
+                ToolbarItem {
+                    Button("Alles klopt") { Task { await model.confirmReviews() } }
+                        .disabled(model.me?.can(.organize) != true)
+                }
+            }
+        }
     }
 
-    private var isInbox: Bool {
-        if case .inbox = model.selection { return true }
-        return false
+    private var openReviews: [FilteredEntry] {
+        guard case .folder(let folder, let id) = model.selection else { return [] }
+        return model.reviews(in: folder, mailboxId: id)
     }
 
     private var title: String {
@@ -41,9 +52,7 @@ struct MessageListView: View {
     private var placeTitle: String {
         switch model.selection {
         case .inbox(let id): model.mailbox(id).map(mailboxTitle) ?? "Inbox"
-        case .folder(.sent): "Verstuurd"
-        case .folder(.archive): "Archief"
-        case .folder(.spam): "Spam"
+        case .folder(let folder, let id): "\(folderTitle(folder)) · \(model.mailbox(id).map(mailboxTitle) ?? "")"
         default: "Hedwig"
         }
     }
@@ -52,7 +61,7 @@ struct MessageListView: View {
         if model.isSearching { return model.messages.count == 1 ? "1 resultaat" : "\(model.messages.count) resultaten" }
         let unread = model.messages.filter(\.unread).count
         let count = unread > 0 ? "\(model.messages.count) berichten, \(unread) ongelezen" : "\(model.messages.count) berichten"
-        return count
+        return openReviews.isEmpty ? count : "\(count), \(openReviews.count) te controleren"
     }
 }
 

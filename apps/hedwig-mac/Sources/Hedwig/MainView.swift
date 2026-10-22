@@ -16,7 +16,6 @@ struct MainView: View {
                     MessageListView()
                 } else {
                     switch model.selection {
-                    case .filtered: FilteredListView()
                     case .drafts: DraftListView()
                     case .tasks: TaskListView()
                     case .outings: OutingListView()
@@ -30,7 +29,6 @@ struct MainView: View {
                 MessageDetailView()
             } else {
                 switch model.selection {
-                case .filtered: FilteredDetailView()
                 case .drafts: DraftDetailView()
                 case .tasks: TaskDetailView()
                 case .outings: OutingDetailView()
@@ -68,7 +66,7 @@ struct MainToolbar: ToolbarContent {
     private var showsMail: Bool {
         if model.isSearching { return true }
         return switch model.selection {
-        case .filtered, .drafts, .tasks, .outings: false
+        case .drafts, .tasks, .outings: false
         default: true
         }
     }
@@ -141,7 +139,7 @@ struct MainToolbar: ToolbarContent {
             .accessibilityIdentifier("hedwig.trash")
             .help("Verwijder (⌘⌫)")
             Divider()
-            Button { Task { await model.perform([.moveToSpam, .markRead]) } } label: {
+            Button { Task { await model.perform([.moveToSpam]) } } label: {
                 Label("Spam", systemImage: "xmark.bin")
             }
             .help("Markeer als spam (⇧⌘J)")

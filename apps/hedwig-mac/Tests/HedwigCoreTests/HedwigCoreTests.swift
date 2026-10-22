@@ -102,12 +102,11 @@ import Testing
         await model.searchLoad?.value
         #expect(server.queries("GET", "/api/search").last?.contains("mailboxId=mb1&folder=inbox") == true)
 
-        model.selection = .folder(.archive)
+        model.selection = .folder(.archive, mailboxId: "mb1")
         await model.searchLoad?.value
         #expect(model.searchText == "factuur")
         #expect(model.messages.map(\.subject) == ["Factuur maart"])
-        #expect(server.queries("GET", "/api/search").last?.contains("folder=archive") == true)
-        #expect(server.queries("GET", "/api/search").last?.contains("mailboxId") == false)
+        #expect(server.queries("GET", "/api/search").last?.contains("mailboxId=mb1&folder=archive") == true)
 
         model.searchEverywhere = true
         await model.searchLoad?.value
@@ -148,7 +147,7 @@ import Testing
 
         let shown = try await model.prepareDraft(to: "", subject: "", body: "Ja, gezellig!", replyTo: "m1")
         #expect(shown["draft"] as? String == "d1")
-        #expect(model.selection == .drafts)
+        #expect(model.selection == .drafts(mailboxId: "mb1"))
         #expect(model.selectedDraftId == "d1")
         let sent = try #require(server.requests("POST", "/api/drafts").first)
         #expect(sent.contains(#""inReplyTo":"m1""#))
@@ -185,7 +184,7 @@ import Testing
         #expect((message["body"] as? String)?.contains("Zin in eten?") == true)
 
         try await model.show("archive")
-        #expect(model.selection == .folder(.archive))
+        #expect(model.selection == .folder(.archive, mailboxId: "mb1"))
         await #expect(throws: ControlError.self) { try await model.show("nergens") }
         await #expect(throws: ControlError.self) { try await model.open(messageId: "m404") }
     }

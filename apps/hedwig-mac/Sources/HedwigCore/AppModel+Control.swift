@@ -43,18 +43,18 @@ extension AppModel {
     private var selectionName: String? {
         switch selection {
         case .inbox(let id): "inbox:\(mailbox(id)?.address ?? id)"
-        case .filtered: "filtered"
-        case .drafts: "drafts"
+        case .drafts(let id): "drafts:\(mailbox(id)?.address ?? id)"
         case .tasks: "tasks"
         case .outings: "outings"
-        case .folder(let folder): folder.rawValue
+        case .folder(let folder, let id): "\(folder.rawValue):\(mailbox(id)?.address ?? id)"
         case nil: nil
         }
     }
 
-    /// `inbox` (the first mailbox), `inbox:<address>`, a role (`private`, `work`,
-    /// `school`: the inbox of its first mailbox), `filtered`, `drafts`, `tasks`,
-    /// `outings`, `archive`, `sent` or `spam`.
+    /// `inbox`, `archive`, `sent`, `spam` or `drafts` of the open mailbox (the
+    /// first one elsewhere), each also as `<place>:<address>`; a role (`private`,
+    /// `work`, `school`: the inbox of its first mailbox); `filtered` (the first
+    /// Spam or Archief with mail to review), `tasks` or `outings`.
     public func show(_ place: String) async throws {
         try select(place)
         await selectionLoad?.value
@@ -62,26 +62,42 @@ extension AppModel {
     }
 
     func select(_ place: String) throws {
+        let boxes = me?.mailboxes ?? []
         switch place {
-        case "filtered": selection = .filtered
-        case "drafts": selection = .drafts
         case "tasks": selection = .tasks
         case "outings": selection = .outings
-        case "archive", "sent", "spam": selection = .folder(MailFolder(rawValue: place)!)
         case "private", "work", "school":
             // The merged inbox per role is gone; older links land on a single inbox.
-            let boxes = me?.mailboxes ?? []
             guard let box = boxes.first(where: { $0.kind.rawValue == place }) ?? boxes.first else {
                 throw ControlError("there is no mailbox")
             }
             selection = .inbox(mailboxId: box.id)
-        default:
-            guard place == "inbox" || place.hasPrefix("inbox:") else { throw ControlError("unknown place \(place)") }
-            let wanted = place.dropFirst("inbox:".count)
-            guard let box = me?.mailboxes.first(where: { wanted.isEmpty || $0.address == wanted || $0.id == wanted }) else {
-                throw ControlError("no mailbox \(wanted)")
+        case "filtered":
+            // The Gefilterd page is gone; its review lives in Spam and Archief.
+            if let entry = filtered.first(where: { $0.message.folder == .spam }) ?? filtered.first {
+                selection = .folder(entry.message.folder, mailboxId: entry.message.mailboxId)
+            } else {
+                try select("spam")
             }
-            selection = .inbox(mailboxId: box.id)
+        default:
+            let parts = place.split(separator: ":", maxSplits: 1).map(String.init)
+            let wanted = parts.count > 1 ? parts[1] : nil
+            let box: MailboxSummary?
+            if let wanted {
+                box = boxes.first { $0.address == wanted || $0.id == wanted }
+            } else {
+                box = currentMailboxId.flatMap(mailbox) ?? boxes.first
+            }
+            switch parts[0] {
+            case "inbox", "archive", "sent", "spam", "drafts": break
+            default: throw ControlError("unknown place \(place)")
+            }
+            guard let box else { throw ControlError("no mailbox \(wanted ?? "")") }
+            selection = switch parts[0] {
+            case "inbox": .inbox(mailboxId: box.id)
+            case "drafts": .drafts(mailboxId: box.id)
+            default: .folder(MailFolder(rawValue: parts[0])!, mailboxId: box.id)
+            }
         }
     }
 
@@ -99,7 +115,7 @@ extension AppModel {
             mailboxId: mailboxId, to: recipients.isEmpty ? [original!.from] : recipients,
             subject: subject.isEmpty ? (original.map { "Re: \($0.subject)" } ?? "") : subject,
             body: body, inReplyTo: original?.id)
-        selection = .drafts
+        selection = .drafts(mailboxId: mailboxId)
         await selectionLoad?.value
         selectedDraftId = draft.id
         return ["draft": draft.id, "shown": "Concepten"]

@@ -3,12 +3,21 @@ import Observation
 
 public enum SidebarItem: Hashable, Sendable {
     case inbox(mailboxId: String)
-    case filtered
-    case drafts
+    /// Archief, Verstuurd or Spam of one mailbox.
+    case folder(MailFolder, mailboxId: String)
+    /// Concepten of one mailbox: drafts prepared by bots or agents, to review.
+    case drafts(mailboxId: String)
     case tasks
     /// Evenementen: the household's outings.
     case outings
-    case folder(MailFolder)
+
+    /// The mailbox this place belongs to; the sidebar shows it under that mailbox.
+    public var mailboxId: String? {
+        switch self {
+        case .inbox(let id), .folder(_, let id), .drafts(let id): id
+        case .tasks, .outings: nil
+        }
+    }
 }
 
 /// The app's state and every action the views can take. Views stay dumb; this
@@ -84,8 +93,8 @@ public final class AppModel {
     public internal(set) var people: [Person] = []
     /// Called whenever the outings change; the app reschedules its reminders.
     public var outingsChanged: (@MainActor () -> Void)?
+    /// What the bot moved to Spam or Archief and the person has not reviewed yet.
     public private(set) var filtered: [FilteredEntry] = []
-    public var selectedFilteredId: String?
     public private(set) var drafts: [Draft] = []
     public var selectedDraftId: String?
     public private(set) var tasks: [TaskItem] = []
@@ -160,17 +169,15 @@ public final class AppModel {
             return
         }
         if selection == nil, let first = me?.mailboxes.first { selection = .inbox(mailboxId: first.id) }
-        switch ProcessInfo.processInfo.environment["HEDWIG_OPEN"] {
-        case "filtered": selection = .filtered
-        case "drafts": selection = .drafts
-        case "tasks": selection = .tasks
-        case "outings": selection = .outings
-        case "archive": selection = .folder(.archive)
-        case let address?: if let box = me?.mailboxes.first(where: { $0.address == address }) { selection = .inbox(mailboxId: box.id) }
-        default: break
+        await refreshFiltered()
+        if let place = ProcessInfo.processInfo.environment["HEDWIG_OPEN"] {
+            if let box = me?.mailboxes.first(where: { $0.address == place }) {
+                selection = .inbox(mailboxId: box.id)
+            } else {
+                try? select(place)
+            }
         }
         await refreshCounts()
-        await refreshFiltered()
         await refreshDrafts()
         await refreshTasks()
         await refreshRunners()
@@ -188,7 +195,7 @@ public final class AppModel {
         if isSearching { return }
         if case .inbox(let id) = selection, event.mailboxId == id {
             await loadSelection(keepSelection: true)
-        } else if case .folder = selection {
+        } else if case .folder(_, let id) = selection, event.mailboxId == id {
             await loadSelection(keepSelection: true)
         }
         if event.messageId == detail?.id, event.type == "message.changed" { await openSelected() }
@@ -256,19 +263,19 @@ public final class AppModel {
             switch selection {
             case .inbox(let id):
                 messages = try await api.messages(mailboxId: id, folder: .inbox)
-            case .folder(let folder):
-                // "Overal" folders combine every mailbox, newest first.
-                var all: [MessageSummary] = []
-                for box in me?.mailboxes ?? [] {
-                    all += try await api.messages(mailboxId: box.id, folder: folder, limit: 50)
+            case .folder(let folder, let id):
+                let list = try await api.messages(mailboxId: id, folder: folder)
+                if folder == .spam || folder == .archive {
+                    await refreshFiltered()
+                    messages = reviewFirst(list)
+                } else {
+                    messages = list
                 }
-                messages = all.sorted { $0.receivedAt > $1.receivedAt }
-            case .filtered:
-                await refreshFiltered()
-                messages = []
-            case .drafts:
+            case .drafts(let id):
                 await refreshDrafts()
                 messages = []
+                let here = drafts(in: id)
+                if !here.contains(where: { $0.id == selectedDraftId }) { selectedDraftId = here.first?.id }
             case .tasks:
                 await refreshTasks()
                 messages = []
@@ -303,12 +310,35 @@ public final class AppModel {
 
     func refreshFiltered() async {
         guard let api else { return }
-        if let list = try? await api.filtered() {
-            filtered = list
-            if selectedFilteredId == nil || !list.contains(where: { $0.id == selectedFilteredId }) {
-                selectedFilteredId = list.first?.id
-            }
-        }
+        if let list = try? await api.filtered() { filtered = list }
+    }
+
+    /// The bot's choice about this message, while it waits for review.
+    public func review(for messageId: String) -> FilteredEntry? {
+        filtered.first { $0.message.id == messageId }
+    }
+
+    /// The bot's choices still to review in one folder of a mailbox.
+    public func reviews(in folder: MailFolder, mailboxId: String) -> [FilteredEntry] {
+        filtered.filter { $0.message.mailboxId == mailboxId && $0.message.folder == folder }
+    }
+
+    /// Filtered mail and prepared drafts waiting in a mailbox's folders.
+    public func reviewCount(mailboxId: String) -> Int {
+        filtered.count { $0.message.mailboxId == mailboxId } + drafts(in: mailboxId).count
+    }
+
+    public func drafts(in mailboxId: String) -> [Draft] {
+        drafts.filter { $0.mailboxId == mailboxId }
+    }
+
+    // The server lists reviews unsure first; the rest of the folder follows newest first.
+    private func reviewFirst(_ list: [MessageSummary]) -> [MessageSummary] {
+        let rank = Dictionary(filtered.enumerated().map { ($1.message.id, $0) }, uniquingKeysWith: min)
+        return list.enumerated().sorted { a, b in
+            let (ra, rb) = (rank[a.element.id] ?? Int.max, rank[b.element.id] ?? Int.max)
+            return ra != rb ? ra < rb : a.offset < b.offset
+        }.map(\.element)
     }
 
     func refreshDrafts() async {
@@ -325,7 +355,8 @@ public final class AppModel {
         }
         do {
             var message = try await api.message(id: id)
-            if message.unread, me?.can(.organize) == true {
+            // Spam stays unread until the person says it is not spam.
+            if message.unread, message.folder != .spam, me?.can(.organize) == true {
                 message = try await api.apply([.markRead], to: id)
                 replace(message.summary)
             }
@@ -380,7 +411,7 @@ public final class AppModel {
         if isSearching { return true }
         return switch selection {
         case .inbox(let id): message.mailboxId == id && message.folder == .inbox
-        case .folder(let folder): message.folder == folder
+        case .folder(let folder, let id): message.mailboxId == id && message.folder == folder
         default: true
         }
     }
@@ -395,7 +426,7 @@ public final class AppModel {
     public var placeScope: SearchScope? {
         switch selection {
         case .inbox(let id): SearchScope(mailboxId: id, folder: .inbox)
-        case .folder(let folder): SearchScope(folder: folder)
+        case .folder(let folder, let id): SearchScope(mailboxId: id, folder: folder)
         case nil: .everywhere
         default: nil
         }
@@ -477,23 +508,36 @@ public final class AppModel {
         await review { try await $0.confirm([entry.id]) }
     }
 
+    /// Back to the inbox (read, for spam) and a learned rule for the sender.
     public func restore(_ entry: FilteredEntry) async {
         await review { try await $0.restore(entry.id) }
+        removeFromList(entry.message.id)
     }
 
-    public func confirmAll() async {
-        await review { try await $0.confirmAll() }
+    /// Confirms every review in the open Spam or Archief.
+    public func confirmReviews() async {
+        guard case .folder(let folder, let id) = selection else { return }
+        let ids = reviews(in: folder, mailboxId: id).map(\.id)
+        guard !ids.isEmpty else { return }
+        await review { try await $0.confirm(ids) }
+    }
+
+    /// "Geen spam" for the open message: the bot's entry when it has one,
+    /// otherwise straight back to the inbox. Only now is it read.
+    public func notSpam() async {
+        guard let message = currentSummary, message.folder == .spam else { return }
+        if let entry = review(for: message.id) {
+            await restore(entry)
+        } else {
+            await perform([.moveToInbox, .markRead], on: message.id)
+        }
     }
 
     private func review(_ action: (APIClient) async throws -> Void) async {
         guard let api else { return }
-        let index = filtered.firstIndex { $0.id == selectedFilteredId }
         do {
             try await action(api)
             await refreshFiltered()
-            if let index, !filtered.isEmpty {
-                selectedFilteredId = filtered[min(index, filtered.count - 1)].id
-            }
             await refreshCounts()
         } catch {
             self.error = error.localizedDescription
@@ -531,10 +575,7 @@ public final class AppModel {
         return ComposeDraft(mailboxId: box)
     }
 
-    public var currentMailboxId: String? {
-        if case .inbox(let id) = selection { return id }
-        return detail?.mailboxId
-    }
+    public var currentMailboxId: String? { selection?.mailboxId ?? detail?.mailboxId }
 
     public func compose(from draft: Draft) -> ComposeDraft {
         ComposeDraft(

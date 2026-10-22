@@ -130,6 +130,10 @@ public struct MessageDetail: Codable, Hashable, Identifiable, Sendable {
     public var bodyHtml: String?
     public var facts: MessageFacts?
 
+    /// Remote images tell the sender the mail was opened; in Spam they stay off,
+    /// with no offer, until the person says it is not spam.
+    public var mayLoadRemoteImages: Bool { folder != .spam }
+
     public var summary: MessageSummary {
         MessageSummary(
             id: id, mailboxId: mailboxId, threadId: threadId, from: from, to: to, subject: subject,

@@ -20,6 +20,7 @@ struct MessageDetailView: View {
                         .padding(.horizontal, 24)
                         .padding(.bottom, 12)
                 }
+                ReviewBar(message: message)
                 if let summary = model.insights?.summary {
                     Label(summary, systemImage: "sparkles")
                         .padding(12)
@@ -30,8 +31,12 @@ struct MessageDetailView: View {
                 }
                 Divider()
                 if let html = message.bodyHtml {
-                    RemoteImagesBar(html: html, messageId: message.id, allowed: $allowedMessageId, always: loadRemoteImages)
-                    HTMLView(html: html, allowRemote: loadRemoteImages || allowedMessageId == message.id)
+                    if message.mayLoadRemoteImages {
+                        RemoteImagesBar(html: html, messageId: message.id, allowed: $allowedMessageId, always: loadRemoteImages)
+                    }
+                    HTMLView(
+                        html: html,
+                        allowRemote: message.mayLoadRemoteImages && (loadRemoteImages || allowedMessageId == message.id))
                 } else {
                     ScrollView {
                         Text(message.bodyText ?? message.snippet)

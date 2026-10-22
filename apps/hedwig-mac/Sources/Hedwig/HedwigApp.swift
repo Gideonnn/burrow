@@ -76,7 +76,7 @@ struct HedwigCommands: Commands {
                 .keyboardShortcut("a", modifiers: [.command, .control])
             Button("Verwijder") { Task { await model.perform([.trash]) } }
                 .keyboardShortcut(.delete, modifiers: .command)
-            Button("Markeer als spam") { Task { await model.perform([.moveToSpam, .markRead]) } }
+            Button("Markeer als spam") { Task { await model.perform([.moveToSpam]) } }
                 .keyboardShortcut("j", modifiers: [.command, .shift])
             Divider()
             Button("Gelezen of ongelezen") { Task { await model.toggleRead() } }
@@ -125,7 +125,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             onError: { model.error = $0 }
         ) { service in
             service.register(
-                "show", help: "Show a list: inbox, inbox:<address>, private, work, school (the inbox of its first mailbox), filtered, drafts, tasks, outings, archive, sent or spam.",
+                "show", help: "Show a list: inbox, archive, sent, spam or drafts of the open mailbox, each also as <place>:<address>; private, work or school (the inbox of its first mailbox); filtered (Spam or Archief with mail to review), tasks or outings.",
                 arguments: [.init("text", "where to go")]
             ) { request in
                 try await model.show(request["text"] as? String ?? "inbox")

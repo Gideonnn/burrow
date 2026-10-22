@@ -9,7 +9,7 @@ struct DraftListView: View {
     var body: some View {
         @Bindable var model = model
         List(selection: $model.selectedDraftId) {
-            ForEach(model.drafts) { draft in
+            ForEach(drafts) { draft in
                 VStack(alignment: .leading, spacing: 2) {
                     HStack {
                         Text(Address.format(draft.to)).font(.headline).lineLimit(1)
@@ -27,10 +27,16 @@ struct DraftListView: View {
         }
         .listStyle(.inset)
         .overlay {
-            if model.drafts.isEmpty { ContentUnavailableView("Geen concepten", systemImage: "doc") }
+            if drafts.isEmpty { ContentUnavailableView("Geen concepten", systemImage: "doc") }
         }
         .navigationTitle("Concepten")
+        .navigationSubtitle(model.currentMailboxId.flatMap(model.mailbox).map(mailboxTitle) ?? "")
         .onChange(of: model.selectedDraftId, initial: true) { DraftSelection.shared.id = model.selectedDraftId }
+    }
+
+    private var drafts: [Draft] {
+        guard case .drafts(let id) = model.selection else { return [] }
+        return model.drafts(in: id)
     }
 }
 

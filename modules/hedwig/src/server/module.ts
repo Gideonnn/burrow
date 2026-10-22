@@ -41,7 +41,7 @@ const settings: SettingDefinition[] = [
     module: 'hedwig',
     label: 'Mail laten sorteren',
     description:
-      'Kreacher zet spam en ruis uit de inbox; jij controleert het onder Gefilterd.',
+      'Kreacher zet spam en ruis uit de inbox; jij controleert het in Spam en Archief.',
     type: 'boolean',
     default: true,
     feature: true,

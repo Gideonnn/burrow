@@ -1017,13 +1017,14 @@ textarea.field { height: auto; padding: 8px 10px; resize: none; font: inherit; w
   <div class="spec-grid">
     <div class="card"><div class="hd">Hedwig</div><div class="bd a-hedwig" style="background:var(--sidebar);padding:8px">
       <div class="sb-label">Inbox</div>
-      <div class="sb-row two sel active"><svg class="i"><use href="#i-tray"/></svg><span class="grow">Gideon<small style="color:rgba(255,255,255,.8)">gideon@example.com</small></span><span class="n">4</span></div>
-      <div class="sb-row two"><svg class="i"><use href="#i-tray"/></svg><span class="grow">Werk<small>gideon@studio.example.com</small></span><span class="n">3</span></div>
+      <div class="sb-row two sel active"><svg class="i"><use href="#i-tray"/></svg><span class="grow">Gideon<small style="color:rgba(255,255,255,.8)">gideon@example.com</small></span><svg class="i sm"><use href="#i-chev-r"/></svg><span class="n">4</span></div>
+      <div class="sb-row two hover"><svg class="i"><use href="#i-tray"/></svg><span class="grow">Werk<small>gideon@studio.example.com</small></span><svg class="i sm"><use href="#i-chev-d"/></svg><span class="n">3</span></div>
+      <div class="sb-row" style="padding-left:26px"><svg class="i"><use href="#i-archive"/></svg><span class="grow">Archief</span></div>
+      <div class="sb-row" style="padding-left:26px"><svg class="i"><use href="#i-paperplane"/></svg><span class="grow">Verstuurd</span></div>
+      <div class="sb-row disabled" style="padding-left:26px"><svg class="i"><use href="#i-doc"/></svg><span class="grow">Concepten</span></div>
+      <div class="sb-row" style="padding-left:26px"><svg class="i"><use href="#i-xmark"/></svg><span class="grow">Spam</span><span class="n">5</span></div>
       <div class="sb-label">Overal</div>
-      <div class="sb-row hover"><svg class="i"><use href="#i-shield"/></svg><span class="grow">Gefilterd</span><span class="badge count">5</span></div>
       <div class="sb-row"><svg class="i"><use href="#i-checklist"/></svg><span class="grow">Taken</span><span class="badge count accent" style="background:var(--warning)">1</span></div>
-      <div class="sb-row disabled"><svg class="i"><use href="#i-doc"/></svg><span class="grow">Concepten</span></div>
-      <div class="sb-row"><svg class="i"><use href="#i-ellipsis"/></svg><span class="grow">Meer</span><svg class="i sm"><use href="#i-chev-r"/></svg></div>
     </div></div>
     <div class="card"><div class="hd">Pensieve</div><div class="bd a-pensieve" style="background:var(--sidebar);padding:8px">
       <div class="sb-label">Opnames</div>
@@ -1041,7 +1042,7 @@ textarea.field { height: auto; padding: 8px 10px; resize: none; font: inherit; w
       <div class="sb-row sel">geselecteerd, venster inactief</div>
       <div class="sb-row sel active">geselecteerd, venster actief</div>
       <div class="sb-row disabled">uitgeschakeld (feature uit)</div>
-      <p class="muted small" style="margin:8px 2px 0">Labels are sentence case. Secondary folders (Verstuurd, Archief, Spam) sit under a collapsible "Meer", collapsed by default. Counts are right-aligned secondary text; only review queues ("Gefilterd", "Taken") get a filled badge. The footer names the server and the device key.</p>
+      <p class="muted small" style="margin:8px 2px 0">Labels are sentence case. A mailbox opens to its Archief, Verstuurd, Concepten and Spam with a small chevron that shows only on hover or for the selected mailbox; collapsed by default. What waits for review in those folders shows as a plain count on the folder, and on the mailbox while it is closed. Counts are right-aligned secondary text; only "Taken" gets a filled badge. The footer names the server and the device key.</p>
     </div></div>
   </div>
 
@@ -1105,7 +1106,7 @@ textarea.field { height: auto; padding: 8px 10px; resize: none; font: inherit; w
       <div class="gh">Functies voor Eva<span class="grow"></span><span class="badge person p-a">Eva</span></div>
       <div class="srow a-hedwig"><span class="ic"><svg class="i"><use href="#i-envelope"/></svg></span><div class="lbl">Hedwig<small>Mail op Dobby, gesorteerd door Kreacher</small></div><span class="toggle on a-hedwig" data-toggle></span></div>
       <div class="srow"><div class="lbl indent">Antwoordsuggesties<small>Concepten bij mails die om antwoord vragen</small></div><span class="toggle on a-hedwig" data-toggle></span></div>
-      <div class="srow"><div class="lbl indent">Spam ongezien verwijderen<small>Alleen bij zekerheid; twijfel blijft in Gefilterd</small></div><span class="toggle a-hedwig" data-toggle></span></div>
+      <div class="srow"><div class="lbl indent">Spam ongezien verwijderen<small>Alleen bij zekerheid; twijfel blijft ter controle in Spam</small></div><span class="toggle a-hedwig" data-toggle></span></div>
       <div class="srow a-pensieve"><span class="ic"><svg class="i"><use href="#i-waveform"/></svg></span><div class="lbl">Pensieve<small>Opnames, transcripten en notulen</small></div><span class="toggle on a-pensieve" data-toggle></span></div>
       <div class="srow disabled a-remembrall"><span class="ic"><svg class="i"><use href="#i-checklist"/></svg></span><div class="lbl">Remembrall<small>Nog niet beschikbaar</small></div><span class="toggle off-disabled"></span></div>
     </div>
@@ -1385,7 +1386,7 @@ textarea.field { height: auto; padding: 8px 10px; resize: none; font: inherit; w
   <!-- c. Hedwig -->
   <div class="scr-pane" id="s-hedwig">
     <div class="mac a-hedwig">
-      <div class="tb"><span class="lights"><i></i><i></i><i></i></span><span class="title">Hedwig</span><span class="sub">Gefilterd · 5 te controleren</span><span class="grow"></span>
+      <div class="tb"><span class="lights"><i></i><i></i><i></i></span><span class="title">Hedwig</span><span class="sub">Spam · Gideon · 5 te controleren</span><span class="grow"></span>
         <div class="field search ph" style="width:200px;height:28px"><svg class="i sm"><use href="#i-search"/></svg>Zoek</div>
         <span class="tb-round" title="Nieuw bericht (⌘N)"><svg class="i lg"><use href="#i-compose"/></svg></span>
         <span class="tb-cap disabled"><button><svg class="i lg"><use href="#i-reply"/></svg></button><span class="sep"></span><button><svg class="i lg"><use href="#i-replyall"/></svg></button><span class="sep"></span><button><svg class="i lg"><use href="#i-forward"/></svg></button></span>
@@ -1394,21 +1395,19 @@ textarea.field { height: auto; padding: 8px 10px; resize: none; font: inherit; w
       <div class="body three">
         <div class="side">
           <div class="sb-label">Inbox</div>
-          <div class="sb-row two"><svg class="i"><use href="#i-tray"/></svg><span class="grow">Gideon<small>gideon@example.com</small></span><span class="n">4</span></div>
+          <div class="sb-row two"><svg class="i"><use href="#i-tray"/></svg><span class="grow">Gideon<small>gideon@example.com</small></span><svg class="i sm"><use href="#i-chev-d"/></svg><span class="n">4</span></div>
+          <div class="sb-row" style="padding-left:26px"><svg class="i"><use href="#i-archive"/></svg><span class="grow">Archief</span></div>
+          <div class="sb-row" style="padding-left:26px"><svg class="i"><use href="#i-paperplane"/></svg><span class="grow">Verstuurd</span></div>
+          <div class="sb-row" style="padding-left:26px"><svg class="i"><use href="#i-doc"/></svg><span class="grow">Concepten</span><span class="n">2</span></div>
+          <div class="sb-row sel active" style="padding-left:26px"><svg class="i"><use href="#i-xmark"/></svg><span class="grow">Spam</span><span class="n">5</span></div>
           <div class="sb-row two"><svg class="i"><use href="#i-tray"/></svg><span class="grow">Werk<small>gideon@studio.example.com</small></span><span class="n">3</span></div>
           <div class="sb-row two"><svg class="i"><use href="#i-tray"/></svg><span class="grow">Samen<small>huis@example.com</small></span><span class="badge shared" style="height:16px;padding:0 5px"><svg class="i sm"><use href="#i-person2"/></svg></span></div>
           <div class="sb-label">Overal</div>
-          <div class="sb-row sel active"><svg class="i"><use href="#i-shield"/></svg><span class="grow">Gefilterd</span><span class="badge count" style="background:rgba(255,255,255,.25)">5</span></div>
           <div class="sb-row"><svg class="i"><use href="#i-checklist"/></svg><span class="grow">Taken</span><span class="badge count" style="background:var(--warning)">1</span></div>
-          <div class="sb-row"><svg class="i"><use href="#i-doc"/></svg><span class="grow">Concepten</span><span class="n">2</span></div>
-          <div class="sb-row"><svg class="i"><use href="#i-ellipsis"/></svg><span class="grow">Meer</span><svg class="i sm"><use href="#i-chev-d"/></svg></div>
-          <div class="sb-row" style="padding-left:26px"><svg class="i"><use href="#i-paperplane"/></svg><span class="grow">Verstuurd</span></div>
-          <div class="sb-row" style="padding-left:26px"><svg class="i"><use href="#i-archive"/></svg><span class="grow">Archief</span></div>
-          <div class="sb-row" style="padding-left:26px"><svg class="i"><use href="#i-xmark"/></svg><span class="grow">Spam</span></div>
           <div class="sb-foot"><span class="dot ok"></span><span><b>burrow.example.nl</b>MacBook Gideon · Hedwig</span></div>
         </div>
         <div class="list">
-          <div class="pane-hd"><span class="t">Gefilterd</span><span class="s">5 te controleren</span><span class="grow"></span><span class="seg"><button class="on">Alles</button><button>Twijfel</button></span></div>
+          <div class="pane-hd"><span class="t">Spam · Gideon</span><span class="s">5 te controleren</span><span class="grow"></span><span class="seg"><button class="on">Alles</button><button>Twijfel</button></span></div>
           <div class="banner info" style="font-size:12px"><span class="av sm bot"><svg class="i"><use href="#i-elf"/></svg></span><span class="grow">Kreacher sorteerde vannacht 31 berichten. 26 zeker, 5 om te controleren.</span></div>
           <div class="scroll">
             <div class="row sel active"><span class="udot"></span><div><div class="l1"><b>Nieuwsbrief Fietsenwinkel Pedaal</b><span class="when">07:12</span></div><div class="l2">Herfstdeals op regenkleding</div><div class="why"><svg class="i sm"><use href="#i-sparkles"/></svg><span>Nieuwsbrief zonder afspraak of factuur; vergelijkbare mails archiveerde je ongelezen.</span></div><div class="tags"><span class="badge">Gearchiveerd</span><span class="grow"></span><span class="acts"><button class="ok">Klopt</button><button class="back">Terug</button></span></div></div></div>
@@ -1443,7 +1442,7 @@ textarea.field { height: auto; padding: 8px 10px; resize: none; font: inherit; w
         </div>
       </div>
     </div>
-    <p class="scr-note"><b>Notes.</b> Hedwig keeps its current structure and gets the shared chrome: warm neutrals, Owl blue for selection and sidebar icons, Kreacher's mark instead of a generic sparkle on his reasons. The "Gefilterd" review is the trust surface: reason in one sentence, the exact server and phone effect, Klopt as the default key, Terug one key away. Twijfel rows (the bot was unsure) use the warning tint and are sorted on top under the Twijfel filter. The shared mailbox "Samen" carries the Gedeeld badge.</p>
+    <p class="scr-note"><b>Notes.</b> Hedwig keeps its current structure and gets the shared chrome: warm neutrals, Owl blue for selection and sidebar icons, Kreacher's mark instead of a generic sparkle on his reasons. The review of what the bot filtered lives in each mailbox's Spam and Archief and is the trust surface: reason in one sentence, the exact server and phone effect, Klopt as the default key, Terug one key away. Twijfel rows (the bot was unsure) use the warning tint and are sorted on top under the Twijfel filter. The shared mailbox "Samen" carries the Gedeeld badge.</p>
   </div>
 
   <!-- d. Login -->
@@ -1508,7 +1507,7 @@ textarea.field { height: auto; padding: 8px 10px; resize: none; font: inherit; w
               <div class="gh">Functies</div>
               <div class="srow a-hedwig"><span class="ic"><svg class="i"><use href="#i-envelope"/></svg></span><div class="lbl">Hedwig<small>Mail, gesorteerd door Kreacher</small></div><span class="toggle on a-hedwig" data-toggle></span></div>
               <div class="srow"><div class="lbl indent">Antwoordsuggesties<small>Concepten bij mails die om antwoord vragen</small></div><span class="toggle on a-hedwig" data-toggle></span></div>
-              <div class="srow"><div class="lbl indent">Spam ongezien verwijderen<small>Alleen bij zekerheid; twijfel blijft in Gefilterd</small></div><span class="toggle a-hedwig" data-toggle></span></div>
+              <div class="srow"><div class="lbl indent">Spam ongezien verwijderen<small>Alleen bij zekerheid; twijfel blijft ter controle in Spam</small></div><span class="toggle a-hedwig" data-toggle></span></div>
               <div class="srow a-pensieve"><span class="ic"><svg class="i"><use href="#i-waveform"/></svg></span><div class="lbl">Pensieve<small>Opnames, transcripten en notulen door Winky</small></div><span class="toggle on a-pensieve" data-toggle></span></div>
               <div class="srow"><div class="lbl indent">Spiegel naar iCloud Drive<small>Eigen en gedeelde opnames in iCloud Drive/Pensieve</small></div><span class="toggle on a-pensieve" data-toggle></span></div>
               <div class="srow"><div class="lbl indent">Actiepunten naar Remembrall<small>Zodra Remembrall beschikbaar is</small></div><span class="toggle off-disabled"></span></div>
@@ -1601,7 +1600,7 @@ textarea.field { height: auto; padding: 8px 10px; resize: none; font: inherit; w
         <div class="chat">
           <span class="day">Vandaag</span>
           <div class="bub bot"><div class="from" style="color:var(--patronus)">Patronus</div>Goedemorgen Gideon. Je ochtendbriefing:<ul><li><b>3 mails</b> wachten op antwoord, de oudste van Boekhouder Van Dijk (akkoord voor 28 okt).</li><li><b>Agenda:</b> 11:30 Intake Studio Vos (Zoom), 15:00 tandarts Eva.</li><li><b>Pensieve:</b> notulen Weekstart staan klaar, 5 actiepunten, 1 te laat.</li></ul><span class="tm">07:30</span></div>
-          <div class="bub bot"><div class="from" style="color:var(--patronus)">Kreacher via Patronus</div>Twijfelgeval: <b>Energie Direct, "Uw jaarafrekening staat klaar"</b>. Lijkt op een factuur, maar het afzenderdomein wijkt af. Staat in Gefilterd als spam.<div class="inl"><button>Klopt, spam</button><button>Terug in inbox</button><button class="full">Toon in Hedwig</button></div><span class="tm">07:31</span></div>
+          <div class="bub bot"><div class="from" style="color:var(--patronus)">Kreacher via Patronus</div>Twijfelgeval: <b>Energie Direct, "Uw jaarafrekening staat klaar"</b>. Lijkt op een factuur, maar het afzenderdomein wijkt af. Staat ter controle in Spam.<div class="inl"><button>Klopt, spam</button><button>Terug in inbox</button><button class="full">Toon in Hedwig</button></div><span class="tm">07:31</span></div>
           <div class="bub me">zet melk op de lijst<span class="tm">08:12</span></div>
           <div class="bub bot"><div class="from" style="color:var(--patronus)">Patronus</div>Melk staat op de boodschappenlijst (Potions Book). Er staan nu 6 dingen op; Eva haalt vanavond.<span class="tm">08:12</span></div>
         </div>

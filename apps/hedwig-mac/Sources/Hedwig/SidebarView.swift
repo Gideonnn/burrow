@@ -5,7 +5,9 @@ struct SidebarView: View {
     @Environment(AppModel.self) private var model
     @State private var renaming: MailboxSummary?
     @State private var newName = ""
-    @AppStorage("hedwig.sidebar.showsMore") private var showsMore = false
+    @State private var hovered: String?
+    // The mailboxes whose folders show, as comma-separated ids: AppStorage holds no sets.
+    @AppStorage("hedwig.sidebar.openMailboxes") private var openMailboxes = ""
 
     var body: some View {
         // The list may clear its selection (a click beside a row, a rebuilt
@@ -15,38 +17,18 @@ struct SidebarView: View {
             ForEach(model.mailboxGroups) { group in
                 Section(sectionTitle(group.role)) {
                     ForEach(group.mailboxes) { box in
-                        NavigationLink(value: SidebarItem.inbox(mailboxId: box.id)) {
-                            Label(mailboxTitle(box), systemImage: "tray")
-                        }
-                        .help(box.address)
-                        .badge(model.unreadCounts[box.id] ?? 0)
-                        .contextMenu {
-                            let index = group.mailboxes.firstIndex(of: box) ?? 0
-                            Button("Wijzig naam…") {
-                                newName = mailboxTitle(box)
-                                renaming = box
-                            }
-                            .disabled(!canOrganize)
-                            Button("Omhoog") { move(group.role, index, to: index - 1) }
-                                .disabled(!canOrganize || index == 0)
-                            Button("Omlaag") { move(group.role, index, to: index + 2) }
-                                .disabled(!canOrganize || index == group.mailboxes.count - 1)
-                        }
-                        // ForEach tags rows with the mailbox id; the list selects SidebarItems.
-                        .tag(SidebarItem.inbox(mailboxId: box.id))
+                        mailboxRow(box, in: group)
+                        if isOpen(box.id) { folderRows(box) }
                     }
-                    .onMove(perform: canOrganize ? { source, destination in
+                    // An open mailbox is several rows, which dragging cannot place;
+                    // Omhoog and Omlaag in its menu still work.
+                    .onMove(perform: canOrganize && !group.mailboxes.contains { isOpen($0.id) } ? { source, destination in
                         Task { await model.moveMailboxes(in: group.role, from: source, to: destination) }
                     } : nil)
                 }
             }
-            // A row with a badge is only selectable with its tag, as above.
+            // A row with a badge is only selectable with its tag.
             Section("Overal") {
-                NavigationLink(value: SidebarItem.filtered) {
-                    Label("Gefilterd", systemImage: "checkmark.shield")
-                }
-                .badge(model.filtered.count)
-                .tag(SidebarItem.filtered)
                 NavigationLink(value: SidebarItem.outings) {
                     Label("Evenementen", systemImage: "ticket")
                 }
@@ -57,36 +39,12 @@ struct SidebarView: View {
                 }
                 .badge(model.tasksAwaitingReview)
                 .tag(SidebarItem.tasks)
-                NavigationLink(value: SidebarItem.drafts) {
-                    Label("Concepten", systemImage: "doc")
-                }
-                .badge(model.drafts.count)
-                .tag(SidebarItem.drafts)
-                DisclosureGroup(isExpanded: $showsMore) {
-                    NavigationLink(value: SidebarItem.folder(.sent)) {
-                        Label("Verstuurd", systemImage: "paperplane")
-                    }
-                    .tag(SidebarItem.folder(.sent))
-                    NavigationLink(value: SidebarItem.folder(.archive)) {
-                        Label("Archief", systemImage: "archivebox")
-                    }
-                    .tag(SidebarItem.folder(.archive))
-                    NavigationLink(value: SidebarItem.folder(.spam)) {
-                        Label("Spam", systemImage: "xmark.bin")
-                    }
-                    .tag(SidebarItem.folder(.spam))
-                } label: {
-                    // Not a place itself: a click opens or closes it, like the chevron.
-                    Label("Meer", systemImage: "ellipsis.circle")
-                        .contentShape(Rectangle())
-                        .onTapGesture { withAnimation { showsMore.toggle() } }
-                }
             }
         }
         .listStyle(.sidebar)
-        // A place under Meer opened elsewhere (a link, an outing's mail) stays in view.
+        // A folder opened elsewhere (a link, an outing's mail) shows under its mailbox.
         .onChange(of: model.selection, initial: true) { _, place in
-            if case .folder = place { showsMore = true }
+            if let place, let id = place.mailboxId, place != .inbox(mailboxId: id) { setOpen(id, true) }
         }
         .alert("Naam van de mailbox", isPresented: Binding(get: { renaming != nil }, set: { if !$0 { renaming = nil } })) {
             TextField("Naam", text: $newName)
@@ -100,6 +58,92 @@ struct SidebarView: View {
                 UpdateBanner()
                 ConnectionBadge()
             }
+        }
+    }
+
+    private func mailboxRow(_ box: MailboxSummary, in group: AppModel.MailboxGroup) -> some View {
+        let open = isOpen(box.id)
+        let waiting = model.reviewCount(mailboxId: box.id)
+        return NavigationLink(value: SidebarItem.inbox(mailboxId: box.id)) {
+            HStack(spacing: 6) {
+                Label(mailboxTitle(box), systemImage: "tray")
+                Spacer(minLength: 0)
+                if !open, waiting > 0 {
+                    Label("\(waiting)", systemImage: "checkmark.shield")
+                        .labelStyle(.titleAndIcon)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .help("\(waiting) te controleren in Archief, Concepten of Spam")
+                }
+                // Folders are rarely needed, so the toggle only shows on hover or for the open mailbox.
+                if hovered == box.id || model.selection?.mailboxId == box.id {
+                    Button { toggle(box) } label: {
+                        Image(systemName: "chevron.right")
+                            .rotationEffect(.degrees(open ? 90 : 0))
+                            .frame(width: 12, height: 12)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .help(open ? "Verberg mappen" : "Toon Archief, Verstuurd, Concepten en Spam")
+                }
+            }
+        }
+        .onHover { inside in
+            if inside { hovered = box.id } else if hovered == box.id { hovered = nil }
+        }
+        .help(box.address)
+        .badge(model.unreadCounts[box.id] ?? 0)
+        .contextMenu {
+            let index = group.mailboxes.firstIndex(of: box) ?? 0
+            Button(open ? "Verberg mappen" : "Toon mappen") { toggle(box) }
+            Divider()
+            Button("Wijzig naam…") {
+                newName = mailboxTitle(box)
+                renaming = box
+            }
+            .disabled(!canOrganize)
+            Button("Omhoog") { move(group.role, index, to: index - 1) }
+                .disabled(!canOrganize || index == 0)
+            Button("Omlaag") { move(group.role, index, to: index + 2) }
+                .disabled(!canOrganize || index == group.mailboxes.count - 1)
+        }
+        // ForEach tags rows with the mailbox id; the list selects SidebarItems.
+        .tag(SidebarItem.inbox(mailboxId: box.id))
+    }
+
+    @ViewBuilder
+    private func folderRows(_ box: MailboxSummary) -> some View {
+        folderRow(.folder(.archive, mailboxId: box.id), "archivebox", waiting: model.reviews(in: .archive, mailboxId: box.id).count)
+        folderRow(.folder(.sent, mailboxId: box.id), "paperplane", waiting: 0)
+        folderRow(.drafts(mailboxId: box.id), "doc", waiting: model.drafts(in: box.id).count)
+        folderRow(.folder(.spam, mailboxId: box.id), "xmark.bin", waiting: model.reviews(in: .spam, mailboxId: box.id).count)
+    }
+
+    private func folderRow(_ place: SidebarItem, _ icon: String, waiting: Int) -> some View {
+        NavigationLink(value: place) {
+            Label(placeName(place), systemImage: icon).padding(.leading, 14)
+        }
+        .badge(waiting)
+        .tag(place)
+    }
+
+    private func isOpen(_ id: String) -> Bool { openMailboxes.split(separator: ",").contains { $0 == id } }
+
+    private func setOpen(_ id: String, _ open: Bool) {
+        guard isOpen(id) != open else { return }
+        var ids = openMailboxes.split(separator: ",").map(String.init).filter { $0 != id }
+        if open { ids.append(id) }
+        openMailboxes = ids.joined(separator: ",")
+    }
+
+    private func toggle(_ box: MailboxSummary) {
+        let open = !isOpen(box.id)
+        withAnimation { setOpen(box.id, open) }
+        // A hidden folder cannot stay selected; its mailbox's inbox takes over.
+        if !open, let place = model.selection, place.mailboxId == box.id, place != .inbox(mailboxId: box.id) {
+            model.selection = .inbox(mailboxId: box.id)
         }
     }
 
@@ -164,6 +208,27 @@ struct ConnectionBadge: View {
 /// The private mailboxes are simply the inbox in the sidebar; Settings keeps "Privé".
 private func sectionTitle(_ role: MailboxRole) -> String {
     role == .private ? "Inbox" : roleTitle(role)
+}
+
+func folderTitle(_ folder: MailFolder) -> String {
+    switch folder {
+    case .inbox: "Inbox"
+    case .archive: "Archief"
+    case .sent: "Verstuurd"
+    case .spam: "Spam"
+    case .trash: "Prullenbak"
+    }
+}
+
+/// A mailbox's subfolder by name, as the sidebar and the window title show it.
+func placeName(_ place: SidebarItem) -> String {
+    switch place {
+    case .folder(let folder, _): folderTitle(folder)
+    case .drafts: "Concepten"
+    case .inbox: "Inbox"
+    case .tasks: "Taken"
+    case .outings: "Evenementen"
+    }
 }
 
 func roleTitle(_ role: MailboxRole) -> String {

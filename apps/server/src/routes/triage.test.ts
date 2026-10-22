@@ -40,7 +40,7 @@ const filtered = async (s: Setup, token: string) =>
   filteredList.parse(await (await s.call(token, '/api/filtered')).json());
 
 describe('triage', () => {
-  it('moves spam to the provider spam folder, read, and lists it for review with the reason', async () => {
+  it('moves spam to the provider spam folder, still unread, and lists it for review with the reason', async () => {
     const s = await setup();
     s.decisions.push({
       action: { kind: 'spam' },
@@ -51,14 +51,13 @@ describe('triage', () => {
 
     expect(s.provider(s.home.id).applied[0]?.ops).toEqual([
       { op: 'moveToSpam' },
-      { op: 'markRead' },
     ]);
     expect(await inbox(s, s.token, s.home.id)).toEqual([]);
     const [entry] = await filtered(s, s.token);
     expect(entry).toMatchObject({
       reason: 'Phishing from a look-alike domain.',
-      serverOps: ['label SPAM', 'mark as read'],
-      message: { subject: 'Uw pakket', folder: 'spam', unread: false },
+      serverOps: ['label SPAM'],
+      message: { subject: 'Uw pakket', folder: 'spam', unread: true },
     });
   });
 
@@ -147,7 +146,7 @@ describe('triage', () => {
 });
 
 describe('review', () => {
-  it('restores filtered mail to an unread inbox message and learns a rule for the sender', async () => {
+  it('restores spam to a read inbox message and learns a rule for the sender', async () => {
     const s = await setup();
     s.decisions.push({
       action: { kind: 'spam' },
@@ -163,7 +162,7 @@ describe('review', () => {
     expect(res.status).toBe(200);
     expect((await inbox(s, s.token, s.home.id))[0]).toMatchObject({
       subject: 'Factuur',
-      unread: true,
+      unread: false,
     });
     expect(await filtered(s, s.token)).toEqual([]);
     const rules = (await (await s.call(s.token, '/api/rules')).json()) as {

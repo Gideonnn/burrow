@@ -23,9 +23,16 @@ mail from the last two days, at most three attempts per message.
 
 ## Review and learning
 
-Spam and archive decisions land in the "Gefilterd" review (`GET /api/filtered`, unsure
-first). Confirming removes an entry; restoring reverses the operations at the provider
-and adds a learned rule for that sender, which the next prompts include. Instructions,
+Spam and archive decisions wait for review (`GET /api/filtered`, unsure first). Hedwig
+shows them in the mailbox's own Spam or Archief, on top of the folder with the reason;
+there is no separate page. Confirming ("Klopt") removes an entry; restoring ("Geen spam",
+"Terug naar inbox") reverses the operations at the provider and adds a learned rule for
+that sender, which the next prompts include.
+
+Spam stays unread: triage only moves it (`serverOpsFor`), Hedwig does not mark it read
+on opening and never loads its remote images. Restoring spam brings it back read
+(`restoreOps`), also for older entries that triage marked read; restored archive mail
+comes back unread. Archived mail is marked read so phones show no badge. Instructions,
 rules and reviews belong to the mailbox owner; keys of another person never see them.
 
 A smoke test on 2026-10-19 with a fake PostNL phishing mail returned `spam` with a Dutch

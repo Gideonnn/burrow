@@ -227,7 +227,8 @@ extension AppModel {
         guard let api else { return }
         do {
             let message = try await api.message(id: id)
-            selection = message.folder == .inbox ? .inbox(mailboxId: message.mailboxId) : .folder(message.folder)
+            selection = message.folder == .inbox
+                ? .inbox(mailboxId: message.mailboxId) : .folder(message.folder, mailboxId: message.mailboxId)
             await selectionLoad?.value
             if !messages.contains(where: { $0.id == id }) { messages.insert(message.summary, at: 0) }
             selectedMessageId = id
