@@ -1,4 +1,9 @@
-import { recordingDetail, recordingSummary, routine } from '@burrow/contracts';
+import {
+  label,
+  recordingDetail,
+  recordingSummary,
+  routine,
+} from '@burrow/contracts';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { testHousehold } from '../testing';
@@ -272,5 +277,320 @@ describe('sharing a recording', () => {
     await h.record();
     expect(await h.list(h.token, '?q=blauwe')).toHaveLength(1);
     expect(await h.list(h.evaToken, '?q=blauwe')).toHaveLength(0);
+  });
+});
+
+const INTERVIEW = {
+  title: 'Interview Joris Bakker',
+  summary: 'Joris bakt al twintig jaar zuurdesem.',
+  quotes: [{ text: 'Brood is geduld dat je kunt eten.', speaker: null, at: 7 }],
+  chapters: [{ title: 'Begin', at: 0 }],
+};
+
+describe('kinds of recording', () => {
+  it('keeps a video stored until its owner asks for the transcript, then writes interview notes with subtitles', async () => {
+    const h = household();
+    const res = await h.record({
+      kind: 'video',
+      title: 'Video',
+      marks: [
+        { at: 15, note: 'Mooie quote' },
+        { at: 4, note: null },
+      ],
+    });
+    const { id } = recordingSummary.parse(await res.json());
+    expect(await h.detail(id)).toMatchObject({
+      kind: 'video',
+      status: 'stored',
+      hasTranscript: false,
+      marks: [
+        { at: 4, note: null },
+        { at: 15, note: 'Mooie quote' },
+      ],
+    });
+    expect(h.transcribeCalls).toHaveLength(0);
+    expect(
+      (await h.call(h.token, `/api/pensieve/recordings/${id}/subtitles`))
+        .status,
+    ).toBe(404);
+
+    h.transcripts.push({
+      text: 'Welkom. Brood is geduld dat je kunt eten.',
+      segments: [
+        { start: 0, end: 1.5, speaker: null, text: 'Welkom.' },
+        {
+          start: 7,
+          end: 9,
+          speaker: null,
+          text: 'Brood is geduld dat je kunt eten.',
+        },
+      ],
+    });
+    h.decisions.push(INTERVIEW);
+    expect(
+      (
+        await h.send(
+          h.evaToken,
+          'POST',
+          `/api/pensieve/recordings/${id}/transcribe`,
+        )
+      ).status,
+    ).toBe(404);
+    await h.send(h.token, 'POST', `/api/pensieve/recordings/${id}/transcribe`);
+    await h.workers.drain();
+
+    expect(h.transcribeCalls).toEqual([
+      { language: 'nl', speakers: false, timestamps: true },
+    ]);
+    const done = await h.detail(id);
+    expect(done).toMatchObject({
+      status: 'done',
+      title: 'Interview Joris Bakker',
+      hasSegments: true,
+      notes: { type: 'interview', chapters: [{ title: 'Begin', at: 0 }] },
+    });
+    expect(done.notesMarkdown).toContain('## Quotes');
+    const request = h.agentRequests.at(-1)!;
+    expect(request.system).toContain('Write interview notes.');
+    expect(request.prompt).toContain('[00:07] Brood is geduld');
+    expect(request.prompt).toContain('- 00:15 Mooie quote');
+
+    const srt = await h.call(
+      h.token,
+      `/api/pensieve/recordings/${id}/subtitles`,
+    );
+    expect(srt.status).toBe(200);
+    expect(await srt.text()).toContain(
+      '2\n00:00:07,000 --> 00:00:09,000\nBrood is geduld dat je kunt eten.',
+    );
+  });
+
+  it('writes the steps of a screen recording with the screen skill', async () => {
+    const h = household();
+    h.transcripts.push({
+      text: 'Open Rapportages.',
+      segments: [
+        { start: 2, end: 4, speaker: null, text: 'Open Rapportages.' },
+      ],
+    });
+    h.decisions.push({
+      summary: 'Een rapportage maken.',
+      steps: [{ text: 'Open Rapportages.', at: 2 }],
+    });
+    const { id } = recordingSummary.parse(
+      await (await h.record({ kind: 'screen', transcribe: true })).json(),
+    );
+    expect(await h.detail(id)).toMatchObject({
+      status: 'done',
+      notes: { type: 'steps', steps: [{ text: 'Open Rapportages.', at: 2 }] },
+    });
+    expect(h.agentRequests.at(-1)!.system).toContain('Write the steps.');
+  });
+
+  it('transcribes a dictation first in line, names it after its first words and writes no notes', async () => {
+    const h = household();
+    h.transcripts.push(
+      'Hoi Ruben, de kozijnen aan de achterkant kunnen volgende week geplaatst worden.',
+    );
+    const { id } = recordingSummary.parse(
+      await (await h.record({ kind: 'dictation', title: 'Dictaat' })).json(),
+    );
+    const done = await h.detail(id);
+    expect(done).toMatchObject({
+      kind: 'dictation',
+      status: 'done',
+      hasNotes: false,
+      title: 'Hoi Ruben, de kozijnen aan de achterkant kunnen…',
+      preview:
+        'Hoi Ruben, de kozijnen aan de achterkant kunnen volgende week geplaatst worden.',
+    });
+    expect(h.agentRequests).toHaveLength(0);
+    expect(h.transcribeCalls).toEqual([
+      { language: 'nl', speakers: false, timestamps: false },
+    ]);
+    const tasks = (await (await h.call(h.token, '/api/tasks')).json()) as {
+      priority: string;
+    }[];
+    expect(tasks.map((t) => t.priority)).toEqual(['urgent', 'urgent']);
+    expect(
+      (
+        await h.send(h.token, 'POST', `/api/pensieve/recordings/${id}/redo`, {
+          step: 'notes',
+        })
+      ).status,
+    ).toBe(400);
+  });
+
+  it('asks for speakers and timestamps on a call when speaker recognition is on', async () => {
+    const h = household();
+    await h.send(h.token, 'PATCH', '/api/me/settings', {
+      values: { 'pensieve.speakers': true },
+    });
+    h.transcripts.push('A: Hallo.');
+    h.decisions.push(NOTES);
+    await h.record();
+    expect(h.transcribeCalls).toEqual([
+      { language: 'nl', speakers: true, timestamps: true },
+    ]);
+  });
+
+  it('filters the list by kind', async () => {
+    const h = household();
+    h.transcripts.push('Gesprek.', 'Dictaat.');
+    h.decisions.push(NOTES);
+    await h.record();
+    await h.record({ kind: 'dictation' });
+    await h.record({ kind: 'video' });
+    expect((await h.list(h.token, '?kind=video')).map((r) => r.kind)).toEqual([
+      'video',
+    ]);
+    expect(await h.list(h.token)).toHaveLength(3);
+  });
+});
+
+describe('marks', () => {
+  it('can be changed by the owner only', async () => {
+    const h = household();
+    const { id } = recordingSummary.parse(
+      await (await h.record({ kind: 'video' })).json(),
+    );
+    await h.send(h.token, 'POST', `/api/pensieve/recordings/${id}/share`, {
+      personId: h.eva.id,
+    });
+    const marks = [{ at: 250, note: 'Eerste oven, 2009' }];
+    expect(
+      (
+        await h.send(
+          h.evaToken,
+          'PUT',
+          `/api/pensieve/recordings/${id}/marks`,
+          {
+            marks,
+          },
+        )
+      ).status,
+    ).toBe(404);
+    await h.send(h.token, 'PUT', `/api/pensieve/recordings/${id}/marks`, {
+      marks,
+    });
+    expect((await h.detail(id, h.evaToken)).marks).toEqual(marks);
+    expect(await h.list(h.token, '?q=oven')).toHaveLength(1);
+  });
+});
+
+describe('labels', () => {
+  it('belong to each person, also on a recording shared with them', async () => {
+    const h = household();
+    const { id } = recordingSummary.parse(
+      await (
+        await h.record({ kind: 'video', labels: ['Interviews', 'werk'] })
+      ).json(),
+    );
+    await h.send(h.token, 'POST', `/api/pensieve/recordings/${id}/share`, {
+      personId: h.eva.id,
+    });
+    expect(
+      (
+        await h.send(
+          h.evaToken,
+          'PUT',
+          `/api/pensieve/recordings/${id}/labels`,
+          {
+            labels: ['Thuis'],
+          },
+        )
+      ).status,
+    ).toBe(200);
+
+    expect((await h.list(h.token))[0]!.labels).toEqual(['Interviews', 'werk']);
+    expect((await h.list(h.evaToken))[0]!.labels).toEqual(['Thuis']);
+    const labels = z
+      .array(label)
+      .parse(await (await h.call(h.token, '/api/pensieve/labels')).json());
+    expect(labels.map((l) => [l.name, l.count])).toEqual([
+      ['Interviews', 1],
+      ['werk', 1],
+    ]);
+  });
+
+  it('filter the list, any of them, and are found by search', async () => {
+    const h = household();
+    h.transcripts.push('Een.', 'Twee.');
+    h.decisions.push(NOTES, NOTES);
+    await h.record({ title: 'Overleg', labels: ['Werk'] });
+    await h.record({ title: 'Huisarts', labels: ['Thuis'] });
+    await h.record({ kind: 'video', title: 'Film', labels: ['Ideeën'] });
+    const titles = async (query: string) =>
+      (await h.list(h.token, query)).map((r) => r.title).sort();
+    expect(await titles('?label=werk')).toEqual(['Overleg']);
+    expect(await titles('?label=Werk&label=Thuis')).toEqual([
+      'Huisarts',
+      'Overleg',
+    ]);
+    expect(await titles('?label=Werk&kind=video')).toEqual([]);
+    expect(await titles('?q=idee')).toEqual(['Film']);
+    expect(await titles('?label=Onbekend')).toEqual([]);
+  });
+
+  it('can be added, renamed into another and removed', async () => {
+    const h = household();
+    const { id } = recordingSummary.parse(
+      await (await h.record({ kind: 'video', labels: ['Werk'] })).json(),
+    );
+    const created = label.parse(
+      await (
+        await h.send(h.token, 'POST', '/api/pensieve/labels', {
+          name: 'Studio Vos',
+        })
+      ).json(),
+    );
+    const again = label.parse(
+      await (
+        await h.send(h.token, 'POST', '/api/pensieve/labels', {
+          name: 'studio vos',
+        })
+      ).json(),
+    );
+    expect(again.id).toBe(created.id);
+
+    const werk = z
+      .array(label)
+      .parse(await (await h.call(h.token, '/api/pensieve/labels')).json())
+      .find((l) => l.name === 'Werk')!;
+    const merged = label.parse(
+      await (
+        await h.send(h.token, 'PATCH', `/api/pensieve/labels/${werk.id}`, {
+          name: 'Studio Vos',
+        })
+      ).json(),
+    );
+    expect(merged).toMatchObject({ id: created.id, count: 1 });
+    expect((await h.detail(id)).labels).toEqual(['Studio Vos']);
+
+    expect(
+      (await h.send(h.evaToken, 'DELETE', `/api/pensieve/labels/${created.id}`))
+        .status,
+    ).toBe(404);
+    await h.send(h.token, 'DELETE', `/api/pensieve/labels/${created.id}`);
+    expect((await h.detail(id)).labels).toEqual([]);
+  });
+
+  it('cannot be put on a recording the person cannot see', async () => {
+    const h = household();
+    const { id } = recordingSummary.parse(
+      await (await h.record({ kind: 'video' })).json(),
+    );
+    expect(
+      (
+        await h.send(
+          h.evaToken,
+          'PUT',
+          `/api/pensieve/recordings/${id}/labels`,
+          {
+            labels: ['Van mij'],
+          },
+        )
+      ).status,
+    ).toBe(404);
   });
 });

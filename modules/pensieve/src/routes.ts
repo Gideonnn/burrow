@@ -3,7 +3,11 @@ import { stat } from 'node:fs/promises';
 import { Readable } from 'node:stream';
 import {
   createRecordingRequest,
+  labelRequest,
+  recordingKind,
   redoRequest,
+  setLabelsRequest,
+  setMarksRequest,
   shareRequest,
   updateRecordingRequest,
 } from '@burrow/contracts';
@@ -17,6 +21,7 @@ import { RecordingError, type Recordings } from './recordings';
 const listQuery = z.object({
   scope: z.enum(['all', 'mine', 'shared']).default('all'),
   q: z.string().trim().min(1).max(200).optional(),
+  kind: recordingKind.optional(),
 });
 
 const asHttp = (error: unknown): never => {
@@ -38,14 +43,58 @@ export function pensieveRoutes(recordings: Recordings) {
         requireRight('read'),
         zValidator('query', listQuery),
         (c) => {
-          const { scope, q } = c.req.valid('query');
+          const { scope, q, kind } = c.req.valid('query');
+          // Repeated: ?label=Werk&label=Thuis matches either.
+          const labels = (c.req.queries('label') ?? [])
+            .map((l) => l.trim())
+            .filter(Boolean);
+          const filter = { scope, kind, labels };
           return c.json(
             q
-              ? recordings.search(c.var.access, q)
-              : recordings.list(c.var.access, scope),
+              ? recordings.search(c.var.access, q, filter)
+              : recordings.list(c.var.access, filter),
           );
         },
       )
+      .get('/pensieve/labels', requireRight('read'), (c) =>
+        c.json(recordings.listLabels(c.var.access)),
+      )
+      .post(
+        '/pensieve/labels',
+        requireRight('organize'),
+        zValidator('json', labelRequest),
+        (c) =>
+          c.json(
+            recordings.addLabel(c.var.access, c.req.valid('json').name),
+            201,
+          ),
+      )
+      .patch(
+        '/pensieve/labels/:id',
+        requireRight('organize'),
+        zValidator('json', labelRequest),
+        (c) => {
+          try {
+            return c.json(
+              recordings.renameLabel(
+                c.var.access,
+                c.req.param('id'),
+                c.req.valid('json').name,
+              ),
+            );
+          } catch (error) {
+            return asHttp(error);
+          }
+        },
+      )
+      .delete('/pensieve/labels/:id', requireRight('organize'), (c) => {
+        try {
+          recordings.removeLabel(c.var.access, c.req.param('id'));
+        } catch (error) {
+          asHttp(error);
+        }
+        return c.json({ deleted: true });
+      })
       .post(
         '/pensieve/recordings',
         requireRight('organize'),
@@ -169,6 +218,63 @@ export function pensieveRoutes(recordings: Recordings) {
           }
         },
       )
+      .put(
+        '/pensieve/recordings/:id/labels',
+        requireRight('organize'),
+        zValidator('json', setLabelsRequest),
+        (c) => {
+          try {
+            return c.json(
+              recordings.setLabels(
+                c.var.access,
+                c.req.param('id'),
+                c.req.valid('json').labels,
+              ),
+            );
+          } catch (error) {
+            return asHttp(error);
+          }
+        },
+      )
+      .put(
+        '/pensieve/recordings/:id/marks',
+        requireRight('organize'),
+        zValidator('json', setMarksRequest),
+        (c) => {
+          try {
+            return c.json(
+              recordings.setMarks(
+                c.var.access,
+                c.req.param('id'),
+                c.req.valid('json').marks,
+              ),
+            );
+          } catch (error) {
+            return asHttp(error);
+          }
+        },
+      )
+      .post(
+        '/pensieve/recordings/:id/transcribe',
+        requireRight('organize'),
+        (c) => {
+          try {
+            return c.json(
+              recordings.requestTranscript(c.var.access, c.req.param('id')),
+            );
+          } catch (error) {
+            return asHttp(error);
+          }
+        },
+      )
+      .get('/pensieve/recordings/:id/subtitles', requireRight('read'), (c) => {
+        const row = recordings.find(c.var.access, c.req.param('id'));
+        const srt = row && recordings.subtitles(row);
+        if (!srt) throw notFound();
+        return c.body(srt, 200, {
+          'content-type': 'application/x-subrip; charset=utf-8',
+        });
+      })
       .post(
         '/pensieve/recordings/:id/redo',
         requireRight('organize'),

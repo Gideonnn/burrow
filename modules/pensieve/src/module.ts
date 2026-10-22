@@ -52,7 +52,7 @@ const settings: SettingDefinition[] = [
     module: MODULE,
     label: 'Kopie in iCloud Drive',
     description:
-      'Pensieve op je Mac zet audio, transcript en notulen ook in iCloud Drive › Pensieve.',
+      'Pensieve op je Mac zet audio, transcript en samenvatting ook in iCloud Drive › Pensieve. Video en schermopnames staan daar altijd.',
     type: 'boolean',
     default: true,
     feature: false,
@@ -66,9 +66,9 @@ export type PensieveOptions = {
   bot: string;
 };
 
-// Pensieve, the recordings module: a Mac app records a conversation and
-// uploads it; here it is compressed, transcribed and turned into notes, and
-// shared with the other person when its owner wants.
+// Pensieve, the recordings module: a Mac app records a call, a video, the
+// screen or a dictation and uploads its audio; here it is compressed,
+// transcribed and turned into notes, and shared when its owner wants.
 export function pensieveModule(platform: Platform, options: PensieveOptions) {
   const recordings = new Recordings({ platform, ...options });
 
@@ -92,6 +92,7 @@ export function pensieveModule(platform: Platform, options: PensieveOptions) {
 ${ctx.instructions.trim() || '(none)'}
 
 ## Recording facts (from the server, trustworthy)
+- Kind: ${row.kind}
 - Title: ${row.title}
 - Recorded: ${row.startedAt.toISOString()}
 

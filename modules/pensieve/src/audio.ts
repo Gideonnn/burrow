@@ -11,9 +11,12 @@ export interface Audio {
   // Any input to the stored format; returns the duration in seconds.
   compress(input: string, output: string): Promise<{ seconds: number }>;
   // Cuts a stored file into parts of at most `seconds`, for the
-  // transcription API's caps; returns the part files in order.
-  split(input: string, dir: string, seconds: number): Promise<string[]>;
+  // transcription API's caps; returns the parts in order with where each
+  // starts in the whole recording.
+  split(input: string, dir: string, seconds: number): Promise<AudioPart[]>;
 }
+
+export type AudioPart = { file: string; start: number };
 
 // AAC, mono, 16 kHz at 32 kbit/s: about 14 MB an hour instead of 115 MB for
 // the WAV, plenty for speech, and every Apple device plays it.
@@ -90,10 +93,13 @@ export class FfmpegAudio implements Audio {
       .sort()
       .map((f) => join(dir, f));
     // Cutting at exact multiples leaves a last part of a few milliseconds,
-    // which the transcription API refuses as too short.
-    const kept: string[] = [];
-    for (const part of parts) {
-      if ((await stat(part)).size >= MIN_PART_BYTES) kept.push(part);
+    // which the transcription API refuses as too short. A copy cuts on
+    // packet boundaries, so starts are measured rather than multiplied.
+    const kept: AudioPart[] = [];
+    let start = 0;
+    for (const [i, file] of parts.entries()) {
+      if ((await stat(file)).size >= MIN_PART_BYTES) kept.push({ file, start });
+      if (i < parts.length - 1) start += await this.duration(file);
     }
     return kept;
   }

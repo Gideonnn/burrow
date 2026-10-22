@@ -68,14 +68,23 @@ describe.skipIf(!hasFfmpeg)('ffmpeg', () => {
     const stored = join(dir, 'audio.m4a');
     await audio.compress(file, stored);
     const parts = await audio.split(stored, dir, 4);
-    expect(parts.map((p) => p.slice(dir.length + 1))).toEqual([
+    expect(parts.map((p) => p.file.slice(dir.length + 1))).toEqual([
       'part-000.m4a',
       'part-001.m4a',
       'part-002.m4a',
     ]);
     const total = (
-      await Promise.all(parts.map((p) => audio.duration(p)))
+      await Promise.all(parts.map((p) => audio.duration(p.file)))
     ).reduce((a, b) => a + b, 0);
     expect(total).toBeCloseTo(10, 0);
+  });
+
+  it('tells where each part starts, so timestamps stay on the whole recording', async () => {
+    const { dir, file } = wav();
+    const audio = new FfmpegAudio();
+    const stored = join(dir, 'audio.m4a');
+    await audio.compress(file, stored);
+    const parts = await audio.split(stored, dir, 4);
+    expect(parts.map((p) => Math.round(p.start))).toEqual([0, 4, 8]);
   });
 });

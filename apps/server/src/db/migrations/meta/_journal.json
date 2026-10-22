@@ -141,6 +141,13 @@
       "when": 1792699954103,
       "tag": "0019_outing_image_frame",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "6",
+      "when": 1792704901256,
+      "tag": "0020_pensieve_v2",
+      "breakpoints": true
     }
   ]
 }

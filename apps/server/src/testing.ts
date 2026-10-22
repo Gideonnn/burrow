@@ -10,7 +10,13 @@ import type {
 } from '@burrow/contracts';
 import { FakeProvider } from '@burrow/hedwig';
 import { type Accounts, hedwigModule, mailboxes } from '@burrow/hedwig/server';
-import { type Audio, pensieveModule, type Transcriber } from '@burrow/pensieve';
+import {
+  type Audio,
+  pensieveModule,
+  type TranscribeOptions,
+  type Transcriber,
+  type Transcription,
+} from '@burrow/pensieve';
 import {
   type AgentRequest,
   type AgentRunner,
@@ -62,6 +68,8 @@ export function testHousehold({
             'mail-search',
             'mail-templates',
             'meeting-notes',
+            'interview-notes',
+            'screen-steps',
             'outing-details',
             'festival-lineup',
           ],
@@ -149,6 +157,23 @@ export function testHousehold({
           instructions: 'Write notes.',
         },
       ],
+      [
+        'interview-notes',
+        {
+          name: 'interview-notes',
+          description: 'Interview notes.',
+          model: 'opus',
+          instructions: 'Write interview notes.',
+        },
+      ],
+      [
+        'screen-steps',
+        {
+          name: 'screen-steps',
+          description: 'Steps.',
+          instructions: 'Write the steps.',
+        },
+      ],
     ]),
   };
   const runner: AgentRunner = {
@@ -194,27 +219,30 @@ export function testHousehold({
   });
   platform.use(hedwig.module);
   // Stand-ins for ffmpeg and OpenAI: compressing copies the file, and each
-  // transcribed part takes the next queued text (an Error fails that part).
-  const transcripts: (string | Error)[] = [];
+  // transcribed part takes the next queued text or transcription (an Error
+  // fails that part). Every call's options are kept.
+  const transcripts: (string | Transcription | Error)[] = [];
+  const transcribeCalls: TranscribeOptions[] = [];
   const audio: Audio = {
     compress: async (input, output) => {
       await copyFile(input, output);
       return { seconds: 61 };
     },
     split: async (input, dir) => {
-      const part = join(dir, 'part-000.m4a');
-      await copyFile(input, part);
-      return [part];
+      const file = join(dir, 'part-000.m4a');
+      await copyFile(input, file);
+      return [{ file, start: 0 }];
     },
   };
   const transcriber: Transcriber = {
     name: 'fake',
     maxSeconds: 1200,
-    transcribe: async () => {
+    transcribe: async (_file, options) => {
+      transcribeCalls.push(options);
       const next = transcripts.shift();
       if (next === undefined || next instanceof Error)
         throw next ?? new Error('no transcript queued');
-      return next;
+      return typeof next === 'string' ? { text: next, segments: null } : next;
     },
   };
   const pensieve = pensieveModule(platform, {
@@ -293,6 +321,7 @@ export function testHousehold({
     arrived,
     recordings: pensieve.recordings,
     transcripts,
+    transcribeCalls,
     decisions,
     agentRequests,
     web,

@@ -57,6 +57,7 @@ describe('MCP', () => {
       'get_settings',
       'list_mailboxes',
       'list_outings',
+      'list_recording_labels',
       'list_recordings',
       'list_routines',
       'list_tasks',
@@ -66,6 +67,7 @@ describe('MCP', () => {
     const full = await connect(s, ['read', 'organize', 'draft', 'send']);
     const names = (await full.listTools()).tools.map((t) => t.name);
     expect(names).toContain('create_draft');
+    expect(names).toContain('label_recording');
     expect(names.some((n) => /send/.test(n))).toBe(false);
     const facts = await connect(s, ['read'], true);
     const factTools = (await facts.listTools()).tools.map((t) => t.name);

@@ -83,3 +83,39 @@ describe('the platform migration', () => {
     ]);
   });
 });
+
+describe('the Pensieve v2 migration', () => {
+  it('turns existing recordings into calls that keep their transcript and notes', () => {
+    const sqlite = new Database(':memory:');
+    const db = drizzle(sqlite);
+    migrate(db, {
+      migrationsFolder: migrationsUpTo('0019_outing_image_frame'),
+    });
+    sqlite.exec(`
+      INSERT INTO people (id, name) VALUES ('p1', 'Eva');
+      INSERT INTO recordings (id, owner_id, title, started_at, status, source, audio, transcript, notes)
+        VALUES ('r1', 'p1', 'Offerte poorten', 0, 'done', 'recorded', 'audio.m4a', 'A: Vrijdag.',
+          '{"title":null,"summary":"Kort.","decisions":[],"actions":[],"openQuestions":[]}');
+    `);
+
+    migrate(db, { migrationsFolder: migrations });
+
+    expect(
+      sqlite
+        .prepare(
+          'SELECT kind, transcribe, marks, segments, transcript, notes FROM recordings',
+        )
+        .all(),
+    ).toEqual([
+      {
+        kind: 'call',
+        transcribe: 1,
+        marks: '[]',
+        segments: null,
+        transcript: 'A: Vrijdag.',
+        notes:
+          '{"title":null,"summary":"Kort.","decisions":[],"actions":[],"openQuestions":[]}',
+      },
+    ]);
+  });
+});
