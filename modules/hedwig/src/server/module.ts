@@ -235,6 +235,13 @@ export function hedwigModule(platform: Platform, options: HedwigOptions) {
         .catch((error: Error) =>
           console.error(`hedwig: the rules pass failed: ${error.message}`),
         );
+      void outings
+        .adoptArchive()
+        .catch((error: Error) =>
+          console.error(
+            `hedwig: outings from the archive failed: ${error.message}`,
+          ),
+        );
       if (options.sync === false) return;
       const stopSync = startSyncLoop(mail, onArrived);
       const stopBackfill = startBackfillLoop(mail);

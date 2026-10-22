@@ -304,6 +304,27 @@ describe('outings', () => {
     });
   });
 
+  it('finds order mails for nights still to come in the archive', async () => {
+    const s = setup();
+    s.provider(s.home.id).deliver({
+      subject: 'Je bestelling',
+      bodyText: 'Bedankt.',
+      bodyHtml: ORDER_HTML,
+    });
+    s.mail.onStored = undefined;
+    await s.mail.sync(s.home.id);
+    expect(
+      outingsResponse.parse(
+        await (await s.send(s.token, 'GET', '/api/outings')).json(),
+      ),
+    ).toEqual([]);
+    expect(await s.outings.adoptArchive()).toBe(1);
+    const list = outingsResponse.parse(
+      await (await s.send(s.token, 'GET', '/api/outings')).json(),
+    );
+    expect(list.map((o) => o.title)).toEqual(['Neon Nineties']);
+  });
+
   it('leaves order mails for nights that are over alone', async () => {
     const s = setup();
     await s.deliver({

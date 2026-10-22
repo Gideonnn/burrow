@@ -256,6 +256,7 @@ export function testHousehold({
     triage: hedwig.triage,
     insights: hedwig.insights,
     facts: hedwig.facts,
+    outings: hedwig.outings,
     routines: platform.routines,
     workers: platform.workers,
     arrived,

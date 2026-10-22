@@ -10,7 +10,7 @@ import type {
   UpdateOutingRequest,
 } from '@burrow/contracts';
 import { type Access, type Platform, people } from '@burrow/platform';
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, desc, eq, like } from 'drizzle-orm';
 import { factsFor } from '../facts/store';
 import type { MailService } from '../mail-service';
 import {
@@ -479,6 +479,20 @@ export class OutingsService {
         ),
       );
     }
+  }
+
+  // Once at start: order mails already in the archive for nights still to
+  // come. Only mail with JSON-LD is looked at, so this stays a quick scan.
+  async adoptArchive() {
+    const ids = this.db
+      .select({ id: messages.id })
+      .from(messages)
+      .where(like(messages.bodyHtml, '%ld+json%'))
+      .orderBy(desc(messages.receivedAt))
+      .all()
+      .map((r) => r.id);
+    await this.adoptStored(ids);
+    return ids.length;
   }
 
   // --- internals ----------------------------------------------------------
