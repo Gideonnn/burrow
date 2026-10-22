@@ -21,8 +21,10 @@ Answer:
   - "announcement": a presale, newsletter, voucher code or invitation to buy tickets.
   - "other": not about an outing.
 - `title`: the event's own name as the organiser writes it ("Neon Nineties"), never the
-  email's subject, the shop or a sentence. Leave out the year unless it is part of the
-  name. For an addon, the event it is for.
+  email's subject, the shop or a sentence. Short, as people say it: leave out the year,
+  dates ("Nov. 1st"), ticket types, order numbers and tour subtitles after "|" unless
+  they are the name ("Hoge Bomen Festival: De Finale", "Neon Nineties", not "Neon
+  Nineties 2027 | The Tour - Early Bird"). For an addon, the event it is for.
 - `kind`: one Dutch word: concert, festival, feest, theater, cabaret, sport, film, or
   another short word.
 - `startsAt`, `endsAt`, `doorsAt`: local time as `YYYY-MM-DDTHH:mm`, or `YYYY-MM-DD`

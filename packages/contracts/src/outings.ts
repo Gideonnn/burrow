@@ -69,6 +69,41 @@ const outingFields = {
   aliases: z.array(text(100).min(1)).max(20),
 };
 
+// One act on a festival's bill, as read from its website.
+export const lineupArtist = z.object({
+  name: z.string().max(120),
+  day: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .nullable(),
+  stage: z.string().max(80).nullable(),
+  // Local time, "21:30".
+  startsAt: z
+    .string()
+    .regex(/^\d{2}:\d{2}$/)
+    .nullable(),
+  headliner: z.boolean(),
+});
+export type LineupArtist = z.infer<typeof lineupArtist>;
+
+// What Haiku reads from the festival's pages.
+export const lineupRead = z.object({
+  artists: z.array(lineupArtist).max(400),
+  // Whether the organiser says the line-up is complete.
+  complete: z.boolean(),
+  // One short Dutch sentence, e.g. "Meer namen volgen".
+  note: z.string().max(200).nullable(),
+});
+export type LineupRead = z.infer<typeof lineupRead>;
+
+export const outingLineup = lineupRead.extend({
+  status: z.enum(['working', 'ready', 'failed']),
+  error: z.string().nullable(),
+  sources: z.array(z.string()),
+  updatedAt: z.iso.datetime(),
+});
+export type OutingLineup = z.infer<typeof outingLineup>;
+
 export const outing = z.object({
   id: z.string(),
   ...outingFields,
@@ -88,6 +123,8 @@ export const outing = z.object({
   mails: z.array(outingMail),
   // Pages where the shop keeps the tickets, from the linked mails, for
   // tickets that came as a link instead of an attachment.
+  // The line-up widget; null when nobody asked for one or it was removed.
+  lineup: outingLineup.nullable(),
   ticketLinks: z.array(
     z.object({ url: z.string(), label: z.string(), messageId: z.string() }),
   ),

@@ -63,6 +63,7 @@ export function testHousehold({
             'mail-templates',
             'meeting-notes',
             'outing-details',
+            'festival-lineup',
           ],
           rights: ['read', 'organize', 'draft'],
           persona: 'You are Kreacher.',
@@ -121,6 +122,14 @@ export function testHousehold({
           name: 'mail-templates',
           description: 'Indexes templates.',
           instructions: 'Index them.',
+        },
+      ],
+      [
+        'festival-lineup',
+        {
+          name: 'festival-lineup',
+          description: 'Reads a line-up.',
+          instructions: 'Read the line-up.',
         },
       ],
       [

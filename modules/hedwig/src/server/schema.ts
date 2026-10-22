@@ -5,6 +5,7 @@ import type {
   MailboxRole,
   MailFolder,
   MailProvider,
+  LineupArtist,
   OutingRead,
   ServerOp,
   TriageAction,
@@ -302,6 +303,27 @@ export const outingTasks = sqliteTable('outing_tasks', {
   doneAt: integer('done_at', { mode: 'timestamp_ms' }),
   doneBy: text('done_by').references(() => people.id),
   createdAt: createdAt(),
+});
+
+// A festival's line-up as Haiku read it from the website; no row means no
+// widget.
+export const outingLineups = sqliteTable('outing_lineups', {
+  outingId: text('outing_id')
+    .primaryKey()
+    .references(() => outings.id, { onDelete: 'cascade' }),
+  status: text('status').$type<'working' | 'ready' | 'failed'>().notNull(),
+  artists: text('artists', { mode: 'json' })
+    .$type<LineupArtist[]>()
+    .notNull()
+    .default([]),
+  complete: integer('complete', { mode: 'boolean' }).notNull().default(false),
+  note: text('note'),
+  error: text('error'),
+  sources: text('sources', { mode: 'json' })
+    .$type<string[]>()
+    .notNull()
+    .default([]),
+  updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
 });
 
 // Haiku's reading of a mail that looks like an outing, once per message.
