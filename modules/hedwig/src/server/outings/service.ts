@@ -31,7 +31,7 @@ import {
   outingTasks,
   outingTickets,
 } from '../schema';
-import { type Detected, detectOuting } from './detect';
+import { type Detected, detectOuting, ticketLinks } from './detect';
 import { type FetchPublic, fetchPublic } from './images';
 import { OutingPictures, PictureError } from './pictures';
 import { OUTING_SKILL, readPrompt, withRead } from './reader';
@@ -944,6 +944,15 @@ export class OutingsService {
           receivedAt: m.receivedAt.toISOString(),
         };
       }),
+      ticketLinks: access.factsOnly
+        ? []
+        : mails.flatMap(({ m }) =>
+            ticketLinks(m.bodyHtml).map((url) => ({
+              url,
+              label: linkLabel(row.vendor, url),
+              messageId: m.id,
+            })),
+          ),
       attendees: row.attendeeIds.filter((p) => names.has(p)).map(ref),
       createdBy: ref(row.createdBy),
       createdAt: row.createdAt.toISOString(),
@@ -1115,4 +1124,13 @@ function fillFrom(row: OutingRow, reads: OutingRead[]) {
     }
   }
   return fill;
+}
+
+// "Kaartjes bij Weeztix", by the shop's name or else the link's host.
+function linkLabel(vendor: string | null, url: string) {
+  if (vendor) return `Kaartjes bij ${vendor}`;
+  const host = new URL(url).hostname
+    .replace(/^(www|order|shop|tickets?|account)\./, '')
+    .split('.')[0]!;
+  return `Kaartjes bij ${host.charAt(0).toUpperCase()}${host.slice(1)}`;
 }

@@ -86,6 +86,11 @@ export const outing = z.object({
   tickets: z.array(outingTicket),
   tasks: z.array(outingTask),
   mails: z.array(outingMail),
+  // Pages where the shop keeps the tickets, from the linked mails, for
+  // tickets that came as a link instead of an attachment.
+  ticketLinks: z.array(
+    z.object({ url: z.string(), label: z.string(), messageId: z.string() }),
+  ),
   createdBy: personRef,
   createdAt: z.iso.datetime(),
   updatedBy: personRef,

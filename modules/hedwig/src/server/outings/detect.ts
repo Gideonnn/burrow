@@ -348,3 +348,39 @@ export function unique(values: (string | null | undefined)[]): string[] {
   }
   return out;
 }
+
+const LINK_WORDS =
+  /download|ticket|kaart|bekijk|view|wallet|claim|bestelling|order/i;
+const LINK_PATH =
+  /\/download\b|\/e?-?tickets?\b|\/order\b|personali[sz]ation|wallet|pkpass/i;
+const NOT_A_TICKET_LINK =
+  /support|help|faq|adobe|reader|terms|voorwaarden|privacy|unsubscribe|afmeld|uitschrijv|facebook|instagram|twitter|tiktok|youtube|linkedin|mailto:|tel:|contact|maps\.|webversion|webversie|browser/i;
+
+// Links in an order mail to the page where the shop keeps the tickets:
+// "Download je tickets", "Ticket bekijken". At most two, downloads first.
+export function ticketLinks(html: string | null): string[] {
+  if (!html) return [];
+  const found: { url: string; download: boolean }[] = [];
+  for (const m of html.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi)) {
+    const href = /\bhref\s*=\s*(?:"([^"]*)"|'([^']*)')/i.exec(m[1]!);
+    const url = (href?.[1] ?? href?.[2] ?? '').replaceAll('&amp;', '&').trim();
+    if (!/^https:\/\//i.test(url)) continue;
+    let target = url;
+    try {
+      target = decodeURIComponent(url);
+    } catch {
+      // keep it as it is
+    }
+    const text = `${m[1]} ${m[2]!.replace(/<img\b[^>]*\balt\s*=\s*"([^"]*)"[^>]*>/gi, ' $1 ').replace(/<[^>]+>/g, ' ')}`;
+    if (NOT_A_TICKET_LINK.test(target) || NOT_A_TICKET_LINK.test(text))
+      continue;
+    if (!LINK_PATH.test(target) || !LINK_WORDS.test(`${text} ${target}`))
+      continue;
+    if (found.some((f) => f.url === url)) continue;
+    found.push({ url, download: /download/i.test(`${text} ${target}`) });
+  }
+  return found
+    .sort((a, b) => Number(b.download) - Number(a.download))
+    .slice(0, 2)
+    .map((f) => f.url);
+}
