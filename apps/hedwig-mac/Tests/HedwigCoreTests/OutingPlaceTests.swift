@@ -18,6 +18,15 @@ import Testing
 
     private static let hall = OutingPlace(latitude: 51.7, longitude: 5.3, name: "Voorbeeldhal", city: "Voorbeeldstad")
 
+    @Test func showsTheVenueThenTheAddressWithoutTheCountry() {
+        #expect(OutingFormat.whereLines(venue: "Voorbeeldpark", address: "Parkweg 1, 3118 Voorbeelddorp, België")
+            == ["Voorbeeldpark", "Parkweg 1, 3118 Voorbeelddorp"])
+        #expect(OutingFormat.whereLines(venue: "Voorbeeldhal", address: "Voorbeeldhal, Voorbeeldstad") == ["Voorbeeldhal", "Voorbeeldstad"])
+        #expect(OutingFormat.whereLines(venue: nil, address: "Voorbeeldstad") == ["Voorbeeldstad"])
+        #expect(OutingFormat.whereLines(venue: "Voorbeeldhal", address: nil) == ["Voorbeeldhal"])
+        #expect(OutingFormat.whereLines(venue: " ", address: "") == [])
+    }
+
     @Test func asksForVenueAndAddressThenTheAddress() {
         #expect(PlaceQuery.queries(venue: "Voorbeeldhal", address: "Voorbeeldstad") == ["Voorbeeldhal, Voorbeeldstad", "Voorbeeldstad"])
         #expect(PlaceQuery.queries(venue: "Voorbeeldhal", address: "Voorbeeldhal 1, Voorbeeldstad") == ["Voorbeeldhal 1, Voorbeeldstad"])

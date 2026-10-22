@@ -92,17 +92,18 @@ private struct OutingFacts: View {
     @State private var lookup: (key: String, place: OutingPlace?)?
 
     var body: some View {
-        // The map sits beside the facts, small: the place's name is already in Waar.
-        HStack(alignment: .top, spacing: 20) {
+        // One card, like the line-up and the tickets: the facts on the left, the
+        // map filling the right side at the facts' height.
+        HStack(spacing: 0) {
             Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 12) {
                 GridRow {
                     key("Wanneer")
                     Text(OutingFormat.when(outing))
                     Color.clear.frame(width: 1, height: 1)
                 }
-                GridRow {
+                GridRow(alignment: .firstTextBaseline) {
                     key("Waar")
-                    Text(place ?? "Nog onbekend").foregroundStyle(place == nil ? .secondary : .primary).textSelection(.enabled)
+                    whereText
                     // The map below has its own Route.
                     if let route, mapPlace == nil, !lookingUp {
                         Button { NSWorkspace.shared.open(route) } label: { Label("Route", systemImage: "map") }
@@ -117,13 +118,20 @@ private struct OutingFacts: View {
                     Color.clear.frame(width: 1, height: 1)
                 }
             }
+            .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
             if let found = mapPlace {
-                OutingMapCard(outing: outing, place: found).transition(.opacity)
+                OutingMapCard(outing: outing, place: found)
+                    .frame(width: OutingMapCard.width)
+                    .frame(minHeight: 130)
+                    .transition(.opacity)
             } else if lookingUp {
-                OutingMapPlaceholder()
+                OutingMapPlaceholder().frame(width: OutingMapCard.width).frame(minHeight: 130)
             }
         }
+        .fixedSize(horizontal: false, vertical: true)
+        .background(.quaternary.opacity(0.3))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
         .task(id: outing.placeKey) {
             guard let key = outing.placeKey, OutingMaps.book.cached(outing) == nil else { return }
             let found = await OutingMaps.book.place(for: outing)
@@ -143,9 +151,22 @@ private struct OutingFacts: View {
         outing.placeKey != nil && lookup?.key != outing.placeKey
     }
 
-    private var place: String? {
-        let parts = [outing.venue, outing.address].compactMap { $0 }
-        return parts.isEmpty ? nil : parts.joined(separator: ", ")
+    /// The venue on its line, the address smaller below it, without the
+    /// country the map already shows.
+    @ViewBuilder
+    private var whereText: some View {
+        let lines = OutingFormat.whereLines(outing)
+        if let first = lines.first {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(first)
+                if let second = lines.dropFirst().first {
+                    Text(second).font(.callout).foregroundStyle(.secondary)
+                }
+            }
+            .textSelection(.enabled)
+        } else {
+            Text("Nog onbekend").foregroundStyle(.secondary)
+        }
     }
 
     private var route: URL? {

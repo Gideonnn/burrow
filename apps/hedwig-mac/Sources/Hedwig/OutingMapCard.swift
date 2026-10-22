@@ -148,28 +148,29 @@ struct OutingMapCard: View {
     let outing: Outing
     let place: OutingPlace
     @State private var image: NSImage?
-    @State private var width: CGFloat = 0
+    @State private var area = CGSize.zero
     @State private var travel: String?
     @State private var landed = false
 
-    static let width: CGFloat = 230
-    static let height: CGFloat = 150
+    /// The map's column in the facts card; its height is the card's.
+    static let width: CGFloat = 240
 
-    // Rounded up, so dragging the window does not draw a map per point.
-    private var size: CGSize { CGSize(width: (width / 80).rounded(.up) * 80, height: Self.height) }
+    // Rounded up, so a changing card does not draw a map per point.
+    private var size: CGSize {
+        CGSize(width: (area.width / 40).rounded(.up) * 40, height: (area.height / 20).rounded(.up) * 20)
+    }
     private var snapshotKey: String { OutingMaps.snapshotKey(place, size: size, dark: scheme == .dark) }
     private var query: String { outing.placeQueries.first ?? outing.title }
     private var label: (title: String, subtitle: String?) { outing.placeLabel(place) }
 
     var body: some View {
+        // Edge to edge in the facts card, which clips it.
         map
-            .frame(width: Self.width, height: Self.height)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .overlay(alignment: .bottomLeading) { caption.allowsHitTesting(false) }
             .overlay(alignment: .bottomTrailing) { routeButton }
-            .clipShape(RoundedRectangle(cornerRadius: 14))
-            .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(.black.opacity(scheme == .dark ? 0.4 : 0.08)))
-            .shadow(color: .black.opacity(0.08), radius: 8, y: 3)
-            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
+            .clipped()
+            .onGeometryChange(for: CGSize.self) { $0.size } action: { area = $0 }
             .task(id: snapshotKey) { await loadSnapshot() }
             .task(id: "\(outing.placeKey ?? "")|\(LocationAccess.shared.granted)") {
                 travel = await OutingMaps.travelTime(to: place, key: outing.placeKey ?? query)
@@ -243,7 +244,7 @@ struct OutingMapCard: View {
     }
 
     private func loadSnapshot() async {
-        guard width > 0 else { return }
+        guard area.width > 0, area.height > 0 else { return }
         if let hit = OutingMaps.cachedSnapshot(snapshotKey) {
             image = hit
             landed = true
@@ -273,9 +274,9 @@ struct OutingMapCard: View {
 /// page does not jump when the map arrives.
 struct OutingMapPlaceholder: View {
     var body: some View {
-        RoundedRectangle(cornerRadius: 14)
+        Rectangle()
             .fill(.quaternary.opacity(0.5))
-            .frame(width: OutingMapCard.width, height: OutingMapCard.height)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .overlay { Image(systemName: "map").font(.title2).foregroundStyle(.tertiary) }
             .accessibilityHidden(true)
     }

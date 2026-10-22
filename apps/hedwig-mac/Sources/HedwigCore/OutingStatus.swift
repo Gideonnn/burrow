@@ -86,6 +86,30 @@ extension String {
 public enum OutingFormat {
     public static let locale = Locale(identifier: "nl_NL")
 
+    private static let countries: Set<String> = [
+        "nederland", "netherlands", "the netherlands", "belgië", "belgie", "belgium", "belgique",
+        "deutschland", "duitsland", "germany", "frankrijk", "france",
+    ]
+
+    /// Waar on two lines: the venue, then the address without the venue and
+    /// without the country the map already shows.
+    public static func whereLines(venue: String?, address: String?) -> [String] {
+        let clean = { (text: String?) in text?.trimmingCharacters(in: .whitespaces).nilIfEmpty }
+        let venue = clean(venue)
+        var parts = (clean(address) ?? "")
+            .split(separator: ",")
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+        if parts.count > 1, let last = parts.last, countries.contains(last.lowercased()) { parts.removeLast() }
+        if let venue, parts.first?.lowercased() == venue.lowercased() { parts.removeFirst() }
+        let rest = parts.isEmpty ? nil : parts.joined(separator: ", ")
+        return [venue, rest].compactMap { $0 }
+    }
+
+    public static func whereLines(_ outing: Outing) -> [String] {
+        whereLines(venue: outing.venue, address: outing.address)
+    }
+
     private static func string(_ date: Date, _ format: String, _ calendar: Calendar) -> String {
         let f = DateFormatter()
         f.locale = locale
@@ -174,4 +198,8 @@ extension Outing {
         }
         return all.filter { $0.fireAt > now }
     }
+}
+
+private extension String {
+    var nilIfEmpty: String? { isEmpty ? nil : self }
 }
