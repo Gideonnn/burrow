@@ -104,6 +104,8 @@ public final class AppModel {
     public private(set) var unreadCounts: [String: Int] = [:]
     public private(set) var isLoading = false
     public var error: String?
+    /// Whether the server answers; while it does not, loads retry quietly.
+    public let reachability: ServerReachability
     /// Open compose windows; restarting would lose what is in them.
     public var composing = 0
 
@@ -118,10 +120,12 @@ public final class AppModel {
     public init(
         store: ConnectionStore = ConnectionStore(app: "hedwig"),
         makeClient: @escaping @Sendable (Connection) -> APIClient = { APIClient(baseURL: $0.serverURL, token: $0.token) },
-        connection: Connection? = nil
+        connection: Connection? = nil,
+        reachability: ServerReachability = ServerReachability()
     ) {
         self.store = store
         self.makeClient = makeClient
+        self.reachability = reachability
         // HEDWIG_SERVER and HEDWIG_KEY connect without touching the Keychain,
         // for demos and automated screenshots.
         let env = ProcessInfo.processInfo.environment
@@ -130,6 +134,8 @@ public final class AppModel {
         } else {
             self.connection = connection ?? store.load()
         }
+        reachability.probe = { [weak self] in await self?.serverAnswers() ?? false }
+        reachability.onRegained = { [weak self] in await self?.reconnected() }
     }
 
     public var api: APIClient? { connection.map(makeClient) }
@@ -165,7 +171,7 @@ public final class AppModel {
             error = APIError.unauthorized.errorDescription
             return
         } catch {
-            self.error = error.localizedDescription
+            report(error, quiet: true)
             return
         }
         if selection == nil, let first = me?.mailboxes.first { selection = .inbox(mailboxId: first.id) }
@@ -184,7 +190,11 @@ public final class AppModel {
         await refreshOutings()
         eventsTask?.cancel()
         eventsTask = Task { [weak self] in
-            guard let stream = self?.api?.events() else { return }
+            let reachability = self?.reachability
+            let connected: @Sendable (Bool) -> Void = { up in
+                Task { @MainActor in up ? await reachability?.answered() : reachability?.lost() }
+            }
+            guard let stream = self?.api?.events(connected: connected) else { return }
             for await event in stream { await self?.handle(event) }
         }
     }
@@ -205,6 +215,41 @@ public final class AppModel {
                 await loadOuting(messageId: messageId)
             }
         }
+    }
+
+    // MARK: Errors and the connection
+
+    /// Shows an error in the alert. When the server cannot be reached and the
+    /// call was a load (`quiet`), only the indicator in the sidebar changes:
+    /// the load repeats once the server is back.
+    func report(_ error: any Error, quiet: Bool = false) {
+        if APIError.isTransient(error) {
+            reachability.lost()
+            if quiet { return }
+        }
+        self.error = APIError.describe(error)
+    }
+
+    func serverAnswers() async -> Bool {
+        guard let api else { return false }
+        do {
+            _ = try await api.me()
+            return true
+        } catch {
+            return !APIError.isTransient(error)
+        }
+    }
+
+    /// Catches up on what changed while the server was away.
+    func reconnected() async {
+        guard me != nil else { return await start() }
+        if !isSearching { await loadSelection(keepSelection: true) }
+        if selectedMessageId != detail?.id { await openSelected() }
+        await refreshCounts()
+        await refreshFiltered()
+        await refreshDrafts()
+        await refreshTasks()
+        await refreshOutings()
     }
 
     // MARK: Lists
@@ -243,7 +288,7 @@ public final class AppModel {
             try await api.orderMailboxes(ordered.map(\.id))
         } catch {
             me?.mailboxes = all
-            self.error = error.localizedDescription
+            report(error)
         }
     }
 
@@ -287,7 +332,7 @@ public final class AppModel {
                 selectedMessageId = messages.first?.id
             }
         } catch {
-            self.error = error.localizedDescription
+            report(error, quiet: true)
         }
     }
 
@@ -371,7 +416,7 @@ public final class AppModel {
                 if message.flagged || (message.bodyText?.count ?? 0) > 1_500 { await loadInsights() }
             }
         } catch {
-            self.error = error.localizedDescription
+            report(error, quiet: true)
         }
     }
 
@@ -389,7 +434,7 @@ public final class AppModel {
             }
             await refreshCounts()
         } catch {
-            self.error = error.localizedDescription
+            report(error)
         }
     }
 
@@ -458,7 +503,7 @@ public final class AppModel {
             guard !Task.isCancelled, query == searchQuery, scope == searchScope else { return }
             showResults(response.results)
         } catch {
-            if !Task.isCancelled { self.error = error.localizedDescription }
+            if !Task.isCancelled { report(error, quiet: true) }
         }
     }
 
@@ -481,7 +526,7 @@ public final class AppModel {
             searchExplanation = response.explanation
             showResults(response.results)
         } catch {
-            if question == searchQuery, scope == searchScope { self.error = error.localizedDescription }
+            if question == searchQuery, scope == searchScope { report(error) }
         }
     }
 
@@ -540,7 +585,7 @@ public final class AppModel {
             await refreshFiltered()
             await refreshCounts()
         } catch {
-            self.error = error.localizedDescription
+            report(error)
         }
     }
 
@@ -645,7 +690,7 @@ extension AppModel {
             await refreshTasks()
             await refreshDrafts()
         } catch {
-            self.error = error.localizedDescription
+            report(error)
         }
     }
 
@@ -655,7 +700,7 @@ extension AppModel {
             try await api.reject(task: task.id)
             await refreshTasks()
         } catch {
-            self.error = error.localizedDescription
+            report(error)
         }
     }
 
@@ -686,7 +731,7 @@ extension AppModel {
             try await api.setRunner(id: runner.id, paused: paused)
             await refreshRunners()
         } catch {
-            self.error = error.localizedDescription
+            report(error)
         }
     }
 }

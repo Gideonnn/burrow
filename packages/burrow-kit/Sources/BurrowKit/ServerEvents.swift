@@ -40,15 +40,17 @@ public struct SSEParser: Sendable {
 
 extension APIClient {
     /// Live changes this key may see. Reconnects with a growing pause until
-    /// the task is cancelled.
-    public func events() -> AsyncStream<ServerEvent> {
+    /// the task is cancelled; `connected` hears when the stream opens or drops.
+    public func events(connected: (@Sendable (Bool) -> Void)? = nil) -> AsyncStream<ServerEvent> {
         AsyncStream { continuation in
             let task = Task {
                 var pause: UInt64 = 1
                 while !Task.isCancelled {
+                    var lost = true
                     do {
                         let (bytes, response) = try await session.bytes(for: eventsRequest())
-                        guard (response as? HTTPURLResponse)?.statusCode == 200 else { throw APIError.invalidResponse }
+                        try Self.check(response, Data())
+                        connected?(true)
                         pause = 1
                         var parser = SSEParser()
                         for try await line in bytes.lines {
@@ -59,8 +61,10 @@ extension APIClient {
                             }
                         }
                     } catch {
-                        if Task.isCancelled { break }
+                        lost = APIError.isTransient(error)
                     }
+                    if Task.isCancelled { break }
+                    if lost { connected?(false) }
                     try? await Task.sleep(nanoseconds: pause * 1_000_000_000)
                     pause = min(pause * 2, 60)
                 }

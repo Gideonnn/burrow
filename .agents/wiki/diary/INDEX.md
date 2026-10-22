@@ -2,6 +2,7 @@
 
 Newest first.
 
+- [2026-10-22 Every deploy restarted the tunnel: 30 seconds of 530](2026-10-22-deploys-restarted-the-tunnel.md): the install now leaves an unchanged tunnel alone; the apps retry gateway errors quietly and never show HTML.
 - [2026-10-22 Folders per mailbox, the filter review in Spam, spam stays unread](2026-10-22-spam-review-per-mailbox.md): no merged inbox, no Meer, no Gefilterd page; spam is read only after "Geen spam".
 - [2026-10-22 Sidebar rows with a badge need a tag](2026-10-22-sidebar-rows-with-a-badge.md): Gefilterd, Evenementen, Taken and Concepten ignored clicks; a badged `NavigationLink(value:)` needs `.tag`.
 - [2026-10-22 Outing pictures on the Mac, pasted anywhere on the page](2026-10-22-outing-pictures-paste-anywhere.md): thumbnail, hero and title colours; ⌘V caught by a key monitor, bytes over links, files over their icon.

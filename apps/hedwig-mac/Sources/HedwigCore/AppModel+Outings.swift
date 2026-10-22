@@ -38,7 +38,7 @@ extension AppModel {
             outing = saved
             outingSuggestion?.outingId = saved.id
         } catch {
-            self.error = error.localizedDescription
+            report(error)
         }
     }
 }
@@ -110,7 +110,7 @@ extension AppModel {
             if !tickets.isEmpty { await addTickets(tickets, to: created.id) }
             return created
         } catch {
-            self.error = error.localizedDescription
+            report(error)
             return nil
         }
     }
@@ -168,7 +168,7 @@ extension AppModel {
             if outing?.id == id { outing = nil }
             if selectedOutingId == id { selectedOutingId = upcomingOutings.first?.id }
         } catch {
-            self.error = error.localizedDescription
+            report(error)
         }
     }
 
@@ -187,7 +187,7 @@ extension AppModel {
                 let upload = try await api.upload(file: file)
                 apply(try await api.addTicket(outingId: outingId, uploadId: upload, name: file.lastPathComponent))
             } catch {
-                self.error = error.localizedDescription
+                report(error)
             }
         }
     }
@@ -204,7 +204,7 @@ extension AppModel {
             try data.write(to: file, options: .atomic)
             return file
         } catch {
-            self.error = error.localizedDescription
+            report(error)
             return nil
         }
     }
@@ -234,7 +234,7 @@ extension AppModel {
             selectedMessageId = id
             await messageLoad?.value
         } catch {
-            self.error = error.localizedDescription
+            report(error)
         }
     }
 
@@ -243,7 +243,7 @@ extension AppModel {
         do {
             apply(try await call(api))
         } catch {
-            self.error = error.localizedDescription
+            report(error)
         }
     }
 

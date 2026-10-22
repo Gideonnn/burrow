@@ -7,6 +7,7 @@ extension AppModel {
         let iso = ISO8601DateFormatter()
         var state: [String: Any] = [
             "connected": connection?.serverURL.host() ?? NSNull(),
+            "serverReachable": reachability.isReachable,
             "selection": selectionName ?? NSNull(),
             "mailboxes": (me?.mailboxes ?? []).map {
                 [

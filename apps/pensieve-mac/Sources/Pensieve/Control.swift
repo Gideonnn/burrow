@@ -9,6 +9,7 @@ func controlState(_ model: PensieveModel, _ recorder: RecorderController) -> [St
     let iso = ISO8601DateFormatter()
     var state: [String: Any] = [
         "connected": model.connection?.serverURL.host() ?? NSNull(),
+        "serverReachable": model.reachability.isReachable,
         "scope": model.scope.rawValue,
         "query": model.query,
         "recordings": model.recordings.prefix(50).map { r in

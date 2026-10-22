@@ -1,3 +1,4 @@
+import BurrowUI
 import HedwigCore
 import SwiftUI
 
@@ -191,18 +192,23 @@ struct ConnectionBadge: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            Circle().fill(.green).frame(width: 7, height: 7)
+            Circle().fill(reachable ? BurrowColor.success : BurrowColor.warning).frame(width: 7, height: 7)
             VStack(alignment: .leading, spacing: 0) {
                 Text(model.connection?.serverURL.host() ?? "").font(.caption.weight(.semibold))
-                Text(model.me?.key.name ?? "").font(.caption2).foregroundStyle(.secondary)
+                Text(reachable ? model.me?.key.name ?? "" : "Server even niet bereikbaar")
+                    .font(.caption2)
+                    .foregroundStyle(reachable ? AnyShapeStyle(.secondary) : AnyShapeStyle(BurrowColor.warning))
             }
             Spacer()
             if model.isLoading { ProgressView().controlSize(.mini) }
         }
         .padding(10)
+        .help(reachable ? "Verbonden" : "Hedwig probeert het vanzelf opnieuw.")
         .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 9))
         .padding(8)
     }
+
+    private var reachable: Bool { model.reachability.isReachable }
 }
 
 /// The private mailboxes are simply the inbox in the sidebar; Settings keeps "Privé".

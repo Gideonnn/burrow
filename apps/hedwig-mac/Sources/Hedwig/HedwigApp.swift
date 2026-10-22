@@ -46,12 +46,8 @@ struct RootView: View {
                 MainView()
             }
         }
-        .alert(
-            "Er ging iets mis",
-            isPresented: Binding(get: { model.error != nil }, set: { if !$0 { model.error = nil } }),
-            actions: { Button("OK") { model.error = nil } },
-            message: { Text(model.error ?? "") }
-        )
+        .errorAlert(Binding(get: { model.error }, set: { model.error = $0 }))
+        .keepsWindowOnScreen()
     }
 }
 

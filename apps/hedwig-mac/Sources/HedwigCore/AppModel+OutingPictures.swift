@@ -57,7 +57,7 @@ extension AppModel {
         do {
             return try await api.outingImageOptions(outingId: outingId)
         } catch {
-            self.error = error.localizedDescription
+            report(error)
             return []
         }
     }
@@ -122,7 +122,7 @@ extension AppModel {
         } catch PictureError.notAPicture, APIError.server(status: 400, _) {
             error = "Hedwig kan daar geen afbeelding van maken. Probeer een andere afbeelding of link."
         } catch {
-            self.error = error.localizedDescription
+            report(error)
         }
         return false
     }

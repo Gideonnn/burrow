@@ -4,15 +4,18 @@ public enum APIError: Error, Equatable, LocalizedError {
     case unauthorized
     case forbidden(String)
     case notFound
+    /// A gateway answered instead of the server: it restarts or the tunnel is down.
+    case unavailable(status: Int?)
     case server(status: Int, message: String)
     case invalidResponse
 
     public var errorDescription: String? {
         switch self {
         case .unauthorized: "De server kent deze sleutel niet (meer)."
-        case .forbidden(let m): "Deze sleutel mag dit niet: \(m)"
+        case .forbidden(let m): m.isEmpty ? "Deze sleutel mag dit niet." : "Deze sleutel mag dit niet: \(m)"
         case .notFound: "Niet gevonden."
-        case .server(let status, let message): "Serverfout \(status): \(message)"
+        case .unavailable: "Server even niet bereikbaar. Probeer het zo opnieuw."
+        case .server(let status, let message): message.isEmpty ? "Serverfout \(status)." : "Serverfout \(status): \(message)"
         case .invalidResponse: "Onverwacht antwoord van de server."
         }
     }
@@ -82,13 +85,24 @@ public struct APIClient: Sendable {
         case 401: throw APIError.unauthorized
         case 403: throw APIError.forbidden(message(bytes))
         case 404: throw APIError.notFound
-        default: throw APIError.server(status: http.statusCode, message: message(bytes))
+        default:
+            let error = jsonError(bytes)
+            if error == nil, APIError.gatewayStatuses.contains(http.statusCode) {
+                throw APIError.unavailable(status: http.statusCode)
+            }
+            throw APIError.server(status: http.statusCode, message: error ?? message(bytes))
         }
     }
 
+    /// The server's JSON error, or a short plain text; HTML pages (Cloudflare's) never.
     public static func message(_ data: Data) -> String {
-        (try? JSONDecoder().decode([String: String].self, from: data))?["error"]
-            ?? String(data: data, encoding: .utf8) ?? ""
+        if let error = jsonError(data) { return ErrorText.short(error) }
+        guard data.count <= 500, let text = String(data: data, encoding: .utf8), !text.contains("<") else { return "" }
+        return ErrorText.short(text)
+    }
+
+    static func jsonError(_ data: Data) -> String? {
+        (try? JSONDecoder().decode([String: JSONValue].self, from: data))?["error"]?.string
     }
 
     public struct Empty: Decodable {

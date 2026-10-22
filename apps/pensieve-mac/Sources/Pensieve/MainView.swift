@@ -114,19 +114,22 @@ struct SidebarFooter: View {
                     .controlSize(.small)
             }
             HStack(spacing: 6) {
-                Circle().fill(BurrowColor.success).frame(width: 7, height: 7)
+                Circle().fill(reachable ? BurrowColor.success : BurrowColor.warning).frame(width: 7, height: 7)
                 VStack(alignment: .leading, spacing: 0) {
                     Text(model.connection?.serverURL.host() ?? "").font(.caption.weight(.semibold))
-                    Text(model.profile.map { "\($0.person.name) · \($0.key.name)" } ?? "")
+                    Text(reachable ? model.profile.map { "\($0.person.name) · \($0.key.name)" } ?? "" : "Server even niet bereikbaar")
                         .font(.caption2)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(reachable ? AnyShapeStyle(.secondary) : AnyShapeStyle(BurrowColor.warning))
                         .lineLimit(1)
                 }
             }
+            .help(reachable ? "Verbonden" : "Pensieve probeert het vanzelf opnieuw.")
         }
         .padding(10)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
+
+    private var reachable: Bool { model.reachability.isReachable }
 }
 
 struct RecordingList: View {

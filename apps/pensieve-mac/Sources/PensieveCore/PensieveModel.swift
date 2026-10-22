@@ -23,6 +23,8 @@ public final class PensieveModel {
     public private(set) var uploadProgress: [String: Double] = [:]
     public private(set) var lastMirror: Date?
     public var error: String?
+    /// Whether the server answers; while it does not, loads and uploads retry quietly.
+    public let reachability: ServerReachability
     /// Set by the app while it records, for the sidebar and the agent state.
     public var recordingTitle: String?
 
@@ -37,9 +39,11 @@ public final class PensieveModel {
     public init(
         store: ConnectionStore = ConnectionStore(app: "pensieve"),
         makeClient: @escaping @Sendable (Connection) -> APIClient = { APIClient(baseURL: $0.serverURL, token: $0.token) },
-        connection: Connection? = nil, outbox: Outbox = Outbox(), mirror: Mirror = Mirror()
+        connection: Connection? = nil, outbox: Outbox = Outbox(), mirror: Mirror = Mirror(),
+        reachability: ServerReachability = ServerReachability()
     ) {
         self.store = store
+        self.reachability = reachability
         self.makeClient = makeClient
         self.outbox = outbox
         self.mirror = mirror
@@ -53,6 +57,8 @@ public final class PensieveModel {
             self.connection = connection ?? store.load()
         }
         pending = outbox.all()
+        reachability.probe = { [weak self] in await self?.serverAnswers() ?? false }
+        reachability.onRegained = { [weak self] in await self?.reconnected() }
     }
 
     public var api: APIClient? { connection.map(makeClient) }
@@ -87,7 +93,7 @@ public final class PensieveModel {
             error = APIError.unauthorized.errorDescription
             return
         } catch {
-            self.error = error.localizedDescription
+            report(error, quiet: true)
             return
         }
         people = (try? await api.people()) ?? []
@@ -95,7 +101,11 @@ public final class PensieveModel {
         Task { await sendPending() }
         eventsTask?.cancel()
         eventsTask = Task { [weak self] in
-            guard let stream = self?.api?.events() else { return }
+            let reachability = self?.reachability
+            let connected: @Sendable (Bool) -> Void = { up in
+                Task { @MainActor in up ? await reachability?.answered() : reachability?.lost() }
+            }
+            guard let stream = self?.api?.events(connected: connected) else { return }
             for await event in stream where event.type.hasPrefix("recording.") {
                 await self?.handle(event)
             }
@@ -106,6 +116,37 @@ public final class PensieveModel {
         await reload()
         if event["recordingId"] == selectedId { await loadDetail() }
         if event["status"] == RecordingStatus.done.rawValue { await mirrorNow() }
+    }
+
+    // MARK: Errors and the connection
+
+    /// Shows an error in the alert. When the server cannot be reached and the
+    /// call was a load or an upload (`quiet`), only the indicator in the
+    /// sidebar changes: it repeats once the server is back.
+    func report(_ error: any Error, quiet: Bool = false, as text: (String) -> String = { $0 }) {
+        if APIError.isTransient(error) {
+            reachability.lost()
+            if quiet { return }
+        }
+        self.error = text(APIError.describe(error))
+    }
+
+    func serverAnswers() async -> Bool {
+        guard let api else { return false }
+        do {
+            _ = try await api.profile()
+            return true
+        } catch {
+            return !APIError.isTransient(error)
+        }
+    }
+
+    /// Catches up on what changed while the server was away, and sends what waits.
+    func reconnected() async {
+        guard profile != nil else { return await start() }
+        await reload()
+        await loadDetail()
+        await sendPending()
     }
 
     public var mirrorEnabled: Bool { profile?.settings?["pensieve.mirror"]?.bool ?? true }
@@ -120,7 +161,7 @@ public final class PensieveModel {
                 selectedId = recordings.first?.id
             }
         } catch {
-            self.error = error.localizedDescription
+            report(error, quiet: true)
         }
     }
 
@@ -169,7 +210,7 @@ public final class PensieveModel {
             } catch {
                 uploadProgress[upload.id] = nil
                 pending = outbox.all()
-                self.error = "Uploaden lukt nu niet; Pensieve probeert het later opnieuw. (\(error.localizedDescription))"
+                report(error, quiet: true) { "Uploaden lukt nu niet; Pensieve probeert het later opnieuw. (\($0))" }
                 return
             }
         }
@@ -200,7 +241,7 @@ public final class PensieveModel {
             if selectedId == id { selectedId = nil }
             await reload()
         } catch {
-            self.error = error.localizedDescription
+            report(error)
         }
     }
 
@@ -211,7 +252,7 @@ public final class PensieveModel {
             await reload()
             await loadDetail()
         } catch {
-            self.error = error.localizedDescription
+            report(error)
         }
     }
 
@@ -227,7 +268,7 @@ public final class PensieveModel {
             try await mirror.sync(all, api: api)
             lastMirror = Date()
         } catch {
-            self.error = "De kopie in iCloud Drive lukte niet: \(error.localizedDescription)"
+            report(error, quiet: true) { "De kopie in iCloud Drive lukte niet: \($0)" }
         }
     }
 

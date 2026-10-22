@@ -50,6 +50,8 @@ and optionally `HEDWIG_OPEN` with any place `burrowctl hedwig show` takes (`filt
   also while Hedwig is closed; Settings › Agent and Settings › Runners show and pause it.
 - Messages show their category, the summary and a lock for sensitive mail once the
   server has facts for them; search hides login codes unless "Toon ook codes" is on.
+- The dot at the bottom of the sidebar turns orange while the server cannot be reached
+  (a deploy, the tunnel); Hedwig retries by itself and reloads once it is back.
 - Settings: the bot instructions and learned rules, adding accounts (admin keys), the
   household (everyone's features and devices, for admins) and the workers.
 

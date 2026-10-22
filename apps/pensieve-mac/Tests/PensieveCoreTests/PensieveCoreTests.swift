@@ -94,6 +94,32 @@ func temporaryDirectory() -> URL {
         #expect(server.requests("POST", "/api/uploads").count == 1)
     }
 
+    @Test func aTunnelRestartDuringAnUploadRetriesQuietly() async throws {
+        let server = server()
+        server.on("POST", "/api/pensieve/recordings", status: 530, json: "<!doctype html><title>Cloudflare Tunnel error</title>")
+        let outbox = Outbox(dir: temporaryDirectory())
+        let client = server.client()
+        let model = PensieveModel(
+            store: ConnectionStore(service: "app.burrow.pensieve.tests"), makeClient: { _ in client },
+            connection: Connection(serverURL: URL(string: "http://burrow.test")!, token: "bk_test"),
+            outbox: outbox, mirror: Mirror(root: temporaryDirectory()),
+            reachability: ServerReachability(delays: [.milliseconds(20)]))
+        await model.start()
+        server.on("GET", "/api/me", status: 530, json: "<html></html>")
+        await model.finished(audio: try wav(in: outbox), title: "Treingesprek", startedAt: Date())
+
+        #expect(model.error == nil)
+        #expect(!model.reachability.isReachable)
+        #expect(outbox.all().count == 1)
+
+        server.on("GET", "/api/me", json: Fixture.me)
+        server.on("POST", "/api/pensieve/recordings", status: 201, json: Fixture.recording("r1", status: "compressing"))
+        for _ in 0..<200 where !outbox.all().isEmpty { try await Task.sleep(for: .milliseconds(10)) }
+        #expect(outbox.all().isEmpty)
+        #expect(model.reachability.isReachable)
+        #expect(model.error == nil)
+    }
+
     @Test func copiesFinishedRecordingsToICloudOnceAndFollowsARename() async throws {
         let server = server()
         server.on("GET", "/api/pensieve/recordings/r1/audio", json: "AAC!")
