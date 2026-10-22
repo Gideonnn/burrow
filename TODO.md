@@ -54,6 +54,20 @@ Hedwig since 22 Oct (`.agents/wiki/topics/outings.md`); still to come for them: 
 them in the shared calendar.
 **Scope:** about five days in four phases, Google first; events and tickets three more.
 
+## Outings: bring bookings together
+
+**What:** (1) merge two outings into one in Hedwig (mails, tickets, checklist and
+pictures move along, the other is deleted) and move a linked mail from one outing to
+another; (2) parts of an outing: a hotel night, locker, parking, camping spot or train
+with their own time, place and booking number, shown under the outing (check-in and
+check-out, route to the hotel); (3) Hedwig suggests a part by itself when a booking
+mail falls on the outing's dates near its place ("Hotel bij Bosburcht? Voeg toe").
+**Why:** a weekend away is one thing for the family, but the hotel booking, the locker
+and the tickets arrive as separate mails. Today a locker only joins when Haiku reads the
+same event name in it, and a hotel never does.
+**Scope:** a merge route plus an `outing_parts` table and Haiku reading hotels and travel
+as parts, then the Mac UI (merge from the list, parts on the page); about two days.
+
 ## Angela's Mac
 
 **What:** install Hedwig and Pensieve on Angela's Mac (once by hand, then they update
