@@ -6,6 +6,7 @@ import {
   createOutingRequest,
   createOutingTaskRequest,
   linkMailRequest,
+  setOutingImageRequest,
   updateOutingRequest,
   updateOutingTaskRequest,
   updateTicketRequest,
@@ -19,10 +20,11 @@ import {
 import { zValidator } from '@hono/zod-validator';
 import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
+import { PictureError } from './pictures';
 import { OutingError, type OutingsService } from './service';
 
 const asHttp = (error: unknown): never => {
-  if (error instanceof OutingError) {
+  if (error instanceof OutingError || error instanceof PictureError) {
     if (error.message === 'not found') throw notFound();
     throw new HTTPException(400, { message: error.message });
   }
@@ -167,6 +169,52 @@ export function outingRoutes(outings: OutingsService) {
           );
         },
       )
+      .get('/outings/:id/image', requireRight('read'), async (c) => {
+        const { path, contentType } = await run(() =>
+          outings.pictures.file(c.req.param('id')),
+        );
+        return sendFile(path, contentType, 'private, max-age=86400');
+      })
+      .get('/outings/:id/image/options', requireRight('read'), async (c) => {
+        ticketsAllowed(c.var.access);
+        return c.json(
+          await run(() => outings.pictures.options(c.req.param('id'))),
+        );
+      })
+      .get(
+        '/outings/:id/image/options/:optionId',
+        requireRight('read'),
+        async (c) => {
+          ticketsAllowed(c.var.access);
+          const { data, contentType } = await run(() =>
+            outings.pictures.preview(
+              c.req.param('id'),
+              c.req.param('optionId'),
+            ),
+          );
+          return new Response(data, { headers: imageHeaders(contentType) });
+        },
+      )
+      .put(
+        '/outings/:id/image',
+        requireRight('organize'),
+        zValidator('json', setOutingImageRequest),
+        async (c) =>
+          c.json(
+            await run(() =>
+              outings.setImage(
+                c.var.access,
+                c.req.param('id'),
+                c.req.valid('json'),
+              ),
+            ),
+          ),
+      )
+      .delete('/outings/:id/image', requireRight('organize'), async (c) =>
+        c.json(
+          await run(() => outings.clearImage(c.var.access, c.req.param('id'))),
+        ),
+      )
       .post(
         '/outings/:id/tasks',
         requireRight('organize'),
@@ -242,5 +290,33 @@ export function outingRoutes(outings: OutingsService) {
             ),
           ),
       )
+  );
+}
+
+// A picture is shown, never run: no script even when opened directly.
+function imageHeaders(contentType: string, cache = 'private, no-store') {
+  return {
+    'content-type': contentType,
+    'x-content-type-options': 'nosniff',
+    'content-security-policy': 'sandbox',
+    'cache-control': cache,
+  };
+}
+
+async function sendFile(path: string, contentType: string, cache: string) {
+  const size = await stat(path).then(
+    (s) => s.size,
+    () => {
+      throw notFound();
+    },
+  );
+  return new Response(
+    Readable.toWeb(createReadStream(path)) as ReadableStream,
+    {
+      headers: {
+        ...imageHeaders(contentType, cache),
+        'content-length': String(size),
+      },
+    },
   );
 }

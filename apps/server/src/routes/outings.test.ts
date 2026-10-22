@@ -46,6 +46,25 @@ const CLAIMED = {
     'Je hebt met succes je tickets geclaimd.\nNeon Nineties\n13 mei 2027, 21:00\nVoorbeeldhal, Voorbeeldstad',
 };
 
+// The first bytes of a PNG or JPEG of this size, which is all Hedwig reads.
+const png = (width: number, height: number) => {
+  const b = Buffer.alloc(40);
+  b.writeUInt32BE(0x89504e47, 0);
+  b.writeUInt32BE(0x0d0a1a0a, 4);
+  b.writeUInt32BE(13, 8);
+  b.write('IHDR', 12, 'ascii');
+  b.writeUInt32BE(width, 16);
+  b.writeUInt32BE(height, 20);
+  return new Uint8Array(b);
+};
+const jpeg = (width: number, height: number) => {
+  const b = Buffer.alloc(40);
+  b.set([0xff, 0xd8, 0xff, 0xc0, 0x00, 0x11, 0x08], 0);
+  b.writeUInt16BE(height, 7);
+  b.writeUInt16BE(width, 9);
+  return new Uint8Array(b);
+};
+
 function setup() {
   const h = testHousehold();
   const gideon = h.person('Gideon');
@@ -73,9 +92,10 @@ function setup() {
     h.provider(home.id).deliver(message);
     return (await h.mail.sync(home.id))[0]!;
   };
-  const upload = async (key: string, bytes: string) => {
+  const upload = async (key: string, bytes: string | Uint8Array) => {
+    const size = typeof bytes === 'string' ? bytes.length : bytes.byteLength;
     const { id } = (await (
-      await send(key, 'POST', '/api/uploads', { size: bytes.length })
+      await send(key, 'POST', '/api/uploads', { size })
     ).json()) as { id: string };
     await h.call(key, `/api/uploads/${id}?offset=0`, {
       method: 'PUT',
@@ -408,6 +428,125 @@ describe('outings', () => {
       await (await s.send(s.token, 'GET', '/api/outings')).json(),
     );
     expect(list).toHaveLength(1);
+  });
+
+  it('takes the biggest picture from the order mail, never a logo or a social button', async () => {
+    const s = setup();
+    const cdn = 'https://cdn.kaartloket.example.com';
+    s.web.set(`${cdn}/logo.png`, {
+      contentType: 'image/png',
+      body: png(900, 300),
+    });
+    s.web.set(`${cdn}/f.png`, {
+      contentType: 'image/png',
+      body: png(1200, 1200),
+    });
+    s.web.set(`${cdn}/side.png`, {
+      contentType: 'image/png',
+      body: png(400, 300),
+    });
+    s.web.set(`${cdn}/neon.jpg`, {
+      contentType: 'image/jpeg',
+      body: jpeg(1200, 630),
+    });
+    await s.deliver({
+      subject: 'Je bestelling',
+      bodyText: 'Bedankt.',
+      bodyHtml: ORDER_HTML.replace(
+        '<body>',
+        `<body><img src="${cdn}/logo.png" alt="Kaartloket logo">
+        <img src="${cdn}/pixel.gif" width="1" height="1">
+        <a href="https://www.facebook.com/kaartloket"><img src="${cdn}/f.png" width="300" height="300"></a>
+        <img src="${cdn}/side.png"><img src="${cdn}/neon.jpg" alt="Neon Nineties">`,
+      ),
+    });
+    await vi.waitFor(async () => {
+      const list = outingsResponse.parse(
+        await (await s.send(s.token, 'GET', '/api/outings')).json(),
+      );
+      expect(list[0]?.image).toMatchObject({
+        source: 'mail',
+        contentType: 'image/jpeg',
+      });
+    });
+    const [made] = outingsResponse.parse(
+      await (await s.send(s.token, 'GET', '/api/outings')).json(),
+    );
+    const res = await s.send(
+      s.evaToken,
+      'GET',
+      `/api/outings/${made!.id}/image`,
+    );
+    expect(res.headers.get('content-security-policy')).toBe('sandbox');
+    expect(new Uint8Array(await res.arrayBuffer())).toEqual(jpeg(1200, 630));
+  });
+
+  it('keeps a pasted picture or one from a copied link, and none when asked', async () => {
+    const s = setup();
+    const made = await s.create(s.token);
+    const put = (body: unknown) =>
+      s.send(s.token, 'PUT', `/api/outings/${made.id}/image`, body);
+
+    const pasted = await put({
+      uploadId: await s.upload(s.token, png(800, 450)),
+    });
+    expect(outing.parse(await pasted.json()).image?.source).toBe('upload');
+
+    expect(
+      (await put({ uploadId: await s.upload(s.token, '<svg onload=x>') }))
+        .status,
+    ).toBe(400);
+
+    s.web.set('https://theo.example.nl/agenda', {
+      contentType: 'text/html',
+      body: '<html><head><meta property="og:image" content="/img/theo.jpg"></head></html>',
+    });
+    s.web.set('https://theo.example.nl/img/theo.jpg', {
+      contentType: 'image/jpeg',
+      body: jpeg(1600, 900),
+    });
+    const linked = outing.parse(
+      await (await put({ url: 'https://theo.example.nl/agenda' })).json(),
+    );
+    expect(linked.image).toMatchObject({
+      source: 'website',
+      contentType: 'image/jpeg',
+    });
+
+    const none = outing.parse(
+      await (
+        await s.send(s.token, 'DELETE', `/api/outings/${made.id}/image`)
+      ).json(),
+    );
+    expect(none.image).toBeNull();
+    // Someone chose none, so a website added later brings no picture back.
+    await s.send(s.token, 'PATCH', `/api/outings/${made.id}`, {
+      url: 'https://theo.example.nl/agenda',
+    });
+    await s.outings.pictures.pickSoon(made.id);
+    expect(
+      outing.parse(
+        await (await s.send(s.token, 'GET', `/api/outings/${made.id}`)).json(),
+      ).image,
+    ).toBeNull();
+
+    // What the website offers, fetched by the server for the picker.
+    const { options } = (await (
+      await s.send(s.token, 'GET', `/api/outings/${made.id}/image/options`)
+    ).json()) as { options: { id: string; source: string }[] };
+    expect(options).toMatchObject([{ source: 'website' }]);
+    const preview = await s.send(
+      s.token,
+      'GET',
+      `/api/outings/${made.id}/image/options/${options[0]!.id}`,
+    );
+    expect(new Uint8Array(await preview.arrayBuffer())).toEqual(
+      jpeg(1600, 900),
+    );
+    const chosen = outing.parse(
+      await (await put({ optionId: options[0]!.id })).json(),
+    );
+    expect(chosen.image?.source).toBe('website');
   });
 
   it('finds order mails for nights still to come in the archive', async () => {

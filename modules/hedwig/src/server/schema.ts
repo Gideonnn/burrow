@@ -247,6 +247,14 @@ export const outings = sqliteTable(
     inCalendar: integer('in_calendar', { mode: 'boolean' })
       .notNull()
       .default(false),
+    // The picture above the outing, a file in its folder; imageOff when
+    // someone chose none, so Hedwig does not pick one again.
+    imageType: text('image_type'),
+    imageSource: text('image_source').$type<'mail' | 'website' | 'upload'>(),
+    imageAt: integer('image_at', { mode: 'timestamp_ms' }),
+    imageOff: integer('image_off', { mode: 'boolean' })
+      .notNull()
+      .default(false),
     createdBy: text('created_by')
       .notNull()
       .references(() => people.id),

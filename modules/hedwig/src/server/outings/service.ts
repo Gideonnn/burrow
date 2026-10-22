@@ -9,6 +9,7 @@ import {
   type OutingSuggestion,
   type OutingTask,
   type PersonRef,
+  type SetOutingImageRequest,
   type UpdateOutingRequest,
 } from '@burrow/contracts';
 import {
@@ -17,7 +18,7 @@ import {
   type Platform,
   people,
 } from '@burrow/platform';
-import { and, asc, desc, eq, gt, like, or } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, isNull, like, or } from 'drizzle-orm';
 import { z } from 'zod';
 import { factsFor } from '../facts/store';
 import type { MailService, MessageRow } from '../mail-service';
@@ -31,6 +32,8 @@ import {
   outingTickets,
 } from '../schema';
 import { type Detected, detectOuting } from './detect';
+import { type FetchPublic, fetchPublic } from './images';
+import { OutingPictures, PictureError } from './pictures';
 import { OUTING_SKILL, readPrompt, withRead } from './reader';
 
 export class OutingError extends Error {}
@@ -75,10 +78,23 @@ const at = (s: string | null | undefined) =>
 export class OutingsService {
   private readonly reading = new Map<string, Promise<OutingRead | null>>();
   private readonly readerOn: boolean;
+  readonly pictures: OutingPictures;
 
   constructor(
-    private readonly o: { platform: Platform; mail: MailService; bot?: string },
+    private readonly o: {
+      platform: Platform;
+      mail: MailService;
+      bot?: string;
+      fetchPublic?: FetchPublic;
+    },
   ) {
+    this.pictures = new OutingPictures({
+      platform: o.platform,
+      mail: o.mail,
+      fetch: o.fetchPublic ?? fetchPublic,
+      dir: (id) => this.dir(id),
+      picked: (id) => this.changed(id),
+    });
     const { catalog } = o.platform;
     const bot = o.bot ? catalog.bots.get(o.bot) : undefined;
     this.readerOn = Boolean(
@@ -193,6 +209,7 @@ export class OutingsService {
         );
       }
     }
+    if (message || fields.url) void this.pictures.pickSoon(id);
     this.changed(id);
     return this.get(access, id);
   }
@@ -230,6 +247,23 @@ export class OutingsService {
         )
         .run();
     }
+    if (patch.url) void this.pictures.pickSoon(id);
+    this.changed(id);
+    return this.get(access, id);
+  }
+
+  // --- the picture --------------------------------------------------------
+
+  async setImage(access: Access, id: string, request: SetOutingImageRequest) {
+    await this.pictures.set(access, id, request).catch(asOutingError);
+    this.touch(access, id);
+    this.changed(id);
+    return this.get(access, id);
+  }
+
+  async clearImage(access: Access, id: string) {
+    await this.pictures.clear(id).catch(asOutingError);
+    this.touch(access, id);
     this.changed(id);
     return this.get(access, id);
   }
@@ -427,6 +461,7 @@ export class OutingsService {
       .onConflictDoNothing()
       .run();
     this.touch(access, id);
+    void this.pictures.pickSoon(id);
     this.changed(id);
     return this.get(access, id);
   }
@@ -478,6 +513,7 @@ export class OutingsService {
           .onConflictDoNothing()
           .run();
         this.changed(existing);
+        void this.pictures.pickSoon(existing);
         continue;
       }
       // A locker or parking spot alone is no outing.
@@ -532,6 +568,13 @@ export class OutingsService {
       .all()
       .map((r) => r.id);
     await this.adoptStored(ids);
+    for (const o of this.o.platform.db
+      .select({ id: outings.id })
+      .from(outings)
+      .where(and(gt(outings.startsAt, now), isNull(outings.imageType)))
+      .all()) {
+      await this.pictures.pickSoon(o.id);
+    }
     return ids.length;
   }
 
@@ -761,6 +804,14 @@ export class OutingsService {
       notes: row.notes,
       aliases: row.aliases,
       inCalendar: row.inCalendar,
+      image:
+        row.imageType && row.imageSource && row.imageAt
+          ? {
+              source: row.imageSource,
+              contentType: row.imageType,
+              updatedAt: row.imageAt.toISOString(),
+            }
+          : null,
       tickets: tickets.map((t) => ({
         id: t.id,
         name: t.name,
@@ -861,4 +912,9 @@ function sameName(a: string, b: string) {
       .replace(/\b(19|20)\d{2}\b/g, '')
       .replace(/[^\p{L}\p{N}]+/gu, '');
   return plain(a) === plain(b);
+}
+
+function asOutingError(error: unknown): never {
+  if (error instanceof PictureError) throw new OutingError(error.message);
+  throw error;
 }

@@ -12,6 +12,7 @@ import { FACTS_FEATURE, FactsService } from './facts/service';
 import { InsightsService, LONG_MESSAGE } from './insights';
 import { type ClientFor, MailService, type MessageRow } from './mail-service';
 import { registerHedwigTools } from './mcp-tools';
+import type { FetchPublic } from './outings/images';
 import { registerOutingTools } from './outings/mcp-tools';
 import { outingRoutes } from './outings/routes';
 import { OutingsService } from './outings/service';
@@ -76,6 +77,8 @@ export type HedwigOptions = {
   bot: string;
   // The local bot that indexes mail facts; Winky by default.
   factsBot?: string;
+  // Fetches pictures for outings from the internet; a fake in tests.
+  fetchPublic?: FetchPublic;
   // Poll the providers; off in tests.
   sync?: boolean;
   // Replaces what happens to newly arrived mail (triage); for tests.
@@ -97,7 +100,12 @@ export function hedwigModule(platform: Platform, options: HedwigOptions) {
   });
   const insights = new InsightsService({ platform, mail, bot: options.bot });
   const search = new SearchService({ platform, bot: options.bot });
-  const outings = new OutingsService({ platform, mail, bot: options.bot });
+  const outings = new OutingsService({
+    platform,
+    mail,
+    bot: options.bot,
+    fetchPublic: options.fetchPublic,
+  });
   mail.onStored = (ids) => {
     facts.applyRules(ids);
     void outings

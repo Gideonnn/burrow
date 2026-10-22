@@ -41,6 +41,11 @@ export function testHousehold({
   // The bot's answers, consumed in order; an Error makes that run fail.
   const decisions: (TriageDecision | MessageInsights | object | Error)[] = [];
   const agentRequests: AgentRequest[] = [];
+  // Pages and pictures on the internet by URL, for the outings' pictures.
+  const web = new Map<
+    string,
+    { contentType: string; body: Uint8Array | string }
+  >();
   const catalog: Catalog = {
     bots: new Map([
       [
@@ -161,6 +166,14 @@ export function testHousehold({
     bot: 'kreacher',
     sync: false,
     accounts,
+    fetchPublic: async (url, maxBytes) => {
+      const page = web.get(url);
+      if (!page) throw new Error('HTTP 404');
+      const data =
+        typeof page.body === 'string' ? Buffer.from(page.body) : page.body;
+      if (data.byteLength > maxBytes) throw new Error('too large');
+      return { data, contentType: page.contentType, url };
+    },
     onArrived: (ids) => arrived.push(...ids),
     clientFor:
       accounts?.clientFor ??
@@ -273,6 +286,7 @@ export function testHousehold({
     transcripts,
     decisions,
     agentRequests,
+    web,
     person,
     mailbox,
     provider,

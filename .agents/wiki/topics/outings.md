@@ -54,6 +54,20 @@ with a deadline, the item "Kaarten op naam zetten".
   and aliases; mail search matches linked mails on it, so "90's party" finds the ticket
   shop's order mail.
 
+**Picture** (`pictures.ts`, `images.ts`): one file `image.<ext>` in the outing's folder,
+`image` in the contract. Hedwig picks one by itself when an outing gets a mail or a
+website and has none: the largest picture of at least 300 by 150 among the mail's remote
+images, its inline image attachments and the website's `og:image`/`twitter:image`.
+Logos, icons, pixels and anything social (also YouTube) are skipped; nothing social is
+ever shown. Someone can choose an option (`GET /image/options`, previews through the
+server), paste or drop one (`PUT /image {uploadId}`) or give a link to a picture or a
+page (`{url}`); `DELETE` means none and sets `imageOff`, so Hedwig never picks again.
+Only PNG, JPEG, GIF and WebP by their bytes, never SVG; served with `sandbox` CSP.
+The server fetches, never the Macs, through `fetchPublic`: http(s) on ports 80 and 443,
+public addresses only (checked after every redirect), 8 MB at most. The DNS check is not
+pinned to the connection, so a rebinding host could still slip through; acceptable for a
+household server, worth pinning if the server ever fetches more.
+
 Every change emits `outing.changed` with the id; both Macs reload. Reading needs `read`,
 changing `organize`. MCP: `list_outings` (read) and `add_outing` (organize); no delete.
 

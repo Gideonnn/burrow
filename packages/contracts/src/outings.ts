@@ -74,6 +74,14 @@ export const outing = z.object({
   ...outingFields,
   // Set once calendar sync has put it in the shared calendar.
   inCalendar: z.boolean(),
+  // Fetch it from /api/outings/:id/image; updatedAt changes with the picture.
+  image: z
+    .object({
+      source: z.enum(['mail', 'website', 'upload']),
+      contentType: z.string(),
+      updatedAt: z.iso.datetime(),
+    })
+    .nullable(),
   attendees: z.array(personRef),
   tickets: z.array(outingTicket),
   tasks: z.array(outingTask),
@@ -175,6 +183,23 @@ export const outingRead = z.object({
   website: z.string().max(300).nullable(),
 });
 export type OutingRead = z.infer<typeof outingRead>;
+
+// Pictures Hedwig found for an outing, fetched through the server.
+export const outingImageOptions = z.object({
+  options: z.array(
+    z.object({ id: z.string(), source: z.enum(['mail', 'website']) }),
+  ),
+});
+export type OutingImageOptions = z.infer<typeof outingImageOptions>;
+
+// One of the options, an upload (pasted or dropped), or a link to a picture
+// or to a page with one.
+export const setOutingImageRequest = z.union([
+  z.object({ optionId: z.string() }),
+  z.object({ uploadId: z.string() }),
+  z.object({ url: z.url({ protocol: /^https?$/ }).max(2000) }),
+]);
+export type SetOutingImageRequest = z.infer<typeof setOutingImageRequest>;
 
 export const addTicketRequest = z.union([
   z.object({ uploadId: z.string(), name: text(200).min(1) }),
