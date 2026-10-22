@@ -4,7 +4,7 @@ import {
   outingsResponse,
   searchResponse,
 } from '@burrow/contracts';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { testHousehold } from '../testing';
 
 const ORDER_HTML = `<html><head><script type="application/ld+json">${JSON.stringify(
@@ -78,7 +78,8 @@ describe('outings', () => {
     const s = setup();
     const made = await s.create(s.token, { kind: 'cabaret' });
     expect(made.createdBy.name).toBe('Gideon');
-    expect(made.tasks.map((t) => t.kind)).toEqual(['calendar']);
+    expect(made.tasks).toEqual([]);
+    expect(made.attendees.map((p) => p.name).sort()).toEqual(['Eva', 'Gideon']);
 
     const list = outingsResponse.parse(
       await (await s.send(s.evaToken, 'GET', '/api/outings')).json(),
@@ -90,19 +91,15 @@ describe('outings', () => {
         await s.send(s.evaToken, 'PATCH', `/api/outings/${made.id}`, {
           startsAt: '2026-11-08T19:30:00.000Z',
           venue: 'Stadsschouwburg Voorbeeld',
-          inCalendar: true,
+          attendeeIds: [s.eva.id],
         })
       ).json(),
     );
     expect(moved).toMatchObject({
       startsAt: '2026-11-08T19:30:00.000Z',
       venue: 'Stadsschouwburg Voorbeeld',
-      inCalendar: true,
+      attendees: [{ name: 'Eva' }],
       updatedBy: { name: 'Eva' },
-    });
-    expect(moved.tasks[0]).toMatchObject({
-      kind: 'calendar',
-      doneBy: { name: 'Eva' },
     });
   });
 
@@ -129,11 +126,10 @@ describe('outings', () => {
   it("reads an order mail, links it, and finds it by the outing's names", async () => {
     const s = setup();
     const messageId = await s.deliver({
-      from: { name: 'Kaartloket', email: 'tickets@kaartloket.example.com' },
-      subject: 'Je bestelling is gelukt',
+      from: { name: 'Weeztix', email: 'noreply@weeztix.example.com' },
+      subject: 'Je tickets voor Neon Nineties',
       bodyText:
-        'Bedankt voor je bestelling. Zet je tickets op naam vóór 29 april 2027.',
-      bodyHtml: ORDER_HTML,
+        'Bestelnummer: KL-48291\nDonderdag 13 mei 2027 om 21:00 in de Voorbeeldhal.\nZet je tickets op naam vóór 29 april 2027.',
     });
     const suggestion = outingSuggestion.parse(
       await (
@@ -142,7 +138,7 @@ describe('outings', () => {
     );
     expect(suggestion).toMatchObject({
       outingId: null,
-      confidence: 'structured',
+      confidence: 'likely',
       title: 'Neon Nineties',
       orderNumber: 'KL-48291',
     });
@@ -156,9 +152,13 @@ describe('outings', () => {
       personaliseBy: suggestion.personaliseBy,
       messageId: messageId,
     });
-    expect(made.tasks.map((t) => t.kind)).toEqual(['calendar', 'personalise']);
+    expect(made.tasks.map((t) => t.kind)).toEqual(['personalise']);
     expect(made.mails).toMatchObject([
-      { id: messageId, visible: true, subject: 'Je bestelling is gelukt' },
+      {
+        id: messageId,
+        visible: true,
+        subject: 'Je tickets voor Neon Nineties',
+      },
     ]);
 
     const again = outingSuggestion.parse(
@@ -259,13 +259,72 @@ describe('outings', () => {
     });
   });
 
-  it('keeps the ticket attachments of the order mail in one click', async () => {
+  it('makes an outing by itself from an order mail it reads with certainty', async () => {
     const s = setup();
     const messageId = await s.deliver({
       from: { name: 'Kaartloket', email: 'tickets@kaartloket.example.com' },
       subject: 'Je bestelling is gelukt',
       bodyText: 'Je e-tickets zitten in de bijlage.',
       bodyHtml: ORDER_HTML,
+      attachments: [
+        {
+          name: 'kaarten.pdf',
+          contentType: 'application/pdf',
+          data: '%PDF-1.4 tickets',
+        },
+      ],
+    });
+    await vi.waitFor(async () => {
+      const list = outingsResponse.parse(
+        await (await s.send(s.evaToken, 'GET', '/api/outings')).json(),
+      );
+      expect(list).toMatchObject([
+        {
+          title: 'Neon Nineties',
+          orderNumber: 'KL-48291',
+          createdBy: { name: 'Gideon' },
+          tickets: [{ name: 'kaarten.pdf' }],
+        },
+      ]);
+    });
+    // A reminder about the same order joins it instead of making a second one.
+    const reminder = await s.deliver({
+      subject: 'Zet je tickets op naam',
+      bodyText: 'Herinnering.',
+      bodyHtml: ORDER_HTML,
+    });
+    await vi.waitFor(async () => {
+      const list = outingsResponse.parse(
+        await (await s.send(s.token, 'GET', '/api/outings')).json(),
+      );
+      expect(list).toHaveLength(1);
+      expect(list[0]!.mails.map((m) => m.id).sort()).toEqual(
+        [messageId, reminder].sort(),
+      );
+    });
+  });
+
+  it('leaves order mails for nights that are over alone', async () => {
+    const s = setup();
+    await s.deliver({
+      subject: 'Je bestelling',
+      bodyText: 'Bedankt.',
+      bodyHtml: ORDER_HTML.replace('2027-05-13', '2020-05-13'),
+    });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(
+      outingsResponse.parse(
+        await (await s.send(s.token, 'GET', '/api/outings')).json(),
+      ),
+    ).toEqual([]);
+  });
+
+  it('keeps the ticket attachments of the order mail in one click', async () => {
+    const s = setup();
+    const messageId = await s.deliver({
+      from: { name: 'Kaartloket', email: 'tickets@kaartloket.example.com' },
+      subject: 'Je tickets voor Neon Nineties',
+      bodyText: 'Je e-tickets voor 13 mei 2027 zitten in de bijlage.',
       attachments: [
         {
           name: 'kaarten.pdf',
@@ -367,7 +426,7 @@ describe('outings', () => {
         )
       ).json(),
     );
-    expect(removed.tasks.map((t) => t.kind)).toEqual(['calendar']);
+    expect(removed.tasks).toEqual([]);
     expect(
       (await s.send(s.token, 'DELETE', `/api/outings/${made.id}`)).status,
     ).toBe(204);

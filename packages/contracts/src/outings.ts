@@ -74,6 +74,7 @@ export const outing = z.object({
   ...outingFields,
   // Set once calendar sync has put it in the shared calendar.
   inCalendar: z.boolean(),
+  attendees: z.array(personRef),
   tickets: z.array(outingTicket),
   tasks: z.array(outingTask),
   mails: z.array(outingMail),
@@ -101,6 +102,7 @@ export const createOutingRequest = z.object({
   notes: outingFields.notes.optional(),
   aliases: outingFields.aliases.optional(),
   personaliseBy: z.iso.datetime().nullable().optional(),
+  attendeeIds: z.array(z.string()).max(20).optional(),
   // Made from a mail: link it and keep these attachments as tickets.
   messageId: z.string().optional(),
   attachmentIds: z.array(z.string()).max(20).optional(),
@@ -108,7 +110,11 @@ export const createOutingRequest = z.object({
 export type CreateOutingRequest = z.infer<typeof createOutingRequest>;
 
 export const updateOutingRequest = z
-  .object({ ...outingFields, inCalendar: z.boolean() })
+  .object({
+    ...outingFields,
+    inCalendar: z.boolean(),
+    attendeeIds: z.array(z.string()).max(20),
+  })
   .partial();
 export type UpdateOutingRequest = z.infer<typeof updateOutingRequest>;
 

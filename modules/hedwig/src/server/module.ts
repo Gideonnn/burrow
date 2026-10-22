@@ -95,10 +95,17 @@ export function hedwigModule(platform: Platform, options: HedwigOptions) {
     factsBot: options.factsBot ?? 'winky',
     templatesBot: options.bot,
   });
-  mail.onStored = (ids) => facts.applyRules(ids);
   const insights = new InsightsService({ platform, mail, bot: options.bot });
   const search = new SearchService({ platform, bot: options.bot });
   const outings = new OutingsService({ platform, mail });
+  mail.onStored = (ids) => {
+    facts.applyRules(ids);
+    void outings
+      .adoptStored(ids)
+      .catch((error: Error) =>
+        console.error(`hedwig: outings from new mail failed: ${error.message}`),
+      );
+  };
   const triage = new TriageService({
     platform,
     mail,

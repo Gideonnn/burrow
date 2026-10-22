@@ -1,0 +1,1 @@
+ALTER TABLE `outings` ADD `attendee_ids` text DEFAULT '[]' NOT NULL;

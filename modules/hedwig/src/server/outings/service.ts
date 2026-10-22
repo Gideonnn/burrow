@@ -123,6 +123,8 @@ export class OutingsService {
       url: request.url ?? null,
       notes: request.notes ?? '',
       aliases: request.aliases ?? [],
+      attendeeIds:
+        request.attendeeIds?.map((p) => this.person(p)!) ?? this.everyone(),
     };
     this.db.transaction((tx) => {
       tx.insert(outings)
@@ -133,13 +135,6 @@ export class OutingsService {
           createdBy: access.personId,
           updatedBy: access.personId,
           updatedAt: now,
-        })
-        .run();
-      tx.insert(outingTasks)
-        .values({
-          outingId: id,
-          kind: 'calendar',
-          title: 'In de agenda zetten',
         })
         .run();
       if (request.personaliseBy) {
@@ -176,6 +171,7 @@ export class OutingsService {
     const row = this.row(id);
     const next = {
       ...patch,
+      attendeeIds: patch.attendeeIds?.map((p) => this.person(p)!),
       startsAt: at(patch.startsAt) ?? undefined,
       endsAt: at(patch.endsAt),
       doorsAt: at(patch.doorsAt),
@@ -422,7 +418,107 @@ export class OutingsService {
     return this.get(access, id);
   }
 
+  // Order mails Hedwig reads with certainty (schema.org) become outings by
+  // themselves, for whoever's mailbox they arrived in. A second mail about the
+  // same order or the same night joins the existing outing.
+  async adoptStored(ids: string[], now = new Date()) {
+    for (const id of ids) {
+      const message = this.o.mail.message(id);
+      if (!message?.bodyHtml?.includes('ld+json')) continue;
+      if (this.forMessage(this.ownerAccess(message.mailboxId), id)) continue;
+      const input = {
+        subject: message.subject,
+        from: message.from,
+        bodyText: message.bodyText,
+        bodyHtml: message.bodyHtml,
+        receivedAt: message.receivedAt,
+        attachments: [],
+      };
+      const found = detectOuting(input);
+      if (found.confidence !== 'structured' || !found.title || !found.startsAt)
+        continue;
+      if (new Date(found.startsAt) < now) continue;
+      const access = this.ownerAccess(message.mailboxId);
+      const existing = this.sameOuting(
+        found.orderNumber,
+        found.title,
+        new Date(found.startsAt),
+      );
+      if (existing) {
+        this.db
+          .insert(outingMessages)
+          .values({ outingId: existing, messageId: id })
+          .onConflictDoNothing()
+          .run();
+        this.changed(existing);
+        continue;
+      }
+      const attachments = message.hasAttachments
+        ? await this.o.mail.attachments(id).catch(() => [])
+        : [];
+      const { tickets } = detectOuting({ ...input, attachments });
+      await this.create(access, {
+        title: found.title,
+        startsAt: found.startsAt,
+        kind: found.kind,
+        endsAt: found.endsAt,
+        doorsAt: found.doorsAt,
+        venue: found.venue,
+        address: found.address,
+        organiser: found.organiser,
+        vendor: found.vendor,
+        orderNumber: found.orderNumber,
+        url: found.url && /^https?:/.test(found.url) ? found.url : null,
+        aliases: found.aliases,
+        personaliseBy: found.personaliseBy,
+        messageId: id,
+        attachmentIds: tickets.map((t) => t.id),
+      }).catch((error: Error) =>
+        console.error(
+          `hedwig: could not keep outing from ${id}: ${error.message}`,
+        ),
+      );
+    }
+  }
+
   // --- internals ----------------------------------------------------------
+
+  private sameOuting(
+    orderNumber: string | null,
+    title: string,
+    startsAt: Date,
+  ) {
+    const rows = this.db.select().from(outings).all();
+    const day = (d: Date) => d.toISOString().slice(0, 10);
+    return rows.find(
+      (o) =>
+        (orderNumber && o.orderNumber === orderNumber) ||
+        (o.title.toLowerCase() === title.toLowerCase() &&
+          day(o.startsAt) === day(startsAt)),
+    )?.id;
+  }
+
+  // What Hedwig itself may do in a mailbox's owner's name.
+  private ownerAccess(mailboxId: string): Access {
+    const owner = this.o.mail.mailbox(mailboxId)!.ownerId;
+    return {
+      keyId: 'hedwig',
+      keyName: 'Hedwig',
+      personId: owner,
+      rights: new Set(['read', 'organize']),
+      restrictions: {},
+      factsOnly: false,
+      mailboxIds: [mailboxId],
+    } as Access;
+  }
+
+  private everyone(): string[] {
+    return this.db
+      .select({ id: people.id })
+      .from(people)
+      .all()
+      .map((p) => p.id);
+  }
 
   private row(id: string): OutingRow {
     const row = this.db.select().from(outings).where(eq(outings.id, id)).get();
@@ -587,6 +683,7 @@ export class OutingsService {
           receivedAt: m.receivedAt.toISOString(),
         };
       }),
+      attendees: row.attendeeIds.filter((p) => names.has(p)).map(ref),
       createdBy: ref(row.createdBy),
       createdAt: row.createdAt.toISOString(),
       updatedBy: ref(row.updatedBy),

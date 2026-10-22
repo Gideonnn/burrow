@@ -235,6 +235,11 @@ export const outings = sqliteTable(
       .$type<string[]>()
       .notNull()
       .default([]),
+    // Who goes; everyone in the household unless someone says otherwise.
+    attendeeIds: text('attendee_ids', { mode: 'json' })
+      .$type<string[]>()
+      .notNull()
+      .default([]),
     // Every name above in lower case, for mail search.
     searchText: text('search_text').notNull().default(''),
     calendarEventId: text('calendar_event_id'),
