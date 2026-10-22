@@ -7,8 +7,10 @@ struct SidebarView: View {
     @State private var newName = ""
 
     var body: some View {
-        @Bindable var model = model
-        List(selection: $model.selection) {
+        // The list may clear its selection (a click beside a row, a rebuilt
+        // list); the window would then show every mail under a stale
+        // highlight, so a place is only ever replaced by another place.
+        List(selection: Binding(get: { model.selection }, set: { if let place = $0 { model.selection = place } })) {
             ForEach(model.mailboxGroups) { group in
                 Section(roleTitle(group.role)) {
                     if group.mailboxes.count > 1 {
