@@ -12,6 +12,9 @@ import { FACTS_FEATURE, FactsService } from './facts/service';
 import { InsightsService, LONG_MESSAGE } from './insights';
 import { type ClientFor, MailService, type MessageRow } from './mail-service';
 import { registerHedwigTools } from './mcp-tools';
+import { registerOutingTools } from './outings/mcp-tools';
+import { outingRoutes } from './outings/routes';
+import { OutingsService } from './outings/service';
 import { triagePrompt } from './prompt';
 import { mailboxColumns, hedwigRoutes } from './routes';
 import { connectRoutes } from './routes-connect';
@@ -95,6 +98,7 @@ export function hedwigModule(platform: Platform, options: HedwigOptions) {
   mail.onStored = (ids) => facts.applyRules(ids);
   const insights = new InsightsService({ platform, mail, bot: options.bot });
   const search = new SearchService({ platform, bot: options.bot });
+  const outings = new OutingsService({ platform, mail });
   const triage = new TriageService({
     platform,
     mail,
@@ -133,6 +137,7 @@ export function hedwigModule(platform: Platform, options: HedwigOptions) {
     search,
     onArrived,
   });
+  api.route('/', outingRoutes(outings));
   if (connect) api.route('/', connect.api);
 
   const module: Module = {
@@ -153,7 +158,10 @@ export function hedwigModule(platform: Platform, options: HedwigOptions) {
             .all()
         : [],
     }),
-    mcp: (server, access) => registerHedwigTools(server, access, { db, mail }),
+    mcp: (server, access) => {
+      registerHedwigTools(server, access, { db, mail });
+      registerOutingTools(server, access, outings);
+    },
     subjects: [
       {
         type: 'message',
@@ -237,7 +245,7 @@ export function hedwigModule(platform: Platform, options: HedwigOptions) {
     },
   };
 
-  return { module, mail, triage, insights, facts, onArrived };
+  return { module, mail, triage, insights, facts, outings, onArrived };
 }
 
 function matches(

@@ -49,9 +49,10 @@ in a shared calendar, and calendar tools and rights for bots.
 **Why:** Gideon wants the shared household calendar to tell him what the other added, as
 iCloud family calendars did, and to add events by asking a bot; the cards need free/busy.
 The store is the start of Burrow's own calendar.
-Includes events with their tickets: one-click In agenda from an order mail, tickets
-attached automatically or by hand, personalisation deadlines as reminders, and search by
-every name of the event (the plan's "Events and tickets").
+Outings (concerts, tickets, checklist, search words) exist in Hedwig since 22 Oct
+(`.agents/wiki/topics/outings.md`); still to come for them: putting them in the shared
+calendar, reminders before a deadline, and the Evenementen page in the Hedwig app (design
+in progress).
 **Scope:** about five days in four phases, Google first; events and tickets three more.
 
 ## Angela's Mac

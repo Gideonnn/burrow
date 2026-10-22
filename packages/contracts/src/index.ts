@@ -5,6 +5,7 @@ export * from './facts';
 export * from './health';
 export * from './login';
 export * from './mail';
+export * from './outings';
 export * from './pensieve';
 export * from './routines';
 export * from './runners';

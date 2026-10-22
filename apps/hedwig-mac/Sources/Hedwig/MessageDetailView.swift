@@ -15,6 +15,11 @@ struct MessageDetailView: View {
                 MessageHeader(message: message)
                     .padding(.horizontal, 24)
                     .padding(.vertical, 16)
+                if model.showsOutingCard {
+                    OutingCard()
+                        .padding(.horizontal, 24)
+                        .padding(.bottom, 12)
+                }
                 if let summary = model.insights?.summary {
                     Label(summary, systemImage: "sparkles")
                         .padding(12)

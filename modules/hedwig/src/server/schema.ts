@@ -211,3 +211,98 @@ export const messageTemplates = sqliteTable(
   },
   (t) => [uniqueIndex('message_templates_person_key').on(t.personId, t.key)],
 );
+
+// An outing the household goes to, shared by everyone in it. Tickets live on
+// disk under <data>/files/hedwig/outings/<id>/.
+export const outings = sqliteTable(
+  'outings',
+  {
+    id: id(),
+    title: text('title').notNull(),
+    kind: text('kind'),
+    startsAt: integer('starts_at', { mode: 'timestamp_ms' }).notNull(),
+    endsAt: integer('ends_at', { mode: 'timestamp_ms' }),
+    doorsAt: integer('doors_at', { mode: 'timestamp_ms' }),
+    allDay: integer('all_day', { mode: 'boolean' }).notNull().default(false),
+    venue: text('venue'),
+    address: text('address'),
+    organiser: text('organiser'),
+    vendor: text('vendor'),
+    orderNumber: text('order_number'),
+    url: text('url'),
+    notes: text('notes').notNull().default(''),
+    aliases: text('aliases', { mode: 'json' })
+      .$type<string[]>()
+      .notNull()
+      .default([]),
+    // Every name above in lower case, for mail search.
+    searchText: text('search_text').notNull().default(''),
+    calendarEventId: text('calendar_event_id'),
+    inCalendar: integer('in_calendar', { mode: 'boolean' })
+      .notNull()
+      .default(false),
+    createdBy: text('created_by')
+      .notNull()
+      .references(() => people.id),
+    updatedBy: text('updated_by')
+      .notNull()
+      .references(() => people.id),
+    createdAt: createdAt(),
+    updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
+  },
+  (t) => [index('outings_starts').on(t.startsAt)],
+);
+
+export const outingTickets = sqliteTable('outing_tickets', {
+  id: id(),
+  outingId: text('outing_id')
+    .notNull()
+    .references(() => outings.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  contentType: text('content_type').notNull(),
+  size: integer('size').notNull(),
+  // File name inside the outing's folder.
+  file: text('file').notNull(),
+  holder: text('holder'),
+  personalised: integer('personalised', { mode: 'boolean' })
+    .notNull()
+    .default(false),
+  messageId: text('message_id').references(() => messages.id, {
+    onDelete: 'set null',
+  }),
+  addedBy: text('added_by')
+    .notNull()
+    .references(() => people.id),
+  addedAt: createdAt(),
+});
+
+export const outingTasks = sqliteTable('outing_tasks', {
+  id: id(),
+  outingId: text('outing_id')
+    .notNull()
+    .references(() => outings.id, { onDelete: 'cascade' }),
+  kind: text('kind').$type<'personalise' | 'calendar' | 'custom'>().notNull(),
+  title: text('title').notNull(),
+  dueAt: integer('due_at', { mode: 'timestamp_ms' }),
+  assigneeId: text('assignee_id').references(() => people.id),
+  doneAt: integer('done_at', { mode: 'timestamp_ms' }),
+  doneBy: text('done_by').references(() => people.id),
+  createdAt: createdAt(),
+});
+
+export const outingMessages = sqliteTable(
+  'outing_messages',
+  {
+    outingId: text('outing_id')
+      .notNull()
+      .references(() => outings.id, { onDelete: 'cascade' }),
+    messageId: text('message_id')
+      .notNull()
+      .references(() => messages.id, { onDelete: 'cascade' }),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex('outing_messages_pair').on(t.outingId, t.messageId),
+    index('outing_messages_message').on(t.messageId),
+  ],
+);

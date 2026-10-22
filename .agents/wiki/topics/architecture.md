@@ -60,7 +60,8 @@ to add one: [modules](modules.md).
 
 - **Hedwig** (`modules/hedwig`): providers (Gmail API, Microsoft Graph, Fastmail JMAP;
   no IMAP), sync, the triage bot acting at the provider so phones stay calm, review of
-  filtered mail, drafts, reply suggestions. The `message` subject and trigger. Triage
+  filtered mail, drafts, reply suggestions, the household's [outings](outings.md). The
+  `message` subject and trigger. Triage
   keeps its own durable queue (the message records its progress). See [triage](triage.md)
   and [mail providers](providers.md).
 - **Pensieve** (`modules/pensieve`): recordings uploaded by the Mac app, compressed with

@@ -64,6 +64,10 @@ public final class AppModel {
     public private(set) var detail: MessageDetail?
     public private(set) var insights: MessageInsights?
     public private(set) var insightsLoading = false
+    /// What the open mail says about an outing, and the outing it belongs to.
+    public internal(set) var outingSuggestion: OutingSuggestion?
+    public internal(set) var outing: Outing?
+    public internal(set) var outingBusy = false
     public private(set) var filtered: [FilteredEntry] = []
     public var selectedFilteredId: String?
     public private(set) var drafts: [Draft] = []
@@ -170,6 +174,9 @@ public final class AppModel {
             await loadSelection(keepSelection: true)
         }
         if event.messageId == detail?.id, event.type == "message.changed" { await openSelected() }
+        if event.type == "outing.changed", let id = event["outingId"], id == outing?.id || id == outingSuggestion?.outingId {
+            if let messageId = detail?.id { await loadOuting(messageId: messageId) }
+        }
     }
 
     // MARK: Lists
@@ -307,6 +314,9 @@ public final class AppModel {
             if selectedMessageId == id {
                 detail = message
                 insights = nil
+                outingSuggestion = nil
+                outing = nil
+                await loadOuting(messageId: id)
                 // The bot only gets asked when it is likely to help: mail that
                 // needs an answer, or long mail worth a summary.
                 if message.flagged || (message.bodyText?.count ?? 0) > 1_500 { await loadInsights() }

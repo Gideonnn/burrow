@@ -2,6 +2,7 @@
 
 Newest first.
 
+- [2026-10-22 Outings live in Hedwig](2026-10-22-outings-in-hedwig.md): household-wide outings with tickets and a checklist, detected without a model, inside Hedwig because modules never import each other.
 - [2026-10-22 Attachments on demand, keyed by part](2026-10-22-attachments-keyed-by-part.md): never stored, fetched per request; Gmail's attachmentId changes on every read, so ids are part ids.
 - [2026-10-22 Runners, two queues and mail facts in one night](2026-10-22-runners-and-mail-facts.md): the claim is the registration, standing work as short-lived rows, and a keychain prompt that blocks a headless runner.
 - [2026-10-20 A model per skill, Winky only local, and two Ollama traps](2026-10-20-models-per-skill-and-local-winky.md): Haiku by default, Opus for writing at effort high, Sol 6.1 for Codex; local bots never fall back to the cloud.

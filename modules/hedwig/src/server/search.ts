@@ -69,6 +69,9 @@ const anyField = (word: string, factsOnly = false) =>
     likeEscaped(messageFacts.summary, word),
     likeEscaped(messageFacts.people, word),
     likeEscaped(messageFacts.organisations, word),
+    // Mail about an outing is found by the outing's names ("90's party"
+    // finds the ticket shop's order mail).
+    sql`exists (select 1 from outing_messages om join outings o on o.id = om.outing_id where om.message_id = ${messages.id} and o.search_text like ${pattern(word.toLowerCase())} escape '\\')`,
   );
 
 const contains = (haystack: string, word: string) =>

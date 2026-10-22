@@ -56,6 +56,7 @@ describe('MCP', () => {
       'get_recording',
       'get_settings',
       'list_mailboxes',
+      'list_outings',
       'list_recordings',
       'list_routines',
       'list_tasks',
@@ -70,6 +71,31 @@ describe('MCP', () => {
     const factTools = (await facts.listTools()).tools.map((t) => t.name);
     expect(factTools).toContain('search_messages');
     expect(factTools).not.toContain('get_message');
+  });
+
+  it('lets an agent add an outing the whole household sees, without its tickets', async () => {
+    const s = await setup();
+    const agent = await connect(s, ['read', 'organize']);
+    const added = json(
+      await agent.callTool({
+        name: 'add_outing',
+        arguments: {
+          title: 'Etentje bij Sanne',
+          startsAt: '2026-10-24T16:00:00.000Z',
+        },
+      }),
+    );
+    expect(added).toMatchObject({
+      title: 'Etentje bij Sanne',
+      createdBy: { name: 'Gideon' },
+    });
+    const evaKey = s.key(s.eva.id, ['read']);
+    const res = await s.call(evaKey, '/api/outings');
+    expect((await res.json()) as unknown[]).toHaveLength(1);
+    const reader = await connect(s, ['read']);
+    expect((await reader.listTools()).tools.map((t) => t.name)).not.toContain(
+      'add_outing',
+    );
   });
 
   it('searches and reads only the key’s mailboxes', async () => {
