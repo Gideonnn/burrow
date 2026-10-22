@@ -747,6 +747,17 @@ export class OutingsService {
     this.changed(id);
   }
 
+  // Only the order mail itself, not news or practical info, points to the
+  // tickets; mail without a reading is an order the rules were sure of.
+  private aboutTickets(messageId: string) {
+    const read = this.db
+      .select({ answer: outingReads.answer })
+      .from(outingReads)
+      .where(eq(outingReads.messageId, messageId))
+      .get();
+    return !read || read.answer.about === 'tickets';
+  }
+
   private isSensitive(messageId: string) {
     return Boolean(factsFor(this.db, [messageId]).get(messageId)?.sensitive);
   }
@@ -946,13 +957,15 @@ export class OutingsService {
       }),
       ticketLinks: access.factsOnly
         ? []
-        : mails.flatMap(({ m }) =>
-            ticketLinks(m.bodyHtml).map((url) => ({
-              url,
-              label: linkLabel(row.vendor, url),
-              messageId: m.id,
-            })),
-          ),
+        : mails
+            .filter(({ m }) => this.aboutTickets(m.id))
+            .flatMap(({ m }) =>
+              ticketLinks(m.bodyHtml).map((url) => ({
+                url,
+                label: linkLabel(row.vendor, url),
+                messageId: m.id,
+              })),
+            ),
       attendees: row.attendeeIds.filter((p) => names.has(p)).map(ref),
       createdBy: ref(row.createdBy),
       createdAt: row.createdAt.toISOString(),
