@@ -100,9 +100,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let model = model
         return AppServices(app: "hedwig", appName: "Hedwig", api: { model.api })
     }()
+    @MainActor lazy var notifications = OutingNotifications(model: model)
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         Task { @MainActor in
+            notifications.start()
             if model.connection != nil { await model.start() }
         }
         Task { @MainActor in startControl() }
@@ -123,7 +125,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             onError: { model.error = $0 }
         ) { service in
             service.register(
-                "show", help: "Show a list: inbox, inbox:<address>, private, work, school, filtered, drafts, tasks, archive, sent or spam.",
+                "show", help: "Show a list: inbox, inbox:<address>, private, work, school, filtered, drafts, tasks, outings, archive, sent or spam.",
                 arguments: [.init("text", "where to go")]
             ) { request in
                 try await model.show(request["text"] as? String ?? "inbox")

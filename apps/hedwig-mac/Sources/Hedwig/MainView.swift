@@ -19,6 +19,7 @@ struct MainView: View {
                     case .filtered: FilteredListView()
                     case .drafts: DraftListView()
                     case .tasks: TaskListView()
+                    case .outings: OutingListView()
                     default: MessageListView()
                     }
                 }
@@ -32,6 +33,7 @@ struct MainView: View {
                 case .filtered: FilteredDetailView()
                 case .drafts: DraftDetailView()
                 case .tasks: TaskDetailView()
+                case .outings: OutingDetailView()
                 default: MessageDetailView()
                 }
             }
@@ -66,7 +68,7 @@ struct MainToolbar: ToolbarContent {
     private var showsMail: Bool {
         if model.isSearching { return true }
         return switch model.selection {
-        case .filtered, .drafts, .tasks: false
+        case .filtered, .drafts, .tasks, .outings: false
         default: true
         }
     }

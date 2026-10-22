@@ -26,6 +26,7 @@ extension AppModel {
             "drafts": drafts.count,
             "filtered": filtered.count,
             "tasksAwaitingReview": tasksAwaitingReview,
+            "outingsNeedingAttention": outingsBadge,
         ]
         if let detail {
             state["message"] = [
@@ -46,14 +47,15 @@ extension AppModel {
         case .filtered: "filtered"
         case .drafts: "drafts"
         case .tasks: "tasks"
+        case .outings: "outings"
         case .folder(let folder): folder.rawValue
         case nil: nil
         }
     }
 
     /// `inbox` (the first mailbox), `inbox:<address>`, a role (`private`, `work`,
-    /// `school`: its inboxes merged), `filtered`, `drafts`, `tasks`, `archive`,
-    /// `sent` or `spam`.
+    /// `school`: its inboxes merged), `filtered`, `drafts`, `tasks`, `outings`,
+    /// `archive`, `sent` or `spam`.
     public func show(_ place: String) async throws {
         try select(place)
         await selectionLoad?.value
@@ -65,6 +67,7 @@ extension AppModel {
         case "filtered": selection = .filtered
         case "drafts": selection = .drafts
         case "tasks": selection = .tasks
+        case "outings": selection = .outings
         case "archive", "sent", "spam": selection = .folder(MailFolder(rawValue: place)!)
         case "private", "work", "school": selection = .role(MailboxRole(rawValue: place)!)
         default:

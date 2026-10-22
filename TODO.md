@@ -49,10 +49,9 @@ in a shared calendar, and calendar tools and rights for bots.
 **Why:** Gideon wants the shared household calendar to tell him what the other added, as
 iCloud family calendars did, and to add events by asking a bot; the cards need free/busy.
 The store is the start of Burrow's own calendar.
-Outings (concerts, tickets, checklist, search words) exist in Hedwig since 22 Oct
-(`.agents/wiki/topics/outings.md`); still to come for them: putting them in the shared
-calendar, reminders before a deadline, and the Evenementen page in the Hedwig app (design
-in progress).
+Outings (concerts, tickets, checklist, search words) and the Evenementen page exist in
+Hedwig since 22 Oct (`.agents/wiki/topics/outings.md`); still to come for them: putting
+them in the shared calendar.
 **Scope:** about five days in four phases, Google first; events and tickets three more.
 
 ## Angela's Mac
@@ -86,6 +85,9 @@ message says who speaks ("Kreacher: drie mails voor je klaargezet"), so there is
 token, one chat and one group. Telegram is a third party that stores what passes through
 it, so Winky never sends content there, at most "er ligt iets gevoeligs voor je klaar in
 Hedwig".
+Outings: each person's tickets on the morning of the day and deadline reminders with
+Doen/Gedaan buttons (`docs/design/hedwig-events.html`, section 4); until then the Mac
+shows local notifications, which Patronus then replaces.
 **Scope:** design note first (webhook through the tunnel or long polling from Dobby,
 linking, which tools a chat may use), then a module; a day.
 
