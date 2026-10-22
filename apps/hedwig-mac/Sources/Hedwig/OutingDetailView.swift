@@ -3,17 +3,18 @@ import HedwigCore
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// One outing: three facts, the one list of things to do and the tickets.
-/// Everything else waits behind Details.
+/// One outing: its picture, three facts, the one list of things to do and
+/// the tickets. Everything else waits behind Details.
 struct OutingDetailView: View {
     @Environment(AppModel.self) private var model
     @State private var dropping = false
+    @State private var picking: Outing?
 
     var body: some View {
         if let outing = model.selectedOuting {
             ScrollView {
+                OutingHero(outing: outing) { picking = outing }
                 VStack(alignment: .leading, spacing: 22) {
-                    header(outing)
                     OutingFacts(outing: outing)
                     if !outing.isPast() {
                         OutingChecklist(outing: outing)
@@ -21,10 +22,12 @@ struct OutingDetailView: View {
                     }
                     detailsToggle
                     if model.showsOutingDetails {
-                        OutingDetails(outing: outing).id(outing.id)
+                        OutingDetails(outing: outing) { picking = outing }.id(outing.id)
                     }
                 }
-                .padding(28)
+                .padding(.horizontal, 28)
+                .padding(.top, 22)
+                .padding(.bottom, 28)
                 .frame(maxWidth: 640, alignment: .leading)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -43,18 +46,14 @@ struct OutingDetailView: View {
                 Task { await model.addTickets(urls, to: outing.id) }
                 return true
             } isTargeted: { dropping = $0 }
+            .background(PasteCatcher {
+                guard model.me?.can(.organize) == true else { return }
+                let contents = NSPasteboard.general.pastedContents()
+                Task { await model.setPicture(contents, for: outing.id) }
+            })
+            .sheet(item: $picking) { PicturePickerSheet(outing: $0) }
         } else {
             ContentUnavailableView("Geen evenement geselecteerd", systemImage: "ticket")
-        }
-    }
-
-    private func header(_ outing: Outing) -> some View {
-        HStack(alignment: .center, spacing: 14) {
-            OutingDateTile(date: outing.startsAt, large: true)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(outing.title).font(.title.weight(.bold)).textSelection(.enabled)
-                if let kind = outing.kind { Text(kind).foregroundStyle(.secondary) }
-            }
         }
     }
 
@@ -303,6 +302,7 @@ private struct ChecklistRow: View {
 private struct OutingDetails: View {
     @Environment(AppModel.self) private var model
     let outing: Outing
+    let pick: () -> Void
     @State private var naming: OutingTicket?
     @State private var holder = ""
     @State private var newAlias = ""
@@ -312,6 +312,7 @@ private struct OutingDetails: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
+            section("Afbeelding") { OutingPictureSection(outing: outing, pick: pick) }
             fields.disabled(!canOrganize)
             section("Kaarten") { tickets }
             section("Mails") { mails }

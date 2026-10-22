@@ -40,6 +40,9 @@ struct OutingCard: View {
                     .help(Self.line(outing.status()))
             }
             Spacer()
+            if outing.image != nil {
+                OutingThumbnail(outing: outing, width: 64, height: 44)
+            }
             Button("Bekijk") { model.showOuting(outing.id) }
         }
     }

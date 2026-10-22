@@ -67,12 +67,14 @@ extension AppModel {
         return OutingPicture(data: data)
     }
 
-    public func choosePicture(_ option: OutingImageOption, for outingId: String) async {
+    @discardableResult
+    public func choosePicture(_ option: OutingImageOption, for outingId: String) async -> Bool {
         await changePicture(outingId) { try await $0.setOutingImage(outingId: outingId, .option(option.id)) }
     }
 
     /// Geen afbeelding: the colours from the title, and it stays that way.
-    public func removePicture(from outingId: String) async {
+    @discardableResult
+    public func removePicture(from outingId: String) async -> Bool {
         await changePicture(outingId) { try await $0.deleteOutingImage(outingId: outingId) }
     }
 
