@@ -57,6 +57,7 @@ export function testHousehold({
             'mail-search',
             'mail-templates',
             'meeting-notes',
+            'outing-details',
           ],
           rights: ['read', 'organize', 'draft'],
           persona: 'You are Kreacher.',
@@ -115,6 +116,14 @@ export function testHousehold({
           name: 'mail-templates',
           description: 'Indexes templates.',
           instructions: 'Index them.',
+        },
+      ],
+      [
+        'outing-details',
+        {
+          name: 'outing-details',
+          description: 'Reads an order mail.',
+          instructions: 'Read the outing.',
         },
       ],
       [

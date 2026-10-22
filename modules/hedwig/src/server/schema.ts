@@ -5,6 +5,7 @@ import type {
   MailboxRole,
   MailFolder,
   MailProvider,
+  OutingRead,
   ServerOp,
   TriageAction,
   TriageStatus,
@@ -292,6 +293,16 @@ export const outingTasks = sqliteTable('outing_tasks', {
   assigneeId: text('assignee_id').references(() => people.id),
   doneAt: integer('done_at', { mode: 'timestamp_ms' }),
   doneBy: text('done_by').references(() => people.id),
+  createdAt: createdAt(),
+});
+
+// Haiku's reading of a mail that looks like an outing, once per message.
+export const outingReads = sqliteTable('outing_reads', {
+  messageId: text('message_id')
+    .primaryKey()
+    .references(() => messages.id, { onDelete: 'cascade' }),
+  answer: text('answer', { mode: 'json' }).$type<OutingRead>().notNull(),
+  model: text('model').notNull(),
   createdAt: createdAt(),
 });
 

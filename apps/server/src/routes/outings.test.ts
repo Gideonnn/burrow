@@ -21,6 +21,31 @@ const ORDER_HTML = `<html><head><script type="application/ld+json">${JSON.string
   },
 )}</script></head><body><p>Bedankt voor je bestelling.</p></body></html>`;
 
+// What Haiku answers about a mail the rules only guess at.
+const read = (over: Record<string, unknown> = {}) => ({
+  about: 'tickets',
+  title: 'Neon Nineties',
+  kind: 'feest',
+  startsAt: '2027-05-13T21:00',
+  endsAt: null,
+  doorsAt: null,
+  venue: 'Voorbeeldhal',
+  city: 'Voorbeeldstad',
+  organiser: null,
+  vendor: 'Kaartloket',
+  orderNumber: null,
+  personaliseBy: null,
+  website: null,
+  ...over,
+});
+
+const CLAIMED = {
+  from: { name: 'Kaartloket', email: 'no-reply@paylogic.example.com' },
+  subject: 'Personaliseren van je ticket(s) voor Neon Nineties is voltooid.',
+  bodyText:
+    'Je hebt met succes je tickets geclaimd.\nNeon Nineties\n13 mei 2027, 21:00\nVoorbeeldhal, Voorbeeldstad',
+};
+
 function setup() {
   const h = testHousehold();
   const gideon = h.person('Gideon');
@@ -302,6 +327,87 @@ describe('outings', () => {
         [messageId, reminder].sort(),
       );
     });
+  });
+
+  it('lets Haiku read a ticket mail the rules only guess at, once', async () => {
+    const s = setup();
+    s.decisions.push(read());
+    const messageId = await s.deliver(CLAIMED);
+    await vi.waitFor(async () => {
+      const list = outingsResponse.parse(
+        await (await s.send(s.token, 'GET', '/api/outings')).json(),
+      );
+      expect(list).toMatchObject([
+        { title: 'Neon Nineties', venue: 'Voorbeeldhal', kind: 'feest' },
+      ]);
+    });
+    expect(s.agentRequests).toHaveLength(1);
+    expect(s.agentRequests[0]!.model).toBe('haiku');
+    expect(s.agentRequests[0]!.prompt).toContain('<untrusted_email>');
+
+    const suggestion = outingSuggestion.parse(
+      await (
+        await s.send(s.token, 'GET', `/api/messages/${messageId}/outing`)
+      ).json(),
+    );
+    expect(suggestion.title).toBe('Neon Nineties');
+    expect(suggestion.outingId).not.toBeNull();
+    expect(s.agentRequests).toHaveLength(1);
+  });
+
+  it('puts the locker with its night and leaves presale mail alone', async () => {
+    const s = setup();
+    s.decisions.push(read());
+    await s.deliver(CLAIMED);
+    await vi.waitFor(async () => {
+      const list = outingsResponse.parse(
+        await (await s.send(s.token, 'GET', '/api/outings')).json(),
+      );
+      expect(list).toHaveLength(1);
+    });
+
+    s.decisions.push(
+      read({
+        about: 'addon',
+        title: 'Neon Nineties 2027',
+        vendor: 'Eventsafe',
+      }),
+    );
+    const locker = await s.deliver({
+      from: { email: 'noreply@eventsafe.example.com' },
+      subject: 'Bestelling kluisje - Neon Nineties 2027',
+      bodyText:
+        'Bevestiging van een reservering voor een kluisje voor het evenement Neon Nineties 2027 op 13 mei 2027.',
+    });
+    await vi.waitFor(async () => {
+      const list = outingsResponse.parse(
+        await (await s.send(s.token, 'GET', '/api/outings')).json(),
+      );
+      expect(list).toHaveLength(1);
+      expect(list[0]!.mails.map((m) => m.id)).toContain(locker);
+    });
+
+    s.decisions.push(
+      read({ about: 'announcement', title: 'Voorbeeldfeest', startsAt: null }),
+    );
+    const presale = await s.deliver({
+      from: {
+        name: 'Ticketpoint',
+        email: 'info@nieuwsbrief.ticketpoint.example.com',
+      },
+      subject: 'Voorverkoop Voorbeeldfeest',
+      bodyText: 'Tickets gaan op 29 oktober 2027 om 12:00 in verkoop.',
+    });
+    const suggestion = outingSuggestion.parse(
+      await (
+        await s.send(s.token, 'GET', `/api/messages/${presale}/outing`)
+      ).json(),
+    );
+    expect(suggestion.confidence).toBe('none');
+    const list = outingsResponse.parse(
+      await (await s.send(s.token, 'GET', '/api/outings')).json(),
+    );
+    expect(list).toHaveLength(1);
   });
 
   it('finds order mails for nights still to come in the archive', async () => {

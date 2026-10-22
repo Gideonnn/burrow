@@ -1,27 +1,37 @@
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { extname, join } from 'node:path';
-import type {
-  AddTicketRequest,
-  CreateOutingRequest,
-  Outing,
-  OutingSuggestion,
-  OutingTask,
-  PersonRef,
-  UpdateOutingRequest,
+import {
+  type AddTicketRequest,
+  type CreateOutingRequest,
+  type Outing,
+  type OutingRead,
+  outingRead,
+  type OutingSuggestion,
+  type OutingTask,
+  type PersonRef,
+  type UpdateOutingRequest,
 } from '@burrow/contracts';
-import { type Access, type Platform, people } from '@burrow/platform';
-import { and, asc, desc, eq, like } from 'drizzle-orm';
+import {
+  type Access,
+  botRequest,
+  type Platform,
+  people,
+} from '@burrow/platform';
+import { and, asc, desc, eq, gt, like, or } from 'drizzle-orm';
+import { z } from 'zod';
 import { factsFor } from '../facts/store';
-import type { MailService } from '../mail-service';
+import type { MailService, MessageRow } from '../mail-service';
 import {
   mailboxes,
   messages,
   outingMessages,
+  outingReads,
   outings,
   outingTasks,
   outingTickets,
 } from '../schema';
-import { detectOuting } from './detect';
+import { type Detected, detectOuting } from './detect';
+import { OUTING_SKILL, readPrompt, withRead } from './reader';
 
 export class OutingError extends Error {}
 
@@ -41,6 +51,21 @@ const EXTENSIONS = Object.fromEntries(
   Object.entries(CONTENT_TYPES).map(([ext, type]) => [type, ext]),
 );
 
+const readSchema = z.toJSONSchema(outingRead, { target: 'draft-7' });
+// Subjects worth a look when the archive is scanned at start.
+const ORDER_SUBJECTS = [
+  'ticket',
+  'kaart',
+  'bestelling',
+  'order',
+  'reservering',
+  'kluis',
+  'locker',
+  'personali',
+];
+const ARCHIVE_DAYS = 400;
+const ARCHIVE_MAX = 300;
+
 const iso = (d: Date | null) => d?.toISOString() ?? null;
 const at = (s: string | null | undefined) =>
   s === undefined ? undefined : s === null ? null : new Date(s);
@@ -48,7 +73,21 @@ const at = (s: string | null | undefined) =>
 // Outings are the household's, not one person's: everyone sees and changes
 // them. Only the mails linked to an outing stay private to their mailbox.
 export class OutingsService {
-  constructor(private readonly o: { platform: Platform; mail: MailService }) {}
+  private readonly reading = new Map<string, Promise<OutingRead | null>>();
+  private readonly readerOn: boolean;
+
+  constructor(
+    private readonly o: { platform: Platform; mail: MailService; bot?: string },
+  ) {
+    const { catalog } = o.platform;
+    const bot = o.bot ? catalog.bots.get(o.bot) : undefined;
+    this.readerOn = Boolean(
+      bot &&
+      bot.agent !== 'local' &&
+      bot.skills.includes(OUTING_SKILL) &&
+      catalog.skills.has(OUTING_SKILL),
+    );
+  }
 
   private get db() {
     return this.o.platform.db;
@@ -82,24 +121,15 @@ export class OutingsService {
   async suggest(access: Access, messageId: string): Promise<OutingSuggestion> {
     const message = this.visibleMessage(access, messageId);
     const outingId = this.forMessage(access, messageId)?.id ?? null;
-    const facts = factsFor(this.db, [message.id]).get(message.id);
-    const input = {
-      subject: message.subject,
-      from: message.from,
-      bodyText: message.bodyText,
-      bodyHtml: message.bodyHtml,
-      receivedAt: message.receivedAt,
-      dates: facts?.dates,
-      attachments: [],
-    };
-    const found = detectOuting(input);
+    const found = await this.detect(message);
     if (!message.hasAttachments || (found.confidence === 'none' && !outingId)) {
       return { outingId, ...found };
     }
     const attachments = await this.o.mail
       .attachments(message.id)
       .catch(() => []);
-    return { outingId, ...detectOuting({ ...input, attachments }) };
+    const { tickets } = detectOuting({ ...inputOf(message), attachments });
+    return { outingId, ...found, tickets };
   }
 
   async create(access: Access, request: CreateOutingRequest): Promise<Outing> {
@@ -418,25 +448,22 @@ export class OutingsService {
     return this.get(access, id);
   }
 
-  // Order mails Hedwig reads with certainty (schema.org) become outings by
-  // themselves, for whoever's mailbox they arrived in. A second mail about the
-  // same order or the same night joins the existing outing.
+  // Order mails become outings by themselves, for whoever's mailbox they
+  // arrived in: certain ones (schema.org) at once, likely ones when Haiku
+  // reads tickets in them. A second mail about the same order or the same
+  // night, a locker for it too, joins the existing outing.
   async adoptStored(ids: string[], now = new Date()) {
     for (const id of ids) {
       const message = this.o.mail.message(id);
-      if (!message?.bodyHtml?.includes('ld+json')) continue;
+      if (!message) continue;
       if (this.forMessage(this.ownerAccess(message.mailboxId), id)) continue;
-      const input = {
-        subject: message.subject,
-        from: message.from,
-        bodyText: message.bodyText,
-        bodyHtml: message.bodyHtml,
-        receivedAt: message.receivedAt,
-        attachments: [],
-      };
-      const found = detectOuting(input);
-      if (found.confidence !== 'structured' || !found.title || !found.startsAt)
+      const input = inputOf(message);
+      if (detectOuting(input).confidence === 'none') continue;
+      const { found, read } = await this.detectWithRead(message);
+      if (found.confidence === 'none' || !found.title || !found.startsAt)
         continue;
+      // A guess of the rules alone waits for the Bewaar click.
+      if (found.confidence === 'likely' && !read) continue;
       if (new Date(found.startsAt) < now) continue;
       const access = this.ownerAccess(message.mailboxId);
       const existing = this.sameOuting(
@@ -453,6 +480,8 @@ export class OutingsService {
         this.changed(existing);
         continue;
       }
+      // A locker or parking spot alone is no outing.
+      if (read?.about === 'addon') continue;
       const attachments = message.hasAttachments
         ? await this.o.mail.attachments(id).catch(() => [])
         : [];
@@ -482,13 +511,24 @@ export class OutingsService {
   }
 
   // Once at start: order mails already in the archive for nights still to
-  // come. Only mail with JSON-LD is looked at, so this stays a quick scan.
-  async adoptArchive() {
+  // come. Only mail of the last year with JSON-LD or an order-like subject is
+  // looked at, so this stays a quick scan; Haiku reads each mail only once.
+  async adoptArchive(now = new Date()) {
+    const since = new Date(now.getTime() - ARCHIVE_DAYS * 86_400_000);
     const ids = this.db
       .select({ id: messages.id })
       .from(messages)
-      .where(like(messages.bodyHtml, '%ld+json%'))
+      .where(
+        and(
+          gt(messages.receivedAt, since),
+          or(
+            like(messages.bodyHtml, '%ld+json%'),
+            ...ORDER_SUBJECTS.map((w) => like(messages.subject, `%${w}%`)),
+          ),
+        ),
+      )
       .orderBy(desc(messages.receivedAt))
+      .limit(ARCHIVE_MAX)
       .all()
       .map((r) => r.id);
     await this.adoptStored(ids);
@@ -496,6 +536,63 @@ export class OutingsService {
   }
 
   // --- internals ----------------------------------------------------------
+
+  private async detect(message: MessageRow): Promise<Detected> {
+    return (await this.detectWithRead(message)).found;
+  }
+
+  private async detectWithRead(message: MessageRow) {
+    const facts = factsFor(this.db, [message.id]).get(message.id);
+    const found = detectOuting({ ...inputOf(message), dates: facts?.dates });
+    if (found.confidence !== 'likely' || facts?.sensitive) {
+      return { found, read: null };
+    }
+    const read = await this.read(message);
+    return { found: read ? withRead(found, read) : found, read };
+  }
+
+  // Haiku reads what the rules only guess: the event's own name, its date,
+  // and whether the mail is about tickets at all. Once per message; a failed
+  // read is tried again next time.
+  private read(message: MessageRow): Promise<OutingRead | null> {
+    if (!this.readerOn) return Promise.resolve(null);
+    const hit = this.db
+      .select({ answer: outingReads.answer })
+      .from(outingReads)
+      .where(eq(outingReads.messageId, message.id))
+      .get();
+    if (hit) return Promise.resolve(hit.answer);
+    let run = this.reading.get(message.id);
+    if (!run) {
+      run = this.readNow(message)
+        .catch((error: Error) => {
+          console.error(
+            `hedwig: reading outing ${message.id} failed: ${error.message}`,
+          );
+          return null;
+        })
+        .finally(() => this.reading.delete(message.id));
+      this.reading.set(message.id, run);
+    }
+    return run;
+  }
+
+  private async readNow(message: MessageRow): Promise<OutingRead> {
+    const { catalog, runner } = this.o.platform;
+    const bot = catalog.bots.get(this.o.bot!)!;
+    const request = {
+      ...botRequest(bot, [catalog.skills.get(OUTING_SKILL)!]),
+      prompt: readPrompt(message),
+      schema: readSchema,
+    };
+    const answer = outingRead.parse(await runner.run(request));
+    this.db
+      .insert(outingReads)
+      .values({ messageId: message.id, answer, model: request.model })
+      .onConflictDoNothing()
+      .run();
+    return answer;
+  }
 
   private sameOuting(
     orderNumber: string | null,
@@ -507,8 +604,7 @@ export class OutingsService {
     return rows.find(
       (o) =>
         (orderNumber && o.orderNumber === orderNumber) ||
-        (o.title.toLowerCase() === title.toLowerCase() &&
-          day(o.startsAt) === day(startsAt)),
+        (sameName(o.title, title) && day(o.startsAt) === day(startsAt)),
     )?.id;
   }
 
@@ -744,4 +840,25 @@ function stripUndefined<T extends Record<string, unknown>>(o: T) {
   return Object.fromEntries(
     Object.entries(o).filter(([, v]) => v !== undefined),
   ) as { [K in keyof T]: Exclude<T[K], undefined> };
+}
+
+function inputOf(message: MessageRow) {
+  return {
+    subject: message.subject,
+    from: message.from,
+    bodyText: message.bodyText,
+    bodyHtml: message.bodyHtml,
+    receivedAt: message.receivedAt,
+    attachments: [],
+  };
+}
+
+// "Welcome To The 90s 2026" and "Welcome To The 90's" are the same night.
+function sameName(a: string, b: string) {
+  const plain = (s: string) =>
+    s
+      .toLowerCase()
+      .replace(/\b(19|20)\d{2}\b/g, '')
+      .replace(/[^\p{L}\p{N}]+/gu, '');
+  return plain(a) === plain(b);
 }

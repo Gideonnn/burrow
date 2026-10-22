@@ -9,6 +9,16 @@ const base = {
 };
 
 describe('detectOuting', () => {
+  it('takes the name from a subject about tickets for it', () => {
+    const found = detectOuting({
+      ...base,
+      subject:
+        'Personaliseren van je ticket(s) voor Neon Nineties is voltooid.',
+      bodyText: 'Je tickets zijn op naam gezet.',
+    });
+    expect(found.title).toBe('Neon Nineties');
+  });
+
   it('reads a schema.org event reservation', () => {
     const html = `<html><head><script type="application/ld+json">${JSON.stringify(
       {

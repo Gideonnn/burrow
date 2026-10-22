@@ -20,11 +20,22 @@ the attachments that look like tickets (pdf, `.pkpass`, non-inline images). It a
 provider for attachments only when the mail looks like an outing, so the Mac asks for every
 opened mail. `outingId` says the mail already belongs to one.
 
-A mail read with certainty (`structured`) becomes an outing by itself when it is stored
-(`adoptStored`); a second mail about the same order or the same night joins the existing
-one. For a `likely` mail the Mac card offers **Bewaar**, which posts the suggestion with
-`messageId` and `attachmentIds`: the outing, the mail linked, the attachments copied as
-tickets and, with a deadline, the item "Kaarten op naam zetten".
+**Haiku reads the `likely` mail** (`reader.ts`, Kreacher's `outing-details` skill,
+cached in `outing_reads`): whether it is about `tickets`, an `addon` (locker, parking),
+an `announcement` (presale, voucher codes) or `other`, and the event's own name, times,
+place, shop and order number. Its answer wins over the rules' guess; an announcement or
+other gets `confidence: none`, so no card. Sensitive mail (mail facts) and bots without
+the skill skip it; the text goes redacted. A failed read is tried again the next time.
+
+A mail becomes an outing by itself when it is stored (`adoptStored`) and its night is
+still to come: a `structured` one always, a `likely` one when Haiku reads tickets. A
+second mail about the same order or the same night joins the existing one; names match
+without year and punctuation ("Welcome To The 90s 2026" and "Welcome To The 90's"). An
+addon only joins, it never starts an outing. At start `adoptArchive` runs the same over
+mail of the last 400 days with JSON-LD or an order-like subject (at most 300). Otherwise
+the Mac card offers **Bewaar**, which posts the suggestion with `messageId` and
+`attachmentIds`: the outing, the mail linked, the attachments copied as tickets and,
+with a deadline, the item "Kaarten op naam zetten".
 
 ## What an outing holds
 

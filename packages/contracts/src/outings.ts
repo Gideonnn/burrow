@@ -150,6 +150,32 @@ export const outingSuggestion = z.object({
 });
 export type OutingSuggestion = z.infer<typeof outingSuggestion>;
 
+// What Haiku reads from a mail about an outing. Times are local, without an
+// offset ("2027-05-13T20:00").
+const localTime = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2})?$/)
+  .nullable();
+export const outingRead = z.object({
+  // tickets: an order or tickets the recipient has; addon: a locker, parking
+  // or camping spot for an event; announcement: a presale, newsletter or
+  // invitation to buy; other: not about an outing.
+  about: z.enum(['tickets', 'addon', 'announcement', 'other']),
+  title: z.string().max(120).nullable(),
+  kind: z.string().max(40).nullable(),
+  startsAt: localTime,
+  endsAt: localTime,
+  doorsAt: localTime,
+  venue: z.string().max(120).nullable(),
+  city: z.string().max(80).nullable(),
+  organiser: z.string().max(120).nullable(),
+  vendor: z.string().max(80).nullable(),
+  orderNumber: z.string().max(60).nullable(),
+  personaliseBy: localTime,
+  website: z.string().max(300).nullable(),
+});
+export type OutingRead = z.infer<typeof outingRead>;
+
 export const addTicketRequest = z.union([
   z.object({ uploadId: z.string(), name: text(200).min(1) }),
   z.object({ messageId: z.string(), attachmentId: z.string() }),

@@ -97,7 +97,7 @@ export function hedwigModule(platform: Platform, options: HedwigOptions) {
   });
   const insights = new InsightsService({ platform, mail, bot: options.bot });
   const search = new SearchService({ platform, bot: options.bot });
-  const outings = new OutingsService({ platform, mail });
+  const outings = new OutingsService({ platform, mail, bot: options.bot });
   mail.onStored = (ids) => {
     facts.applyRules(ids);
     void outings

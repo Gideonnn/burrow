@@ -31,6 +31,9 @@ const SHOPS: [RegExp, string][] = [
   [/ticketmatic/, 'Ticketmatic'],
   [/ticketcounter/, 'Ticketcounter'],
   [/tibbaa/, 'Tibbaa'],
+  [/ticketpoint/, 'Ticketpoint'],
+  // Lockers at festivals: not a ticket, but part of the night.
+  [/eventsafe/, 'Eventsafe'],
 ];
 
 const TICKET_WORDS =
@@ -258,7 +261,7 @@ function date(value: string | undefined): Date | null {
 
 function titleFromSubject(subject: string): string | null {
   const m =
-    /(?:tickets?|kaarten|kaartjes|e-?tickets?|bestelling|order)\s+(?:voor|for)\s+["'„]?(.+?)["'”]?\s*$/i.exec(
+    /(?:ticket(?:s|\(s\))?|kaarten|kaartjes|e-?tickets?|bestelling|order)\s+(?:voor|for)\s+["'„]?(.+?)["'”]?(?:\s+(?:is|zijn|are|is now)\s+\S+)?[.!]?\s*$/i.exec(
       subject.trim(),
     );
   return m?.[1]?.trim() || null;
@@ -325,7 +328,7 @@ export function personaliseDeadline(
   return null;
 }
 
-function unique(values: (string | null | undefined)[]): string[] {
+export function unique(values: (string | null | undefined)[]): string[] {
   const seen = new Set<string>();
   const out: string[] = [];
   for (const v of values) {
