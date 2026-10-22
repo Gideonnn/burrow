@@ -24,7 +24,7 @@ pnpm dev                       # http://127.0.0.1:4717
 
 Then connect Hedwig to `http://127.0.0.1:4717` with the "MacBook Gideon" key. For
 screenshots without the Keychain, start the binary with `HEDWIG_SERVER`, `HEDWIG_KEY`
-and optionally `HEDWIG_OPEN=filtered|drafts|archive`.
+and optionally `HEDWIG_OPEN=filtered|drafts|outings|archive`.
 
 ## What it does
 
@@ -32,6 +32,11 @@ and optionally `HEDWIG_OPEN=filtered|drafts|archive`.
   without JavaScript or remote content (trackers stay blocked), replying, forwarding.
 - Archive, delete, spam, read and flag act at the provider, so phones see the same.
 - "Gefilterd": what the bot filtered, with its reason; confirm or restore.
+- "Evenementen": the household's outings, each with one status sentence; Details holds
+  times, tickets per person, mails and search words. Drop a pdf, Wallet pass or
+  screenshot on an outing to keep it as a ticket. Until Patronus exists, the Mac
+  reminds of the day and of deadlines with notifications (see the
+  [outings topic](../../.agents/wiki/topics/outings.md)).
 - "Concepten": drafts prepared by bots or agents through MCP, to review and send.
 - "Taken": what routines propose, to approve or reject. Tasks meant for this Mac run in
   `burrowctl runner` (see the [agent-control topic](../../.agents/wiki/topics/agent-control.md)),

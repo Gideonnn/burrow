@@ -59,6 +59,7 @@ public struct Outing: Codable, Hashable, Identifiable, Sendable {
     public var notes: String
     public var aliases: [String]
     public var inCalendar: Bool
+    public var attendees: [PersonRef]
     public var tickets: [OutingTicket]
     public var tasks: [OutingTask]
     public var mails: [OutingMail]
@@ -71,6 +72,10 @@ public struct Outing: Codable, Hashable, Identifiable, Sendable {
     public var openPersonalise: OutingTask? {
         tasks.first { $0.kind == .personalise && !$0.done }
     }
+
+    /// The checklist without the old "In de agenda zetten" items: calendar
+    /// sync is automatic, so nobody ticks that by hand.
+    public var checklist: [OutingTask] { tasks.filter { $0.kind != .calendar } }
 }
 
 /// What Hedwig read from a mail before it becomes an outing.
@@ -116,8 +121,16 @@ public struct CreateOutingRequest: Encodable, Sendable {
     public var url: String?
     public var aliases: [String]?
     public var personaliseBy: Date?
+    public var attendeeIds: [String]?
     public var messageId: String?
     public var attachmentIds: [String]?
+
+    /// What the Nieuw evenement sheet asks; the server adds everyone as attendee.
+    public init(title: String, startsAt: Date, venue: String? = nil) {
+        self.title = title
+        self.startsAt = startsAt
+        self.venue = venue
+    }
 
     /// Everything Hedwig read from the mail, with its ticket attachments.
     public init?(suggestion s: OutingSuggestion, messageId: String) {
@@ -141,7 +154,7 @@ public struct CreateOutingRequest: Encodable, Sendable {
 
     enum CodingKeys: String, CodingKey {
         case title, startsAt, kind, endsAt, doorsAt, venue, address, organiser, vendor, orderNumber, url, aliases
-        case personaliseBy, messageId, attachmentIds
+        case personaliseBy, attendeeIds, messageId, attachmentIds
     }
 
     // The server wants ISO dates, and no key at all for what is unknown.
@@ -161,6 +174,7 @@ public struct CreateOutingRequest: Encodable, Sendable {
         try c.encodeIfPresent(url, forKey: .url)
         try c.encodeIfPresent(aliases, forKey: .aliases)
         try c.encodeIfPresent(personaliseBy.map(iso), forKey: .personaliseBy)
+        try c.encodeIfPresent(attendeeIds, forKey: .attendeeIds)
         try c.encodeIfPresent(messageId, forKey: .messageId)
         try c.encodeIfPresent(attachmentIds, forKey: .attachmentIds)
     }
@@ -183,8 +197,32 @@ extension APIClient {
         try await call("PATCH", "api/outings/\(outingId)/tasks/\(taskId)", body: ["done": done])
     }
 
-    public func setInCalendar(outingId: String, _ inCalendar: Bool) async throws -> Outing {
-        try await call("PATCH", "api/outings/\(outingId)", body: ["inCalendar": inCalendar])
+    public func addOutingTask(outingId: String, title: String, dueAt: Date?) async throws -> Outing {
+        var body: [String: JSONValue] = ["title": .string(title)]
+        if let dueAt { body["dueAt"] = .string(Self.isoFractional.string(from: dueAt)) }
+        return try await call("POST", "api/outings/\(outingId)/tasks", body: body)
+    }
+
+    /// A partial update; `.null` clears a field.
+    public func updateOuting(id: String, _ patch: [String: JSONValue]) async throws -> Outing {
+        try await call("PATCH", "api/outings/\(id)", body: patch)
+    }
+
+    public func deleteOuting(id: String) async throws {
+        let _: Empty = try await call("DELETE", "api/outings/\(id)")
+    }
+
+    /// Keeps an uploaded file (see `upload(file:)`) as a ticket.
+    public func addTicket(outingId: String, uploadId: String, name: String) async throws -> Outing {
+        try await call("POST", "api/outings/\(outingId)/tickets", body: ["uploadId": uploadId, "name": name])
+    }
+
+    public func updateTicket(outingId: String, ticketId: String, _ patch: [String: JSONValue]) async throws -> Outing {
+        try await call("PATCH", "api/outings/\(outingId)/tickets/\(ticketId)", body: patch)
+    }
+
+    public func deleteTicket(outingId: String, ticketId: String) async throws -> Outing {
+        try await call("DELETE", "api/outings/\(outingId)/tickets/\(ticketId)")
     }
 
     /// The ticket's file, for Quick Look or the printer.

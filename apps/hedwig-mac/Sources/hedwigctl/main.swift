@@ -10,7 +10,7 @@ usage: hedwigctl <command>   (or: burrowctl hedwig <command>)
   press <id>            press a button or menu item; sending and deleting ask the person
   type <id> <text>      type into a text field; password and key fields are refused
   select <id>           select a row
-  show <place>          inbox, inbox:<address>, filtered, drafts, tasks, archive, sent, spam
+  show <place>          inbox, inbox:<address>, filtered, drafts, tasks, outings, archive, sent, spam
   open <messageId>      open a message from the current list
   update                look for a newer signed build and get it ready
   restart [--force]     quit and start again, installing a ready update; refuses

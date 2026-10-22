@@ -49,6 +49,10 @@ struct SidebarView: View {
                     Label("Gefilterd", systemImage: "checkmark.shield")
                 }
                 .badge(model.filtered.count)
+                NavigationLink(value: SidebarItem.outings) {
+                    Label("Evenementen", systemImage: "ticket")
+                }
+                .badge(model.outingsBadge)
                 NavigationLink(value: SidebarItem.tasks) {
                     Label("Taken", systemImage: "checklist")
                 }

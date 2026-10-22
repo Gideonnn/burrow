@@ -2,6 +2,7 @@
 
 Newest first.
 
+- [2026-10-22 The Evenementen page on the Mac, simple first](2026-10-22-evenementen-page-on-the-mac.md): one sentence per outing, details folded away, Mac notifications until Patronus, and a DatePicker that saved on appear.
 - [2026-10-22 Outings live in Hedwig](2026-10-22-outings-in-hedwig.md): household-wide outings with tickets and a checklist, detected without a model, inside Hedwig because modules never import each other.
 - [2026-10-22 Attachments on demand, keyed by part](2026-10-22-attachments-keyed-by-part.md): never stored, fetched per request; Gmail's attachmentId changes on every read, so ids are part ids.
 - [2026-10-22 Runners, two queues and mail facts in one night](2026-10-22-runners-and-mail-facts.md): the claim is the registration, standing work as short-lived rows, and a keychain prompt that blocks a headless runner.

@@ -8,6 +8,8 @@ public enum SidebarItem: Hashable, Sendable {
     case filtered
     case drafts
     case tasks
+    /// Evenementen: the household's outings.
+    case outings
     case folder(MailFolder)
 }
 
@@ -57,7 +59,7 @@ public final class AppModel {
     /// Bumped by ⌘F; the window moves focus to the search field.
     public var searchFocusRequest = 0
     public var isSearching: Bool { !searchQuery.isEmpty }
-    public private(set) var messages: [MessageSummary] = []
+    public internal(set) var messages: [MessageSummary] = []
     public var selectedMessageId: String? {
         didSet { if oldValue != selectedMessageId { messageLoad = Task { await openSelected() } } }
     }
@@ -68,6 +70,19 @@ public final class AppModel {
     public internal(set) var outingSuggestion: OutingSuggestion?
     public internal(set) var outing: Outing?
     public internal(set) var outingBusy = false
+    /// The household's outings for the Evenementen page, every one of them.
+    public internal(set) var outings: [Outing] = [] {
+        didSet { if oldValue != outings { outingsChanged?() } }
+    }
+    public var selectedOutingId: String?
+    /// Whether Details is open under an outing; kept while Hedwig runs.
+    public var showsOutingDetails = false
+    /// Tickets being uploaded right now.
+    public internal(set) var ticketUploads = 0
+    /// Everyone in the household, for Wie and the ticket holders.
+    public internal(set) var people: [Person] = []
+    /// Called whenever the outings change; the app reschedules its reminders.
+    public var outingsChanged: (@MainActor () -> Void)?
     public private(set) var filtered: [FilteredEntry] = []
     public var selectedFilteredId: String?
     public private(set) var drafts: [Draft] = []
@@ -148,6 +163,7 @@ public final class AppModel {
         case "filtered": selection = .filtered
         case "drafts": selection = .drafts
         case "tasks": selection = .tasks
+        case "outings": selection = .outings
         case "archive": selection = .folder(.archive)
         case let address?: if let box = me?.mailboxes.first(where: { $0.address == address }) { selection = .inbox(mailboxId: box.id) }
         default: break
@@ -157,6 +173,7 @@ public final class AppModel {
         await refreshDrafts()
         await refreshTasks()
         await refreshRunners()
+        await refreshOutings()
         eventsTask?.cancel()
         eventsTask = Task { [weak self] in
             guard let stream = self?.api?.events() else { return }
@@ -174,8 +191,11 @@ public final class AppModel {
             await loadSelection(keepSelection: true)
         }
         if event.messageId == detail?.id, event.type == "message.changed" { await openSelected() }
-        if event.type == "outing.changed", let id = event["outingId"], id == outing?.id || id == outingSuggestion?.outingId {
-            if let messageId = detail?.id { await loadOuting(messageId: messageId) }
+        if event.type == "outing.changed" {
+            await refreshOutings()
+            if let id = event["outingId"], id == outing?.id || id == outingSuggestion?.outingId, let messageId = detail?.id {
+                await loadOuting(messageId: messageId)
+            }
         }
     }
 
@@ -256,6 +276,9 @@ public final class AppModel {
                 messages = []
             case .tasks:
                 await refreshTasks()
+                messages = []
+            case .outings:
+                await refreshOutings()
                 messages = []
             }
             if !keepSelection || !messages.contains(where: { $0.id == selectedMessageId }) {
