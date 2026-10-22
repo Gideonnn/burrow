@@ -8,18 +8,27 @@ enum Fixture {
      "rights":["read","organize","tasks"],"admin":true,"settings":{"pensieve.mirror":true}}
     """
 
-    static func recording(_ id: String, title: String = "Offerte poorten", status: String = "done", updatedAt: String = "2026-10-20T10:00:00.000Z", audioBytes: Int = 4) -> String {
-        """
-        {"id":"\(id)","title":"\(title)","owner":{"id":"p1","name":"Eva"},"mine":true,"sharedWith":[],
-         "startedAt":"2026-10-20T09:02:00.000Z","durationSeconds":61,"status":"\(status)","error":null,
-         "source":"recorded","audioBytes":\(audioBytes),"hasTranscript":true,"hasNotes":true,"preview":"Kort.",
-         "updatedAt":"\(updatedAt)"}
+    static func recording(
+        _ id: String, title: String = "Offerte poorten", status: String = "done", updatedAt: String = "2026-10-20T10:00:00.000Z",
+        audioBytes: Int = 4, kind: String = "call", labels: [String] = [], hasSegments: Bool = false
+    ) -> String {
+        let labelList = labels.map { "\"\($0)\"" }.joined(separator: ",")
+        return """
+        {"id":"\(id)","kind":"\(kind)","title":"\(title)","owner":{"id":"p1","name":"Eva"},"mine":true,"sharedWith":[],
+         "labels":[\(labelList)],"startedAt":"2026-10-20T09:02:00.000Z","durationSeconds":61,"status":"\(status)","error":null,
+         "source":"recorded","audioBytes":\(audioBytes),"hasTranscript":true,"hasSegments":\(hasSegments),"hasNotes":true,
+         "markCount":0,"preview":"Kort.","updatedAt":"\(updatedAt)"}
         """
     }
 
-    static func detail(_ id: String, title: String = "Offerte poorten") -> String {
-        let summary = recording(id, title: title)
-        return String(summary.dropLast(1)) + ###","transcript":"A: Vrijdag.","notes":null,"notesMarkdown":"## Samenvatting\n\nKort."}"###
+    static func detail(
+        _ id: String, title: String = "Offerte poorten", kind: String = "call", labels: [String] = [], extra: String = ""
+    ) -> String {
+        let summary = recording(id, title: title, kind: kind, labels: labels, hasSegments: !extra.isEmpty)
+        let fields = extra.isEmpty
+            ? ###","transcript":"A: Vrijdag.","segments":null,"marks":[],"notes":null,"notesMarkdown":"## Samenvatting\n\nKort."}"###
+            : extra
+        return String(summary.dropLast(1)) + fields
     }
 }
 
@@ -36,7 +45,7 @@ func temporaryDirectory() -> URL {
         return PensieveModel(
             store: ConnectionStore(service: "app.burrow.pensieve.tests"), makeClient: { _ in client },
             connection: Connection(serverURL: URL(string: "http://burrow.test")!, token: "bk_test"),
-            outbox: outbox, mirror: mirror)
+            outbox: outbox, mirror: mirror, shelf: Shelf(dir: temporaryDirectory()))
     }
 
     private func server() -> MockServer {
@@ -102,7 +111,7 @@ func temporaryDirectory() -> URL {
         let model = PensieveModel(
             store: ConnectionStore(service: "app.burrow.pensieve.tests"), makeClient: { _ in client },
             connection: Connection(serverURL: URL(string: "http://burrow.test")!, token: "bk_test"),
-            outbox: outbox, mirror: Mirror(root: temporaryDirectory()),
+            outbox: outbox, mirror: Mirror(root: temporaryDirectory()), shelf: Shelf(dir: temporaryDirectory()),
             reachability: ServerReachability(delays: [.milliseconds(20)]))
         await model.start()
         server.on("GET", "/api/me", status: 530, json: "<html></html>")
@@ -129,8 +138,8 @@ func temporaryDirectory() -> URL {
         await model.mirrorNow()
 
         let folder = root.appendingPathComponent("2026-10-20_offerte-poorten")
-        #expect(try String(contentsOf: folder.appendingPathComponent("notulen.md"), encoding: .utf8).contains("## Samenvatting"))
-        #expect(try String(contentsOf: folder.appendingPathComponent("transcript.txt"), encoding: .utf8) == "A: Vrijdag.")
+        #expect(try String(contentsOf: folder.appendingPathComponent("samenvatting.md"), encoding: .utf8).contains("## Samenvatting"))
+        #expect(try String(contentsOf: folder.appendingPathComponent("transcript.md"), encoding: .utf8).hasSuffix("A: Vrijdag.\n"))
         #expect(FileManager.default.fileExists(atPath: folder.appendingPathComponent("audio.m4a").path))
 
         await model.mirrorNow()

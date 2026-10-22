@@ -5,9 +5,15 @@ import Foundation
 /// a crash or a day offline.
 public struct PendingUpload: Codable, Hashable, Identifiable, Sendable {
     public var id: String
+    // Optional fields came with the kinds; older pending uploads are calls.
+    public var kind: RecordingKind?
     public var title: String
     public var startedAt: Date
     public var audio: String
+    public var marks: [Mark]?
+    public var labels: [String]?
+    /// Overrides the kind's default, as the person chose.
+    public var transcribe: Bool?
     // Set once the server knows the upload, so a retry continues it.
     public var uploadId: String?
     public var transcript: String?
@@ -18,10 +24,15 @@ public struct PendingUpload: Codable, Hashable, Identifiable, Sendable {
     public var lastError: String?
 
     public init(
-        id: String = UUID().uuidString, title: String, startedAt: Date, audio: String, transcript: String? = nil,
+        id: String = UUID().uuidString, kind: RecordingKind = .call, title: String, startedAt: Date, audio: String,
+        marks: [Mark] = [], labels: [String] = [], transcribe: Bool? = nil, transcript: String? = nil,
         notesMarkdown: String? = nil, source: String = "recorded", importedFrom: String? = nil
     ) {
         self.id = id
+        self.kind = kind
+        self.marks = marks
+        self.labels = labels
+        self.transcribe = transcribe
         self.title = title
         self.startedAt = startedAt
         self.audio = audio
@@ -44,9 +55,9 @@ public struct Outbox: Sendable {
     }
 
     /// A fresh audio file for a new recording.
-    public func newAudioFile() throws -> URL {
+    public func newAudioFile(extension ext: String = "wav") throws -> URL {
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        return dir.appendingPathComponent("\(UUID().uuidString).wav")
+        return dir.appendingPathComponent("\(UUID().uuidString).\(ext)")
     }
 
     public func add(_ upload: PendingUpload) throws {
@@ -86,8 +97,9 @@ public struct Outbox: Sendable {
             upload.uploadId = uploadId
             try add(upload)
             let recording = try await api.createRecording(.init(
-                uploadId: uploadId, title: upload.title, startedAt: upload.startedAt, transcript: upload.transcript,
-                notesMarkdown: upload.notesMarkdown, source: upload.source))
+                uploadId: uploadId, kind: upload.kind ?? .call, title: upload.title, startedAt: upload.startedAt,
+                marks: upload.marks ?? [], labels: upload.labels ?? [], transcribe: upload.transcribe,
+                transcript: upload.transcript, notesMarkdown: upload.notesMarkdown, source: upload.source))
             remove(upload)
             return recording
         } catch {

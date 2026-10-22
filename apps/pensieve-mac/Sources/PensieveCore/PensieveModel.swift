@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import PensieveMedia
 
 /// Pensieve's state and every action its views take. Recording itself lives
 /// in the app (it needs the microphone); what happens to a finished file is
@@ -15,6 +16,16 @@ public final class PensieveModel {
         didSet { if oldValue != scope { Task { await reload() } } }
     }
     public var query = ""
+    /// Only this kind; nil shows every kind.
+    public var kindFilter: RecordingKind? {
+        didSet { if oldValue != kindFilter { Task { await reload() } } }
+    }
+    /// Only recordings with any of these labels.
+    public var labelFilter: Set<String> = [] {
+        didSet { if oldValue != labelFilter { Task { await reload() } } }
+    }
+    /// The person's own labels, with how many recordings carry each.
+    public private(set) var labels: [RecordingLabel] = []
     public var selectedId: String? {
         didSet { if oldValue != selectedId { detailLoad = Task { await loadDetail() } } }
     }
@@ -32,6 +43,12 @@ public final class PensieveModel {
     private let makeClient: @Sendable (Connection) -> APIClient
     public let outbox: Outbox
     public let mirror: Mirror
+    public let shelf: Shelf
+    let encoder: VideoEncoder
+    let probe: MediaProbing
+    let extractAudio: @Sendable (URL, URL) async throws -> Void
+    private var compression: Task<Void, Never>?
+    private var compressAgain = false
     private var eventsTask: Task<Void, Never>?
     private var sending = false
     public private(set) var detailLoad: Task<Void, Never>?
@@ -40,9 +57,15 @@ public final class PensieveModel {
         store: ConnectionStore = ConnectionStore(app: "pensieve"),
         makeClient: @escaping @Sendable (Connection) -> APIClient = { APIClient(baseURL: $0.serverURL, token: $0.token) },
         connection: Connection? = nil, outbox: Outbox = Outbox(), mirror: Mirror = Mirror(),
+        shelf: Shelf = Shelf(), encoder: VideoEncoder = AssetWriterEncoder(), probe: MediaProbing = AVProbe(),
+        extractAudio: @escaping @Sendable (URL, URL) async throws -> Void = { try await AudioExtractor.extract(from: $0, to: $1) },
         reachability: ServerReachability = ServerReachability()
     ) {
         self.store = store
+        self.shelf = shelf
+        self.encoder = encoder
+        self.probe = probe
+        self.extractAudio = extractAudio
         self.reachability = reachability
         self.makeClient = makeClient
         self.outbox = outbox
@@ -99,6 +122,7 @@ public final class PensieveModel {
         people = (try? await api.people()) ?? []
         await reload()
         Task { await sendPending() }
+        Task { await compressVideos() }
         eventsTask?.cancel()
         eventsTask = Task { [weak self] in
             let reachability = self?.reachability
@@ -115,7 +139,9 @@ public final class PensieveModel {
     func handle(_ event: ServerEvent) async {
         await reload()
         if event["recordingId"] == selectedId { await loadDetail() }
-        if event["status"] == RecordingStatus.done.rawValue { await mirrorNow() }
+        if event["status"] == RecordingStatus.done.rawValue || event["status"] == RecordingStatus.stored.rawValue {
+            await mirrorNow()
+        }
     }
 
     // MARK: Errors and the connection
@@ -156,7 +182,9 @@ public final class PensieveModel {
     public func reload() async {
         guard let api else { return }
         do {
-            recordings = try await api.recordings(scope: scope, query: query.isEmpty ? nil : query)
+            recordings = try await api.recordings(
+                scope: scope, query: query.isEmpty ? nil : query, kind: kindFilter, labels: labelFilter.sorted())
+            labels = (try? await api.labels()) ?? labels
             if selectedId == nil || !recordings.contains(where: { $0.id == selectedId }) {
                 selectedId = recordings.first?.id
             }
@@ -177,10 +205,15 @@ public final class PensieveModel {
 
     // MARK: A finished recording
 
-    /// Puts a finished file in the outbox and sends it; on failure it waits
-    /// there for the next try.
-    public func finished(audio: URL, title: String, startedAt: Date) async {
-        let upload = PendingUpload(title: title, startedAt: startedAt, audio: audio.lastPathComponent)
+    /// Puts a finished call or dictation in the outbox and sends it; on
+    /// failure it waits there for the next try.
+    public func finished(
+        audio: URL, kind: RecordingKind = .call, title: String, startedAt: Date, marks: [Mark] = [], labels: [String] = [],
+        transcribe: Bool? = nil
+    ) async {
+        let upload = PendingUpload(
+            kind: kind, title: title, startedAt: startedAt, audio: audio.lastPathComponent, marks: marks, labels: labels,
+            transcribe: transcribe)
         do {
             try outbox.add(upload)
         } catch {
@@ -188,6 +221,67 @@ public final class PensieveModel {
         }
         pending = outbox.all()
         await sendPending()
+    }
+
+    /// A finished video or screen recording: its sound goes to the server
+    /// (transcribed only when asked, unless `transcribe`), the picture stays
+    /// on the shelf until the shareable MP4 is safely in iCloud.
+    public func finishedVideo(
+        original: URL, kind: RecordingKind, title: String, startedAt: Date, marks: [Mark] = [], labels: [String] = [],
+        format: RecordingFormat = .normal, transcribe: Bool? = nil
+    ) async {
+        let id = UUID().uuidString
+        do {
+            try shelf.save(ShelfItem(id: id, kind: kind, title: title, startedAt: startedAt, original: original.path, format: format))
+            let audio = try outbox.newAudioFile(extension: "m4a")
+            try await extractAudio(original, audio)
+            try outbox.add(PendingUpload(
+                id: id, kind: kind, title: title, startedAt: startedAt, audio: audio.lastPathComponent, marks: marks,
+                labels: labels, transcribe: transcribe))
+        } catch {
+            self.error = "Het geluid van de opname kon niet apart worden gezet: \(error.localizedDescription). De video staat nog op deze Mac."
+        }
+        pending = outbox.all()
+        await sendPending()
+        await compressVideos()
+    }
+
+    /// Makes the shareable MP4 of every video still raw, then copies it to
+    /// iCloud. A call while one runs waits for it and is picked up by it.
+    public func compressVideos() async {
+        compressAgain = true
+        if let compression { return await compression.value }
+        let task = Task {
+            while compressAgain {
+                compressAgain = false
+                await shelf.compressPending(encoder: encoder, probe: probe)
+            }
+            if shelf.all().contains(where: { $0.video != nil && $0.recordingId != nil }) { await mirrorNow() }
+        }
+        compression = task
+        await task.value
+        compression = nil
+    }
+
+    /// A dictation: sends the audio and waits for the text, to paste it.
+    /// When the server is away it waits in the outbox and this throws.
+    public func dictate(audio: URL, startedAt: Date, labels: [String] = [], timeout: Duration = .seconds(60)) async throws -> RecordingDetail {
+        guard let api else { throw APIError.unauthorized }
+        let upload = PendingUpload(
+            kind: .dictation, title: RecordingDefaults.name(of: .dictation), startedAt: startedAt, audio: audio.lastPathComponent,
+            labels: labels)
+        try outbox.add(upload)
+        pending = outbox.all()
+        let created = try await outbox.send(upload, api: api)
+        pending = outbox.all()
+        let detail = try await api.waitForTranscript(created.id, timeout: timeout)
+        await reload()
+        return detail
+    }
+
+    /// Title and labels for a new recording of this kind.
+    public func suggestion(for kind: RecordingKind) -> (title: String, labels: [String]) {
+        RecordingDefaults.suggestion(for: kind, after: recordings)
     }
 
     /// Sends every pending upload, oldest first. Stops at the first failure;
@@ -204,9 +298,10 @@ public final class PensieveModel {
                 }
                 uploadProgress[upload.id] = nil
                 if let slug = upload.importedFrom { markImported(slug) }
+                shelf.bind(upload.id, to: created.id)
                 pending = outbox.all()
                 await reload()
-                if upload.source == "recorded" { selectedId = created.id }
+                if upload.source == "recorded", upload.kind != .dictation { selectedId = created.id }
             } catch {
                 uploadProgress[upload.id] = nil
                 pending = outbox.all()
@@ -234,6 +329,31 @@ public final class PensieveModel {
         await act { try await $0.redo(recording: id, step: step) }
     }
 
+    /// "Maak transcript": only the audio goes to the server.
+    public func requestTranscript(_ id: String) async {
+        await act { try await $0.requestTranscript(id) }
+    }
+
+    public func setLabels(_ id: String, _ labels: [String]) async {
+        await act { try await $0.setLabels(recording: id, labels) }
+    }
+
+    public func setMarks(_ id: String, _ marks: [Mark]) async {
+        await act { _ = try await $0.setMarks(recording: id, marks); return nil }
+    }
+
+    public func addLabel(_ name: String) async {
+        await act { _ = try await $0.addLabel(name); return nil }
+    }
+
+    public func renameLabel(_ id: String, to name: String) async {
+        await act { _ = try await $0.renameLabel(id, to: name); return nil }
+    }
+
+    public func deleteLabel(_ id: String) async {
+        await act { try await $0.deleteLabel(id); return nil }
+    }
+
     public func delete(_ id: String) async {
         guard let api else { return }
         do {
@@ -245,7 +365,7 @@ public final class PensieveModel {
         }
     }
 
-    private func act(_ change: (APIClient) async throws -> RecordingSummary) async {
+    private func act(_ change: (APIClient) async throws -> RecordingSummary?) async {
         guard let api else { return }
         do {
             _ = try await change(api)
@@ -261,11 +381,13 @@ public final class PensieveModel {
 
     // MARK: iCloud and RecHoarder
 
+    /// Video and screen recordings go to iCloud even with the copy off:
+    /// their folder is the video's only home.
     public func mirrorNow() async {
-        guard mirrorEnabled, let api else { return }
+        guard let api else { return }
         do {
             let all = try await api.recordings(scope: .all)
-            try await mirror.sync(all, api: api)
+            try await mirror.sync(mirrorEnabled ? all : all.filter { $0.kind.hasVideo && $0.mine }, api: api, shelf: shelf)
             lastMirror = Date()
         } catch {
             report(error, quiet: true) { "De kopie in iCloud Drive lukte niet: \($0)" }
