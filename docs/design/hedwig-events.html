@@ -1,0 +1,1609 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="color-scheme" content="light dark" />
+<title>Hedwig · evenementen · ontwerp v1</title>
+<style>
+/* ---------------------------------------------------------------------------
+   Tokens. Light is the default; dark lives on [data-theme=dark] so the whole
+   document, or one mockup, can switch. Every colour below is listed with its
+   contrast ratio in section 2.
+   --------------------------------------------------------------------------- */
+:root, [data-theme="light"] {
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, monospace;
+
+  --bg: #F4F1EC;          /* window and document background: warm plaster */
+  --surface: #FFFFFF;     /* lists, cards, reader */
+  --surface-2: #F8F6F2;   /* grouped rows, inset panels */
+  --sidebar: #ECE8E1;     /* sidebar, titlebar */
+  --line: #E2DDD5;        /* hairlines */
+  --line-strong: #CFC9BF;
+  --text: #1F1C18;        /* 16.97:1 on white */
+  --text-2: #6B655D;      /* 5.76:1 on white */
+  --text-3: #857E74;      /* 4.01:1, large text and icons only */
+  --sel: #E4DFD6;         /* inactive selection */
+  --hover: rgba(31, 28, 24, 0.05);
+
+  --primary: #A24E1D;     /* Hearth: Burrow brick, 5.76:1 on white */
+  --primary-tint: rgba(162, 78, 29, 0.12);
+  --on-primary: #FFFFFF;
+
+  --success: #2A7549;
+  --warning: #9A5B00;
+  --danger: #C8372D;
+  --info: #2F6FB5;
+  --success-tint: rgba(42, 117, 73, 0.12);
+  --warning-tint: rgba(154, 91, 0, 0.12);
+  --danger-tint: rgba(200, 55, 45, 0.12);
+  --info-tint: rgba(47, 111, 181, 0.12);
+
+  --hedwig: #4E6E9E;      /* Owl: dusty slate blue */
+  --pensieve: #237A6F;    /* Basin: deep teal */
+  --remembrall: #B9436B;  /* Glow: rose */
+  --gringotts: #85660F;   /* Vault: old gold */
+  --clock: #43753A;       /* Hands: moss green */
+  --patronus: #5A5FBF;    /* Spark: indigo */
+  --gideon: #3B4A6B;      /* Ink */
+  --eva: #8A4FA3;      /* Heather */
+
+  --shadow-1: 0 1px 2px rgba(31, 28, 24, 0.08), 0 0 0 1px rgba(31, 28, 24, 0.05);
+  --shadow-2: 0 6px 20px rgba(31, 28, 24, 0.14), 0 0 0 1px rgba(31, 28, 24, 0.06);
+  --shadow-3: 0 24px 70px rgba(31, 28, 24, 0.22), 0 0 0 1px rgba(31, 28, 24, 0.08);
+  --glass: rgba(255, 255, 255, 0.72);
+  --glass-line: rgba(31, 28, 24, 0.08);
+}
+[data-theme="dark"] {
+  --bg: #1C1A17;
+  --surface: #242120;
+  --surface-2: #2B2825;
+  --sidebar: #2B2825;
+  --line: #35312D;
+  --line-strong: #4A453F;
+  --text: #F2EEE8;        /* 15.02:1 on #1C1A17 */
+  --text-2: #A39C92;      /* 6.39:1 */
+  --text-3: #7C756B;      /* 3.81:1, large text and icons only */
+  --sel: #3A3632;
+  --hover: rgba(242, 238, 232, 0.06);
+
+  --primary: #F0956A;     /* 7.62:1 on #1C1A17 */
+  --primary-tint: rgba(240, 149, 106, 0.16);
+  --on-primary: #1C1A17;
+
+  --success: #5FCB85;
+  --warning: #F0B24A;
+  --danger: #F07A6E;
+  --info: #7FB2F0;
+  --success-tint: rgba(95, 203, 133, 0.16);
+  --warning-tint: rgba(240, 178, 74, 0.16);
+  --danger-tint: rgba(240, 122, 110, 0.16);
+  --info-tint: rgba(127, 178, 240, 0.16);
+
+  --hedwig: #9DB7DC;
+  --pensieve: #6FCDBF;
+  --remembrall: #F08BAE;
+  --gringotts: #E3BE4F;
+  --clock: #8BCB7C;
+  --patronus: #A3A7F2;
+  --gideon: #9FB0D6;
+  --eva: #CFA3E6;
+
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.06);
+  --shadow-2: 0 6px 20px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.07);
+  --shadow-3: 0 24px 70px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.09);
+  --glass: rgba(43, 40, 37, 0.75);
+  --glass-line: rgba(255, 255, 255, 0.08);
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0; font-family: var(--font); font-size: 14px; line-height: 1.5;
+  background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased;
+}
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+a { color: var(--primary); text-decoration: none; }
+a:hover { text-decoration: underline; }
+code, kbd { font-family: var(--mono); font-size: 0.9em; background: var(--surface-2); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; }
+h1, h2, h3, h4 { margin: 0; letter-spacing: -0.01em; }
+p { margin: 0 0 10px; }
+.muted { color: var(--text-2); }
+.faint { color: var(--text-3); }
+.small { font-size: 12px; }
+.mono { font-family: var(--mono); }
+.nowrap { white-space: nowrap; }
+
+/* Document shell -------------------------------------------------------- */
+.topbar {
+  position: sticky; top: 0; z-index: 50; display: flex; align-items: center; gap: 14px;
+  padding: 10px 24px; background: var(--glass); backdrop-filter: blur(18px);
+  border-bottom: 1px solid var(--glass-line);
+}
+.topbar .brand { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 15px; }
+.topbar nav { display: flex; gap: 2px; flex-wrap: wrap; flex: 1; }
+.topbar nav a { color: var(--text-2); font-size: 13px; padding: 5px 9px; border-radius: 6px; }
+.topbar nav a:hover { background: var(--hover); color: var(--text); text-decoration: none; }
+.doc { max-width: 1360px; margin: 0 auto; padding: 36px 24px 120px; }
+.hero { padding: 24px 0 36px; max-width: 920px; }
+.hero h1 { font-size: 34px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 8px; }
+.hero .lead { font-size: 17px; color: var(--text-2); line-height: 1.5; }
+.hero .meta { display: flex; gap: 14px; margin-top: 14px; font-size: 13px; color: var(--text-3); }
+section.sec { margin-top: 56px; scroll-margin-top: 70px; }
+section.sec > h2 { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
+section.sec > .intro { color: var(--text-2); max-width: 820px; margin-bottom: 20px; }
+.sec h3 { font-size: 17px; font-weight: 600; margin: 28px 0 10px; }
+.sec h4 { font-size: 14px; font-weight: 600; margin: 16px 0 6px; }
+.num { display: inline-block; min-width: 28px; color: var(--primary); font-weight: 700; }
+
+.grid { display: grid; gap: 14px; }
+.g2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.g3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.g4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.g6 { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+@media (max-width: 1000px) { .g3, .g4, .g6 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px;
+  box-shadow: var(--shadow-1);
+}
+.card h4:first-child { margin-top: 0; }
+.card p:last-child { margin-bottom: 0; }
+.card ul { margin: 6px 0 0; padding-left: 18px; }
+.card li { margin-bottom: 3px; }
+.principle { display: grid; grid-template-columns: 44px 1fr; gap: 12px; }
+.principle .pi { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: var(--primary-tint); color: var(--primary); }
+.principle .pi svg { width: 20px; height: 20px; }
+.principle .ex { margin-top: 8px; padding: 8px 10px; background: var(--surface-2); border-radius: 8px; font-size: 12.5px; color: var(--text-2); }
+
+table.t { width: 100%; border-collapse: separate; border-spacing: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; font-size: 13px; }
+table.t th, table.t td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+table.t tr:last-child td { border-bottom: 0; }
+table.t th { background: var(--surface-2); font-weight: 600; color: var(--text-2); font-size: 12px; }
+.swatch { display: inline-block; width: 14px; height: 14px; border-radius: 4px; vertical-align: -2px; margin-right: 6px; border: 1px solid rgba(0,0,0,0.08); }
+.ratio { font-family: var(--mono); font-size: 12px; }
+.pass { color: var(--success); font-weight: 600; }
+.aa-large { color: var(--warning); font-weight: 600; }
+
+.palette { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.chip-c { border-radius: 12px; overflow: hidden; border: 1px solid var(--line); background: var(--surface); }
+.chip-c .fill { height: 64px; display: flex; align-items: flex-end; padding: 8px 10px; font-size: 12px; font-weight: 600; }
+.chip-c .meta { padding: 8px 10px; font-size: 12px; }
+.chip-c .meta b { display: block; font-weight: 600; }
+.chip-c .meta span { color: var(--text-2); font-family: var(--mono); font-size: 11.5px; }
+
+.type-row { display: grid; grid-template-columns: 180px 1fr 220px; gap: 16px; align-items: baseline; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.type-row .lbl { font-size: 12px; color: var(--text-2); }
+.type-row .spec { font-family: var(--mono); font-size: 11.5px; color: var(--text-3); text-align: right; }
+.spacing { display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap; }
+.spacing .sp { display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 11px; color: var(--text-2); font-family: var(--mono); }
+.spacing .sp i { display: block; background: var(--primary); border-radius: 2px; opacity: 0.85; }
+.radii { display: flex; gap: 14px; flex-wrap: wrap; }
+.radii .r { width: 88px; height: 64px; background: var(--surface-2); border: 1px solid var(--line-strong); display: grid; place-items: center; font-size: 11px; font-family: var(--mono); color: var(--text-2); }
+.elev { display: flex; gap: 22px; flex-wrap: wrap; padding: 8px 0 12px; }
+.elev .e { width: 150px; height: 80px; background: var(--surface); border-radius: 12px; display: grid; place-items: center; font-size: 12px; color: var(--text-2); }
+.e1 { box-shadow: var(--shadow-1); } .e2 { box-shadow: var(--shadow-2); } .e3 { box-shadow: var(--shadow-3); }
+
+/* Icons (inline SVG sprite, SF Symbol stand-ins) ------------------------- */
+svg.i { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+svg.i.lg { width: 20px; height: 20px; } svg.i.xl { width: 28px; height: 28px; stroke-width: 1.4; } svg.i.sm { width: 13px; height: 13px; }
+.icon-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; }
+.icon-grid .ic { display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; font-size: 12.5px; }
+.icon-grid .ic span { color: var(--text-2); font-family: var(--mono); font-size: 11px; display: block; }
+
+/* App icons -------------------------------------------------------------- */
+.appicons { display: grid; grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: 16px; }
+.appicon { display: flex; flex-direction: column; align-items: center; gap: 8px; font-size: 12.5px; text-align: center; }
+.appicon .tile { width: 84px; height: 84px; border-radius: 20px; display: grid; place-items: center; box-shadow: var(--shadow-2); position: relative; overflow: hidden; }
+.appicon .tile::after { content: ""; position: absolute; inset: 0; background: linear-gradient(160deg, rgba(255,255,255,0.22), rgba(255,255,255,0) 55%); pointer-events: none; }
+.appicon .tile svg { width: 52px; height: 52px; fill: none; stroke: #fff; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.appicon .tile.sm { width: 44px; height: 44px; border-radius: 11px; } .appicon .tile.sm svg { width: 28px; height: 28px; stroke-width: 3.2; }
+.appicon small { color: var(--text-2); display: block; }
+.t-burrow { background: linear-gradient(180deg, #C56A3A, #A24E1D); }
+.t-hedwig { background: linear-gradient(180deg, #6B8CBC, #4E6E9E); }
+.t-pensieve { background: linear-gradient(180deg, #3E9A8E, #237A6F); }
+.t-remembrall { background: linear-gradient(180deg, #D45E86, #B9436B); }
+.t-gringotts { background: linear-gradient(180deg, #A68430, #85660F); }
+.t-clock { background: linear-gradient(180deg, #5F9353, #43753A); }
+.t-patronus { background: linear-gradient(180deg, #7A7FD6, #5A5FBF); }
+.t-prophet { background: linear-gradient(180deg, #6E6A66, #4A4642); }
+.t-potions { background: linear-gradient(180deg, #8E7A52, #6E5B36); }
+.t-errol { background: linear-gradient(180deg, #B08057, #8C603A); }
+.t-bus { background: linear-gradient(180deg, #7E4A8E, #5E2F6E); }
+.t-map { background: linear-gradient(180deg, #4F7F8E, #345F6E); }
+.t-howler { background: linear-gradient(180deg, #D6553F, #B23A2A); }
+.t-vow { background: linear-gradient(180deg, #5C7F70, #3F5F52); }
+.t-accio { background: linear-gradient(180deg, #5B6B7D, #3F4C5B); }
+
+/* Controls --------------------------------------------------------------- */
+.btn { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; border-radius: 7px; font-size: 13px; font-weight: 500; background: var(--surface); border: 1px solid var(--line-strong); box-shadow: 0 1px 1px rgba(0,0,0,0.04); white-space: nowrap; }
+.btn:hover { background: var(--surface-2); }
+.btn:active { background: var(--sel); }
+.btn.primary { background: var(--primary); border-color: transparent; color: var(--on-primary); }
+.btn.primary:hover { filter: brightness(1.05); }
+.btn.danger { color: var(--danger); }
+.btn.danger.filled { background: var(--danger); color: #fff; border-color: transparent; }
+.btn.ghost { background: transparent; border-color: transparent; box-shadow: none; }
+.btn.ghost:hover { background: var(--hover); }
+.btn.sm { height: 22px; padding: 0 8px; font-size: 12px; border-radius: 6px; }
+.btn.lg { height: 36px; padding: 0 18px; font-size: 14px; border-radius: 9px; }
+.btn.block { width: 100%; justify-content: center; }
+.btn[disabled], .btn.disabled { opacity: 0.45; pointer-events: none; }
+.btn:focus-visible, .seg button:focus-visible, .toggle:focus-visible { outline: 3px solid color-mix(in srgb, var(--primary) 45%, transparent); outline-offset: 1px; }
+.btn.app { color: var(--app, var(--primary)); }
+.btn.app.filled { background: var(--app, var(--primary)); color: #fff; border-color: transparent; }
+
+.seg { display: inline-flex; background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 2px; gap: 2px; }
+.seg button { height: 22px; padding: 0 10px; border-radius: 6px; font-size: 12.5px; color: var(--text-2); }
+.seg button.on { background: var(--surface); color: var(--text); box-shadow: var(--shadow-1); font-weight: 500; }
+.seg.lg button { height: 26px; font-size: 13px; padding: 0 14px; }
+
+.toggle { width: 38px; height: 22px; border-radius: 11px; background: var(--line-strong); position: relative; transition: background 150ms ease-out; flex: none; }
+.toggle::after { content: ""; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.25); transition: transform 150ms ease-out; }
+.toggle.on { background: var(--app, var(--primary)); }
+.toggle.on::after { transform: translateX(16px); }
+.toggle.off-disabled { opacity: 0.4; }
+
+.checkbox { width: 16px; height: 16px; border-radius: 4px; border: 1px solid var(--line-strong); background: var(--surface); display: inline-grid; place-items: center; flex: none; }
+.checkbox.on { background: var(--primary); border-color: transparent; }
+.checkbox.on svg { width: 11px; height: 11px; stroke: #fff; stroke-width: 2.4; }
+
+.field { height: 28px; padding: 0 10px; border-radius: 7px; border: 1px solid var(--line-strong); background: var(--surface); display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text); white-space: nowrap; overflow: hidden; }
+.field.ph { color: var(--text-3); }
+.field.focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-tint); }
+.field.search { border-radius: 8px; background: var(--surface-2); }
+textarea.field { height: auto; padding: 8px 10px; resize: none; font: inherit; width: 100%; line-height: 1.45; }
+
+/* Badges ---------------------------------------------------------------- */
+.badge { display: inline-flex; align-items: center; gap: 4px; height: 18px; padding: 0 7px; border-radius: 999px; font-size: 11px; font-weight: 600; white-space: nowrap; border: 1px solid transparent; }
+.badge.count { background: var(--text-3); color: #fff; min-width: 18px; justify-content: center; padding: 0 5px; }
+.badge.count.accent { background: var(--primary); }
+.badge.outline { border-color: var(--line-strong); color: var(--text-2); font-weight: 500; }
+.badge.filtered { background: var(--info-tint); color: var(--info); }
+.badge.shared { background: var(--pensieve-tint, rgba(35,122,111,0.14)); color: var(--pensieve); }
+.badge.doubt { background: var(--warning-tint); color: var(--warning); }
+.badge.ok { background: var(--success-tint); color: var(--success); }
+.badge.err { background: var(--danger-tint); color: var(--danger); }
+.badge.bot { background: var(--surface-2); border-color: var(--line); color: var(--text-2); font-weight: 500; padding-left: 3px; }
+.badge.bot .av { width: 13px; height: 13px; font-size: 7px; }
+.badge.private { background: var(--surface-2); border-color: var(--line); color: var(--text-2); font-weight: 500; }
+.badge.app { background: color-mix(in srgb, var(--app) 14%, transparent); color: var(--app); }
+.badge.person { background: color-mix(in srgb, var(--p) 14%, transparent); color: var(--p); }
+
+.av { width: 26px; height: 26px; border-radius: 50%; display: inline-grid; place-items: center; color: #fff; font-size: 11px; font-weight: 700; background: var(--p, var(--text-3)); flex: none; letter-spacing: 0; }
+.av.sm { width: 20px; height: 20px; font-size: 9px; } .av.lg { width: 40px; height: 40px; font-size: 15px; } .av.xl { width: 56px; height: 56px; font-size: 20px; }
+.av.bot { border-radius: 8px; background: var(--surface-2); color: var(--text); border: 1px solid var(--line-strong); }
+.av.bot.sm { border-radius: 6px; } .av.bot.lg { border-radius: 11px; } .av.bot.xl { border-radius: 14px; }
+.av.bot svg { width: 60%; height: 60%; }
+.p-g { --p: var(--gideon); } .p-a { --p: var(--eva); }
+.a-hedwig { --app: var(--hedwig); } .a-pensieve { --app: var(--pensieve); } .a-remembrall { --app: var(--remembrall); } .a-gringotts { --app: var(--gringotts); } .a-clock { --app: var(--clock); } .a-patronus { --app: var(--patronus); } .a-burrow { --app: var(--primary); }
+
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-3); display: inline-block; flex: none; }
+.dot.ok { background: var(--success); } .dot.warn { background: var(--warning); } .dot.bad { background: var(--danger); } .dot.run { background: var(--info); animation: pulse 1.4s ease-in-out infinite; } .dot.accent { background: var(--primary); }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+/* Status pills for worker tasks */
+.status { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; }
+.status.queued { color: var(--text-2); } .status.running { color: var(--info); } .status.review { color: var(--warning); } .status.done { color: var(--success); } .status.failed { color: var(--danger); }
+.spinner { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--line-strong); border-top-color: var(--info); animation: spin 0.9s linear infinite; flex: none; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.progress { height: 4px; border-radius: 2px; background: var(--line); overflow: hidden; }
+.progress i { display: block; height: 100%; background: var(--app, var(--primary)); border-radius: 2px; }
+
+/* Component stage (specimen areas) ----------------------------------------- */
+.stage { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px; display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
+.stage.col { flex-direction: column; align-items: stretch; gap: 10px; }
+.stage.bgp { background: var(--bg); }
+.spec-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+.spec-grid .card { padding: 0; overflow: hidden; }
+.spec-grid .card .hd { padding: 10px 14px; border-bottom: 1px solid var(--line); font-size: 12.5px; font-weight: 600; color: var(--text-2); display: flex; justify-content: space-between; align-items: center; }
+.spec-grid .card .bd { padding: 14px; }
+.states { display: grid; grid-template-columns: 90px 1fr; gap: 8px 12px; align-items: center; font-size: 12px; color: var(--text-2); }
+
+/* macOS window mockup ------------------------------------------------------- */
+.mac { width: 100%; max-width: 1280px; margin: 0 auto; border-radius: 12px; overflow: hidden; background: var(--surface); box-shadow: var(--shadow-3); font-size: 13px; color: var(--text); display: grid; grid-template-rows: 52px 1fr; height: 760px; position: relative; }
+.mac.short { height: 560px; } .mac.narrow { max-width: 760px; } .mac.settings { max-width: 820px; height: auto; min-height: 560px; }
+.mac .tb { display: flex; align-items: center; gap: 10px; padding: 0 14px; background: var(--sidebar); border-bottom: 1px solid var(--line); }
+.mac .tb .lights { display: flex; gap: 8px; margin-right: 8px; }
+.mac .tb .lights i { width: 12px; height: 12px; border-radius: 50%; display: block; }
+.mac .tb .lights i:nth-child(1) { background: #FF5F57; } .mac .tb .lights i:nth-child(2) { background: #FEBC2E; } .mac .tb .lights i:nth-child(3) { background: #28C840; }
+.mac .tb .title { font-weight: 600; font-size: 13px; }
+.mac .tb .sub { color: var(--text-2); font-size: 12px; margin-left: 4px; }
+.mac .tb .grow { flex: 1; }
+.mac .body { display: grid; min-height: 0; }
+.mac .body.three { grid-template-columns: 220px 360px 1fr; }
+.mac .body.two { grid-template-columns: 220px 1fr; }
+.mac .side { background: var(--sidebar); border-right: 1px solid var(--line); padding: 10px 8px; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+.mac .list { background: var(--surface); border-right: 1px solid var(--line); min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+.mac .detail { background: var(--surface); min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+.mac .pane-hd { display: flex; align-items: baseline; gap: 8px; padding: 12px 16px 8px; }
+.mac .pane-hd .t { font-size: 15px; font-weight: 700; } .mac .pane-hd .s { font-size: 12px; color: var(--text-2); } .mac .pane-hd .grow { flex: 1; }
+.mac .scroll { overflow: auto; min-height: 0; flex: 1; }
+
+/* Toolbar: round primary plus capsule groups, as Hedwig has on macOS 26 */
+.tb-round { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: var(--glass); border: 1px solid var(--glass-line); box-shadow: 0 1px 3px rgba(0,0,0,0.08); color: var(--text); }
+.tb-round.rec { background: var(--danger); color: #fff; border-color: transparent; }
+.tb-cap { display: inline-flex; align-items: center; height: 34px; padding: 0 6px; border-radius: 17px; background: var(--glass); border: 1px solid var(--glass-line); box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+.tb-cap button { width: 30px; height: 30px; border-radius: 15px; display: grid; place-items: center; color: var(--text); }
+.tb-cap button:hover { background: var(--hover); }
+.tb-cap .sep { width: 1px; height: 16px; background: var(--line-strong); margin: 0 2px; }
+.tb-cap.disabled { opacity: 0.45; }
+.tb-cap.text { padding: 0 12px; gap: 6px; font-size: 13px; font-weight: 500; }
+
+/* Sidebar rows */
+.sb-label { font-size: 11px; font-weight: 600; color: var(--text-3); padding: 12px 10px 4px; text-transform: none; }
+.sb-row { display: flex; align-items: center; gap: 8px; height: 28px; padding: 0 8px; border-radius: 6px; color: var(--text); white-space: nowrap; }
+.sb-row svg { color: var(--app, var(--primary)); }
+.sb-row .grow { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+.sb-row .n { font-size: 12px; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.sb-row.sel { background: var(--sel); font-weight: 500; }
+.sb-row.sel.active { background: var(--app, var(--primary)); color: #fff; } .sb-row.sel.active svg, .sb-row.sel.active .n { color: #fff; }
+.sb-row.two { height: 38px; } .sb-row.two .grow { line-height: 1.15; } .sb-row.two .grow small { display: block; color: var(--text-2); font-size: 11px; }
+.sb-row.hover { background: var(--hover); }
+.sb-row.disabled { opacity: 0.45; }
+.sb-foot { margin-top: auto; padding: 8px; display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--text-2); border-top: 1px solid var(--line); }
+.sb-foot b { color: var(--text); font-weight: 600; display: block; font-size: 11.5px; }
+
+/* List rows (mail, recordings) */
+.row { position: relative; display: grid; grid-template-columns: 16px 1fr; gap: 6px; padding: 9px 12px 9px 10px; border-bottom: 1px solid var(--line); }
+.row .udot { width: 8px; height: 8px; border-radius: 50%; margin-top: 5px; background: transparent; }
+.row.unread .udot { background: var(--app, var(--primary)); }
+.row .l1 { display: flex; align-items: baseline; gap: 8px; } .row .l1 b { font-weight: 600; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row .l1 .when { font-size: 12px; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.row .l2 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+.row .l3 { font-size: 12.5px; color: var(--text-2); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.35; }
+.row .why { font-size: 12px; color: var(--text-2); display: flex; gap: 5px; align-items: flex-start; line-height: 1.35; }
+.row .why svg { margin-top: 2px; color: var(--text-3); }
+.row .tags { display: flex; gap: 5px; margin-top: 4px; flex-wrap: wrap; align-items: center; }
+.row .tags .grow { flex: 1; }
+.row.sel { background: var(--sel); }
+.row.sel.active { background: var(--app, var(--primary)); color: #fff; }
+.row.sel.active .l1 .when, .row.sel.active .l3, .row.sel.active .why, .row.sel.active .why svg { color: rgba(255,255,255,0.8); }
+.row.sel.active .badge { background: rgba(255,255,255,0.2); color: #fff; border-color: transparent; }
+.row.sel.active .udot { background: #fff; }
+.row.hover { background: var(--hover); }
+.row .acts { display: flex; gap: 4px; }
+.row .acts button { font-size: 12px; font-weight: 600; padding: 2px 7px; border-radius: 5px; }
+.row .acts .ok { color: var(--success); } .row .acts .back { color: var(--text-2); }
+.row.sel.active .acts button { color: #fff; }
+/* recording row */
+.row.rec { grid-template-columns: 36px 1fr; gap: 10px; }
+.row.rec .ri { width: 36px; height: 36px; border-radius: 9px; background: color-mix(in srgb, var(--pensieve) 14%, transparent); color: var(--pensieve); display: grid; place-items: center; }
+.row.rec.sel.active .ri { background: rgba(255,255,255,0.2); color: #fff; }
+.row.rec .dur { font-variant-numeric: tabular-nums; }
+
+/* Detail parts */
+.detail-head { padding: 16px 20px 10px; border-bottom: 1px solid var(--line); }
+.detail-head h2 { font-size: 20px; font-weight: 700; letter-spacing: -0.01em; }
+.detail-head .meta { display: flex; gap: 10px; align-items: center; margin-top: 6px; color: var(--text-2); font-size: 12.5px; flex-wrap: wrap; }
+.detail-body { padding: 16px 20px; display: flex; flex-direction: column; gap: 14px; line-height: 1.5; }
+.detail-body h3 { font-size: 14px; font-weight: 700; margin: 6px 0 4px; }
+.reason { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; background: var(--surface-2); display: flex; flex-direction: column; gap: 6px; }
+.reason .h { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.reason .fx { font-size: 12px; color: var(--text-2); display: flex; align-items: center; gap: 6px; }
+.reason .acts { display: flex; gap: 8px; margin-top: 4px; }
+.tabs-ui { display: inline-flex; gap: 2px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 2px; }
+.tabs-ui button { height: 24px; padding: 0 12px; border-radius: 6px; font-size: 12.5px; color: var(--text-2); }
+.tabs-ui button.on { background: var(--surface); color: var(--text); font-weight: 600; box-shadow: var(--shadow-1); }
+
+/* Worker card -------------------------------------------------------------- */
+.worker { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-1); overflow: hidden; }
+.worker .hd { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-bottom: 1px solid var(--line); background: var(--surface-2); }
+.worker .hd .who { flex: 1; line-height: 1.2; } .worker .hd .who b { display: block; font-weight: 600; } .worker .hd .who span { font-size: 11.5px; color: var(--text-2); }
+.worker .bd { padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; font-size: 12.5px; }
+.worker .bd .r { display: flex; gap: 6px; align-items: flex-start; color: var(--text-2); line-height: 1.4; }
+.worker .bd .r svg { margin-top: 2px; color: var(--text-3); }
+.worker .bd .r.q { color: var(--text); font-style: normal; background: var(--surface-2); border-left: 2px solid var(--primary); padding: 6px 8px; border-radius: 0 6px 6px 0; }
+.worker .ft { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-top: 1px solid var(--line); font-size: 12px; color: var(--text-2); }
+.worker .ft .grow { flex: 1; }
+.worker.review { border-color: color-mix(in srgb, var(--warning) 40%, var(--line)); }
+.worker.failed { border-color: color-mix(in srgb, var(--danger) 40%, var(--line)); }
+.steps { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 0; margin: 2px 0; }
+.steps .st { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-3); white-space: nowrap; }
+.steps .st i { width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid var(--line-strong); display: grid; place-items: center; }
+.steps .st i svg { width: 10px; height: 10px; stroke-width: 2.4; }
+.steps .st.done { color: var(--text-2); } .steps .st.done i { background: var(--success); border-color: var(--success); color: #fff; }
+.steps .st.run { color: var(--text); font-weight: 600; } .steps .st.run i { border-color: var(--info); border-top-color: transparent; animation: spin 0.9s linear infinite; }
+.steps .ln { flex: 1; height: 1.5px; background: var(--line-strong); margin: 0 6px; min-width: 8px; }
+.steps .ln.done { background: var(--success); }
+
+/* Empty and error states */
+.empty { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 6px; padding: 40px 20px; color: var(--text-2); flex: 1; }
+.empty svg { width: 36px; height: 36px; stroke-width: 1.2; color: var(--text-3); margin-bottom: 4px; }
+.empty b { color: var(--text); font-size: 15px; font-weight: 600; }
+.empty p { font-size: 12.5px; max-width: 280px; margin: 0; }
+.banner { display: flex; align-items: center; gap: 10px; padding: 8px 12px; font-size: 12.5px; border-bottom: 1px solid var(--line); }
+.banner.err { background: var(--danger-tint); color: var(--danger); } .banner.warn { background: var(--warning-tint); color: var(--warning); } .banner.info { background: var(--info-tint); color: var(--info); } .banner.ok { background: var(--success-tint); color: var(--success); }
+.banner .grow { flex: 1; } .banner .btn { height: 22px; font-size: 12px; }
+
+/* Settings rows */
+.form { display: flex; flex-direction: column; gap: 14px; }
+.group { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.group .gh { padding: 8px 14px; font-size: 12px; font-weight: 600; color: var(--text-2); background: var(--surface-2); border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 8px; }
+.group .gh .grow { flex: 1; }
+.srow { display: flex; align-items: center; gap: 12px; padding: 9px 14px; border-bottom: 1px solid var(--line); min-height: 40px; }
+.srow:last-child { border-bottom: 0; }
+.srow .lbl { flex: 1; line-height: 1.25; } .srow .lbl small { display: block; color: var(--text-2); font-size: 11.5px; margin-top: 1px; }
+.srow .lbl.indent { padding-left: 24px; }
+.srow .val { color: var(--text-2); font-size: 12.5px; }
+.srow .ic { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; background: color-mix(in srgb, var(--app, var(--primary)) 14%, transparent); color: var(--app, var(--primary)); flex: none; }
+.srow.disabled .lbl { opacity: 0.45; }
+.note-box { border-radius: 10px; padding: 10px 12px; font-size: 12.5px; display: flex; gap: 10px; align-items: flex-start; line-height: 1.45; }
+.note-box.privacy { background: var(--info-tint); color: var(--text); } .note-box.privacy svg { color: var(--info); margin-top: 2px; }
+.sets-side { width: 190px; }
+.sets-side .sb-row { height: 30px; }
+
+/* Recording control -------------------------------------------------------- */
+.recbtn { width: 72px; height: 72px; border-radius: 50%; display: grid; place-items: center; background: var(--danger); color: #fff; box-shadow: 0 0 0 6px var(--danger-tint), var(--shadow-2); transition: transform 150ms ease-out; }
+.recbtn:hover { transform: scale(1.03); }
+.recbtn .sq { width: 24px; height: 24px; border-radius: 6px; background: #fff; }
+.recbtn .ci { width: 28px; height: 28px; border-radius: 50%; background: #fff; }
+.recbtn.idle { background: var(--surface); color: var(--danger); border: 1px solid var(--line-strong); box-shadow: var(--shadow-1); } .recbtn.idle .ci { background: var(--danger); }
+.recbtn.paused { background: var(--warning); } .recbtn.paused .ci, .recbtn.paused .sq { background: #fff; }
+.elapsed { font-size: 34px; font-weight: 300; font-variant-numeric: tabular-nums; letter-spacing: 0.01em; line-height: 1; }
+.elapsed small { font-size: 16px; color: var(--text-2); font-weight: 400; margin-left: 4px; }
+.meter { display: grid; grid-template-columns: 90px 1fr 36px; align-items: center; gap: 10px; font-size: 12px; }
+.meter .lbl { display: flex; align-items: center; gap: 6px; color: var(--text-2); }
+.meter .bars { display: flex; gap: 2px; height: 14px; align-items: center; }
+.meter .bars i { flex: 1; height: 4px; border-radius: 1px; background: var(--line-strong); }
+.meter .bars i.on { background: var(--success); }
+.meter .bars i.hot { background: var(--warning); }
+.meter .bars i.clip { background: var(--danger); }
+.meter.live .bars i.on { animation: lvl 1.2s ease-in-out infinite; }
+.meter .db { color: var(--text-3); font-family: var(--mono); font-size: 11px; text-align: right; }
+@keyframes lvl { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(2.6); } }
+.meter.live .bars i:nth-child(odd).on { animation-delay: -0.3s; } .meter.live .bars i:nth-child(3n).on { animation-delay: -0.7s; }
+.livewave { display: flex; align-items: center; gap: 2px; height: 36px; }
+.livewave i { width: 3px; border-radius: 2px; background: var(--pensieve); animation: wv 1s ease-in-out infinite; }
+@keyframes wv { 0%, 100% { transform: scaleY(0.4); } 50% { transform: scaleY(1); } }
+.chipset { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 9px 0 4px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--line); font-size: 12px; }
+.chip.add { padding: 0 9px; color: var(--text-2); border-style: dashed; }
+
+/* Audio player */
+.player { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; background: var(--surface); display: flex; flex-direction: column; gap: 10px; }
+.player .ctl { display: flex; align-items: center; gap: 10px; }
+.player .play { width: 36px; height: 36px; border-radius: 50%; background: var(--pensieve); color: #fff; display: grid; place-items: center; }
+.player .ctl .time { font-variant-numeric: tabular-nums; font-size: 12px; color: var(--text-2); }
+.player .ctl .grow { flex: 1; }
+.wave { display: flex; align-items: center; gap: 1.5px; height: 56px; position: relative; cursor: pointer; }
+.wave i { flex: 1; min-width: 1.5px; border-radius: 1px; background: var(--line-strong); }
+.wave i.past { background: var(--pensieve); }
+.wave .cur { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--text); border-radius: 1px; }
+.wave .cur::after { content: ""; position: absolute; top: -3px; left: -3px; width: 8px; height: 8px; border-radius: 50%; background: var(--text); }
+.wave .mark { position: absolute; top: -6px; width: 8px; height: 8px; border-radius: 50%; background: var(--remembrall); border: 2px solid var(--surface); transform: translateX(-4px); }
+.speakers { display: flex; gap: 10px; font-size: 11.5px; color: var(--text-2); flex-wrap: wrap; }
+.speakers span { display: inline-flex; align-items: center; gap: 4px; }
+
+/* Notes view */
+.notes { display: flex; flex-direction: column; gap: 16px; }
+.notes section h3 { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; margin: 0 0 6px; text-transform: none; color: var(--text); }
+.notes section h3 .n { color: var(--text-3); font-weight: 500; }
+.notes p, .notes li { font-size: 13px; line-height: 1.5; }
+.notes ul { margin: 0; padding-left: 18px; }
+.action { display: grid; grid-template-columns: 16px 1fr auto auto; gap: 10px; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+.action:last-child { border-bottom: 0; }
+.action .owner { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-2); }
+.action .due { font-size: 12px; color: var(--text-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.action .due.late { color: var(--danger); font-weight: 600; }
+.action.done span.txt { color: var(--text-3); text-decoration: line-through; }
+.action .ts { color: var(--pensieve); font-family: var(--mono); font-size: 11px; margin-left: 6px; cursor: pointer; }
+
+/* Transcript */
+.tx { display: flex; flex-direction: column; gap: 10px; font-size: 13px; }
+.tx .u { display: grid; grid-template-columns: 62px 1fr; gap: 10px; }
+.tx .u .t { font-family: var(--mono); font-size: 11px; color: var(--text-3); padding-top: 3px; cursor: pointer; }
+.tx .u .t:hover { color: var(--pensieve); }
+.tx .u .who { font-weight: 600; font-size: 12px; margin-bottom: 1px; display: flex; align-items: center; gap: 5px; }
+.tx .u .who i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.tx .u p { margin: 0; line-height: 1.5; }
+.tx .u.cur p { background: color-mix(in srgb, var(--pensieve) 10%, transparent); border-radius: 6px; padding: 2px 6px; margin-left: -6px; }
+.tx mark { background: color-mix(in srgb, var(--gringotts) 30%, transparent); color: inherit; border-radius: 2px; }
+
+/* Sheets and browser page -------------------------------------------------- */
+.sheet { width: 440px; margin: 0 auto; background: var(--surface); border-radius: 14px; box-shadow: var(--shadow-3); padding: 28px 28px 22px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px; }
+.sheet h3 { margin: 6px 0 0; font-size: 17px; }
+.sheet p { color: var(--text-2); font-size: 13px; margin: 0; max-width: 340px; }
+.sheet .acts { display: flex; gap: 10px; margin-top: 10px; width: 100%; justify-content: flex-end; }
+.dim { background: color-mix(in srgb, var(--text) 35%, transparent); padding: 60px 20px; border-radius: 12px; }
+.browser { max-width: 820px; margin: 0 auto; border-radius: 12px; overflow: hidden; box-shadow: var(--shadow-3); background: var(--surface); }
+.browser .bb { height: 44px; background: var(--sidebar); border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 10px; padding: 0 12px; }
+.browser .url { flex: 1; height: 28px; border-radius: 8px; background: var(--surface); border: 1px solid var(--line); display: flex; align-items: center; gap: 6px; padding: 0 10px; font-size: 12px; color: var(--text-2); justify-content: center; }
+.browser .url b { color: var(--text); font-weight: 500; }
+.browser .page { padding: 56px 20px 72px; display: flex; justify-content: center; background: var(--bg); }
+.login-card { width: 420px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 28px; box-shadow: var(--shadow-2); text-align: center; display: flex; flex-direction: column; gap: 12px; align-items: center; }
+.login-card h2 { font-size: 20px; } .login-card p { color: var(--text-2); font-size: 13px; margin: 0; }
+.device { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); width: 100%; text-align: left; font-size: 13px; }
+.device b { display: block; } .device small { color: var(--text-2); }
+
+/* Menu bar popover */
+.menubar { height: 28px; background: var(--glass); backdrop-filter: blur(10px); border: 1px solid var(--glass-line); border-radius: 8px 8px 0 0; display: flex; align-items: center; justify-content: flex-end; gap: 14px; padding: 0 12px; font-size: 12.5px; }
+.menubar .mi { display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 6px; border-radius: 5px; }
+.menubar .mi.open { background: var(--sel); }
+.popover { width: 320px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow-3); padding: 14px; display: flex; flex-direction: column; gap: 12px; margin: 6px 0 0 auto; position: relative; }
+.popover::before { content: ""; position: absolute; top: -7px; right: 36px; width: 12px; height: 12px; background: var(--surface); border-left: 1px solid var(--line); border-top: 1px solid var(--line); transform: rotate(45deg); }
+
+/* Phone mockups ------------------------------------------------------------ */
+.phones { display: flex; gap: 28px; justify-content: center; flex-wrap: wrap; }
+.phone { width: 320px; height: 800px; border-radius: 42px; background: #111; padding: 10px; box-shadow: var(--shadow-3); position: relative; }
+.phone .scr { width: 100%; height: 100%; border-radius: 34px; background: var(--bg); overflow: hidden; display: flex; flex-direction: column; font-size: 13.5px; }
+.phone .notch { position: absolute; top: 18px; left: 50%; transform: translateX(-50%); width: 100px; height: 28px; border-radius: 16px; background: #111; z-index: 2; }
+.phone .ph-hd { padding: 54px 14px 8px; background: var(--sidebar); border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 10px; }
+.phone .ph-hd .nm { flex: 1; line-height: 1.15; } .phone .ph-hd .nm b { display: block; } .phone .ph-hd .nm small { color: var(--text-2); font-size: 11px; }
+.phone .chat { flex: 1; overflow: hidden; padding: 12px 10px; display: flex; flex-direction: column; justify-content: flex-end; gap: 7px; }
+.phone .day { align-self: center; font-size: 11px; color: var(--text-2); background: var(--surface-2); border-radius: 10px; padding: 2px 10px; }
+.bub { max-width: 86%; padding: 8px 11px; border-radius: 16px; background: var(--surface); box-shadow: var(--shadow-1); line-height: 1.4; position: relative; font-size: 12.5px; }
+.bub .from { font-size: 11.5px; font-weight: 600; margin-bottom: 2px; }
+.bub .tm { display: block; text-align: right; font-size: 10px; color: var(--text-3); margin-top: 3px; }
+.bub.me { align-self: flex-end; background: color-mix(in srgb, var(--patronus) 22%, var(--surface)); }
+.bub.bot { align-self: flex-start; border-bottom-left-radius: 6px; }
+.bub .inl { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-top: 8px; }
+.bub .inl button { height: 30px; border-radius: 8px; background: color-mix(in srgb, var(--patronus) 14%, transparent); color: var(--patronus); font-weight: 600; font-size: 12.5px; }
+.bub .inl button.full { grid-column: 1 / -1; }
+.bub ul { margin: 4px 0 0; padding-left: 16px; } .bub li { margin: 1px 0; }
+.bub .mono { font-family: var(--mono); font-size: 11.5px; }
+.phone .inbar { display: flex; align-items: center; gap: 8px; padding: 8px 10px 28px; background: var(--sidebar); border-top: 1px solid var(--line); }
+.phone .inbar .field { flex: 1; border-radius: 16px; }
+
+/* Launcher ------------------------------------------------------------------ */
+.launch { width: 380px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow-3); overflow: hidden; }
+.launch .hd { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--line); background: var(--surface-2); }
+.launch .hd b { flex: 1; }
+.launch .apps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 12px; }
+.launch .app { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 6px 8px; border-radius: 10px; font-size: 12px; position: relative; }
+.launch .app:hover { background: var(--hover); }
+.launch .app .cnt { position: absolute; top: 6px; right: 10px; }
+.launch .app .st { font-size: 11px; color: var(--text-2); display: flex; align-items: center; gap: 4px; }
+.launch .wk { border-top: 1px solid var(--line); padding: 10px 14px 12px; display: flex; flex-direction: column; gap: 8px; }
+.launch .wk .ttl { font-size: 11px; font-weight: 600; color: var(--text-3); }
+.launch .wk .ln { display: flex; align-items: center; gap: 8px; font-size: 12.5px; }
+.launch .wk .ln .grow { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.launch .wk .ln .grow small { color: var(--text-2); }
+
+/* Screen tabs (document level) --------------------------------------------- */
+.scr-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin: 16px 0 14px; }
+.scr-tabs button { height: 30px; padding: 0 14px; border-radius: 15px; border: 1px solid var(--line-strong); background: var(--surface); font-size: 13px; }
+.scr-tabs button.on { background: var(--text); color: var(--bg); border-color: var(--text); font-weight: 600; }
+.scr-pane { display: none; } .scr-pane.on { display: block; }
+.scr-note { margin: 14px auto 0; max-width: 1280px; font-size: 13px; color: var(--text-2); line-height: 1.5; }
+.scr-note b { color: var(--text); }
+.theme-row { display: flex; gap: 8px; align-items: center; margin: 0 0 12px; font-size: 12.5px; color: var(--text-2); }
+
+/* Brainstorm */
+.idea { display: grid; grid-template-columns: 44px 1fr; gap: 12px; }
+.idea .tile { width: 44px; height: 44px; border-radius: 11px; display: grid; place-items: center; box-shadow: var(--shadow-1); }
+.idea .tile svg { width: 28px; height: 28px; fill: none; stroke: #fff; stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; }
+.idea b { display: block; } .idea small { color: var(--text-2); display: block; font-size: 12px; margin-top: 2px; }
+.idea .w { display: inline-flex; align-items: center; gap: 5px; margin-top: 6px; font-size: 11.5px; color: var(--text-2); }
+.sketch { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow-2); overflow: hidden; font-size: 12.5px; }
+.sketch .tb { height: 36px; display: flex; align-items: center; gap: 8px; padding: 0 12px; background: var(--sidebar); border-bottom: 1px solid var(--line); font-weight: 600; }
+.sketch .in { padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.kv { display: flex; justify-content: space-between; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.kv:last-child { border-bottom: 0; }
+.kv b { font-variant-numeric: tabular-nums; font-weight: 600; }
+.bar { height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; display: flex; }
+.bar i { display: block; height: 100%; }
+
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+@media print { .topbar { position: static; } .scr-pane { display: block; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-tray" viewBox="0 0 24 24"><path d="M3 13h5l1.5 3h5L16 13h5"/><path d="M5 5h14l2 8v6H3v-6z"/></symbol>
+    <symbol id="i-tray2" viewBox="0 0 24 24"><path d="M3 15h5l1.5 2.5h5L16 15h5"/><path d="M5 9h14l2 6v5H3v-5z"/><path d="M7 5h10"/></symbol>
+    <symbol id="i-envelope" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3.5 7l8.5 6.5L20.5 7"/></symbol>
+    <symbol id="i-waveform" viewBox="0 0 24 24"><path d="M3 12h1M6 8v8M9 5v14M12 9v6M15 3v18M18 8v8M21 11v2"/></symbol>
+    <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></symbol>
+    <symbol id="i-speaker" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/></symbol>
+    <symbol id="i-record" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.5" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><path d="M8 5h3v14H8zM13 5h3v14h-3z" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-back15" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.3-5.7L4 8"/><path d="M4 3v5h5"/><text x="12" y="15" font-size="7" text-anchor="middle" fill="currentColor" stroke="none" font-family="-apple-system" font-weight="600">15</text></symbol>
+    <symbol id="i-fwd15" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.7L20 8"/><path d="M20 3v5h-5"/><text x="12" y="15" font-size="7" text-anchor="middle" fill="currentColor" stroke="none" font-family="-apple-system" font-weight="600">15</text></symbol>
+    <symbol id="i-share" viewBox="0 0 24 24"><path d="M12 3v12M8 7l4-4 4 4"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7"/></symbol>
+    <symbol id="i-xmark" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+    <symbol id="i-sparkles" viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z"/></symbol>
+    <symbol id="i-person" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></symbol>
+    <symbol id="i-person2" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2 20c0-3.5 3-6 7-6s7 2.5 7 6"/><path d="M16 5a3.5 3.5 0 0 1 0 7M18 14c2.5.7 4 2.8 4 6"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></symbol>
+    <symbol id="i-checklist" viewBox="0 0 24 24"><path d="M3 6l2 2 3-3M3 12l2 2 3-3M3 18l2 2 3-3M12 6h9M12 12h9M12 18h9"/></symbol>
+    <symbol id="i-coin" viewBox="0 0 24 24"><ellipse cx="12" cy="7" rx="8" ry="3"/><path d="M4 7v10c0 1.7 3.6 3 8 3s8-1.3 8-3V7"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></symbol>
+    <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/></symbol>
+    <symbol id="i-paperplane" viewBox="0 0 24 24"><path d="M21 3L3 10.5l7.5 3L13.5 21z"/><path d="M21 3l-10.5 10.5"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 4.5-3.5 8-8 9.5C7.5 20 4 16.5 4 12V6z"/><path d="M9 12l2 2 4-4"/></symbol>
+    <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 2L5 14h6l-1 8 9-13h-6z"/></symbol>
+    <symbol id="i-chev-r" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+    <symbol id="i-chev-d" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.3-4.3"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-ellipsis" viewBox="0 0 24 24"><circle cx="6" cy="12" r="1.3" fill="currentColor"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/><circle cx="18" cy="12" r="1.3" fill="currentColor"/></symbol>
+    <symbol id="i-archive" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="5" rx="1.5"/><path d="M5 9v10a1.5 1.5 0 0 0 1.5 1.5h11A1.5 1.5 0 0 0 19 19V9M10 13h4"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></symbol>
+    <symbol id="i-reply" viewBox="0 0 24 24"><path d="M9 6L3 12l6 6"/><path d="M3 12h10a7 7 0 0 1 7 7v1"/></symbol>
+    <symbol id="i-replyall" viewBox="0 0 24 24"><path d="M11 6l-6 6 6 6M7 6l-6 6 6 6"/><path d="M5 12h9a7 7 0 0 1 7 7v1"/></symbol>
+    <symbol id="i-forward" viewBox="0 0 24 24"><path d="M15 6l6 6-6 6"/><path d="M21 12H11a7 7 0 0 0-7 7v1"/></symbol>
+    <symbol id="i-compose" viewBox="0 0 24 24"><path d="M4 20h4l10-10-4-4L4 16z"/><path d="M12.5 7.5l4 4"/></symbol>
+    <symbol id="i-house" viewBox="0 0 24 24"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></symbol>
+    <symbol id="i-server" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="6" rx="1.5"/><rect x="3" y="14" width="18" height="6" rx="1.5"/><path d="M7 7h.01M7 17h.01"/></symbol>
+    <symbol id="i-laptop" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="11" rx="1.5"/><path d="M2 19h20"/></symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18h2"/></symbol>
+    <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="14" r="4"/><path d="M11 11l9-9M16 6l2 2M13 9l2 2"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
+    <symbol id="i-eyeslash" viewBox="0 0 24 24"><path d="M3 3l18 18"/><path d="M10.5 5.3A11 11 0 0 1 12 5c5 0 9 4.5 10 7-0.4 1-1.3 2.4-2.6 3.6M6.2 6.2C4 7.7 2.6 10 2 12c1 2.5 5 7 10 7 1.6 0 3.1-.4 4.4-1.1"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20a2 2 0 0 0 4 0"/></symbol>
+    <symbol id="i-doc" viewBox="0 0 24 24"><path d="M6 3h8l5 5v13H6z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></symbol>
+    <symbol id="i-cart" viewBox="0 0 24 24"><path d="M3 4h2l2.5 11h11L21 7H6"/><circle cx="9" cy="19" r="1.5"/><circle cx="17" cy="19" r="1.5"/></symbol>
+    <symbol id="i-box" viewBox="0 0 24 24"><path d="M3 8l9-4 9 4v9l-9 4-9-4z"/><path d="M3 8l9 4 9-4M12 12v9"/></symbol>
+    <symbol id="i-bus" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="15" rx="3"/><path d="M4 11h16M8 21v-3M16 21v-3M8 15h.01M16 15h.01"/></symbol>
+    <symbol id="i-map" viewBox="0 0 24 24"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v14M15 6v14"/></symbol>
+    <symbol id="i-flame" viewBox="0 0 24 24"><path d="M12 3c1 3 4 4.5 4 9a4 4 0 0 1-8 0c0-2 1-3 1-3 .5 1.5 1.5 2 2 2 0-3-1-5 1-8z"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 1 0-5.7l3-3a4 4 0 0 1 5.7 5.7l-1.5 1.5"/><path d="M14 10a4 4 0 0 1 0 5.7l-3 3a4 4 0 0 1-5.7-5.7l1.5-1.5"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s7-6.5 7-11.5a7 7 0 0 0-14 0C5 14.5 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></symbol>
+    <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 3L2 21h20z"/><path d="M12 10v5M12 18h.01"/></symbol>
+    <symbol id="i-paperclip" viewBox="0 0 24 24"><path d="M21 12l-8.5 8.5a5 5 0 0 1-7-7L14 5a3.2 3.2 0 0 1 4.5 4.5L10 18a1.5 1.5 0 0 1-2-2l7.5-7.5"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></symbol>
+    <symbol id="i-arrowdown" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M8 13l4 4 4-4"/></symbol>
+    <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M7 18a4 4 0 0 1-.5-8A6 6 0 0 1 18 9a4.5 4.5 0 0 1 0 9z"/></symbol>
+    <symbol id="i-dollar" viewBox="0 0 24 24"><path d="M12 3v18M16 7.5c0-1.9-1.8-3-4-3s-4 1.1-4 3 1.8 2.6 4 3.2 4 1.5 4 3.3-1.8 3-4 3-4-1.1-4-3"/></symbol>
+    <symbol id="i-elf" viewBox="0 0 24 24"><path d="M7 11c-3-1-4-4-3-7 2 1 3.5 3 4 5M17 11c3-1 4-4 3-7-2 1-3.5 3-4 5"/><circle cx="12" cy="12" r="5"/><path d="M10 12h.01M14 12h.01M10.5 15c.8.7 2.2.7 3 0"/></symbol>
+    <symbol id="i-elf2" viewBox="0 0 24 24"><path d="M6.5 12C4 11 3 8 4 5c1.8.8 3 2.5 3.5 4.5M17.5 12C20 11 21 8 20 5c-1.8.8-3 2.5-3.5 4.5"/><circle cx="12" cy="13" r="5"/><path d="M10 13h.01M14 13h.01M10.5 15.5h3"/></symbol>
+    <symbol id="i-quote" viewBox="0 0 24 24"><path d="M7 6c-2 2-3 4-3 7h4v5H3v-5c0-3.5 1.5-6 4-8zM17 6c-2 2-3 4-3 7h4v5h-5v-5c0-3.5 1.5-6 4-8z"/></symbol>
+    <symbol id="i-brain" viewBox="0 0 24 24"><path d="M9 4a3 3 0 0 0-3 3 3 3 0 0 0-2 5 3 3 0 0 0 2 5 3 3 0 0 0 3 3h3V4zM15 4a3 3 0 0 1 3 3 3 3 0 0 1 2 5 3 3 0 0 1-2 5 3 3 0 0 1-3 3h-3V4z"/></symbol>
+  </defs>
+</svg>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-ticket" viewBox="0 0 24 24"><path d="M3 8a2 2 0 0 0 2-2h14a2 2 0 0 0 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 0-2 2H5a2 2 0 0 0-2-2v-2a2 2 0 0 0 0-4z"/><path d="M14 6v12" stroke-dasharray="2 2"/></symbol>
+  <symbol id="i-ext" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4"/></symbol>
+  <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-8 9"/></symbol>
+  <symbol id="i-wallet" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="14" rx="2.5"/><path d="M3 10h18M6 6l9-3 2 3"/><circle cx="16.5" cy="15" r="1.2" fill="currentColor"/></symbol>
+  <symbol id="i-chev-l" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></symbol>
+</svg>
+
+<style>
+/* Evenementen page. Own classes carry the ev- prefix; .ctrl matches hedwig-cards. */
+.ctrl { display: flex; gap: 10px 18px; align-items: center; flex-wrap: wrap; margin: 0 auto 14px; max-width: 1280px; font-size: 12.5px; color: var(--text-2); }
+.ctrl .grp { display: flex; gap: 8px; align-items: center; }
+.ev { --k: var(--remembrall); }
+.mac.ev-win { height: 900px; }
+.mac .body.three.ev-three { grid-template-columns: 200px 330px minmax(0, 1fr); }
+.ev-q { flex: 1; min-width: 0; border: 0; background: transparent; font: inherit; font-size: 13px; color: var(--text); outline: none; padding: 0; }
+.ev-q::placeholder { color: var(--text-3); }
+button.tb-cap.text { cursor: pointer; }
+.btn.ev-k { background: var(--k); color: #fff; border-color: transparent; }
+.btn.ev-h { background: var(--app, var(--hedwig)); color: #fff; border-color: transparent; }
+[data-theme="dark"] .btn.ev-k, [data-theme="dark"] .btn.ev-h { color: #1C1A17; }
+
+/* list */
+.ev-grp { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; color: var(--text-3); padding: 12px 14px 4px; }
+.ev-row { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 10px; padding: 10px 12px; border-bottom: 1px solid var(--line); cursor: pointer; align-items: start; position: relative; }
+.ev-row:hover { background: var(--hover); }
+.ev-row.on { background: color-mix(in srgb, var(--app) 15%, var(--surface)); }
+.ev-row.on::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--app); }
+.ev-date { width: 44px; border-radius: 9px; border: 1px solid var(--line); background: var(--surface); text-align: center; overflow: hidden; line-height: 1.1; box-shadow: var(--shadow-1); }
+.ev-date i { display: block; font-style: normal; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; padding: 2px 0; background: var(--k); color: #fff; }
+[data-theme="dark"] .ev-date i { color: #1C1A17; }
+.ev-date b { display: block; font-size: 18px; font-weight: 700; padding-top: 3px; font-variant-numeric: tabular-nums; }
+.ev-date small { display: block; font-size: 10px; color: var(--text-2); padding-bottom: 3px; }
+.ev-row.past .ev-date i { background: var(--text-3); }
+.ev-row .t { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.ev-row .l1 { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.ev-row .t b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
+.ev-row .t .s { font-size: 12px; color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ev-row .via { font-size: 11.5px; color: var(--text-2); display: flex; gap: 4px; align-items: center; }
+.ev-row .via mark, .ev-hl { background: color-mix(in srgb, var(--gringotts) 28%, transparent); color: inherit; border-radius: 3px; padding: 0 3px; }
+.ev-row .bds { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 5px; }
+.ev-row .rt { font-size: 12px; color: var(--text-2); white-space: nowrap; font-variant-numeric: tabular-nums; text-align: right; flex: none; }
+.ev-row .rt.now { color: var(--k); font-weight: 700; }
+.ev-row.past .t b { color: var(--text-2); font-weight: 500; }
+.ev-row.past .ev-date { box-shadow: none; opacity: 0.8; }
+.badge.ev-wij { background: color-mix(in srgb, var(--clock) 14%, transparent); color: var(--clock); }
+.badge.ev-wij::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.banner.warn.ev-ban { cursor: pointer; }
+.banner.warn.ev-ban:hover { filter: brightness(0.98); }
+.ev-listft { padding: 12px 14px 16px; font-size: 11.5px; color: var(--text-3); line-height: 1.4; }
+
+/* detail */
+.ev-dhead { display: flex; gap: 12px; align-items: flex-start; padding: 14px 20px 12px; border-bottom: 1px solid var(--line); }
+.ev-tile { width: 40px; height: 40px; border-radius: 10px; background: color-mix(in srgb, var(--k) 14%, transparent); color: var(--k); display: grid; place-items: center; flex: none; }
+.ev-tile.past { background: var(--surface-2); color: var(--text-3); }
+.ev-ttl { flex: 1; min-width: 0; }
+.ev-kindrow { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.ev-kind { display: inline-flex; align-items: center; gap: 3px; height: 20px; padding: 0 5px 0 8px; border-radius: 999px; background: color-mix(in srgb, var(--k) 14%, transparent); color: var(--k); font-size: 11.5px; font-weight: 600; }
+.ev-kind svg { width: 11px; height: 11px; }
+.ev-title { display: block; font: inherit; font-size: 20px; font-weight: 700; letter-spacing: -0.01em; border: 1px solid transparent; border-radius: 6px; background: transparent; color: var(--text); padding: 0 6px; margin: 3px 0 2px -7px; width: calc(100% + 7px); height: 30px; }
+.ev-in { font: inherit; font-size: 12.5px; height: 26px; border: 1px solid transparent; border-radius: 6px; background: transparent; color: var(--text); padding: 0 6px; margin-left: -7px; width: calc(100% + 7px); min-width: 0; }
+textarea.ev-in { height: auto; min-height: 54px; padding: 5px 6px; resize: none; line-height: 1.4; display: block; }
+.ev-in::placeholder, .ev-title::placeholder { color: var(--text-3); }
+.ev-in:hover, .ev-title:hover { border-color: var(--line); background: var(--surface-2); }
+.ev-in:focus, .ev-title:focus { outline: none; border-color: var(--app); background: var(--surface); box-shadow: 0 0 0 3px color-mix(in srgb, var(--app) 22%, transparent); }
+.ev-by { font-size: 12px; color: var(--text-2); display: flex; gap: 6px; align-items: flex-start; line-height: 1.4; }
+.ev-by > span:last-child { flex: 1; min-width: 0; }
+.ev-by .av.sm { margin-top: 1px; }
+.ev-by .av.sm { width: 16px; height: 16px; font-size: 8px; }
+.ev-hacts { display: flex; gap: 6px; align-items: center; padding-top: 2px; }
+.ev-wijst { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; border-radius: 7px; font-size: 13px; font-weight: 600; color: var(--clock); background: color-mix(in srgb, var(--clock) 12%, transparent); }
+.ev-dbody { padding: 16px 20px 28px; display: flex; flex-direction: column; gap: 16px; }
+.ev-hero { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.ev-hero .big { font-size: 22px; font-weight: 650; letter-spacing: -0.01em; }
+.ev-hero .rel { font-size: 13px; color: var(--text-2); }
+.ev-hero.past .big { color: var(--text-2); }
+.ev-count { display: flex; align-items: center; gap: 14px; padding: 12px 14px; border-radius: 12px; background: color-mix(in srgb, var(--k) 10%, transparent); }
+.ev-count .n { font-size: 36px; font-weight: 700; letter-spacing: -0.02em; color: var(--k); line-height: 1; font-variant-numeric: tabular-nums; }
+.ev-count .l { font-size: 12.5px; color: var(--text-2); line-height: 1.4; }
+.ev-count .l b { display: block; color: var(--text); font-size: 14px; font-weight: 600; }
+.ev-acts { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.ev-acts .grow { flex: 1; }
+.ev-today { display: flex; flex-direction: column; gap: 10px; }
+.ev-note { font-size: 12.5px; background: var(--surface-2); border-left: 2px solid var(--k); padding: 7px 10px; border-radius: 0 6px 6px 0; line-height: 1.45; }
+.ev-note b { font-weight: 600; display: block; font-size: 11.5px; color: var(--text-2); }
+.ev-alert { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 10px; background: var(--warning-tint); font-size: 12.5px; line-height: 1.4; }
+.ev-alert > svg { color: var(--warning); margin-top: 2px; }
+.ev-alert .grow { flex: 1; }
+.ev-alert b { display: block; color: var(--warning); font-weight: 650; }
+.ev-cols { display: grid; grid-template-columns: minmax(0, 1fr) 290px; gap: 22px; align-items: start; }
+.ev-col { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+.ev-sec h3 { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--text-2); margin: 0 0 8px; min-height: 22px; }
+.ev-sec h3 > svg { color: var(--text-3); }
+.ev-sec h3 .n { font-weight: 500; color: var(--text-3); }
+.ev-sec h3 .grow { flex: 1; }
+.ev-sec h3 .aside { font-weight: 400; font-size: 11.5px; color: var(--text-3); }
+.ev-hint { font-size: 11.5px; color: var(--text-3); margin: 7px 0 0; line-height: 1.4; }
+.ev-form { display: grid; grid-template-columns: 70px minmax(0, 1fr); gap: 3px 10px; align-items: center; font-size: 12.5px; }
+.ev-form > label { color: var(--text-2); align-self: center; }
+.ev-form > label.top { align-self: start; padding-top: 5px; }
+.ev-times { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding-left: 7px; }
+.ev-times label { display: flex; flex-direction: column; font-size: 10.5px; color: var(--text-3); line-height: 1.2; }
+.ev-times .ev-in { font-variant-numeric: tabular-nums; }
+.ev-addr { display: flex; gap: 6px; align-items: center; min-width: 0; padding-left: 7px; }
+.ev-addr .ev-in { flex: 1; width: auto; }
+.ev-who { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; padding: 3px 0; }
+.chip .av.sm { width: 18px; height: 18px; font-size: 8.5px; }
+.chip.add { cursor: pointer; }
+
+/* checklist (same look as the Evenement card) */
+.ev-chk { display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--surface); }
+.ev-ci { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; gap: 9px; align-items: center; padding: 7px 10px; font-size: 12.5px; border-bottom: 1px solid var(--line); min-height: 40px; }
+.ev-ci:last-child { border-bottom: 0; }
+.ev-ci .l { min-width: 0; line-height: 1.3; }
+.ev-ci .l small { display: block; color: var(--text-2); font-size: 11.5px; line-height: 1.35; margin-top: 1px; }
+.ev-ci.struck .l > span { color: var(--text-3); text-decoration: line-through; }
+.ev-ci.warn { background: var(--warning-tint); }
+.ev-ci.warn .l small.d { color: var(--warning); font-weight: 600; }
+.ev-ci .acts { display: flex; gap: 4px; align-items: center; }
+.ev-ci .l .acts { margin-top: 6px; }
+.ev-s { width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; border: 1.5px solid var(--line-strong); background: var(--surface); }
+.ev-s:hover { border-color: var(--app); }
+.ev-s svg { width: 11px; height: 11px; stroke-width: 2.6; }
+.ev-s.ok { background: var(--success); border-color: transparent; color: var(--surface); }
+.ev-s.warn { border-color: var(--warning); border-width: 2px; }
+.ev-ci.add { grid-template-columns: 18px minmax(0, 1fr) auto auto; background: var(--surface-2); }
+.ev-ci.add > svg { color: var(--text-3); justify-self: center; }
+.ev-ci.add .ev-in { margin-left: -6px; }
+.ev-sel { font: inherit; font-size: 12px; height: 24px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--text); padding: 0 4px; }
+.ev-due { width: 78px !important; margin-left: 0 !important; border-color: var(--line) !important; background: var(--surface) !important; }
+.ev-tag { font-size: 11px; color: var(--text-3); white-space: nowrap; }
+
+/* tickets */
+.ev-tks { display: flex; flex-direction: column; gap: 6px; }
+.ev-tk { display: grid; grid-template-columns: 42px minmax(0, 1fr) auto; gap: 9px; align-items: center; border: 1px solid var(--line); border-radius: 9px; padding: 6px 8px 6px 6px; background: var(--surface); cursor: pointer; }
+.ev-tk:hover { background: var(--hover); }
+.ev-tk .qrw { width: 42px; height: 42px; border-radius: 5px; overflow: hidden; border: 1px solid var(--line); background: #fff; }
+.ev-tk .qrw svg { display: block; width: 100%; height: 100%; }
+.ev-tk .who { min-width: 0; line-height: 1.25; }
+.ev-tk .who small { display: block; font-size: 11px; color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ev-tk .nm { display: flex; align-items: center; gap: 2px; min-width: 0; }
+.ev-tk .nm > svg { width: 10px; height: 10px; color: var(--text-3); margin-right: 4px; }
+.ev-tk > svg { color: var(--text-3); }
+.ev-holder { field-sizing: content; appearance: none; -webkit-appearance: none; font: inherit; font-size: 12.5px; font-weight: 600; color: var(--text); background: transparent; border: 1px solid transparent; border-radius: 5px; padding: 0 2px; margin-left: -3px; height: 20px; cursor: pointer; }
+.ev-holder:hover { border-color: var(--line); background: var(--surface-2); }
+.ev-tk.past { opacity: 0.55; }
+.ev-tk.past .qrw { filter: grayscale(1) opacity(0.5); }
+.ev-rel { position: relative; }
+.ev-addtk { display: flex; width: 100%; align-items: center; justify-content: center; gap: 6px; border: 1px dashed var(--line-strong); border-radius: 9px; padding: 7px 12px; font-size: 12px; color: var(--text-2); margin-top: 6px; }
+.ev-addtk:hover { background: var(--hover); color: var(--text); }
+.ev-drop { border: 1.5px dashed var(--line-strong); border-radius: 10px; padding: 14px 12px 12px; text-align: center; font-size: 12.5px; color: var(--text-2); display: flex; flex-direction: column; align-items: center; gap: 6px; line-height: 1.4; }
+.ev-drop > svg { width: 26px; height: 26px; color: var(--text-3); stroke-width: 1.4; }
+.ev-drop b { color: var(--danger); font-weight: 650; }
+.ev-drop .ev-acts { justify-content: center; margin-top: 4px; }
+.ev-priv { display: flex; gap: 6px; align-items: flex-start; font-size: 11.5px; color: var(--text-2); margin-top: 8px; line-height: 1.4; }
+.ev-priv svg { color: var(--info); margin-top: 1px; }
+.ev-menu { position: absolute; z-index: 15; left: 0; right: 0; top: calc(100% + 4px); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow-2); padding: 5px; min-width: 250px; }
+.ev-menu.up { top: auto; bottom: calc(100% + 4px); }
+.ev-menu.kindm { right: auto; width: 220px; }
+.ev-menu .lbl { font-size: 11px; font-weight: 600; color: var(--text-3); padding: 5px 8px 3px; }
+.ev-menu .none { font-size: 12px; color: var(--text-3); padding: 4px 8px 6px; }
+.ev-menu .sep { height: 1px; background: var(--line); margin: 4px 2px; }
+.ev-menu button { display: flex; width: 100%; gap: 8px; align-items: flex-start; padding: 6px 8px; border-radius: 6px; font-size: 12.5px; text-align: left; line-height: 1.3; }
+.ev-menu button > svg { margin-top: 1px; color: var(--text-2); }
+.ev-menu button small { display: block; color: var(--text-2); font-size: 11px; }
+.ev-menu button:hover { background: var(--app); color: #fff; }
+.ev-menu button:hover small, .ev-menu button:hover > svg { color: rgba(255,255,255,0.85); }
+[data-theme="dark"] .ev-menu button:hover { color: #1C1A17; }
+[data-theme="dark"] .ev-menu button:hover small, [data-theme="dark"] .ev-menu button:hover > svg { color: rgba(28,26,23,0.8); }
+.ev-menu button .ck { width: 14px; flex: none; }
+
+/* mails, aliases, history */
+.ev-mails { display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.ev-mails a { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 7px 10px; font-size: 12.5px; color: var(--text); border-bottom: 1px solid var(--line); line-height: 1.3; }
+.ev-mails a:last-child { border-bottom: 0; }
+.ev-mails a:hover { background: var(--hover); text-decoration: none; }
+.ev-mails a > svg:first-child { color: var(--app); }
+.ev-mails a > svg:last-child { color: var(--text-3); }
+.ev-mails a span { min-width: 0; }
+.ev-mails a span b { display: block; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ev-mails a small { color: var(--text-2); font-size: 11px; display: flex; gap: 4px; align-items: center; white-space: nowrap; overflow: hidden; }
+.ev-mails a small svg { width: 11px; height: 11px; }
+.ev-mails .badge { font-size: 10.5px; height: 17px; padding: 0 6px; }
+.ev-als { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.ev-al { display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 3px 0 8px; border-radius: 11px; border: 1px solid var(--line-strong); font-size: 12px; background: var(--surface); }
+.ev-al small { color: var(--text-3); font-size: 10.5px; }
+.ev-al button { width: 16px; height: 16px; border-radius: 50%; display: grid; place-items: center; color: var(--text-3); }
+.ev-al button:hover { background: var(--hover); color: var(--text); }
+.ev-al button svg { width: 10px; height: 10px; stroke-width: 2.2; }
+.ev-aladd { font: inherit; font-size: 12px; height: 22px; width: 104px; border: 1px dashed var(--line-strong); border-radius: 11px; padding: 0 9px; background: transparent; color: var(--text); }
+.ev-aladd:focus { outline: none; border-style: solid; border-color: var(--app); width: 150px; }
+.ev-aladd::placeholder { color: var(--text-2); }
+.ev-hist { display: flex; flex-direction: column; gap: 2px; }
+.ev-hist .h { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 8px; font-size: 12px; padding: 3px 0; line-height: 1.35; align-items: start; }
+.ev-hist .h small { display: block; color: var(--text-3); font-size: 11px; }
+.ev-hist .av.sm { width: 18px; height: 18px; font-size: 8.5px; }
+.ev-hist .av.bot svg { width: 11px; height: 11px; }
+.ev-hist .h.new { animation: evflash 1.2s ease-out; border-radius: 4px; }
+@keyframes evflash { from { background: color-mix(in srgb, var(--app) 22%, transparent); } to { background: transparent; } }
+
+/* modal sheet inside the window, and the same sheet in the document */
+.ev-modal { position: absolute; left: 0; right: 0; top: 52px; bottom: 0; background: color-mix(in srgb, #000 30%, transparent); display: flex; justify-content: center; align-items: flex-start; z-index: 30; padding: 18px 20px; }
+.ev-modal .ev-sheet { max-height: 100%; }
+.ev-sheet { width: 590px; max-width: 100%; background: var(--surface); border-radius: 14px; box-shadow: var(--shadow-3); display: flex; flex-direction: column; overflow: hidden; text-align: left; font-size: 13px; color: var(--text); }
+.ev-sh-hd { display: flex; gap: 12px; align-items: flex-start; padding: 16px 20px 12px; border-bottom: 1px solid var(--line); }
+.ev-sh-hd .grow { flex: 1; min-width: 0; }
+.ev-sh-hd h3 { font-size: 16px; margin: 0 0 3px; }
+.ev-sh-hd p { margin: 1px 0 0; font-size: 12px; color: var(--text-2); display: flex; gap: 5px; align-items: center; flex-wrap: wrap; }
+.ev-sh-hd p b { color: var(--text); font-weight: 500; }
+.ev-sh-bd { padding: 14px 20px 16px; display: flex; flex-direction: column; gap: 14px; overflow: auto; min-height: 0; }
+.ev-sh-grid { display: grid; grid-template-columns: 74px minmax(0, 1fr) 96px; gap: 7px 10px; align-items: center; }
+.ev-sh-grid > label { font-size: 12.5px; color: var(--text-2); text-align: right; }
+.ev-fi { font: inherit; font-size: 13px; height: 28px; border: 1px solid var(--line-strong); border-radius: 7px; background: var(--surface); color: var(--text); padding: 0 9px; width: 100%; min-width: 0; }
+.ev-fi::placeholder { color: var(--text-3); }
+.ev-fi:focus, .ev-fi:focus-within { outline: none; border-color: var(--app); box-shadow: 0 0 0 3px color-mix(in srgb, var(--app) 22%, transparent); }
+.ev-fi.got { background: color-mix(in srgb, var(--app) 6%, var(--surface)); }
+.ev-fl { display: flex; align-items: center; gap: 6px; }
+.ev-fl small { color: var(--text-3); font-size: 11.5px; white-space: nowrap; }
+.ev-fl input { border: 0; background: transparent; font: inherit; color: inherit; width: 100%; outline: none; min-width: 0; padding: 0; font-variant-numeric: tabular-nums; }
+.ev-fl input::placeholder { color: var(--text-3); }
+.ev-tm3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.ev-from { font-size: 11px; color: var(--app); display: inline-flex; gap: 4px; align-items: center; white-space: nowrap; }
+.ev-from.miss { color: var(--text-3); }
+.ev-sh-grid .seg { flex-wrap: wrap; }
+.ev-sh-grid .seg button { padding: 0 9px; }
+.ev-sh-lbl { font-size: 12px; font-weight: 700; color: var(--text-2); margin-bottom: 6px; }
+.ev-found { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.ev-found .r { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 9px; padding: 8px 12px; border-bottom: 1px solid var(--line); font-size: 12.5px; cursor: pointer; line-height: 1.35; align-items: start; }
+.ev-found .r:last-child { border-bottom: 0; }
+.ev-found .r:hover { background: var(--hover); }
+.ev-found .r b { font-weight: 600; }
+.ev-found .r small { display: block; color: var(--text-2); font-size: 11.5px; }
+.ev-cb { width: 16px; height: 16px; border-radius: 4px; border: 1px solid var(--line-strong); background: var(--surface); display: grid; place-items: center; margin-top: 1px; color: var(--surface); }
+.ev-cb svg { width: 11px; height: 11px; stroke-width: 2.6; visibility: hidden; }
+.ev-cb.on { background: var(--app); border-color: transparent; }
+.ev-cb.on svg { visibility: visible; }
+.ev-sh-tg { display: flex; align-items: center; gap: 12px; padding: 9px 12px; border: 1px solid var(--line); border-radius: 10px; }
+.ev-sh-tg .lbl { flex: 1; line-height: 1.3; }
+.ev-sh-tg .lbl small { display: block; font-size: 11.5px; color: var(--text-2); }
+.ev-sh-ft { display: flex; gap: 8px; align-items: center; padding: 12px 20px; border-top: 1px solid var(--line); background: var(--surface-2); }
+.ev-sh-ft .grow { flex: 1; }
+.ev-sh-ft .muted { display: inline-flex; gap: 5px; align-items: center; }
+.chip.ev-off { opacity: 0.4; }
+button.chip { cursor: pointer; }
+.ev-dim { background: color-mix(in srgb, #000 24%, var(--sidebar)); border-radius: 12px; padding: 36px 20px; display: flex; justify-content: center; }
+.ev-pair { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 18px; align-items: start; }
+@media (max-width: 1100px) { .ev-pair { grid-template-columns: 1fr; } }
+
+/* Kaarten tonen */
+.ev-show { background: #0d0d0e; color: #f5f5f5; display: flex; flex-direction: column; padding: 16px 22px 22px; gap: 16px; font-size: 13px; }
+.ev-show.full { position: fixed; inset: 0; z-index: 200; }
+.ev-show-top { display: flex; align-items: center; gap: 10px; font-size: 12.5px; color: rgba(255,255,255,0.7); }
+.ev-show-top .grow { flex: 1; }
+.ev-show-top .bright { display: inline-flex; gap: 6px; align-items: center; color: #FFD66B; font-weight: 600; }
+.ev-show-x { height: 28px; padding: 0 12px; border-radius: 14px; background: rgba(255,255,255,0.14); color: #fff; font-weight: 600; display: inline-flex; gap: 8px; align-items: center; }
+.ev-show-x kbd { background: rgba(255,255,255,0.14); border: 0; color: #fff; }
+.ev-show-mid { flex: 1; display: flex; align-items: center; justify-content: center; gap: 28px; }
+.ev-nav { width: 44px; height: 44px; border-radius: 50%; background: rgba(255,255,255,0.12); color: #fff; display: grid; place-items: center; }
+.ev-nav:hover { background: rgba(255,255,255,0.2); }
+.ev-nav[disabled] { opacity: 0.2; cursor: default; }
+.ev-pass { width: 360px; background: #fff; color: #151515; border-radius: 20px; padding: 18px 22px 16px; display: flex; flex-direction: column; align-items: center; gap: 8px; box-shadow: 0 30px 80px rgba(0,0,0,0.6); }
+.ev-pass-hd { width: 100%; display: flex; justify-content: space-between; align-items: baseline; gap: 10px; border-bottom: 1px dashed #d4d4d4; padding-bottom: 10px; margin-bottom: 4px; }
+.ev-pass-hd b { font-size: 16px; }
+.ev-pass-hd span { font-size: 12px; color: #666; white-space: nowrap; }
+.ev-pass-qr svg { display: block; }
+.ev-pass-name { font-size: 22px; font-weight: 700; letter-spacing: -0.01em; margin-top: 4px; }
+.ev-pass-sub { font-size: 12.5px; color: #555; display: flex; gap: 6px; align-items: center; }
+.ev-pass-sub .ok { color: #2A7549; font-weight: 600; }
+.ev-pass-sub .no { color: #9A5B00; font-weight: 600; }
+.ev-pass-code { font-family: var(--mono); font-size: 12px; color: #777; letter-spacing: 0.08em; }
+.ev-dots { display: flex; justify-content: center; gap: 6px; }
+.ev-dots i { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,0.3); }
+.ev-dots i.on { background: #fff; }
+.ev-show-ft { text-align: center; font-size: 12.5px; color: rgba(255,255,255,0.65); }
+.ev-screen { border-radius: 16px; overflow: hidden; box-shadow: var(--shadow-3); border: 9px solid #1d1d1f; }
+.ev-screen .ev-show { min-height: 640px; }
+
+/* states */
+.ev-states { display: grid; grid-template-columns: repeat(auto-fill, minmax(390px, 1fr)); gap: 18px; align-items: start; }
+.ev-stcard .cap { font-size: 12px; font-weight: 600; color: var(--text-2); margin: 0 0 6px; display: flex; gap: 8px; align-items: center; }
+.ev-stcard .cap .grow { flex: 1; }
+.ev-stcard .cap button { font-size: 12px; color: var(--hedwig); font-weight: 500; }
+.ev-stcard > p { margin: 8px 2px 0; }
+.ev-mini { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-1); overflow: hidden; font-size: 13px; }
+.ev-mini .ev-dhead { padding: 12px 14px 10px; }
+.ev-mini .ev-tile { width: 32px; height: 32px; border-radius: 8px; }
+.ev-mini .ev-ttl > b { display: block; font-size: 15px; font-weight: 650; margin: 2px 0 1px; }
+.ev-mini-bd { padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 12px; }
+.ev-mini .ev-hero .big { font-size: 18px; }
+.ev-mini .ev-count .n { font-size: 28px; }
+.ev-mini.on { border-color: color-mix(in srgb, var(--k) 55%, var(--line)); box-shadow: 0 0 0 3px color-mix(in srgb, var(--k) 14%, transparent), var(--shadow-1); }
+
+.empty .btn svg { width: 13px; height: 13px; color: inherit; margin: 0; stroke-width: 1.7; }
+.ev-toast { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(20px); background: var(--text); color: var(--bg); padding: 8px 14px; border-radius: 8px; font-size: 13px; opacity: 0; transition: all 160ms ease-out; pointer-events: none; z-index: 300; max-width: 560px; text-align: center; }
+.ev-toast.on { opacity: 1; transform: translateX(-50%); }
+.ev-try { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.ev-try button { font-size: 12px; height: 22px; padding: 0 8px; border-radius: 11px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--text); }
+.ev-try button:hover { background: var(--surface-2); }
+</style>
+
+<header class="topbar">
+  <div class="brand">Hedwig · evenementen <span class="muted" style="font-weight:400">ontwerp v1</span></div>
+  <nav><a href="#page">De pagina</a><a href="#states">Elke staat</a><a href="#show">Kaarten tonen</a><a href="#new">Nieuw evenement</a><a href="#behaviour">Gedrag</a></nav>
+  <div class="seg" id="theme-seg"><button data-theme-pick="auto" class="on">Auto</button><button data-theme-pick="light">Light</button><button data-theme-pick="dark">Dark</button></div>
+</header>
+
+<main class="doc ev">
+<div class="hero">
+  <h1>Evenementen in Hedwig</h1>
+  <p class="lead">Concerts, theatre, festivals and parties, booked half a year ahead through ticket shops whose mail never names the night the way you remember it. <b>Evenementen</b> is one page in Hedwig, under Overal, where Gideon and Eva keep every outing together: the date and the place, the tickets with their QR codes, what still has to happen before the night, the mails that belong to it, and every name it can be found by.</p>
+  <div class="meta"><span>22 October 2026</span><span>·</span><span>Invented people, shops and venues</span><span>·</span><span>UI text Dutch, notes English</span></div>
+  <p class="muted small" style="margin-top:10px">Builds on the Evenement card in <a href="hedwig-cards.html">hedwig-cards.html</a> (same checklist, ticket rows and aliases; the card is this page cut short) and supersedes the Uitjes sketch in <a href="weasley-clock.html#outings">weasley-clock.html</a>. Rules: <code>docs/plans/2026-10-22-calendars.md</code>, section Events and tickets. Calendar sync is not built yet, so "In Wij" is shown as a state with a one-click action.</p>
+</div>
+
+<section class="sec" id="page">
+  <h2><span class="num">1</span>De pagina</h2>
+  <p class="intro">Click an event in the list, tick checklist items, add a ticket, edit any field, or search. The clock is fixed at Thursday 22 October 2026, 17:42, so <i>Stille Wateren</i> is tonight. <b>Staat</b> jumps to an event in that state.</p>
+  <div class="ctrl">
+    <div class="grp">Staat <span class="seg" id="st-seg"><button data-st="net">Net geboekt</button><button data-st="naam">Op naam bijna</button><button data-st="mist">Kaarten ontbreken</button><button data-st="vandaag">Vandaag</button><button data-st="geweest">Geweest</button><button data-st="leeg">Leeg</button></span></div>
+    <div class="grp">Zoek eens op <span class="ev-try"><button data-try="90s party">90s party</button><button data-try="KL-48291">KL-48291</button><button data-try="Kaartloket">Kaartloket</button><button data-try="cabaret">cabaret</button><button data-try="Kolenloods">Kolenloods</button></span></div>
+  </div>
+  <div class="mac a-hedwig ev-win" id="ev-win">
+    <div class="tb"><span class="lights"><i></i><i></i><i></i></span><span class="title">Hedwig</span><span class="sub">Evenementen</span><span class="grow"></span>
+      <label class="field search" style="width:270px;height:28px"><svg class="i sm"><use href="#i-search"/></svg><input id="ev-q" class="ev-q" placeholder="Zoek op naam, zaal, winkel, bestelnummer" autocomplete="off" spellcheck="false"></label>
+      <button class="tb-cap text" data-new="blank"><svg class="i"><use href="#i-plus"/></svg>Nieuw evenement</button>
+    </div>
+    <div class="body three ev-three">
+      <div class="side">
+        <div class="sb-label">Inboxen</div>
+        <div class="sb-row"><svg class="i"><use href="#i-tray2"/></svg><span class="grow">Alle inboxen</span><span class="n">7</span></div>
+        <div class="sb-row two"><svg class="i"><use href="#i-tray"/></svg><span class="grow">Gideon<small>gideon@example.com</small></span><span class="n">4</span></div>
+        <div class="sb-row two"><svg class="i"><use href="#i-tray"/></svg><span class="grow">Werk<small>gideon@studio.example.com</small></span><span class="n">3</span></div>
+        <div class="sb-row two"><svg class="i"><use href="#i-tray"/></svg><span class="grow">Samen<small>huis@example.com</small></span><span class="badge shared" style="height:16px;padding:0 5px"><svg class="i sm"><use href="#i-person2"/></svg></span></div>
+        <div class="sb-label">Overal</div>
+        <div class="sb-row"><svg class="i"><use href="#i-shield"/></svg><span class="grow">Gefilterd</span></div>
+        <div class="sb-row"><svg class="i"><use href="#i-checklist"/></svg><span class="grow">Taken</span><span class="badge count" style="background:var(--warning)">1</span></div>
+        <div class="sb-row sel active"><svg class="i"><use href="#i-ticket"/></svg><span class="grow">Evenementen</span><span class="badge count" id="ev-sbn" style="background:rgba(255,255,255,.28)">1</span></div>
+        <div class="sb-row"><svg class="i"><use href="#i-doc"/></svg><span class="grow">Concepten</span><span class="n">2</span></div>
+        <div class="sb-row"><svg class="i"><use href="#i-paperplane"/></svg><span class="grow">Verstuurd</span></div>
+        <div class="sb-row"><svg class="i"><use href="#i-archive"/></svg><span class="grow">Archief</span></div>
+        <div class="sb-foot"><span class="dot ok"></span><span><b>burrow.example.nl</b>MacBook Gideon · Hedwig</span></div>
+      </div>
+      <div class="list">
+        <div class="pane-hd"><span class="t">Evenementen</span><span class="s" id="ev-n">5 komend</span><span class="grow"></span><span class="badge shared"><svg class="i sm"><use href="#i-person2"/></svg>Samen met Eva</span></div>
+        <div id="ev-ban"></div>
+        <div class="scroll" id="ev-list"></div>
+      </div>
+      <div class="detail" id="ev-detail"></div>
+    </div>
+    <div id="ev-modal"></div>
+  </div>
+  <p class="scr-note"><b>Notes.</b> Evenementen sits under Overal because events are not per mailbox: both adults see the same list, and the toolbar search on this page searches events by every alias (try <i>90s party</i>; apostrophes and accents do not matter). The sidebar badge counts what needs one of them within 30 days. Rows carry three quiet facts: tickets, the personalisation deadline (amber inside 30 days) and whether it is in Wij. Every field in the detail is plain text until you hover it, like Finder's Get Info; a change is saved at once, written to <i>Wie deed wat</i>, and, once calendar sync exists, pushed to Wij. The checklist and ticket rows are the Evenement card's, so a ticked item in the card is ticked here.</p>
+</section>
+
+<section class="sec" id="states">
+  <h2><span class="num">2</span>Elke staat</h2>
+  <p class="intro">The top of the detail in each state, side by side. These are live: ticking an item here ticks it in the window above, and <i>Open</i> selects the event there.</p>
+  <div class="ev-states" id="ev-states"></div>
+</section>
+
+<section class="sec" id="show">
+  <h2><span class="num">3</span>Kaarten tonen</h2>
+  <p class="intro">At the door you want one thing: a QR code a scanner can read. <i>Kaarten tonen</i> (key <kbd>K</kbd>) opens a full-screen view on black, raises the screen to full brightness while it is open and puts it back after.</p>
+  <div class="ev-pair">
+    <div class="ev-screen" id="ev-show-doc"></div>
+    <div class="card"><h4>How it behaves</h4><ul class="small">
+      <li>One ticket at a time, large; arrows or swipe for the next one. The holder's name is printed under the code because a personalised ticket is checked against an ID.</li>
+      <li>Opens on the first ticket of the person whose Mac it is, so Gideon and Eva can each show their own from their own device.</li>
+      <li>Works offline: the pdf, the Wallet pass or the screenshot is cached on the Mac once the event is less than a week away.</li>
+      <li>A Wallet pass also offers <i>Voeg toe aan Wallet</i>, for the phone at the door.</li>
+      <li>The QR is drawn from the stored file, never re-encoded, and never leaves Dobby and the Macs: no cloud AI, and Telegram gets only "Je kaarten staan in Hedwig".</li>
+    </ul><button class="btn ev-k" style="margin-top:10px" data-show="sw"><svg class="i sm"><use href="#i-ticket"/></svg>Probeer het op volledig scherm</button></div>
+  </div>
+</section>
+
+<section class="sec" id="new">
+  <h2><span class="num">4</span>Nieuw evenement, of maak er een van een mail</h2>
+  <p class="intro">An order mail that Hedwig recognises with certainty (schema.org <code>EventReservation</code> or a known shop template) becomes an event on its own, as <i>Neon Nineties</i> did. Anything else goes through this sheet: from the mail's menu or its card (<i>Maak evenement van deze mail</i>), prefilled and marked per field, or empty from <i>Nieuw evenement</i>. Every field stays editable.</p>
+  <div class="ctrl" style="max-width:none"><div class="grp">Sheet <span class="seg" id="sheet-seg"><button data-sheetmode="mail" class="on">Van een mail</button><button data-sheetmode="blank">Leeg</button></span></div></div>
+  <div class="ev-pair">
+    <div class="ev-dim a-hedwig" id="ev-sheet-doc"></div>
+    <div class="card"><h4>What the sheet does</h4><ul class="small">
+      <li>Fields read from the mail say <i>uit de mail</i>; a field it could not read stays empty and is marked as missing (<i>niet in de mail</i>, <i>ontbreekt</i>). Nothing is guessed.</li>
+      <li>Winky reads it, locally on Dobby, because the mail holds the tickets. A cloud bot never sees this sheet's input.</li>
+      <li><i>Ook uit de mail</i> lists what comes along: the ticket files, a deadline sentence turned into a checklist item with its two reminders, and the mail itself as the first linked mail.</li>
+      <li>Aliases start with title, kind, venue, organiser, shop and order number; remove what is noise, add what you would type.</li>
+      <li><i>Meteen in Wij zetten</i> is on by default because every event is shared.</li>
+    </ul></div>
+  </div>
+</section>
+
+<section class="sec" id="behaviour">
+  <h2><span class="num">5</span>Gedrag</h2>
+  <p class="intro">The rules behind the page, short.</p>
+  <div class="grid g3">
+    <div class="card"><h4>Mails join by themselves</h4><p class="muted small">A later mail joins an event by its order number, or by event name plus date. A weaker guess (only the organiser) shows on the mail as <i>Hoort dit bij Neon Nineties?</i> with Ja and Nee; nothing is linked silently on a guess. <i>Koppel een mail</i> does it by hand, and a linked mail gets the event's aliases as search words.</p></div>
+    <div class="card"><h4>Deadlines and reminders</h4><p class="muted small">A deadline sentence in a mail ("uiterlijk 14 dagen voor het evenement op naam") becomes a checklist item with a date. Four weeks and one week before, it appears in Vandaag and as a notice to both. Whoever ticks it closes it for both. Custom items have an optional date and person; only dated ones remind.</p></div>
+    <div class="card"><h4>Two people, one event</h4><p class="muted small">Both can change everything. Each change is saved per field with who and when, shown in <i>Wie deed wat</i>. The other person gets a quiet notice only for changes that matter on the night: date, times, venue, tickets, and ticked deadlines. Last write wins per field; there is no locking.</p></div>
+    <div class="card"><h4>Tickets are sensitive</h4><p class="muted small">A QR code is money. Ticket files live in the platform's uploads on Dobby and in an offline cache on the Macs; QR codes in screenshots are read on the Mac (Vision), not by a model. No cloud AI sees them, Kreacher's tools cannot reach them, Telegram gets a pointer only.</p></div>
+    <div class="card"><h4>Wij</h4><p class="muted small"><i>In Wij zetten</i> creates the event in the shared Google calendar with the times, the address, a link back to Hedwig and the tickets as attachments for whoever opens it on the phone. Once sync exists, a time moved in Wij shows up here as a change by that person.</p></div>
+    <div class="card"><h4>After the night</h4><p class="muted small">The day after, the event moves under Geweest. Notes, mails and aliases stay, so <i>Jazz in het park</i> still finds last year's order. The ticket files are removed from Dobby 30 days after the event.</p></div>
+  </div>
+</section>
+</main>
+<div id="ev-overlay"></div>
+<div class="ev-toast" id="ev-toast"></div>
+
+<script>
+(function () {
+  var root = document.documentElement;
+  var media = window.matchMedia('(prefers-color-scheme: dark)');
+  var pick = localStorage.getItem('burrow-theme') || 'auto';
+  function apply() {
+    root.setAttribute('data-theme', pick === 'auto' ? (media.matches ? 'dark' : 'light') : pick);
+    document.querySelectorAll('[data-theme-pick]').forEach(function (b) { b.classList.toggle('on', b.dataset.themePick === pick); });
+  }
+  document.querySelectorAll('[data-theme-pick]').forEach(function (b) {
+    b.addEventListener('click', function () { pick = b.dataset.themePick; localStorage.setItem('burrow-theme', pick); apply(); });
+  });
+  media.addEventListener('change', apply);
+  apply();
+})();
+
+const MIN = 60e3, HOUR = 60 * MIN, DAY = 24 * HOUR;
+// The page runs on a fixed clock so every state is reproducible; it still ticks from page load.
+const BASE = new Date(2026, 9, 22, 17, 42).getTime(), LOADED = Date.now();
+const now = () => BASE + (Date.now() - LOADED);
+const WD = ['zo', 'ma', 'di', 'wo', 'do', 'vr', 'za'];
+const MO = ['jan', 'feb', 'mrt', 'apr', 'mei', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
+const D = (y, m, d) => new Date(y, m - 1, d).getTime();
+const addDays = (t, n) => { const d = new Date(t); d.setDate(d.getDate() + n); return d.getTime(); };
+const daysLeft = (t) => Math.round((dayStart(t) - dayStart(now())) / DAY);
+const $ = (s, r = document) => r.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const ic = (n, cls = 'sm') => `<svg class="i ${cls}"><use href="#i-${n}"/></svg>`;
+const norm = (s) => String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/['’`]/g, '');
+const dayStart = (t) => { const d = new Date(t); return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime(); };
+const fDay = (t) => { const d = new Date(t), y = new Date(now()).getFullYear(); return `${WD[d.getDay()]} ${d.getDate()} ${MO[d.getMonth()]}${d.getFullYear() !== y ? ' ' + d.getFullYear() : ''}`; };
+const fDM = (t) => { const d = new Date(t); return `${d.getDate()} ${MO[d.getMonth()]}`; };
+const at = (e, hhmm) => { if (!/^\d{1,2}:\d{2}$/.test(hhmm || '')) return e.date + 20 * HOUR; const [h, m] = hhmm.split(':').map(Number); return e.date + h * HOUR + m * MIN; };
+const daysTo = (e) => Math.round((dayStart(e.date) - dayStart(now())) / DAY);
+const isToday = (e) => { const d = daysTo(e); return d <= 0 && d + (e.days || 1) - 1 >= 0; };
+const isPast = (e) => daysTo(e) + (e.days || 1) - 1 < 0;
+const relDays = (e) => { const d = daysTo(e); if (isToday(e)) return 'vandaag'; if (d < 0) return 'geweest'; if (d === 1) return 'morgen'; if (d <= 60) return `over ${d} dagen`; return `over ${Math.round(d / 30.4)} maanden`; };
+const relTime = (ms) => { const m = Math.max(0, Math.round(ms / MIN)); if (m < 60) return `${m} min`; const h = Math.floor(m / 60), r = m % 60; return r ? `${h} u ${r} min` : `${h} uur`; };
+const dateText = (e) => e.dateLabel || (e.days > 1 ? `${fDay(e.date).replace(/ \d{4}$/, '')} tot ${fDay(addDays(e.date, e.days - 1))}` : fDay(e.date));
+const whenTxt = (d) => /^(vandaag|gisteren|zojuist)/.test(d) ? d : 'op ' + d;
+const P = { g: { name: 'Gideon', cls: 'p-g', ini: 'G' }, a: { name: 'Eva', cls: 'p-a', ini: 'E' }, h: { name: 'Hedwig' } };
+const av = (w) => w === 'h' ? `<span class="av sm bot" title="Hedwig">${ic('envelope')}</span>` : P[w] ? `<span class="av sm ${P[w].cls}">${P[w].ini}</span>` : `<span class="av sm">${esc(String(w)[0])}</span>`;
+const KINDS = ["90's party", 'concert', 'festival', 'theater', 'feest'];
+const FIELD = { title: 'de titel', dateLabel: 'de datum', doors: 'de deuren', start: 'de aanvang', end: 'het einde', venue: 'de zaal', address: 'het adres', notes: 'de notities' };
+
+function qr(seed, px) {
+  let h = 2166136261;
+  for (const c of seed) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); }
+  const rnd = () => { h ^= h << 13; h ^= h >>> 17; h ^= h << 5; return (h >>> 0) / 4294967296; };
+  const N = 25, inF = (x, y) => (x < 8 && y < 8) || (x >= N - 8 && y < 8) || (x < 8 && y >= N - 8);
+  let r = '';
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) if (!inF(x, y) && rnd() < 0.48) r += `M${x} ${y}h1v1h-1z`;
+  const f = (x, y) => `M${x} ${y}h7v7h-7zM${x + 1} ${y + 1}v5h5v-5zM${x + 2} ${y + 2}h3v3h-3z`;
+  return `<svg viewBox="-2 -2 ${N + 4} ${N + 4}" width="${px}" height="${px}" shape-rendering="crispEdges"><rect x="-2" y="-2" width="${N + 4}" height="${N + 4}" fill="#fff"/><path fill="#111" fill-rule="evenodd" d="${r}${f(0, 0)}${f(N - 7, 0)}${f(0, N - 7)}"/></svg>`;
+}
+
+const EVENTS = [
+  { id: 'sw', title: 'Stille Wateren', kind: 'concert', date: D(2026, 10, 22), doors: '19:30', start: '20:30', end: '23:00',
+    venue: 'De Kolenloods', address: 'Voorbeeldkade 3, Utrecht', who: ['g', 'a'], notes: 'Garderobe alleen met pin. Terug met de nachtbus van 00:12.', inWij: true, tkind: 'staand',
+    tickets: [{ holder: 'g', named: true, src: 'pdf uit de mail', code: 'PK-51120-01' }, { holder: 'a', named: true, src: 'Wallet-pas', code: 'PK-51120-02' }],
+    personalise: { due: D(2026, 10, 8) + DAY - MIN, done: true, rule: 'uiterlijk 14 dagen voor het concert op naam', shop: 'Podiumkassa', domain: 'podiumkassa.example.com' },
+    custom: [{ t: 'Treinen regelen', who: 'g', due: '', done: true }],
+    info: 'Deuren 19:30, ingang Noord. Voorprogramma om 19:45. Garderobe € 2, alleen pin.', infoFrom: 'Praktische info voor vanavond',
+    mails: [{ s: 'Je bestelling PK-51120 is gelukt', f: 'Podiumkassa', d: '14 mrt', role: 'Bestelling', att: ['tickets-PK-51120.pdf'] }, { s: 'Zet je tickets op naam', f: 'Podiumkassa', d: '10 sep', role: 'Herinnering' }, { s: 'Praktische info voor vanavond', f: 'De Kolenloods', d: 'vandaag 10:02', role: 'Praktische info' }],
+    aliases: [['naam', 'Stille Wateren'], ['soort', 'concert'], ['zaal', 'Kolenloods'], ['organisator', 'Kolenloods Live'], ['winkel', 'Podiumkassa'], ['bestelling', 'PK-51120']],
+    history: [{ w: 'a', t: 'maakte dit van een mail van Podiumkassa', d: '14 mrt' }, { w: 'g', t: 'zette de kaarten op naam', d: '2 okt' }, { w: 'h', t: 'koppelde "Praktische info voor vanavond"', d: 'vandaag 10:02' }] },
+  { id: 'tv', title: 'Theo Voorbeeld: Halve Waarheden', kind: 'theater', date: D(2026, 11, 7), doors: '19:30', start: '20:15', end: '22:30',
+    venue: 'Stadsschouwburg Voorbeeld', address: 'Voorbeeldplein 1, Haarlem', who: ['g', 'a'], notes: 'Rij 7, stoel 12 en 13. Pauze rond 21:15.', inWij: true, tkind: 'zitplaats',
+    tickets: [{ holder: 'g', named: false, src: 'pdf uit de mail', code: 'SV-2210-0712', seat: 'rij 7, stoel 12' }, { holder: 'a', named: false, src: 'pdf uit de mail', code: 'SV-2210-0713', seat: 'rij 7, stoel 13' }],
+    personalise: null,
+    custom: [{ t: 'Oppas regelen', who: 'a', due: '31 okt', done: false }, { t: 'Tafel reserveren bij Bistro Voorbeeld', who: 'g', due: '', done: true }],
+    mails: [{ s: 'Uw kaarten voor Halve Waarheden', f: 'Stadsschouwburg Voorbeeld', d: '3 okt', role: 'Bestelling', att: ['e-tickets-SV-2210.pdf'] }],
+    aliases: [['naam', 'Halve Waarheden'], ['artiest', 'Theo Voorbeeld'], ['soort', 'theater'], ['soort', 'cabaret'], ['zaal', 'Stadsschouwburg'], ['bestelling', 'SV-2210']],
+    history: [{ w: 'a', t: 'voegde dit toe', d: '3 okt' }, { w: 'a', t: 'zette het in Wij', d: '3 okt' }, { w: 'g', t: 'wijzigde de aanvang naar 20:15', d: '5 okt' }] },
+  { id: 'fv', title: 'Foute Vrijdag XL', kind: 'feest', date: D(2026, 11, 20), doors: '21:00', start: '21:30', end: '03:00',
+    venue: 'Hal 4', address: 'Kadeweg 4, Rotterdam', who: ['g', 'a'], notes: '', inWij: true, tkind: 'staand',
+    tickets: [{ holder: 'g', named: false, src: 'pdf uit de mail', code: 'TB-88412-1' }, { holder: 'a', named: false, src: 'pdf uit de mail', code: 'TB-88412-2' }],
+    personalise: { due: D(2026, 10, 27) + DAY - MIN, done: false, rule: 'Personaliseren kan tot en met 27 oktober. Zonder naam geen toegang.', shop: 'Ticketbalie', domain: 'ticketbalie.example.com' },
+    custom: [{ t: 'Laatste trein of hotel', who: 'g', due: '', done: false }, { t: 'Oppas regelen', who: 'a', due: '14 nov', done: true }],
+    mails: [{ s: 'Bestelbevestiging TB-88412', f: 'Ticketbalie', d: '18 jun', role: 'Bestelling', att: ['TB-88412.pdf'] }, { s: 'Herinnering: zet je tickets op naam', f: 'Ticketbalie', d: '20 okt', role: 'Herinnering' }],
+    aliases: [['naam', 'Foute Vrijdag'], ['soort', 'feest'], ['soort', "80's"], ['organisator', 'Feestfabriek'], ['zaal', 'Hal 4'], ['winkel', 'Ticketbalie'], ['bestelling', 'TB-88412']],
+    history: [{ w: 'g', t: 'maakte dit van een mail van Ticketbalie', d: '18 jun' }, { w: 'a', t: 'vinkte "Oppas regelen" af', d: '12 okt' }, { w: 'h', t: 'herinnerde jullie aan op naam zetten', d: '20 okt' }] },
+  { id: 'nn', title: 'Neon Nineties', kind: "90's party", date: D(2027, 5, 13), doors: '20:00', start: '21:00', end: '02:00',
+    venue: 'Voorbeeldhal', address: 'Hallenweg 14, Utrecht', who: ['g', 'a'], notes: '', inWij: false, tkind: 'staand',
+    tickets: [{ holder: 'g', named: false, src: 'pdf uit de mail', code: 'KL-48291-1' }, { holder: 'a', named: false, src: 'pdf uit de mail', code: 'KL-48291-2' }],
+    personalise: { due: D(2027, 4, 29) + DAY - MIN, done: false, rule: 'uiterlijk 14 dagen voor het evenement op naam', shop: 'Kaartloket', domain: 'kaartloket.example.com' },
+    custom: [],
+    mails: [{ s: 'Je bestelling KL-48291 is gelukt', f: 'Kaartloket', d: 'vandaag 09:12', role: 'Bestelling', att: ['tickets-KL-48291.pdf', 'NeonNineties.pkpass'] }],
+    aliases: [['naam', 'Neon Nineties'], ['soort', "90's party"], ['zaal', 'Voorbeeldhal'], ['organisator', 'Neon Events'], ['winkel', 'Kaartloket'], ['bestelling', 'KL-48291']],
+    history: [{ w: 'h', t: 'maakte dit van de bestelmail van Kaartloket', d: 'vandaag 09:14' }] },
+  { id: 'zw', title: 'Zomerweide Festival', kind: 'festival', date: D(2027, 6, 18), days: 3, doors: '12:00', start: '13:00', end: '23:00',
+    venue: 'Weiland Voorbeeld', address: 'Voorbeelddijk 8, Voorbeeldveen', who: ['g', 'a'], notes: 'Camping bij de oostingang.', inWij: true, tkind: 'weekend met camping',
+    tickets: [], where: 'Ze staan in de app van Ticketvoorbeeld, vanaf twee weken vooraf. Voeg ze dan toe als Wallet-pas of screenshot.',
+    personalise: null,
+    custom: [{ t: 'Treinen regelen', who: 'g', due: '1 jun', done: false }, { t: 'Tent en matjes nakijken', who: 'a', due: '', done: false }],
+    mails: [{ s: 'Je bestelling TV-30017 is bevestigd', f: 'Ticketvoorbeeld', d: '9 okt', role: 'Bestelling' }],
+    aliases: [['naam', 'Zomerweide'], ['soort', 'festival'], ['zaal', 'Weiland Voorbeeld'], ['winkel', 'Ticketvoorbeeld'], ['bestelling', 'TV-30017']],
+    history: [{ w: 'a', t: 'maakte dit van een mail van Ticketvoorbeeld', d: '9 okt' }, { w: 'g', t: 'voegde "Treinen regelen" toe', d: '10 okt' }] },
+  { id: 'mi', title: 'Feest 40 jaar Mila', kind: 'feest', date: D(2026, 10, 3), doors: '20:00', start: '20:00', end: '01:00',
+    venue: 'Zaal De Lindeboom', address: 'Voorbeeldstraat 20, Leiden', who: ['g', 'a'], needsTickets: false, tickets: [], inWij: true, personalise: null,
+    notes: 'Cadeau: bon voor de ballonvaart, samen met Bram en Noor.', custom: [{ t: 'Cadeau regelen', who: 'a', due: '1 okt', done: true }],
+    mails: [{ s: 'Uitnodiging: Mila wordt 40!', f: 'Mila', d: '2 sep', role: 'Uitnodiging' }],
+    aliases: [['naam', 'Mila 40'], ['soort', 'feest'], ['zaal', 'De Lindeboom']], history: [{ w: 'g', t: 'voegde dit toe', d: '2 sep' }] },
+  { id: 'jz', title: 'Jazz in het park', kind: 'concert', date: D(2026, 9, 27), doors: '14:00', start: '14:30', end: '18:00',
+    venue: 'Voorbeeldpark', address: 'Parklaan 1, Amersfoort', who: ['g', 'a'], inWij: true, tkind: 'staand', personalise: null,
+    tickets: [{ holder: 'g', named: false, src: 'pdf uit de mail', code: 'KL-40017-1' }, { holder: 'a', named: false, src: 'pdf uit de mail', code: 'KL-40017-2' }],
+    custom: [{ t: 'Kleed en thermoskan mee', who: 'a', due: '', done: true }], notes: 'Volgend jaar eerder komen, vooraan was het vol.',
+    mails: [{ s: 'Je tickets voor Jazz in het park', f: 'Kaartloket', d: '2 aug', role: 'Bestelling', att: ['jazz-tickets.pdf'] }],
+    aliases: [['naam', 'Jazz in het park'], ['soort', 'concert'], ['zaal', 'Voorbeeldpark'], ['winkel', 'Kaartloket'], ['bestelling', 'KL-40017']],
+    history: [{ w: 'g', t: 'maakte dit van een mail van Kaartloket', d: '2 aug' }] },
+];
+const byId = (id) => EVENTS.find((e) => e.id === id);
+const STATES = [
+  ['net', 'nn', 'Net geboekt, ver vooruit', 'The order mail made the event on its own this morning. Not in Wij yet: one click, and Eva gets a notice. The deadline is half a year out, so its badge stays grey.'],
+  ['naam', 'fv', 'Op naam zetten, deadline dichtbij', 'Inside 30 days the deadline turns amber in the row, the sidebar badge and Vandaag. Both reminders have gone out; Nu doen opens the shop, Gedaan ticks it for both.'],
+  ['mist', 'zw', 'Kaarten ontbreken', 'The shop keeps the tickets in its own app until two weeks before. The event says where they are and takes a Wallet pass or a screenshot later.'],
+  ['vandaag', 'sw', 'Vandaag', 'Doors countdown, Kaarten tonen as the primary action, the route, and the organiser\'s practical info quoted from its mail.'],
+  ['geweest', 'jz', 'Geweest', 'Quiet, under Geweest. Notes and mails stay findable; the ticket files go from Dobby 30 days later.'],
+];
+
+const S = { sel: 'nn', q: '', empty: false, menu: null, modal: null, show: null, docShow: 0, docSheet: 'mail' };
+
+/* ---- list ---- */
+function match(e, q) {
+  if (norm(e.title).includes(q) || norm(e.venue).includes(q)) return { via: null };
+  const a = e.aliases.find(([, w]) => norm(w).includes(q));
+  if (a) return { via: a };
+  if (norm(e.kind).includes(q)) return { via: ['soort', e.kind] };
+  return null;
+}
+function dueSoon(e) { const p = e.personalise; return p && !p.done && !isPast(e) && p.due - now() < 30 * DAY; }
+function badges(e) {
+  if (isPast(e)) return '';
+  const b = [];
+  if (e.needsTickets !== false) b.push(e.tickets.length ? `<span class="badge ok">${e.tickets.length} ${e.tickets.length === 1 ? 'kaart' : 'kaarten'}</span>` : '<span class="badge err">Kaarten ontbreken</span>');
+  if (e.personalise && !e.personalise.done) b.push(`<span class="badge ${dueSoon(e) ? 'doubt' : 'outline'}">Op naam vóór ${fDM(e.personalise.due)}</span>`);
+  b.push(e.inWij ? '<span class="badge ev-wij">In Wij</span>' : '<span class="badge outline">Nog niet in Wij</span>');
+  return b.join('');
+}
+function dateBlock(e) {
+  const d = new Date(e.date), last = new Date(addDays(e.date, (e.days || 1) - 1));
+  return `<span class="ev-date"><i>${MO[d.getMonth()]}</i><b>${d.getDate()}</b><small>${e.days > 1 ? `${WD[d.getDay()]} tot ${WD[last.getDay()]}` : WD[d.getDay()]}</small></span>`;
+}
+function rowHtml(e, m) {
+  const today = isToday(e), past = isPast(e);
+  const sub = today ? `${esc(e.venue)} · deuren ${e.doors}` : `${esc(e.venue)} · ${e.days > 1 ? e.days + ' dagen' : esc(e.start || 'tijd volgt')}`;
+  const via = m && m.via ? `<span class="via">${ic('search')}${esc(m.via[0])} <mark>${esc(m.via[1])}</mark></span>` : '';
+  const rt = today ? (now() < at(e, e.doors) ? `over ${relTime(at(e, e.doors) - now())}` : 'nu') : relDays(e);
+  return `<div class="ev-row ${S.sel === e.id ? 'on' : ''} ${past ? 'past' : ''}" data-sel="${e.id}">${dateBlock(e)}<div class="t"><div class="l1"><b>${esc(e.title)}</b><span class="rt ${today ? 'now' : ''}">${rt}</span></div><span class="s">${sub}</span>${via}${badges(e) ? `<div class="bds">${badges(e)}</div>` : ''}</div></div>`;
+}
+function listHtml() {
+  if (S.empty) return `<div class="empty" style="height:100%">${ic('ticket', 'xl')}<b>Nog geen evenementen</b><p>Bestel kaarten zoals altijd: een bestelmail wordt hier vanzelf een evenement. Of maak er zelf een, ook zonder kaarten.</p><button class="btn ev-h" data-new="blank" style="margin-top:10px">${ic('plus')}Nieuw evenement</button></div>`;
+  const q = norm(S.q.trim());
+  const rows = EVENTS.map((e) => ({ e, m: q ? match(e, q) : { via: null } })).filter((x) => x.m);
+  if (!rows.length) return `<div class="empty" style="height:100%">${ic('search', 'xl')}<b>Niets gevonden voor "${esc(S.q)}"</b><p>Geen evenement heet zo of heeft dit als zoekwoord. Voeg het toe onder <i>Vind je terug als</i>, dan vind je het voortaan wel.</p><button class="btn" style="margin-top:10px" data-toast="Zoekt in alle mail naar &quot;${esc(S.q)}&quot;">Zoek in alle mail</button></div>`;
+  const today = rows.filter((x) => isToday(x.e)).sort((a, b) => a.e.date - b.e.date);
+  const up = rows.filter((x) => !isToday(x.e) && !isPast(x.e)).sort((a, b) => a.e.date - b.e.date);
+  const past = rows.filter((x) => isPast(x.e)).sort((a, b) => b.e.date - a.e.date);
+  const grp = (t, xs) => xs.length ? `<div class="ev-grp">${t}</div>${xs.map((x) => rowHtml(x.e, x.m)).join('')}` : '';
+  return grp('Vandaag', today) + grp('Komend', up) + grp('Geweest', past)
+    + (q ? '' : '<div class="ev-listft">Een bestelmail van een kaartenwinkel wordt hier vanzelf een evenement. Ook in je mail vind je ze terug op elk zoekwoord.</div>');
+}
+function renderList() {
+  const html = listHtml(), el = $('#ev-list');
+  if (el._h !== html) { el.innerHTML = html; el._h = html; }
+  const up = EVENTS.filter((e) => !isPast(e)).length;
+  $('#ev-n').textContent = S.empty ? 'geen' : `${up} komend`;
+  const soon = S.empty ? [] : EVENTS.filter(dueSoon);
+  $('#ev-sbn').style.display = soon.length ? '' : 'none';
+  $('#ev-sbn').textContent = soon.length;
+  const ban = soon.length && !S.q ? soon.map((e) => `<div class="banner warn ev-ban" data-sel="${e.id}">${ic('warn')}<span class="grow"><b>${esc(e.title)}</b>: kaarten op naam zetten, nog ${daysLeft(e.personalise.due)} dagen</span>${ic('chev-r')}</div>`).join('') : '';
+  const b = $('#ev-ban'); if (b._h !== ban) { b.innerHTML = ban; b._h = ban; }
+}
+
+/* ---- detail parts ---- */
+function heroHtml(e) {
+  const n = now();
+  if (isToday(e)) {
+    const doors = at(e, e.doors), start = at(e, e.start);
+    const big = n < doors ? e.doors : n < start ? e.start : 'Nu';
+    const lbl = n < doors ? `Deuren open over ${relTime(doors - n)}` : n < start ? `Deuren open, aanvang over ${relTime(start - n)}` : 'Bezig';
+    return `<div class="ev-today"><div class="ev-count"><span class="n">${big}</span><div class="l"><b>${lbl}</b>Aanvang ${esc(e.start)} · ${esc(e.venue)}, ${esc(e.address)}</div></div>
+      <div class="ev-acts"><button class="btn lg ev-k" data-show="${e.id}">${ic('ticket', '')}Kaarten tonen</button><button class="btn lg" data-route="${e.id}">${ic('map', '')}Route</button><span class="grow"></span><span class="muted small"><kbd>K</kbd> kaarten</span></div>
+      ${e.info ? `<div class="ev-note"><b>Uit "${esc(e.infoFrom)}"</b>${esc(e.info)}</div>` : ''}</div>`;
+  }
+  if (isPast(e)) return `<div class="ev-hero past"><span class="big">${dateText(e)}</span><span class="rel">geweest · ${esc(e.venue)}</span></div>`;
+  return `<div class="ev-hero"><span class="big">${dateText(e)}</span><span class="rel">${e.days > 1 ? '' : esc(e.start || 'tijd volgt') + ' · '}${esc(e.venue)} · ${relDays(e)}</span></div>`;
+}
+function alertHtml(e) {
+  if (!dueSoon(e)) return '';
+  const p = e.personalise, d = daysLeft(p.due);
+  return `<div class="ev-alert">${ic('warn')}<div class="grow"><b>Nog ${d} dagen om de kaarten op naam te zetten</b>${esc(p.shop)} schrijft: "${esc(p.rule)}"</div><button class="btn sm" data-toast="Opent ${esc(p.domain)} in je browser">${ic('ext')}Nu doen</button></div>`;
+}
+function byHtml(e, mini) {
+  const c = e.history[0], last = e.history.length > 1 ? e.history[e.history.length - 1] : null;
+  return `${av(c.w)}<span>${P[c.w].name} ${esc(c.t)} ${esc(whenTxt(c.d))}${last && !mini ? ` · laatst ${P[last.w].name}, ${esc(last.d)}` : ''}</span>`;
+}
+function headHtml(e, mini) {
+  const by = byHtml(e, mini);
+  const kind = mini ? `<span class="ev-kind" style="padding-right:8px">${esc(e.kind)}</span>`
+    : `<span class="ev-rel"><button class="ev-kind" data-kindmenu="${e.id}">${esc(e.kind)}${ic('chev-d')}</button>${S.menu === 'kind' ? kindMenu(e) : ''}</span>`;
+  const wij = e.inWij ? `<button class="ev-wijst" data-toast="Opent het evenement in de agenda Wij">${ic('check')}In Wij</button>`
+    : `<button class="btn ev-h" data-wij="${e.id}">${ic('calendar')}In Wij zetten</button>`;
+  return `<div class="ev-dhead"><span class="ev-tile ${isPast(e) ? 'past' : ''}">${ic('ticket', 'lg')}</span><div class="ev-ttl">
+    <div class="ev-kindrow">${kind}${mini ? '' : `<span class="badge shared">${ic('person2')}Gedeeld met Eva</span>`}</div>
+    ${mini ? `<b>${esc(e.title)}</b>` : `<input class="ev-title" data-f="title" value="${esc(e.title)}" aria-label="Titel">`}
+    <div class="ev-by" ${mini ? '' : 'id="ev-by"'}>${by}</div></div>
+    <div class="ev-hacts">${wij}${mini ? '' : `<button class="btn ghost" data-toast="Dupliceren, Als agenda-item exporteren, Verwijderen">${ic('ellipsis')}</button>`}</div></div>`;
+}
+function kindMenu(e) {
+  return `<div class="ev-menu kindm"><div class="lbl">Soort</div>${KINDS.map((k) => `<button data-kind="${esc(k)}"><span class="ck">${k === e.kind ? ic('check') : ''}</span><span>${esc(k)}</span></button>`).join('')}<div class="sep"></div><button data-kind="?"><span class="ck">${ic('plus')}</span><span>Eigen soort…<small>bijvoorbeeld cabaret of musical</small></span></button></div>`;
+}
+function formHtml(e) {
+  const who = e.who.map((w) => `<span class="chip">${av(w)}${P[w].name}</span>`).join('');
+  return `<div class="ev-form">
+    <label>Datum</label><input class="ev-in" data-f="dateLabel" value="${esc(dateText(e))}">
+    <label>Tijden</label><div class="ev-times"><label>Deuren<input class="ev-in" data-f="doors" value="${esc(e.doors)}" placeholder="--:--"></label><label>Aanvang<input class="ev-in" data-f="start" value="${esc(e.start)}" placeholder="--:--"></label><label>Einde<input class="ev-in" data-f="end" value="${esc(e.end)}" placeholder="onbekend"></label></div>
+    <label>Zaal</label><input class="ev-in" data-f="venue" value="${esc(e.venue)}">
+    <label>Adres</label><div class="ev-addr"><input class="ev-in" data-f="address" value="${esc(e.address)}" placeholder="Straat en plaats"><button class="btn sm" data-route="${e.id}">${ic('map')}Route</button></div>
+    <label>Wie gaan</label><div class="ev-who">${who}<button class="chip add" data-toast="Kies iemand uit Contacten, bijvoorbeeld een vriend met een eigen kaart">${ic('plus')}Iemand</button></div>
+    <label class="top">Notities</label><textarea class="ev-in" data-f="notes" rows="2" placeholder="Voor jullie allebei, bijvoorbeeld waar je afspreekt">${esc(e.notes)}</textarea>
+  </div>`;
+}
+function checkItems(e) {
+  const n = now(), items = [];
+  items.push(e.inWij ? { k: 'wij', st: 'ok', l: 'In Wij', s: `${dateText(e)}${e.days > 1 ? '' : ', ' + esc(e.start)}, met de kaarten en de mails erbij` }
+    : { k: 'wij', st: 'todo', l: 'Nog niet in Wij', s: 'Eva ziet het in haar agenda zodra het in Wij staat', act: `<button class="btn sm" data-wij="${e.id}">In Wij zetten</button>` });
+  if (e.needsTickets !== false) items.push(e.tickets.length ? { k: 'tix', st: 'ok', l: 'Kaarten bewaard', s: isPast(e) ? `${e.tickets.length} kaarten, tot ${fDM(addDays(e.date, 30))} op Dobby` : `${e.tickets.length} op Dobby, offline op deze Mac vanaf een week vooraf` }
+    : { k: 'tix', st: 'todo', l: 'Kaarten ontbreken', s: esc(e.where || 'Voeg ze toe als pdf, Wallet-pas of screenshot'), act: `<button class="btn sm" data-addmenu="${e.id}">Toevoegen</button>` });
+  const p = e.personalise;
+  if (p) {
+    if (p.done) items.push({ k: 'pers', st: 'ok', l: 'Op naam gezet', s: e.tickets.map((t) => P[t.holder] ? P[t.holder].name : 'iemand').join(' en ') });
+    else {
+      const r1 = addDays(p.due, -28), r2 = addDays(p.due, -7);
+      const rem = r2 < n ? `herinnerd op ${fDM(r1)} en ${fDM(r2)}` : r1 < n ? `herinnerd op ${fDM(r1)}, nog eens op ${fDM(r2)}` : `herinnering op ${fDM(r1)} en ${fDM(r2)}`;
+      const soon = dueSoon(e);
+      items.push({ k: 'pers', st: soon ? 'warn' : 'todo', l: `Op naam zetten vóór ${fDay(p.due)}`, d: soon ? `nog ${daysLeft(p.due)} dagen · ${rem}` : `${rem}, ook in Vandaag`, s: soon ? '' : `uit de mail van ${esc(p.shop)}: "${esc(p.rule)}"`,
+        below: `<span class="acts"><button class="btn sm" data-toast="Opent ${esc(p.domain)} in je browser">${ic('ext')}Doen</button><button class="btn sm ghost" data-tick="${e.id}:pers">Gedaan</button></span>` });
+    }
+  }
+  e.custom.forEach((c, i) => items.push({ k: 'c' + i, st: c.done ? 'ok' : 'todo', custom: true, l: esc(c.t), s: [P[c.who] ? P[c.who].name : 'Samen', c.due ? `vóór ${esc(c.due)}` : ''].filter(Boolean).join(' · ') }));
+  return items;
+}
+function checklistHtml(e, mini) {
+  const items = checkItems(e);
+  const rows = items.map((it) => `<div class="ev-ci ${it.st === 'warn' ? 'warn' : ''} ${it.custom && it.st === 'ok' ? 'struck' : ''}">
+    <button class="ev-s ${it.st}" data-tick="${e.id}:${it.k}" title="${it.st === 'ok' ? 'Weer open zetten' : 'Afvinken'}">${it.st === 'ok' ? ic('check') : ''}</button>
+    <span class="l"><span>${it.l}</span>${it.d ? `<small class="d">${it.d}</small>` : ''}${it.s ? `<small>${it.s}</small>` : ''}${it.below || ''}</span>${it.act || ''}</div>`).join('');
+  const add = mini ? '' : `<div class="ev-ci add">${ic('plus')}<input class="ev-in ev-newtask" data-ev="${e.id}" placeholder="Taak toevoegen, bijvoorbeeld oppas regelen"><select class="ev-sel ev-newwho" aria-label="Wie"><option value="s">Samen</option><option value="g">Gideon</option><option value="a">Eva</option></select><input class="ev-in ev-due ev-newdue" placeholder="vóór…" aria-label="Datum"></div>`;
+  return `<div class="ev-chk">${rows}${add}</div>`;
+}
+function checkCount(e) { const it = checkItems(e); return `${it.filter((x) => x.st === 'ok').length} van ${it.length}`; }
+function addMenu(e, up) {
+  const att = e.mails.flatMap((m) => (m.att || []).map((a) => ({ a, m })));
+  return `<div class="ev-menu ${up ? 'up' : ''}"><div class="lbl">Uit een gekoppelde mail</div>
+    ${att.length ? att.map((x) => `<button data-addtk="${e.id}" data-src="${esc(x.a)}">${ic(x.a.endsWith('.pkpass') ? 'wallet' : 'doc')}<span>${esc(x.a)}<small>${esc(x.m.f)} · ${esc(x.m.d)}</small></span></button>`).join('') : '<div class="none">Geen bijlagen in de gekoppelde mails</div>'}
+    <div class="sep"></div>
+    <button data-addtk="${e.id}" data-src="bestand">${ic('doc')}<span>Bestand kiezen…<small>pdf, Wallet-pas (.pkpass) of afbeelding</small></span></button>
+    <button data-addtk="${e.id}" data-src="screenshot">${ic('image')}<span>Screenshot of foto<small>de QR-code wordt op deze Mac uitgelezen</small></span></button>
+    <button data-addtk="${e.id}" data-src="mail">${ic('envelope')}<span>Uit een andere mail…<small>kies een mail, Hedwig haalt de bijlagen op</small></span></button></div>`;
+}
+function ticketsHtml(e) {
+  const n = e.tickets.length, past = isPast(e);
+  if (e.needsTickets === false && !n) return `<h3>${ic('ticket')}Kaarten</h3><p class="ev-hint" style="margin:0">Geen kaarten nodig. <button class="btn sm ghost" data-addmenu="${e.id}">Toch een kaart toevoegen</button></p>${S.menu === 'add' ? `<div class="ev-rel">${addMenu(e)}</div>` : ''}`;
+  const head = `<h3>${ic('ticket')}Kaarten <span class="n">${n || ''}</span><span class="grow"></span>${n && !past ? `<button class="btn sm" data-show="${e.id}">Kaarten tonen</button>` : ''}</h3>`;
+  const tk = e.tickets.map((t, i) => {
+    const nb = e.personalise ? (t.named ? '<span class="badge ok">Op naam</span>' : '<span class="badge doubt">Nog niet op naam</span>') : '';
+    const sel = `<select class="ev-holder" data-holder="${e.id}:${i}" aria-label="Voor wie">${['g', 'a'].map((w) => `<option value="${w}" ${t.holder === w ? 'selected' : ''}>${P[w].name}</option>`).join('')}<option value="x" ${t.holder === 'x' ? 'selected' : ''}>Iemand anders</option></select>`;
+    return `<div class="ev-tk ${past ? 'past' : ''}" ${past ? 'data-toast="Deze kaart is verlopen"' : `data-show="${e.id}" data-i="${i}"`}><span class="qrw">${qr(t.code, 42)}</span><span class="who"><span class="nm">${sel}${ic('chev-d')}${past ? '<span class="badge outline">Verlopen</span>' : nb}</span><small>Kaart ${i + 1} · ${esc(t.seat || e.tkind)} · ${esc(t.src)}</small></span>${ic('chev-r')}</div>`;
+  }).join('');
+  const body = n ? `<div class="ev-tks">${tk}</div>`
+    : `<div class="ev-drop">${ic('ticket', '')}<b>Kaarten ontbreken</b><span>${esc(e.where || 'Voeg ze toe als pdf, Wallet-pas of screenshot.')}</span><span class="faint small">Of sleep ze hierheen.</span></div>`;
+  const add = past ? `<p class="ev-hint">${ic('clock')} De kaartbestanden gaan op ${fDM(addDays(e.date, 30))} van Dobby, 30 dagen na afloop.</p>`
+    : `<div class="ev-rel"><button class="ev-addtk" data-addmenu="${e.id}">${ic('plus')}Kaart toevoegen</button>${S.menu === 'add' ? addMenu(e, false) : ''}</div>`;
+  return `${head}${body}${add}<div class="ev-priv">${ic('lock')}<span>Alleen op Dobby en jullie Macs. Nooit naar een cloud-AI; Telegram krijgt alleen een verwijzing.</span></div>`;
+}
+function mailsHtml(e) {
+  const order = (e.aliases.find((a) => a[0] === 'bestelling') || [])[1];
+  return `<h3>${ic('envelope')}Mails <span class="n">${e.mails.length}</span><span class="grow"></span><button class="btn sm ghost" data-toast="Kies een mail in Hedwig, of sleep hem op dit evenement">${ic('link')}Koppel een mail</button></h3>
+    <div class="ev-mails">${e.mails.map((m) => `<a href="#" data-toast="Opent in Hedwig: ${esc(m.s)}">${ic('envelope')}<span><b>${esc(m.s)}</b><small>${esc(m.role)} · ${esc(m.f)} · ${esc(m.d)}${m.att ? ` · ${ic('paperclip')}${m.att.length}` : ''}</small></span>${ic('chev-r')}</a>`).join('')}</div>
+    ${isPast(e) ? '' : `<p class="ev-hint">Nieuwe mails ${order ? `met ${esc(order)}, of ` : ''}met "${esc(e.title)}" rond ${fDM(e.date)} komen hier vanzelf bij.</p>`}`;
+}
+function aliasesHtml(e) {
+  return `<h3>${ic('search')}Vind je terug als</h3><div class="ev-als">${e.aliases.map((a, i) => `<span class="ev-al"><small>${esc(a[0])}</small>${esc(a[1])}<button data-rmal="${e.id}:${i}" title="Weghalen">${ic('xmark')}</button></span>`).join('')}<input class="ev-aladd" data-aladd="${e.id}" placeholder="+ zoekwoord"></div>
+    <p class="ev-hint">Zoek in Hedwig op een van deze woorden en je vindt dit evenement en zijn ${e.mails.length === 1 ? 'mail' : e.mails.length + ' mails'}.</p>`;
+}
+function histHtml(e) {
+  return `<div class="ev-hist">${e.history.slice().reverse().map((h, i) => `<div class="h ${h.fresh && i === 0 ? 'new' : ''}">${av(h.w)}<span>${P[h.w].name} ${esc(h.t)}<small>${esc(h.d)}</small></span></div>`).join('')}</div>`;
+}
+function detailHtml() {
+  const e = byId(S.sel);
+  if (S.empty || !e) return `<div class="empty">${ic('ticket', 'xl')}<b>Geen evenement gekozen</b><p>Kies er een in de lijst, of maak een nieuw evenement.</p></div>`;
+  return `${headHtml(e)}<div class="scroll"><div class="ev-dbody">
+    <div data-hero="${e.id}">${heroHtml(e)}</div>${alertHtml(e)}
+    <div class="ev-cols"><div class="ev-col">
+      <section class="ev-sec"><h3>${ic('info')}Gegevens<span class="grow"></span><span class="aside">Eva ziet wijzigingen meteen</span></h3>${formHtml(e)}</section>
+      <section class="ev-sec"><h3>${ic('checklist')}Voor je gaat <span class="n">${checkCount(e)}</span></h3>${checklistHtml(e)}</section>
+    </div><div class="ev-col">
+      <section class="ev-sec">${ticketsHtml(e)}</section>
+      <section class="ev-sec">${mailsHtml(e)}</section>
+      <section class="ev-sec">${aliasesHtml(e)}</section>
+      <section class="ev-sec"><h3>${ic('clock')}Wie deed wat</h3><div id="ev-hist">${histHtml(e)}</div></section>
+    </div></div></div></div>`;
+}
+function renderDetail() {
+  const sc = $('#ev-detail .scroll'), top = sc ? sc.scrollTop : 0, keep = renderDetail.keepScroll;
+  $('#ev-detail').innerHTML = detailHtml();
+  const sc2 = $('#ev-detail .scroll'); if (sc2 && keep) sc2.scrollTop = top;
+  renderDetail.keepScroll = false;
+}
+
+/* ---- states section ---- */
+function renderStates() {
+  $('#ev-states').innerHTML = STATES.map(([k, id, cap, note]) => {
+    const e = byId(id);
+    return `<div class="ev-stcard"><div class="cap">${esc(cap)}<span class="grow"></span><button data-jump="${k}">Open in het venster ${ic('chev-r')}</button></div>
+      <div class="ev-mini a-hedwig ${isToday(e) ? 'on' : ''}">${headHtml(e, true)}<div class="ev-mini-bd"><div data-hero="${e.id}">${heroHtml(e)}</div>${alertHtml(e)}${checklistHtml(e, true)}</div></div>
+      <p class="muted small">${esc(note)}</p></div>`;
+  }).join('');
+}
+
+/* ---- Kaarten tonen ---- */
+function showHtml(e, i, full) {
+  const n = e.tickets.length, t = e.tickets[i];
+  const name = P[t.holder] ? P[t.holder].name : 'Iemand anders';
+  const named = e.personalise ? (t.named ? '<span class="ok">Op naam</span>' : '<span class="no">Nog niet op naam</span>') : '<span>Geen naam nodig</span>';
+  const tgt = full ? 'full' : 'doc';
+  return `<div class="ev-show ${full ? 'full' : ''}">
+    <div class="ev-show-top"><span class="bright">${ic('sun')}Helderheid vol</span><span class="grow"></span><span><b>${esc(e.title)}</b> · ${dateText(e)}</span><span class="grow"></span>${full ? '<button class="ev-show-x" data-closeshow>Klaar <kbd>esc</kbd></button>' : '<span class="ev-show-x">Klaar <kbd>esc</kbd></span>'}</div>
+    <div class="ev-show-mid"><button class="ev-nav" data-shownav="${tgt}:-1" ${i === 0 ? 'disabled' : ''} aria-label="Vorige">${ic('chev-l', 'lg')}</button>
+      <div class="ev-pass"><div class="ev-pass-hd"><b>${esc(e.title)}</b><span>${fDay(e.date)} · deuren ${esc(e.doors)}</span></div>
+        <div class="ev-pass-qr">${qr(t.code, 280)}</div>
+        <div class="ev-pass-name">${esc(name)}</div>
+        <div class="ev-pass-sub">${named}<span>·</span><span>${esc(t.seat || e.tkind)}</span><span>·</span><span>Kaart ${i + 1} van ${n}</span></div>
+        <div class="ev-pass-code">${esc(t.code)}</div></div>
+      <button class="ev-nav" data-shownav="${tgt}:1" ${i === n - 1 ? 'disabled' : ''} aria-label="Volgende">${ic('chev-r', 'lg')}</button></div>
+    <div class="ev-dots">${e.tickets.map((_, j) => `<i class="${j === i ? 'on' : ''}"></i>`).join('')}</div>
+    <div class="ev-show-ft">${esc(e.venue)}, ${esc(e.address)}${e.info ? ' · ingang Noord' : ''} · <kbd style="background:rgba(255,255,255,.12);border:0;color:#fff">←</kbd> <kbd style="background:rgba(255,255,255,.12);border:0;color:#fff">→</kbd> volgende kaart</div></div>`;
+}
+function renderShow() {
+  $('#ev-overlay').innerHTML = S.show ? showHtml(byId(S.show.id), S.show.i, true) : '';
+  $('#ev-show-doc').innerHTML = showHtml(byId('sw'), S.docShow, false);
+}
+
+/* ---- sheet ---- */
+const PREFILL = { title: 'The Paper Lanterns', kind: 'concert', date: 'vr 12 feb 2027', doors: '19:30', start: '20:30', end: '', venue: 'Muziekgebouw Voorbeeld', address: 'Stationsplein 9, Eindhoven',
+  aliases: [['naam', 'The Paper Lanterns'], ['soort', 'concert'], ['zaal', 'Muziekgebouw Voorbeeld'], ['organisator', 'Lantaarn Live'], ['winkel', 'Podiumkassa'], ['bestelling', 'PK-77310']] };
+function sheetHtml(mode, scope) {
+  const m = mode === 'mail', f = m ? PREFILL : { kind: 'concert' };
+  const from = (k) => m ? (f[k] ? `<span class="ev-from">${ic('doc')}uit de mail</span>` : '<span class="ev-from miss">niet in de mail</span>') : '<span></span>';
+  const inp = (k, ph) => `<input class="ev-fi ${m && f[k] ? 'got' : ''}" data-k="${k}" value="${esc(f[k] || '')}" placeholder="${esc(ph)}">`;
+  const tm = (k, l) => `<label class="ev-fi ev-fl ${m && f[k] ? 'got' : ''}"><small>${l}</small><input data-k="${k}" value="${esc(f[k] || '')}" placeholder="${m && !f[k] ? 'ontbreekt' : '--:--'}"></label>`;
+  const cb = `<span class="ev-cb on">${ic('check')}</span>`;
+  return `<div class="ev-sheet a-hedwig" data-mode="${mode}" data-scope="${scope}">
+    <div class="ev-sh-hd"><span class="ev-tile">${ic('ticket', 'lg')}</span><div class="grow"><h3>${m ? 'Maak evenement van deze mail' : 'Nieuw evenement'}</h3>
+      ${m ? `<p>${ic('envelope')}<b>Je tickets voor The Paper Lanterns</b>· Podiumkassa · vandaag 11:20</p><p>${ic('elf2')}Gelezen door Winky, lokaal op Dobby. Kijk de velden even na.</p>`
+          : '<p>Alles is later aan te passen. Kaarten en mails kun je ook achteraf toevoegen.</p>'}</div></div>
+    <div class="ev-sh-bd">
+      <div class="ev-sh-grid">
+        <label>Titel</label>${inp('title', 'Bijvoorbeeld Neon Nineties')}${from('title')}
+        <label>Soort</label><span><span class="seg">${KINDS.map((k) => `<button data-pickkind="${esc(k)}" class="${f.kind === k ? 'on' : ''}">${esc(k)}</button>`).join('')}</span></span>${from('kind')}
+        <label>Datum</label>${inp('date', 'bijvoorbeeld 13 mei 2027')}${from('date')}
+        <label>Tijden</label><div class="ev-tm3">${tm('doors', 'Deuren')}${tm('start', 'Aanvang')}${tm('end', 'Einde')}</div>${m ? `<span class="ev-from">${ic('doc')}deels</span>` : '<span></span>'}
+        <label>Zaal</label>${inp('venue', 'Naam van de zaal')}${from('venue')}
+        <label>Adres</label>${inp('address', 'Straat en plaats, voor de route')}${from('address')}
+        <label>Wie gaan</label><div class="ev-who"><button class="chip" data-whotg>${av('g')}Gideon</button><button class="chip" data-whotg>${av('a')}Eva</button><button class="chip add" data-toast="Kies iemand uit Contacten">${ic('plus')}Iemand</button></div><span></span>
+      </div>
+      ${m ? `<div><div class="ev-sh-lbl">Ook uit de mail</div><div class="ev-found">
+          <div class="r" data-cb>${cb}<span><b>2 kaarten bewaren</b><small>tickets-PK-77310.pdf · alleen op Dobby en jullie Macs</small></span></div>
+          <div class="r" data-cb>${cb}<span><b>Op naam zetten vóór vr 29 jan 2027</b><small>"uiterlijk 14 dagen voor het concert" · herinnering op 1 jan en 22 jan</small></span></div>
+          <div class="r" data-cb>${cb}<span><b>Deze mail koppelen</b><small>latere mails met PK-77310 komen er vanzelf bij</small></span></div></div></div>`
+        : `<div><div class="ev-sh-lbl">Kaarten en mails</div><div class="ev-acts"><button class="btn" data-toast="Kies een pdf, Wallet-pas of screenshot">${ic('ticket')}Kaart toevoegen…</button><button class="btn" data-toast="Kies een mail in Hedwig">${ic('link')}Mail koppelen…</button></div></div>`}
+      <div><div class="ev-sh-lbl">Vind je terug als</div><div class="ev-als">${(m ? PREFILL.aliases : []).map((a) => `<span class="ev-al"><small>${esc(a[0])}</small>${esc(a[1])}<button data-rmchip title="Weghalen">${ic('xmark')}</button></span>`).join('')}<input class="ev-aladd" data-chipadd placeholder="+ zoekwoord"></div>${m ? '' : '<p class="ev-hint">Titel, soort en zaal komen er vanzelf bij.</p>'}</div>
+      <div class="ev-sh-tg"><div class="lbl">Meteen in Wij zetten<small>Jullie gedeelde agenda; Eva krijgt een melding</small></div><span class="toggle on" data-toggle role="switch"></span></div>
+    </div>
+    <div class="ev-sh-ft">${m ? `<span class="muted small">${ic('lock')}Kaarten gaan nooit naar een cloud-AI</span>` : ''}<span class="grow"></span><button class="btn" data-cancel>Annuleer</button><button class="btn ev-h" data-make>Maak evenement</button></div></div>`;
+}
+function renderModal() { $('#ev-modal').innerHTML = S.modal ? `<div class="ev-modal" data-modalbg>${sheetHtml(S.modal, 'win')}</div>` : ''; }
+function renderDocSheet() { $('#ev-sheet-doc').innerHTML = sheetHtml(S.docSheet, 'doc'); }
+function parseDate(s) {
+  const m = norm(s).match(/(\d{1,2})\s+([a-z]{3})[a-z]*\.?\s*(\d{4})?/);
+  if (!m) return null;
+  const mi = m[2] === 'maa' ? 2 : MO.indexOf(m[2]) >= 0 ? MO.indexOf(m[2]) : ['jan', 'feb', 'mar', 'apr', 'mei', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'].indexOf(m[2]);
+  if (mi < 0) return null;
+  const n = new Date(now());
+  let t = new Date(m[3] ? +m[3] : n.getFullYear(), mi, +m[1]).getTime();
+  if (!m[3] && t < dayStart(now())) t = new Date(n.getFullYear() + 1, mi, +m[1]).getTime();
+  return t;
+}
+function makeEvent(sh) {
+  const mode = sh.dataset.mode, mail = mode === 'mail';
+  const v = (k) => ((sh.querySelector(`[data-k="${k}"]`) || {}).value || '').trim();
+  const title = v('title');
+  if (!title) { toast('Geef het evenement eerst een naam'); sh.querySelector('[data-k="title"]').focus(); return; }
+  const kind = (sh.querySelector('[data-pickkind].on') || {}).dataset?.pickkind || 'concert';
+  const wij = sh.querySelector('[data-toggle]').classList.contains('on');
+  const parsed = parseDate(v('date'));
+  const venue = v('venue');
+  const aliases = [...sh.querySelectorAll('.ev-al')].map((el) => [el.querySelector('small').textContent, el.childNodes[1].textContent]);
+  if (!mail) { aliases.push(['naam', title], ['soort', kind]); if (venue) aliases.push(['zaal', venue]); }
+  const e = { id: 'n' + Date.now(), title, kind, date: parsed ?? (mail ? D(2027, 2, 12) : dayStart(now()) + 30 * DAY), dateLabel: parsed || !v('date') ? '' : v('date'),
+    doors: v('doors'), start: v('start'), end: v('end'), venue: venue || 'Zaal nog onbekend', address: v('address'), who: ['g', 'a'], notes: '', inWij: wij, tkind: 'staand', custom: [],
+    tickets: mail ? [{ holder: 'g', named: false, src: 'pdf uit de mail', code: 'PK-77310-1' }, { holder: 'a', named: false, src: 'pdf uit de mail', code: 'PK-77310-2' }] : [],
+    where: 'Voeg ze toe als pdf, Wallet-pas of screenshot.',
+    personalise: mail ? { due: D(2027, 1, 29) + DAY - MIN, done: false, rule: 'uiterlijk 14 dagen voor het concert op naam', shop: 'Podiumkassa', domain: 'podiumkassa.example.com' } : null,
+    mails: mail ? [{ s: 'Je tickets voor The Paper Lanterns', f: 'Podiumkassa', d: 'vandaag 11:20', role: 'Bestelling', att: ['tickets-PK-77310.pdf'] }] : [],
+    aliases, history: [{ w: 'g', t: mail ? 'maakte dit van een mail van Podiumkassa' : 'voegde dit toe', d: 'zojuist' }] };
+  EVENTS.push(e);
+  Object.assign(S, { sel: e.id, empty: false, q: '', modal: null, menu: null });
+  $('#ev-q').value = '';
+  syncSeg(); renderModal(); renderList(); renderDetail();
+  if (sh.dataset.scope === 'doc') { renderDocSheet(); $('#page').scrollIntoView({ behavior: 'smooth' }); }
+  toast(wij ? 'Evenement gemaakt en in Wij gezet. Eva krijgt een melding.' : 'Evenement gemaakt. Eva ziet het in haar lijst.');
+}
+
+/* ---- shared helpers ---- */
+function toast(t) { const el = $('#ev-toast'); el.textContent = t; el.classList.add('on'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('on'), 2200); }
+function log(e, t) { e.history.forEach((h) => delete h.fresh); e.history.push({ w: 'g', t, d: 'zojuist', fresh: true }); }
+function syncSeg() {
+  const k = S.empty ? 'leeg' : (STATES.find((s) => s[1] === S.sel) || [])[0];
+  document.querySelectorAll('[data-st]').forEach((b) => b.classList.toggle('on', b.dataset.st === k));
+}
+function renderAll() { renderList(); renderDetail(); renderStates(); renderModal(); renderShow(); }
+function tick() {
+  renderList();
+  document.querySelectorAll('[data-hero]').forEach((el) => { const h = heroHtml(byId(el.dataset.hero)); if (el._h !== h) { el.innerHTML = h; el._h = h; } });
+}
+function toggleTick(e, k) {
+  if (k === 'wij') { e.inWij = !e.inWij; log(e, e.inWij ? 'zette het in Wij' : 'haalde het uit Wij'); toast(e.inWij ? 'In Wij gezet, met de kaarten en de mails erbij. Eva krijgt een melding.' : 'Uit Wij gehaald. Eva krijgt een melding.'); return true; }
+  if (k === 'tix') { toast(e.tickets.length ? 'Dit vinkt vanzelf af zolang er kaarten zijn' : 'Voeg eerst een kaart toe'); return false; }
+  if (k === 'pers') { const p = e.personalise; p.done = !p.done; e.tickets.forEach((t) => { t.named = p.done; }); log(e, p.done ? 'vinkte "Op naam zetten" af' : 'zette "Op naam zetten" weer open'); toast(p.done ? 'Afgevinkt. De herinneringen stoppen, ook voor Eva.' : 'Weer open gezet'); return true; }
+  const c = e.custom[+k.slice(1)]; c.done = !c.done; log(e, `${c.done ? 'vinkte' : 'opende'} "${c.t}" ${c.done ? 'af' : 'weer'}`); toast(c.done ? 'Afgevinkt. Eva ziet het ook.' : 'Weer open gezet'); return true;
+}
+
+/* ---- events ---- */
+document.addEventListener('click', (ev) => {
+  const t = ev.target;
+  if (t.closest('select, input, textarea')) return;
+  const b = t.closest('[data-toast],[data-sel],[data-st],[data-try],[data-wij],[data-tick],[data-addmenu],[data-addtk],[data-kindmenu],[data-kind],[data-rmal],[data-show],[data-shownav],[data-closeshow],[data-new],[data-cancel],[data-make],[data-modalbg],[data-sheetmode],[data-pickkind],[data-whotg],[data-cb],[data-toggle],[data-rmchip],[data-route],[data-jump]');
+  const hadMenu = S.menu;
+  if (hadMenu && !(b && (b.dataset.addmenu || b.dataset.addtk || b.dataset.kindmenu || b.dataset.kind))) { S.menu = null; renderDetail.keepScroll = true; renderDetail(); }
+  if (!b) return;
+  const d = b.dataset, sel = byId(S.sel);
+  if (d.modalbg !== undefined && t !== b) return;
+  if (d.toast) { ev.preventDefault(); ev.stopPropagation(); toast(d.toast); return; }
+  if (d.route) { const e = byId(d.route); toast(`Opent Apple Kaarten met de route naar ${e.address || e.venue}`); return; }
+  if (d.sel) { S.sel = d.sel; S.empty = false; S.menu = null; syncSeg(); renderList(); renderDetail(); return; }
+  if (d.st) {
+    S.empty = d.st === 'leeg'; S.menu = null;
+    if (!S.empty) { S.sel = STATES.find((s) => s[0] === d.st)[1]; S.q = ''; $('#ev-q').value = ''; }
+    syncSeg(); renderList(); renderDetail(); return;
+  }
+  if (d.jump) { S.empty = false; S.q = ''; $('#ev-q').value = ''; S.sel = STATES.find((s) => s[0] === d.jump)[1]; syncSeg(); renderList(); renderDetail(); $('#page').scrollIntoView({ behavior: 'smooth' }); return; }
+  if (d.try) { S.q = d.try; S.empty = false; $('#ev-q').value = d.try; syncSeg(); renderList(); return; }
+  if (d.wij) { const e = byId(d.wij); if (!e.inWij) toggleTick(e, 'wij'); renderDetail.keepScroll = true; renderAll(); return; }
+  if (d.tick) { const [id, k] = d.tick.split(':'); if (toggleTick(byId(id), k)) { renderDetail.keepScroll = true; renderAll(); } return; }
+  if (d.addmenu) { if (d.addmenu !== S.sel) { S.sel = d.addmenu; syncSeg(); renderList(); } S.menu = hadMenu === 'add' ? null : 'add'; renderDetail.keepScroll = true; renderDetail(); return; }
+  if (d.kindmenu) { S.menu = hadMenu === 'kind' ? null : 'kind'; renderDetail.keepScroll = true; renderDetail(); return; }
+  if (d.kind) {
+    let k = d.kind;
+    if (k === '?') { k = prompt('Eigen soort', 'cabaret'); if (!k) { S.menu = null; renderDetail(); return; } }
+    sel.kind = k; const a = sel.aliases.find((x) => x[0] === 'soort'); if (a) a[1] = k; else sel.aliases.push(['soort', k]);
+    S.menu = null; log(sel, `wijzigde de soort naar ${k}`); renderDetail.keepScroll = true; renderAll(); toast(`Soort is nu ${k}. Zoeken op "${k}" vindt het ook.`); return;
+  }
+  if (d.addtk) {
+    const e = byId(d.addtk), src = d.src;
+    const label = src === 'bestand' ? 'bestand' : src === 'screenshot' ? 'screenshot' : src === 'wallet' ? 'Wallet-pas' : src === 'mail' ? 'pdf uit een andere mail' : src.endsWith('.pkpass') ? 'Wallet-pas uit de mail' : 'pdf uit de mail';
+    if (src === 'mail') { S.menu = null; renderDetail.keepScroll = true; renderDetail(); toast('Kies een mail in de lijst; Hedwig haalt de bijlagen op en leest de kaarten uit'); return; }
+    const n = e.tickets.length;
+    e.tickets.push({ holder: n % 2 ? 'a' : 'g', named: false, src: label, code: `${e.id.toUpperCase()}-${Date.now() % 100000}` });
+    S.menu = null; log(e, `voegde kaart ${n + 1} toe (${label})`); renderDetail.keepScroll = true; renderAll();
+    toast(`Kaart ${n + 1} bewaard${src.includes('.') ? ' uit ' + src : ''}. Alleen op Dobby en jullie Macs.`); return;
+  }
+  if (d.rmal) { const [id, i] = d.rmal.split(':'), e = byId(id), a = e.aliases.splice(+i, 1)[0]; log(e, `haalde zoekwoord "${a[1]}" weg`); renderDetail.keepScroll = true; renderDetail(); renderList(); toast(`"${a[1]}" weggehaald`); return; }
+  if (d.show) { const e = byId(d.show); if (!e.tickets.length) { toast('Nog geen kaarten om te tonen'); return; } S.show = { id: e.id, i: +(d.i || 0) }; renderShow(); return; }
+  if (d.shownav) { const [w, dir] = d.shownav.split(':'); if (w === 'full') { const e = byId(S.show.id); S.show.i = Math.max(0, Math.min(e.tickets.length - 1, S.show.i + +dir)); } else S.docShow = Math.max(0, Math.min(1, S.docShow + +dir)); renderShow(); return; }
+  if (d.closeshow !== undefined) { S.show = null; renderShow(); return; }
+  if (d.new) { S.modal = d.new; renderModal(); setTimeout(() => { const i = $('#ev-modal [data-k="title"]'); if (i) i.focus(); }, 30); return; }
+  if (d.cancel !== undefined) { const sh = b.closest('.ev-sheet'); if (sh.dataset.scope === 'win') { S.modal = null; renderModal(); } else { renderDocSheet(); toast('Geannuleerd, er is niets gemaakt'); } return; }
+  if (d.modalbg !== undefined) { S.modal = null; renderModal(); return; }
+  if (d.make !== undefined) { makeEvent(b.closest('.ev-sheet')); return; }
+  if (d.sheetmode) { S.docSheet = d.sheetmode; document.querySelectorAll('[data-sheetmode]').forEach((x) => x.classList.toggle('on', x === b)); renderDocSheet(); return; }
+  if (d.pickkind) { b.parentElement.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b)); return; }
+  if (d.whotg !== undefined) { b.classList.toggle('ev-off'); return; }
+  if (d.cb !== undefined) { b.querySelector('.ev-cb').classList.toggle('on'); return; }
+  if (d.toggle !== undefined) { b.classList.toggle('on'); return; }
+  if (d.rmchip !== undefined) { b.closest('.ev-al').remove(); return; }
+});
+document.addEventListener('change', (ev) => {
+  const t = ev.target, e = byId(S.sel);
+  if (t.dataset.holder) { const [id, i] = t.dataset.holder.split(':'), x = byId(id); x.tickets[+i].holder = t.value; log(x, `gaf kaart ${+i + 1} aan ${P[t.value] ? P[t.value].name : 'iemand anders'}`); $('#ev-hist').innerHTML = histHtml(x); toast(`Kaart ${+i + 1} is voor ${P[t.value] ? P[t.value].name : 'iemand anders'}`); return; }
+  if (!t.dataset.f || !e || !t.closest('#ev-detail')) return;
+  const f = t.dataset.f, v = t.value.trim();
+  if (f === 'dateLabel') { const p = parseDate(v); if (p) { e.date = p; e.dateLabel = ''; e.days = 1; } else e.dateLabel = v; }
+  else e[f] = v;
+  if (f === 'title') { const a = e.aliases.find((x) => x[0] === 'naam'); if (a) a[1] = v; }
+  log(e, `wijzigde ${FIELD[f]}`);
+  $('#ev-hist').innerHTML = histHtml(e);
+  $('#ev-by').innerHTML = byHtml(e);
+  renderList(); renderStates();
+  const onNight = ['title', 'dateLabel', 'doors', 'start', 'end', 'venue', 'address'].includes(f);
+  toast(e.inWij && onNight ? 'Opgeslagen en aangepast in Wij. Eva krijgt een melding.' : 'Opgeslagen. Eva ziet het ook.');
+});
+document.addEventListener('input', (ev) => { if (ev.target.id === 'ev-q') { S.q = ev.target.value; S.empty = false; syncSeg(); renderList(); } });
+document.addEventListener('keydown', (ev) => {
+  const t = ev.target;
+  if (ev.key === 'Enter' && t.classList.contains('ev-newtask') && t.value.trim()) {
+    const e = byId(t.dataset.ev), row = t.closest('.ev-ci');
+    const who = row.querySelector('.ev-newwho').value, due = row.querySelector('.ev-newdue').value.trim().replace(/^vóór\s*/, '');
+    e.custom.push({ t: t.value.trim(), who, due, done: false }); log(e, `voegde "${t.value.trim()}" toe`);
+    renderDetail.keepScroll = true; renderAll(); toast(due ? `Toegevoegd, met een herinnering op ${due}` : 'Toegevoegd aan de checklist. Eva ziet het ook.');
+    const n = $('#ev-detail .ev-newtask'); if (n) n.focus(); return;
+  }
+  if (ev.key === 'Enter' && t.dataset.aladd && t.value.trim()) {
+    const e = byId(t.dataset.aladd), w = t.value.trim(); e.aliases.push(['eigen', w]); log(e, `voegde zoekwoord "${w}" toe`);
+    renderDetail.keepScroll = true; renderDetail(); renderList(); toast(`Zoeken op "${w}" vindt nu dit evenement en zijn mails`);
+    const n = $('#ev-detail .ev-aladd'); if (n) n.focus(); return;
+  }
+  if (ev.key === 'Enter' && t.dataset.chipadd !== undefined && t.value.trim()) {
+    t.insertAdjacentHTML('beforebegin', `<span class="ev-al"><small>eigen</small>${esc(t.value.trim())}<button data-rmchip title="Weghalen">${ic('xmark')}</button></span>`); t.value = ''; return;
+  }
+  if (ev.key === 'Enter' && t.dataset.f && t.tagName === 'INPUT') { t.blur(); return; }
+  if (ev.key === 'Escape') {
+    if (S.show) { S.show = null; renderShow(); return; }
+    if (S.modal) { S.modal = null; renderModal(); return; }
+    if (S.menu) { S.menu = null; renderDetail(); return; }
+    if (t.id === 'ev-q') { t.value = ''; S.q = ''; renderList(); return; }
+  }
+  if (S.show && (ev.key === 'ArrowRight' || ev.key === 'ArrowLeft')) { const e = byId(S.show.id); S.show.i = Math.max(0, Math.min(e.tickets.length - 1, S.show.i + (ev.key === 'ArrowRight' ? 1 : -1))); renderShow(); return; }
+  if (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || ev.metaKey || ev.ctrlKey) return;
+  if (ev.key.toLowerCase() === 'k') { const e = byId(S.sel); if (e && e.tickets.length && !isPast(e)) { S.show = { id: e.id, i: 0 }; renderShow(); } }
+});
+
+syncSeg();
+renderAll();
+renderDocSheet();
+setInterval(tick, 20000);
+</script>
+</body>
+</html>
