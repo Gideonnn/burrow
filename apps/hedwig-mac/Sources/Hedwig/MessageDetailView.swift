@@ -25,6 +25,7 @@ struct MessageDetailView: View {
                             ReviewBar(message: message)
                             if let summary = model.insights?.summary {
                                 Label(summary, systemImage: "sparkles")
+                                    .font(.callout)
                                     .padding(12)
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                     .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 10))
@@ -33,11 +34,11 @@ struct MessageDetailView: View {
                                 RemoteImagesBar(html: html, messageId: message.id, allowed: $allowedMessageId, always: loadRemoteImages)
                             }
                         }
-                        .padding(.horizontal, 24)
+                        .padding(.horizontal, 28)
                         .padding(.top, 18)
-                        .padding(.bottom, 14)
+                        .padding(.bottom, 16)
                         .id(Self.top)
-                        Divider().padding(.horizontal, 24)
+                        Divider().padding(.horizontal, 28)
                         if let html = message.bodyHtml {
                             HTMLView(
                                 html: html,
@@ -46,10 +47,13 @@ struct MessageDetailView: View {
                             )
                             .frame(height: bodyHeight)
                         } else {
+                            // Mail's default message font.
                             Text(message.bodyText ?? message.snippet)
+                                .font(.custom("Helvetica", size: 12))
                                 .textSelection(.enabled)
                                 .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(24)
+                                .padding(.horizontal, 28)
+                                .padding(.vertical, 20)
                         }
                     }
                 }
@@ -64,28 +68,32 @@ struct MessageDetailView: View {
 
 /// After Mail: the sender is the strongest line, the subject sits under it,
 /// then compact Aan/Kopie/Antwoord aan lines. The date stays top right.
+/// Mail sizes its header from the message font (12 pt): the sender at 14.
 struct MessageHeader: View {
     let message: MessageDetail
 
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            Avatar(name: message.from.display, size: 44)
-            VStack(alignment: .leading, spacing: 3) {
+        HStack(alignment: .top, spacing: 10) {
+            Avatar(name: message.from.display, size: 32)
+                .padding(.top, 2)
+            VStack(alignment: .leading, spacing: 2) {
                 HStack(alignment: .firstTextBaseline, spacing: 12) {
                     Text(message.from.display)
-                        .font(.title3.weight(.bold))
+                        .font(.system(size: 14, weight: .semibold))
                         .lineLimit(1)
                         .help(message.from.email)
                         .contextMenu {
                             Button("Kopieer adres") { copy(message.from.email) }
                         }
                     Spacer(minLength: 0)
-                    Text(message.receivedAt.formatted(date: .abbreviated, time: .shortened))
-                        .font(.callout)
+                    Text(MailFormat().headerDate(message.receivedAt))
+                        .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .fixedSize()
                 }
+                .padding(.bottom, 2)
                 Text(message.subject)
+                    .font(.callout)
                     .textSelection(.enabled)
                     .fixedSize(horizontal: false, vertical: true)
                 RecipientLinesView(lines: message.recipientLines)
@@ -121,7 +129,7 @@ struct RecipientLinesView: View {
                     .buttonStyle(.link)
             } else {
                 ViewThatFits(in: .horizontal) {
-                    HStack(spacing: 14) {
+                    HStack(spacing: 12) {
                         ForEach(compact) { line in
                             RecipientText(line: line, limit: Self.limit) { expanded = true }.fixedSize()
                         }
@@ -148,8 +156,11 @@ private struct RecipientText: View {
 
     var body: some View {
         let names = line.names(limit: limit)
-        HStack(alignment: .firstTextBaseline, spacing: 4) {
-            (Text("\(line.label): ").fontWeight(.semibold) + Text(names.shown).foregroundColor(.secondary))
+        // Mail: the label in the primary colour, the names in grey after a wide gap.
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Text("\(line.label):").fixedSize()
+            Text(names.shown)
+                .foregroundStyle(.secondary)
                 .lineLimit(limit == nil ? nil : 1)
                 .truncationMode(.tail)
             if names.more > 0 {
@@ -309,7 +320,7 @@ struct HTMLView: NSViewRepresentable {
         """
         <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
         <meta name="color-scheme" content="light dark">
-        <style>body{font:14px -apple-system,sans-serif;margin:20px 24px 24px;line-height:1.5;word-wrap:break-word}img{max-width:100%}</style>
+        <style>body{font:12px Helvetica,sans-serif;margin:20px 28px 24px;word-wrap:break-word}img{max-width:100%}</style>
         \(html)
         <style>html,html body{height:auto!important;min-height:0!important}html{overflow-y:hidden!important}</style>
         <div id="hedwig-end" style="clear:both;height:1px"></div>

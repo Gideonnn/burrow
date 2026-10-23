@@ -373,20 +373,28 @@ textarea.field { height: auto; padding: 8px 10px; resize: none; font: inherit; w
 .row.rec .ri { width: 36px; height: 36px; border-radius: 9px; background: color-mix(in srgb, var(--pensieve) 14%, transparent); color: var(--pensieve); display: grid; place-items: center; }
 .row.rec.sel.active .ri { background: rgba(255,255,255,0.2); color: #fff; }
 .row.rec .dur { font-variant-numeric: tabular-nums; }
+/* Hedwig's mail rows follow Apple Mail: the sender 13 pt semibold, the rest in Mail's 11 pt list font */
+.a-hedwig .row:not(.rec) .l1 .when, .a-hedwig .row:not(.rec) .l2, .a-hedwig .row:not(.rec) .l3, .a-hedwig .row:not(.rec) .why { font-size: 11px; }
+.a-hedwig .row:not(.rec) .l2, .a-hedwig .row:not(.rec) .l3, .a-hedwig .row:not(.rec) .why { margin-top: 3px; }
+.a-hedwig .row:not(.rec) .l3 { line-height: 14px; }
+/* and its sidebar: section headers in secondary grey, counts 11 pt semibold */
+.a-hedwig .sb-label { color: var(--text-2); }
+.a-hedwig .sb-row .n { font-size: 11px; font-weight: 600; }
 
 /* Detail parts */
 .detail-head { padding: 16px 20px 10px; border-bottom: 1px solid var(--line); }
 .detail-head h2 { font-size: 20px; font-weight: 700; letter-spacing: -0.01em; }
 .detail-head .meta { display: flex; gap: 10px; align-items: center; margin-top: 6px; color: var(--text-2); font-size: 12.5px; flex-wrap: wrap; }
-/* Hedwig reader: Mail's order, sender first; it scrolls with the message */
-.mail-head { display: flex; gap: 12px; padding: 18px 20px 14px; border-bottom: 1px solid var(--line); }
-.mail-head .who { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
-.mail-head .l1 { display: flex; align-items: baseline; gap: 12px; }
-.mail-head .name { font-size: 15px; font-weight: 700; flex: 1; }
-.mail-head .when { color: var(--text-2); font-size: 12px; }
-.mail-head .subj { font-size: 13px; }
-.mail-head .rcpt { font-size: 12px; color: var(--text-2); display: flex; flex-wrap: wrap; gap: 2px 14px; margin-top: 2px; }
-.mail-head .rcpt b { color: var(--text); font-weight: 600; }
+/* Hedwig reader: Mail's order and sizes (from Mail's 12 pt message font); it scrolls with the message */
+.mail-head { display: flex; gap: 10px; padding: 18px 28px 16px; border-bottom: 1px solid var(--line); }
+.mail-head .av { width: 32px; height: 32px; font-size: 12px; margin-top: 2px; }
+.mail-head .who { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.mail-head .l1 { display: flex; align-items: baseline; gap: 12px; margin-bottom: 2px; }
+.mail-head .name { font-size: 14px; font-weight: 600; flex: 1; }
+.mail-head .when { color: var(--text-2); font-size: 11px; }
+.mail-head .subj { font-size: 12px; }
+.mail-head .rcpt { font-size: 12px; color: var(--text-2); display: flex; flex-wrap: wrap; gap: 2px 12px; margin-top: 2px; }
+.mail-head .rcpt b { color: var(--text); font-weight: 400; margin-right: 5px; }
 .mail-head .rcpt a { color: var(--app); }
 .detail-body { padding: 16px 20px; display: flex; flex-direction: column; gap: 14px; line-height: 1.5; }
 .detail-body h3 { font-size: 14px; font-weight: 700; margin: 6px 0 4px; }
@@ -1036,7 +1044,7 @@ textarea.field { height: auto; padding: 8px 10px; resize: none; font: inherit; w
       <div class="sb-row disabled" style="padding-left:26px"><svg class="i"><use href="#i-doc"/></svg><span class="grow">Concepten</span></div>
       <div class="sb-row" style="padding-left:26px"><svg class="i"><use href="#i-xmark"/></svg><span class="grow">Spam</span><span class="n">5</span></div>
       <div class="sb-label">Overal</div>
-      <div class="sb-row"><svg class="i"><use href="#i-checklist"/></svg><span class="grow">Taken</span><span class="badge count accent" style="background:var(--warning)">1</span></div>
+      <div class="sb-row"><svg class="i"><use href="#i-checklist"/></svg><span class="grow">Taken</span><span class="n">1</span></div>
     </div></div>
     <div class="card"><div class="hd">Pensieve</div><div class="bd a-pensieve" style="background:var(--sidebar);padding:8px">
       <div class="sb-label">Opnames</div>
@@ -1054,7 +1062,7 @@ textarea.field { height: auto; padding: 8px 10px; resize: none; font: inherit; w
       <div class="sb-row sel">geselecteerd, venster inactief</div>
       <div class="sb-row sel active">geselecteerd, venster actief</div>
       <div class="sb-row disabled">uitgeschakeld (feature uit)</div>
-      <p class="muted small" style="margin:8px 2px 0">Labels are sentence case. A mailbox opens to its Archief, Verstuurd, Concepten and Spam with a small chevron that shows only on hover or for the selected mailbox; collapsed by default. What waits for review in those folders shows as a plain count on the folder, and on the mailbox while it is closed. Counts are right-aligned secondary text; only "Taken" gets a filled badge. The footer names the server and the device key.</p>
+      <p class="muted small" style="margin:8px 2px 0">Labels are sentence case. A mailbox opens to its Archief, Verstuurd, Concepten and Spam with a small chevron that shows only on hover or for the selected mailbox; collapsed by default. What waits for review in those folders shows as a plain count on the folder, and on the mailbox while it is closed. Counts are right-aligned secondary text at 11 pt semibold, as in Mail (SwiftUI's <code>.badge</code> is lighter, so Hedwig draws them itself); section headers are secondary grey. Rows, icons and labels are the native sidebar list at the system's sidebar size (13 pt). The footer names the server and the device key.</p>
     </div></div>
   </div>
 
@@ -1063,8 +1071,8 @@ textarea.field { height: auto; padding: 8px 10px; resize: none; font: inherit; w
     <div class="card"><div class="hd">Mail row (Hedwig)</div><div class="bd a-hedwig" style="padding:0">
       <div class="row unread"><span class="udot"></span><div><div class="l1"><b>Marieke de Groot</b><span class="when">10:42</span></div><div class="l2">Offerte website Bakkerij De Korenaar</div><div class="l3">Hoi Gideon, dank voor het gesprek van gisteren. Zoals besproken stuur ik hierbij de offerte voor de nieuwe website, inclusief de webshop.</div><div class="tags"><span class="badge outline" style="color:var(--warning);border-color:var(--warning)">Antwoord nodig</span><svg class="i sm" style="color:var(--text-3)"><use href="#i-paperclip"/></svg></div></div></div>
       <div class="row sel active"><span class="udot"></span><div><div class="l1"><b>Gemeente Voorbeeldstad</b><span class="when">Gisteren</span></div><div class="l2">Afvalkalender 2027 staat online</div><div class="l3">De nieuwe afvalkalender voor uw adres is beschikbaar in de app en op de website.</div><div class="tags"><span class="badge">Gemeente</span><span class="badge">Werk · gideon@studio.example.com</span></div></div></div>
-      <div class="row"><span class="udot"></span><div><div class="l1"><b>Tandartspraktijk Lindelaan</b><span class="when">ma</span></div><div class="l2">Herinnering: controle 28 oktober 14:30</div><div class="l3">Beste Eva, tot ziens op 28 oktober. Neem uw zorgpas mee.</div></div></div>
-      <div class="row hover"><span class="udot"></span><div><div class="l1"><b>Nieuwsbrief Fietsenwinkel Pedaal</b><span class="when">14 okt</span></div><div class="l2">Herfstdeals op regenkleding</div><div class="why"><svg class="i sm"><use href="#i-sparkles"/></svg><span>Kreacher: nieuwsbrief zonder afspraak of factuur; vergelijkbare mails archiveerde je ongelezen.</span></div><div class="tags"><span class="badge filtered">Gefilterd</span><span class="badge outline">Gearchiveerd</span><span class="grow"></span><span class="acts"><button class="ok">Klopt</button><button class="back">Terug</button></span></div></div></div>
+      <div class="row"><span class="udot"></span><div><div class="l1"><b>Tandartspraktijk Lindelaan</b><span class="when">19-10-2026</span></div><div class="l2">Herinnering: controle 28 oktober 14:30</div><div class="l3">Beste Eva, tot ziens op 28 oktober. Neem uw zorgpas mee.</div></div></div>
+      <div class="row hover"><span class="udot"></span><div><div class="l1"><b>Nieuwsbrief Fietsenwinkel Pedaal</b><span class="when">14-10-2026</span></div><div class="l2">Herfstdeals op regenkleding</div><div class="why"><svg class="i sm"><use href="#i-sparkles"/></svg><span>Kreacher: nieuwsbrief zonder afspraak of factuur; vergelijkbare mails archiveerde je ongelezen.</span></div><div class="tags"><span class="badge filtered">Gefilterd</span><span class="badge outline">Gearchiveerd</span><span class="grow"></span><span class="acts"><button class="ok">Klopt</button><button class="back">Terug</button></span></div></div></div>
     </div></div>
     <div class="card"><div class="hd">Recording row (Pensieve)</div><div class="bd a-pensieve" style="padding:0">
       <div class="row rec sel active"><span class="ri"><svg class="i lg"><use href="#i-waveform"/></svg></span><div><div class="l1"><b>Weekstart team Noorderlicht</b><span class="when">Vandaag 09:02</span></div><div class="l3" style="-webkit-line-clamp:1">Sprintdoelen, vakantieplanning en de release van 3 november.</div><div class="tags"><span class="badge">Notulen klaar</span><span class="badge"><span class="dur">47:12</span></span><span class="grow"></span><span class="av sm p-g">G</span></div></div></div>
@@ -1073,7 +1081,7 @@ textarea.field { height: auto; padding: 8px 10px; resize: none; font: inherit; w
       <div class="row rec"><span class="ri" style="background:var(--danger-tint);color:var(--danger)"><svg class="i lg"><use href="#i-warn"/></svg></span><div><div class="l1"><b>Oudergesprek groep 5</b><span class="when">12 okt</span></div><div class="l3" style="-webkit-line-clamp:1;color:var(--danger)">Upload onderbroken; gaat verder zodra deze Mac online is.</div><div class="tags"><span class="badge err">Mislukt</span><span class="badge outline"><span class="dur">23:05</span></span><span class="grow"></span><span class="av sm p-a">E</span></div></div></div>
     </div></div>
   </div>
-  <p class="muted small" style="margin-top:8px">A row has at most four lines: who, what, a two-line preview or a reason, and a tag line. Unread is a dot in the app colour, not bold-everything. Ownership sits at the far right of the tag line as an avatar; shared items show both avatars overlapping.</p>
+  <p class="muted small" style="margin-top:8px">A row has at most four lines: who, what, a two-line preview or a reason, and a tag line. Hedwig's mail rows match Apple Mail: the sender at 13 pt semibold, subject, preview and date at 11 pt (Mail's list font), 3 pt between lines, dates as "06:54", "Gisteren" or "20-10-2026". Unread is a dot in the app colour, not bold-everything. Ownership sits at the far right of the tag line as an avatar; shared items show both avatars overlapping.</p>
 
   <h3>Worker card</h3>
   <p class="muted small">A bot doing one task. Header: persona avatar, bot name, skill and where it runs. Body: the subject, the status, and when relevant the reason or the proposal in a quoted block. Footer: timing and actions. Approve and reject are only present in the review state.</p>
@@ -1415,7 +1423,7 @@ textarea.field { height: auto; padding: 8px 10px; resize: none; font: inherit; w
           <div class="sb-row two"><svg class="i"><use href="#i-tray"/></svg><span class="grow">Werk<small>gideon@studio.example.com</small></span><span class="n">3</span></div>
           <div class="sb-row two"><svg class="i"><use href="#i-tray"/></svg><span class="grow">Samen<small>huis@example.com</small></span><span class="badge shared" style="height:16px;padding:0 5px"><svg class="i sm"><use href="#i-person2"/></svg></span></div>
           <div class="sb-label">Overal</div>
-          <div class="sb-row"><svg class="i"><use href="#i-checklist"/></svg><span class="grow">Taken</span><span class="badge count" style="background:var(--warning)">1</span></div>
+          <div class="sb-row"><svg class="i"><use href="#i-checklist"/></svg><span class="grow">Taken</span><span class="n">1</span></div>
           <div class="sb-foot"><span class="dot ok"></span><span><b>burrow.example.nl</b>MacBook Gideon · Hedwig</span></div>
         </div>
         <div class="list">
@@ -1426,16 +1434,16 @@ textarea.field { height: auto; padding: 8px 10px; resize: none; font: inherit; w
             <div class="row"><span class="udot"></span><div><div class="l1"><b>Energie Direct</b><span class="when">06:50</span></div><div class="l2">Uw jaarafrekening staat klaar</div><div class="why"><svg class="i sm"><use href="#i-sparkles"/></svg><span>Lijkt op een factuur van je leverancier, maar het afzenderdomein wijkt af van eerdere afrekeningen.</span></div><div class="tags"><span class="badge doubt">Twijfel</span><span class="badge outline">Spam</span><span class="grow"></span><span class="acts"><button class="ok">Klopt</button><button class="back">Terug</button></span></div></div></div>
             <div class="row"><span class="udot"></span><div><div class="l1"><b>Platform Huiswerk</b><span class="when">Gisteren</span></div><div class="l2">Weekoverzicht van Sam</div><div class="why"><svg class="i sm"><use href="#i-sparkles"/></svg><span>Automatisch weekoverzicht; je hebt gevraagd deze te labelen en uit de inbox te houden.</span></div><div class="tags"><span class="badge outline">Label School</span><span class="badge outline">Samen · huis@example.com</span><span class="grow"></span><span class="acts"><button class="ok">Klopt</button><button class="back">Terug</button></span></div></div></div>
             <div class="row"><span class="udot"></span><div><div class="l1"><b>Boekhouder Van Dijk</b><span class="when">Gisteren</span></div><div class="l2">Btw-aangifte Q3: graag akkoord voor 28 oktober</div><div class="why"><svg class="i sm"><use href="#i-sparkles"/></svg><span>Vraagt een akkoord met deadline; in de inbox gelaten en gemarkeerd.</span></div><div class="tags"><span class="badge outline" style="color:var(--warning);border-color:var(--warning)">Antwoord nodig</span><span class="badge outline">Werk</span><span class="grow"></span><span class="acts"><button class="ok">Klopt</button><button class="back">Terug</button></span></div></div></div>
-            <div class="row"><span class="udot"></span><div><div class="l1"><b>no-reply@parcels.example.com</b><span class="when">ma</span></div><div class="l2">Je pakket is onderweg (1Z 999 AA1)</div><div class="why"><svg class="i sm"><use href="#i-sparkles"/></svg><span>Trackingmail van een bestelling van Eva; gelabeld en in de inbox gelaten tot bezorging.</span></div><div class="tags"><span class="badge doubt">Twijfel</span><span class="badge outline">Label Pakketten</span><span class="grow"></span><span class="acts"><button class="ok">Klopt</button><button class="back">Terug</button></span></div></div></div>
+            <div class="row"><span class="udot"></span><div><div class="l1"><b>no-reply@parcels.example.com</b><span class="when">19-10-2026</span></div><div class="l2">Je pakket is onderweg (1Z 999 AA1)</div><div class="why"><svg class="i sm"><use href="#i-sparkles"/></svg><span>Trackingmail van een bestelling van Eva; gelabeld en in de inbox gelaten tot bezorging.</span></div><div class="tags"><span class="badge doubt">Twijfel</span><span class="badge outline">Label Pakketten</span><span class="grow"></span><span class="acts"><button class="ok">Klopt</button><button class="back">Terug</button></span></div></div></div>
             <div class="empty" style="padding:28px 20px 20px;flex:none"><p>Eerder gecontroleerd: 212 keer Klopt, 9 keer Terug. Kreacher leerde 6 regels, zie Instellingen › Workers.</p></div>
           </div>
         </div>
         <div class="detail">
           <div class="scroll">
           <div class="mail-head">
-            <span class="av lg" style="--p:#7A6A5A" title="nieuws@pedaal.example.com">FP</span>
+            <span class="av" style="--p:#7A6A5A" title="nieuws@pedaal.example.com">FP</span>
             <div class="who">
-              <div class="l1"><span class="name" title="nieuws@pedaal.example.com">Nieuwsbrief Fietsenwinkel Pedaal</span><span class="when">23 okt 2026, 07:12</span></div>
+              <div class="l1"><span class="name" title="nieuws@pedaal.example.com">Nieuwsbrief Fietsenwinkel Pedaal</span><span class="when">07:12</span></div>
               <div class="subj">Herfstdeals op regenkleding</div>
               <div class="rcpt"><span><b>Aan:</b> Gideon</span><span><b>Kopie:</b> Eva, Sam, Noor <a href="#">+2</a></span></div>
               <div class="rcpt"><span><b>Antwoord aan:</b> Klantenservice Pedaal</span></div>
@@ -1460,7 +1468,7 @@ textarea.field { height: auto; padding: 8px 10px; resize: none; font: inherit; w
         </div>
       </div>
     </div>
-    <p class="scr-note"><b>Notes.</b> Hedwig keeps its current structure and gets the shared chrome: warm neutrals, Owl blue for selection and sidebar icons, Kreacher's mark instead of a generic sparkle on his reasons. The review of what the bot filtered lives in each mailbox's Spam and Archief and is the trust surface: reason in one sentence, the exact server and phone effect, Klopt as the default key, Terug one key away. Twijfel rows (the bot was unsure) use the warning tint and are sorted on top under the Twijfel filter. The shared mailbox "Samen" carries the Gedeeld badge. The reader's header follows Mail: a large avatar, the sender as the strongest line (address on hover), the subject in regular weight under it, then compact Aan, Kopie and, only when it differs from the sender, Antwoord aan lines with bold labels and names; past three names a "+2" opens the full list. The date stays top right; there is no folder name or Details link. Header, review, summary and mail scroll as one, with a hairline before the mail itself.</p>
+    <p class="scr-note"><b>Notes.</b> Hedwig keeps its current structure and gets the shared chrome: warm neutrals, Owl blue for selection and sidebar icons, Kreacher's mark instead of a generic sparkle on his reasons. The review of what the bot filtered lives in each mailbox's Spam and Archief and is the trust surface: reason in one sentence, the exact server and phone effect, Klopt as the default key, Terug one key away. Twijfel rows (the bot was unsure) use the warning tint and are sorted on top under the Twijfel filter. The shared mailbox "Samen" carries the Gedeeld badge. The reader's header follows Mail's sizes, which derive from its 12 pt message font: a 32 pt avatar, the sender at 14 pt semibold as the strongest line (address on hover), the subject at 12 pt regular under it, then compact Aan, Kopie and, only when it differs from the sender, Antwoord aan lines at 12 pt, labels in the primary colour and names in grey; past three names a "+2" opens the full list. The date stays top right at 11 pt, written like Mail ("07:12", "Gisteren om 17:06", "3 september 2026 om 22:01"); there is no folder name or Details link. Header and divider sit 28 pt from the column edges. Mail that sets no font of its own shows in Helvetica 12, Mail's default message font. Header, review, summary and mail scroll as one, with a hairline before the mail itself.</p>
   </div>
 
   <!-- d. Login -->
