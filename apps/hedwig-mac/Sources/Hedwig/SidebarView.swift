@@ -27,7 +27,7 @@ struct SidebarView: View {
                         Task { await model.moveMailboxes(in: group.role, from: source, to: destination) }
                     } : nil)
                 } header: {
-                    SectionHeader(title: sectionTitle(group.role))
+                    SidebarSectionHeader(sectionTitle(group.role))
                 }
             }
             // Every row keeps its tag: badged rows once ignored clicks without one
@@ -42,7 +42,7 @@ struct SidebarView: View {
                 }
                 .tag(SidebarItem.tasks)
             } header: {
-                SectionHeader(title: "Overal")
+                SidebarSectionHeader("Overal")
             }
         }
         .listStyle(.sidebar)
@@ -59,8 +59,10 @@ struct SidebarView: View {
         }
         .safeAreaInset(edge: .bottom) {
             VStack(spacing: 0) {
-                UpdateBanner()
-                ConnectionBadge()
+                UpdateBanner(appName: "Hedwig") { (NSApp.delegate as? AppDelegate)?.restart() }
+                ConnectionBadge(
+                    host: model.connection?.serverURL.host() ?? "", detail: model.me?.key.name ?? "",
+                    reachable: model.reachability.isReachable, busy: model.isLoading, appName: "Hedwig")
             }
         }
     }
@@ -168,87 +170,6 @@ struct SidebarView: View {
             }
         }
     }
-}
-
-/// Mail's sidebar counts are semibold, which SwiftUI's `.badge` cannot be, so
-/// every count in the sidebar is this text instead.
-private struct SidebarCount: View {
-    let count: Int
-
-    var body: some View {
-        Text(count > 0 ? count.formatted() : "")
-            .font(.subheadline.weight(.semibold))
-            .monospacedDigit()
-            .foregroundStyle(.secondary)
-            .accessibilityHidden(count == 0)
-    }
-}
-
-/// SwiftUI draws sidebar section headers in tertiary grey; Mail's are secondary.
-private struct SectionHeader: View {
-    let title: String
-
-    var body: some View {
-        Text(title).foregroundStyle(.secondary)
-    }
-}
-
-private struct CountedLabel: View {
-    let title: String
-    let icon: String
-    let count: Int
-
-    var body: some View {
-        HStack(spacing: 6) {
-            Label(title, systemImage: icon)
-            Spacer(minLength: 0)
-            SidebarCount(count: count)
-        }
-    }
-}
-
-struct UpdateBanner: View {
-    @Environment(Updater.self) private var updater
-
-    var body: some View {
-        if let version = updater.ready {
-            HStack(spacing: 8) {
-                Image(systemName: "arrow.down.circle.fill").foregroundStyle(.tint)
-                Text("Update klaar").font(.caption.weight(.semibold))
-                Spacer()
-                Button("Herstart") { (NSApp.delegate as? AppDelegate)?.restart() }
-                    .controlSize(.small)
-            }
-            .help("Build \(version) staat klaar; Hedwig start opnieuw op met de nieuwe versie.")
-            .padding(10)
-            .background(.tint.opacity(0.12), in: RoundedRectangle(cornerRadius: 9))
-            .padding(.horizontal, 8)
-        }
-    }
-}
-
-struct ConnectionBadge: View {
-    @Environment(AppModel.self) private var model
-
-    var body: some View {
-        HStack(spacing: 8) {
-            Circle().fill(reachable ? BurrowColor.success : BurrowColor.warning).frame(width: 7, height: 7)
-            VStack(alignment: .leading, spacing: 0) {
-                Text(model.connection?.serverURL.host() ?? "").font(.caption.weight(.semibold))
-                Text(reachable ? model.me?.key.name ?? "" : "Server even niet bereikbaar")
-                    .font(.caption2)
-                    .foregroundStyle(reachable ? AnyShapeStyle(.secondary) : AnyShapeStyle(BurrowColor.warning))
-            }
-            Spacer()
-            if model.isLoading { ProgressView().controlSize(.mini) }
-        }
-        .padding(10)
-        .help(reachable ? "Verbonden" : "Hedwig probeert het vanzelf opnieuw.")
-        .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 9))
-        .padding(8)
-    }
-
-    private var reachable: Bool { model.reachability.isReachable }
 }
 
 /// The private mailboxes are simply the inbox in the sidebar; Settings keeps "Privé".
