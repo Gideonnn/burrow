@@ -172,6 +172,9 @@ describe('GraphClient', () => {
       graphMessage('a', 'inbox', {
         categories: ['Offerte'],
         flag: { flagStatus: 'flagged' },
+        replyTo: [
+          { emailAddress: { name: 'Offertes', address: 'offerte@example.nl' } },
+        ],
       }),
     );
     const { upserts } = await new GraphClient(api.session, api.fetchFn).sync(
@@ -182,6 +185,7 @@ describe('GraphClient', () => {
       threadId: 'c-a',
       from: { name: 'Joris', email: 'joris@example.nl' },
       to: [{ email: 'gideon@example.com' }],
+      replyTo: [{ name: 'Offertes', email: 'offerte@example.nl' }],
       folder: 'inbox',
       unread: true,
       flagged: true,

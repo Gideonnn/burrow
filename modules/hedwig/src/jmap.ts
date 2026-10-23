@@ -28,6 +28,7 @@ const PROPERTIES = [
   'from',
   'to',
   'cc',
+  'replyTo',
   'subject',
   'preview',
   'receivedAt',
@@ -52,6 +53,7 @@ export type JmapEmail = {
   from?: JmapAddress[] | null;
   to?: JmapAddress[] | null;
   cc?: JmapAddress[] | null;
+  replyTo?: JmapAddress[] | null;
   subject?: string | null;
   preview?: string;
   receivedAt: string;
@@ -500,6 +502,7 @@ export function parseJmapEmail(
     from: toAddress(e.from?.[0]) ?? { email: '' },
     to: (e.to ?? []).map((a) => toAddress(a)!),
     cc: (e.cc ?? []).map((a) => toAddress(a)!),
+    replyTo: (e.replyTo ?? []).map((a) => toAddress(a)!),
     subject: e.subject ?? '',
     snippet: e.preview ?? '',
     receivedAt: new Date(e.receivedAt),

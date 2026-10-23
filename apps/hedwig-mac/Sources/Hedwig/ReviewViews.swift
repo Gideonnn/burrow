@@ -63,8 +63,6 @@ struct ReviewBar: View {
             .padding(12)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 10))
-            .padding(.horizontal, 24)
-            .padding(.bottom, 12)
         }
     }
 }

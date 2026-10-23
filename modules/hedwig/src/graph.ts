@@ -29,6 +29,7 @@ const SELECT = [
   'from',
   'toRecipients',
   'ccRecipients',
+  'replyTo',
   'receivedDateTime',
   'isRead',
   'isDraft',
@@ -50,6 +51,7 @@ export type GraphMessage = {
   from?: Recipient;
   toRecipients?: Recipient[];
   ccRecipients?: Recipient[];
+  replyTo?: Recipient[];
   receivedDateTime: string;
   isRead: boolean;
   isDraft?: boolean;
@@ -219,6 +221,7 @@ export class GraphClient implements MailProviderClient {
       from: toAddress(m.from) ?? { email: '' },
       to: (m.toRecipients ?? []).flatMap((r) => toAddress(r) ?? []),
       cc: (m.ccRecipients ?? []).flatMap((r) => toAddress(r) ?? []),
+      replyTo: (m.replyTo ?? []).flatMap((r) => toAddress(r) ?? []),
       subject: m.subject ?? '',
       snippet: m.bodyPreview ?? '',
       receivedAt: new Date(m.receivedDateTime),

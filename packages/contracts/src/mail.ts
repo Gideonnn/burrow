@@ -47,6 +47,7 @@ export const folderCounts = z.array(folderCount);
 
 export const messageDetail = messageSummary.extend({
   cc: z.array(address),
+  replyTo: z.array(address).default([]),
   bodyText: z.string().nullable(),
   bodyHtml: z.string().nullable(),
 });

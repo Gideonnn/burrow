@@ -287,6 +287,7 @@ export function parseGmailMessage(
     from: parseAddress(header('From') ?? ''),
     to: parseAddressList(header('To')),
     cc: parseAddressList(header('Cc')),
+    replyTo: parseAddressList(header('Reply-To')),
     subject: header('Subject') ?? '',
     snippet: decodeEntities(raw.snippet ?? ''),
     receivedAt: new Date(Number(raw.internalDate ?? Date.now())),

@@ -2,6 +2,7 @@
 
 Newest first.
 
+- [2026-10-23 Hedwig's reader header scrolls with the mail](2026-10-23-reader-header-scrolls-with-the-mail.md): Mail's header order, one ScrollView with a web view as tall as its mail, quirks mode locked the height, Reply-To kept by the server.
 - [2026-10-23 Pensieve v6: iCloud is the source, Dobby keeps every file, links replace sharing](2026-10-23-pensieve-files-live-on-dobby.md): video goes to Dobby too, the app follows the iCloud folder with grey restorable deletions, and Stuur makes one-download 24-hour links instead of sharing between people.
 - [2026-10-23 CI's Xcode differed from the local one](2026-10-23-ci-xcode-differs-from-local.md): a newer Swift on the runner rejected a send of non-Sendable drop providers; the loader runs on the caller's actor and CI pins the local Xcode.
 - [2026-10-23 Keeping a window on screen hid it between Spaces](2026-10-23-window-keeper-hid-windows-between-spaces.md): no screen-change observer, no animation, fit only a settled window on the active Space.

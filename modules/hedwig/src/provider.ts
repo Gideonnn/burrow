@@ -12,6 +12,7 @@ export type ProviderMessage = {
   from: Address;
   to: Address[];
   cc: Address[];
+  replyTo: Address[];
   subject: string;
   snippet: string;
   receivedAt: Date;

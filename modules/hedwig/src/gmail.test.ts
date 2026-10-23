@@ -19,6 +19,7 @@ function message(
       headers: [
         { name: 'From', value: '"Doe, Jane" <jane@example.com>' },
         { name: 'To', value: 'owner@example.com, Bob <bob@example.com>' },
+        { name: 'Reply-To', value: 'Support <help@example.com>' },
         { name: 'Subject', value: subject },
         { name: 'Message-ID', value: `<${id}@example.com>` },
         { name: 'List-Unsubscribe', value: '<mailto:unsub@example.com>' },
@@ -195,6 +196,7 @@ describe('GmailClient', () => {
         { email: 'owner@example.com' },
         { name: 'Bob', email: 'bob@example.com' },
       ],
+      replyTo: [{ name: 'Support', email: 'help@example.com' }],
       snippet: "Tom & Jerry's",
       folder: 'inbox',
       unread: true,

@@ -290,6 +290,7 @@ function columnsFrom(m: ProviderMessage) {
     from: m.from,
     to: m.to,
     cc: m.cc,
+    replyTo: m.replyTo,
     subject: m.subject,
     snippet: m.snippet,
     bodyText: m.bodyText,
@@ -343,6 +344,7 @@ export function toDetail(
   return {
     ...toSummary(row, facts),
     cc: row.cc,
+    replyTo: row.replyTo ?? [],
     bodyText: row.bodyText,
     bodyHtml: row.bodyHtml,
   };

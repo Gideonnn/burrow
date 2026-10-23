@@ -186,7 +186,10 @@ describe('JmapClient', () => {
   it('parses an email with keywords as labels and bodies from body values', async () => {
     const api = fakeJmap();
     api.deliver(
-      email('a', 'mb-inbox', { keywords: { $flagged: true, Bon: true } }),
+      email('a', 'mb-inbox', {
+        keywords: { $flagged: true, Bon: true },
+        replyTo: [{ name: null, email: 'eten@example.nl' }],
+      }),
     );
     const { upserts } = await client(api).sync(null);
     expect(upserts[0]).toMatchObject({
@@ -196,6 +199,7 @@ describe('JmapClient', () => {
       flagged: true,
       labels: ['Bon'],
       to: [{ email: 'owner@example.com' }],
+      replyTo: [{ email: 'eten@example.nl' }],
       bodyText: 'Zin in eten?',
       bodyHtml: '<p>Zin in eten?</p>',
       headers: { messageId: '<a@example.nl>' },

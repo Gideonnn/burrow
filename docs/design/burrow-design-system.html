@@ -377,6 +377,16 @@ textarea.field { height: auto; padding: 8px 10px; resize: none; font: inherit; w
 .detail-head { padding: 16px 20px 10px; border-bottom: 1px solid var(--line); }
 .detail-head h2 { font-size: 20px; font-weight: 700; letter-spacing: -0.01em; }
 .detail-head .meta { display: flex; gap: 10px; align-items: center; margin-top: 6px; color: var(--text-2); font-size: 12.5px; flex-wrap: wrap; }
+/* Hedwig reader: Mail's order, sender first; it scrolls with the message */
+.mail-head { display: flex; gap: 12px; padding: 18px 20px 14px; border-bottom: 1px solid var(--line); }
+.mail-head .who { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.mail-head .l1 { display: flex; align-items: baseline; gap: 12px; }
+.mail-head .name { font-size: 15px; font-weight: 700; flex: 1; }
+.mail-head .when { color: var(--text-2); font-size: 12px; }
+.mail-head .subj { font-size: 13px; }
+.mail-head .rcpt { font-size: 12px; color: var(--text-2); display: flex; flex-wrap: wrap; gap: 2px 14px; margin-top: 2px; }
+.mail-head .rcpt b { color: var(--text); font-weight: 600; }
+.mail-head .rcpt a { color: var(--app); }
 .detail-body { padding: 16px 20px; display: flex; flex-direction: column; gap: 14px; line-height: 1.5; }
 .detail-body h3 { font-size: 14px; font-weight: 700; margin: 6px 0 4px; }
 .reason { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; background: var(--surface-2); display: flex; flex-direction: column; gap: 6px; }
@@ -1419,11 +1429,17 @@ textarea.field { height: auto; padding: 8px 10px; resize: none; font: inherit; w
           </div>
         </div>
         <div class="detail">
-          <div class="detail-head">
-            <h2>Herfstdeals op regenkleding</h2>
-            <div class="meta"><span class="av sm" style="--p:#7A6A5A">FP</span><span>Nieuwsbrief Fietsenwinkel Pedaal</span><span class="faint">&lt;nieuws@pedaal.example.com&gt;</span><span>·</span><span>aan gideon@example.com</span><span>·</span><span>Vandaag 07:12</span></div>
+          <div class="scroll">
+          <div class="mail-head">
+            <span class="av lg" style="--p:#7A6A5A" title="nieuws@pedaal.example.com">FP</span>
+            <div class="who">
+              <div class="l1"><span class="name" title="nieuws@pedaal.example.com">Nieuwsbrief Fietsenwinkel Pedaal</span><span class="when">23 okt 2026, 07:12</span></div>
+              <div class="subj">Herfstdeals op regenkleding</div>
+              <div class="rcpt"><span><b>Aan:</b> Gideon</span><span><b>Kopie:</b> Eva, Sam, Noor <a href="#">+2</a></span></div>
+              <div class="rcpt"><span><b>Antwoord aan:</b> Klantenservice Pedaal</span></div>
+            </div>
           </div>
-          <div class="scroll"><div class="detail-body">
+          <div class="detail-body">
             <div class="reason">
               <div class="h"><span class="av bot"><svg class="i"><use href="#i-elf"/></svg></span><span>Kreacher archiveerde dit bericht</span><span class="grow" style="flex:1"></span><span class="badge filtered">Gefilterd</span></div>
               <div>Nieuwsbrief zonder afspraak of factuur. Vergelijkbare mails van deze afzender archiveerde je de laatste drie keer ongelezen.</div>
@@ -1442,7 +1458,7 @@ textarea.field { height: auto; padding: 8px 10px; resize: none; font: inherit; w
         </div>
       </div>
     </div>
-    <p class="scr-note"><b>Notes.</b> Hedwig keeps its current structure and gets the shared chrome: warm neutrals, Owl blue for selection and sidebar icons, Kreacher's mark instead of a generic sparkle on his reasons. The review of what the bot filtered lives in each mailbox's Spam and Archief and is the trust surface: reason in one sentence, the exact server and phone effect, Klopt as the default key, Terug one key away. Twijfel rows (the bot was unsure) use the warning tint and are sorted on top under the Twijfel filter. The shared mailbox "Samen" carries the Gedeeld badge.</p>
+    <p class="scr-note"><b>Notes.</b> Hedwig keeps its current structure and gets the shared chrome: warm neutrals, Owl blue for selection and sidebar icons, Kreacher's mark instead of a generic sparkle on his reasons. The review of what the bot filtered lives in each mailbox's Spam and Archief and is the trust surface: reason in one sentence, the exact server and phone effect, Klopt as the default key, Terug one key away. Twijfel rows (the bot was unsure) use the warning tint and are sorted on top under the Twijfel filter. The shared mailbox "Samen" carries the Gedeeld badge. The reader's header follows Mail: a large avatar, the sender as the strongest line (address on hover), the subject in regular weight under it, then compact Aan, Kopie and, only when it differs from the sender, Antwoord aan lines with bold labels and names; past three names a "+2" opens the full list. The date stays top right; there is no folder name or Details link. Header, review, summary and mail scroll as one, with a hairline before the mail itself.</p>
   </div>
 
   <!-- d. Login -->

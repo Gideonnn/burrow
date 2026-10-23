@@ -57,6 +57,8 @@ export const messages = sqliteTable(
     from: text('from', { mode: 'json' }).$type<Address>().notNull(),
     to: text('to', { mode: 'json' }).$type<Address[]>().notNull(),
     cc: text('cc', { mode: 'json' }).$type<Address[]>().notNull(),
+    // Null for mail stored before Reply-To was kept.
+    replyTo: text('reply_to', { mode: 'json' }).$type<Address[]>(),
     subject: text('subject').notNull(),
     snippet: text('snippet').notNull(),
     bodyText: text('body_text'),

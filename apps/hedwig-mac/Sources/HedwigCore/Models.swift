@@ -126,6 +126,8 @@ public struct MessageDetail: Codable, Hashable, Identifiable, Sendable {
     public var from: Address
     public var to: [Address]
     public var cc: [Address]
+    // Absent from servers older than Reply-To support.
+    public var replyTo: [Address]?
     public var subject: String
     public var snippet: String
     public var receivedAt: Date

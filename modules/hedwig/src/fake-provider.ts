@@ -51,6 +51,7 @@ export class FakeProvider implements MailProviderClient {
       from: { name: 'Someone', email: 'someone@example.com' },
       to: [{ email: 'owner@example.com' }],
       cc: [],
+      replyTo: [],
       snippet: partial.subject,
       receivedAt: new Date('2026-10-19T08:00:00Z'),
       folder: 'inbox',

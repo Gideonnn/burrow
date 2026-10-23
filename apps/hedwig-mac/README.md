@@ -31,7 +31,9 @@ and optionally `HEDWIG_OPEN` with any place `burrowctl hedwig show` takes (`filt
 
 - The sidebar's "Inbox" lists every mailbox; each opens (a small chevron on hover, or its
   menu) to its own Archief, Verstuurd, Concepten and Spam. Reading shows HTML without
-  JavaScript or remote content (trackers stay blocked); replying, forwarding.
+  JavaScript or remote content (trackers stay blocked) under a header laid out like
+  Mail's (sender, subject, Aan/Kopie/Antwoord aan) that scrolls with the message;
+  replying, forwarding.
 - Archive, delete, spam, read and flag act at the provider, so phones see the same.
 - What the bot filtered waits for review in that mailbox's Spam or Archief, on top and
   with its reason: "Klopt" confirms, "Geen spam" or "Terug naar inbox" restores. A count
