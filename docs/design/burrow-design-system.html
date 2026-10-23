@@ -321,7 +321,7 @@ textarea.field { height: auto; padding: 8px 10px; resize: none; font: inherit; w
 .mac .pane-hd .t { font-size: 15px; font-weight: 700; } .mac .pane-hd .s { font-size: 12px; color: var(--text-2); } .mac .pane-hd .grow { flex: 1; }
 .mac .scroll { overflow: auto; min-height: 0; flex: 1; }
 
-/* Toolbar: round primary plus capsule groups, as Hedwig has on macOS 26 */
+/* Toolbar: round button plus capsule groups, as macOS 26 draws native toolbar items */
 .tb-round { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: var(--glass); border: 1px solid var(--glass-line); box-shadow: 0 1px 3px rgba(0,0,0,0.08); color: var(--text); }
 .tb-round.rec { background: var(--danger); color: #fff; border-color: transparent; }
 .tb-cap { display: inline-flex; align-items: center; height: 34px; padding: 0 6px; border-radius: 17px; background: var(--glass); border: 1px solid var(--glass-line); box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
@@ -1012,7 +1012,7 @@ textarea.field { height: auto; padding: 8px 10px; resize: none; font: inherit; w
   </div>
 
   <h3>Toolbar</h3>
-  <p class="muted small">As Hedwig ships today on macOS 26: one round primary action on its own glass, then capsule groups of icon buttons with thin separators. Disabled groups fade as a whole. Text capsules are allowed for one-off actions like "Alles klopt".</p>
+  <p class="muted small">Native SwiftUI items as in Apple Mail on macOS 26: plain toolbar buttons and <code>ControlGroup</code>s, which the system draws as a round button and capsule groups with thin separators, at the system symbol size and weight; no custom glass, tints or image scale. Above Hedwig's reading column: compose at the column's leading edge, the reply and organize groups in the middle (flexible spaces on both sides) and the search field at the trailing edge. Disabled groups fade as a whole. Text capsules are allowed for one-off actions like "Alles klopt".</p>
   <div class="stage bgp" style="gap:10px">
     <span class="tb-round"><svg class="i lg"><use href="#i-compose"/></svg></span>
     <span class="tb-cap"><button><svg class="i lg"><use href="#i-reply"/></svg></button><span class="sep"></span><button><svg class="i lg"><use href="#i-replyall"/></svg></button><span class="sep"></span><button><svg class="i lg"><use href="#i-forward"/></svg></button></span>
