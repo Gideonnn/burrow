@@ -13,8 +13,8 @@ extension View {
             message: { Text(ErrorText.short(error.wrappedValue ?? "")) })
     }
 
-    /// Moves the window back onto its screen when it appears, after a sheet or
-    /// alert closes and when the screens change.
+    /// Moves the window back onto its screen when it appears and after a sheet
+    /// or alert closes.
     public func keepsWindowOnScreen() -> some View {
         background(WindowKeeper())
     }
@@ -25,28 +25,32 @@ private struct WindowKeeper: NSViewRepresentable {
     func updateNSView(_ view: KeeperView, context: Context) {}
 
     final class KeeperView: NSView {
-        private var observers: [NSObjectProtocol] = []
+        private var observer: NSObjectProtocol?
 
         override func viewDidMoveToWindow() {
             super.viewDidMoveToWindow()
-            observers.forEach(NotificationCenter.default.removeObserver)
-            observers = []
+            observer.map(NotificationCenter.default.removeObserver)
+            observer = nil
             guard let window else { return }
-            for name in [NSWindow.didEndSheetNotification, NSWindow.didChangeScreenNotification] {
-                observers.append(
-                    NotificationCenter.default.addObserver(forName: name, object: window, queue: .main) { note in
-                        // AppKit may still move the window right after the sheet ends.
-                        let window = note.object as? NSWindow
-                        MainActor.assumeIsolated { DispatchQueue.main.async { window.map(Self.fit) } }
-                    })
+            observer = NotificationCenter.default.addObserver(
+                forName: NSWindow.didEndSheetNotification, object: window, queue: .main
+            ) { note in
+                // AppKit may still move the window right after the sheet ends.
+                let window = note.object as? NSWindow
+                MainActor.assumeIsolated { DispatchQueue.main.async { window.map(Self.fit) } }
             }
             DispatchQueue.main.async { [weak window] in window.map(Self.fit) }
         }
 
+        // No didChangeScreen observer and no animation: moving the window to another
+        // Space in Mission Control reports a passing screen change, and an animated
+        // setFrame then hid the window. Only a settled window on this Space is fitted.
         static func fit(_ window: NSWindow) {
-            guard !window.styleMask.contains(.fullScreen), let screen = window.screen ?? NSScreen.main else { return }
+            guard window.isVisible, window.isOnActiveSpace, NSEvent.pressedMouseButtons == 0,
+                !window.styleMask.contains(.fullScreen), let screen = window.screen
+            else { return }
             let fitted = WindowFrame.fitted(window.frame, in: screen.visibleFrame)
-            if fitted != window.frame { window.setFrame(fitted, display: true, animate: true) }
+            if fitted != window.frame { window.setFrame(fitted, display: true) }
         }
     }
 }

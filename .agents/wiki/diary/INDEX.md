@@ -2,6 +2,7 @@
 
 Newest first.
 
+- [2026-10-23 Keeping a window on screen hid it between Spaces](2026-10-23-window-keeper-hid-windows-between-spaces.md): no screen-change observer, no animation, fit only a settled window on the active Space.
 - [2026-10-22 Pensieve v2: four kinds, video on the Mac, labels per person](2026-10-22-pensieve-v2-engine.md): only the diarizing model gives timestamps, measured part offsets, labels private per person, the shelf that deletes originals only after iCloud has the MP4.
 - [2026-10-22 Every deploy restarted the tunnel: 30 seconds of 530](2026-10-22-deploys-restarted-the-tunnel.md): the install now leaves an unchanged tunnel alone; the apps retry gateway errors quietly and never show HTML.
 - [2026-10-22 Folders per mailbox, the filter review in Spam, spam stays unread](2026-10-22-spam-review-per-mailbox.md): no merged inbox, no Meer, no Gefilterd page; spam is read only after "Geen spam".
