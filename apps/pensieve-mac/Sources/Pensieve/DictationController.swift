@@ -5,8 +5,7 @@ import PensieveCapture
 import PensieveCore
 
 /// Hold ⌥ Spatie anywhere, talk, let go: the text is pasted where the cursor
-/// is and kept as a dictation in Pensieve. The HUD that shows `state` comes
-/// with the UI work, which also decides when `enable()` is called.
+/// is and kept as a dictation in Pensieve. Settings switches it on or off.
 @MainActor
 @Observable
 final class DictationController {
@@ -18,7 +17,13 @@ final class DictationController {
         case failed(String)
     }
 
-    private(set) var state: State = .idle
+    private(set) var state: State = .idle {
+        didSet { onChange?(state) }
+    }
+    /// The HUD follows the state from outside SwiftUI.
+    @ObservationIgnored var onChange: ((State) -> Void)?
+    /// Why ⌥ Spatie could not be claimed, for Settings.
+    private(set) var problem: String?
     var labels: [String] = []
     @ObservationIgnored private var hotKey: HoldHotKey?
     @ObservationIgnored private var recorder: DictationRecorder?
@@ -34,8 +39,18 @@ final class DictationController {
 
     var isEnabled: Bool { hotKey != nil }
 
-    func enable() throws {
+    /// Claims ⌥ Spatie; when another app has it, says so in Settings.
+    func enable() {
         guard hotKey == nil else { return }
+        do {
+            try claim()
+            problem = nil
+        } catch {
+            problem = error.localizedDescription
+        }
+    }
+
+    private func claim() throws {
         hotKey = try HoldHotKey(
             onPress: { [weak self] in MainActor.assumeIsolated { self?.begin() } },
             onRelease: { [weak self] in

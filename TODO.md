@@ -190,19 +190,17 @@ copy of the database, then consider bundling the dependencies into the tsup buil
 clients still see errors.
 **Scope:** an hour to profile, a few hours to fix.
 
-## Pensieve v2: the UI on the new engine
+## Pensieve v2: what the window still lacks
 
-**What:** the screens of `docs/design/pensieve-v6.html` on the engine of
-`docs/plans/2026-10-22-pensieve-v2.md`: the three-column window with kinds in the
-sidebar, thumbnails and pending work per row, the quiet label filter and the record
-button that remembers the kind, with the toolbar, search capsule and sidebar status card
-as in Hedwig; the detail (timeline from segments and marks, transcript
-following playback); the recording stage with Markeer, the floating orb, the dictation
-HUD (and switching on `DictationController`), the Verklein video sheet, Settings ›
-Labels and the Mac settings; pause; title and labels from the calendar once Burrow has
-calendars. Drop "Van mij", "Gedeeld met mij" and Pensieve's share routes.
-**Why:** the engine landed without UI so the design could settle first.
-**Scope:** several days; the plan lists what each screen needs.
+**What:** pause during a recording (the recorders cannot pause yet); title and labels
+from the calendar once Burrow has calendars; the shelf's compression progress in the row
+("Verkleinen 64%"); "Nieuw uit iCloud", "Open deellinks" and "Verwijderd" in the sidebar
+and rows, which come with the two entries below; the settings that need the server
+(Dobby's copy, how long deleted folders are kept, share link defaults) and a maximum
+size per file; drop the household share routes on the server ("Van mij" and "Gedeeld
+met mij" are gone from the app).
+**Why:** the window of `docs/design/pensieve-v6.html` landed on what the engine has now.
+**Scope:** a day for pause and progress; the rest rides with the entries below.
 
 ## Pensieve: every file on Dobby, the iCloud folder as the source
 

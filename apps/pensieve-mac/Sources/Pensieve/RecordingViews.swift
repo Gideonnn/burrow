@@ -146,18 +146,7 @@ private struct ControlBar: View {
         .controlSize(.large)
         .padding(.horizontal, 18)
         .padding(.vertical, 10)
-        .modifier(BarBackground())
-    }
-}
-
-/// Liquid glass from macOS 26, a material before.
-private struct BarBackground: ViewModifier {
-    func body(content: Content) -> some View {
-        if #available(macOS 26, *) {
-            content.glassEffect(.regular, in: Capsule())
-        } else {
-            content.background(.regularMaterial, in: Capsule())
-        }
+        .modifier(Glass(shape: Capsule()))
     }
 }
 

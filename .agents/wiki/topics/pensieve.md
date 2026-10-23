@@ -86,11 +86,22 @@ it. Admins manage settings, never recordings. Starting a recording is never an a
 - **Dictation**: a Carbon hot key (press and release; no Accessibility needed), the
   upload, a wait for the transcript, then the paster puts the text on the clipboard and
   sends Command-V and restores the clipboard; without Accessibility it stays on the
-  clipboard. Off until the UI switches it on.
+  clipboard. On by default (Settings › Algemeen › Dictaten); when another app holds
+  ⌥ Spatie, Settings says so. A pill at the bottom of the screen shows listening,
+  transcribing and where the text went.
+- **The window** follows Hedwig: kinds in the sidebar with counts, Hedwig's server card,
+  the red button that records the kind of last time (⌘1-3 pick one), Stuur (the share
+  sheet on the file in iCloud), Verklein and Toon in Finder as one toolbar group, and
+  search as the toolbar field. The detail is one column: `AVPlayerView` (SwiftUI's
+  `VideoPlayer` does not load in a package executable), the timeline of speakers and
+  marks, the transcript following playback, the summary per kind, the folder's files.
+  While a call or the screen is recorded with Pensieve in the background, a bubble
+  floats above every app. Settings on this Mac live in `MacSettings`.
 - **RecHoarder import**: Archief › Importeer RecHoarder-opnames uploads
   `iCloud Drive/Meetings` once, with the transcripts and notes they had (source
   `imported`, so the server only compresses).
-- `PENSIEVE_SERVER` and `PENSIEVE_KEY` connect without the Keychain, for test runs.
+- `PENSIEVE_SERVER` and `PENSIEVE_KEY` connect without the Keychain, for test runs;
+  `PENSIEVE_FOLDER` moves the iCloud copy elsewhere so a demo leaves iCloud alone.
 
 ## Choices
 

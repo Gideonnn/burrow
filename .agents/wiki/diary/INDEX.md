@@ -2,6 +2,7 @@
 
 Newest first.
 
+- [2026-10-23 Pensieve's v6 window, native like Hedwig](2026-10-23-pensieve-window-like-hedwig.md): system controls instead of drawn ones, shared sidebar pieces in BurrowUI; day sections shrank every row, and `VideoPlayer` crashes in a package executable.
 - [2026-10-23 Mail centres its toolbar groups too](2026-10-23-hedwig-toolbar-measured-against-mail.md): measured at four widths: compose, flexible space, groups, flexible space, a 310 pt search field; Hedwig already matched.
 - [2026-10-23 Replies go to Reply-To, decided by the server](2026-10-23-replies-go-to-reply-to.md): one `replyRecipients` rule, its outcome in every message detail, empty `to` on a reply draft means Reply.
 - [2026-10-23 Hedwig's typography measured against Apple Mail](2026-10-23-hedwig-typography-measured-against-mail.md): sizes from pixel measurements, Mail's fonts read through AppleScript, semibold counts instead of `.badge`, Helvetica 12 for unstyled mail.

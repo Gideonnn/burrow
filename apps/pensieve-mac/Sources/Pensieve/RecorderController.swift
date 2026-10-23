@@ -27,10 +27,20 @@ final class RecorderController {
     private(set) var levels = Levels()
     private(set) var elapsed: TimeInterval = 0
     private(set) var microphones: [Device] = []
-    var microphone: Device?
+    var microphone: Device? {
+        didSet { UserDefaults.standard.set(microphone?.uid, forKey: MacSettings.microphone) }
+    }
+    /// Nil is the system's default camera.
+    var camera: String? = UserDefaults.standard.string(forKey: MacSettings.camera) {
+        didSet { UserDefaults.standard.set(camera, forKey: MacSettings.camera) }
+    }
     /// Screen recordings take the microphone only when asked.
-    var screenWithMicrophone = false
-    var format: RecordingFormat = .normal
+    var screenWithMicrophone = UserDefaults.standard.bool(forKey: MacSettings.screenWithMicrophone) {
+        didSet { UserDefaults.standard.set(screenWithMicrophone, forKey: MacSettings.screenWithMicrophone) }
+    }
+    var format = MacSettings.recordingFormat {
+        didSet { UserDefaults.standard.set(format.rawValue, forKey: MacSettings.format) }
+    }
     var error: String?
     @ObservationIgnored private var ticker: Task<Void, Never>?
     @ObservationIgnored private let model: PensieveModel
@@ -51,7 +61,8 @@ final class RecorderController {
     func refreshMicrophones() {
         microphones = PensieveCapture.microphones()
         if microphone == nil || !microphones.contains(where: { $0.uid == microphone?.uid }) {
-            microphone = preferredMicrophone()
+            let saved = UserDefaults.standard.string(forKey: MacSettings.microphone)
+            microphone = microphones.first { $0.uid == saved } ?? preferredMicrophone()
         }
     }
 
@@ -75,7 +86,7 @@ final class RecorderController {
                 }
                 active = .call(try Recorder(microphone: microphone, url: try model.outbox.newAudioFile()))
             case .video:
-                let capture = try VideoCapture(camera: nil, microphone: microphone?.uid, url: try model.shelf.newOriginal())
+                let capture = try VideoCapture(camera: camera, microphone: microphone?.uid, url: try model.shelf.newOriginal())
                 capture.start()
                 active = .video(capture)
             case .screen:
@@ -170,7 +181,9 @@ final class RecorderController {
         switch active {
         case .call(let recorder):
             recorder.stop()
-            await model.finished(audio: recorder.url, kind: .call, title: title, startedAt: startedAt, marks: marks, labels: labels)
+            await model.finished(
+                audio: recorder.url, kind: .call, title: title, startedAt: startedAt, marks: marks, labels: labels,
+                transcribe: MacSettings.transcribes(.call))
         case .video(let capture):
             await finishVideo(startedAt: startedAt, marks: marks) { try await capture.stop() }
         case .screen(let capture):
@@ -184,7 +197,8 @@ final class RecorderController {
         do {
             let original = try await stop()
             await model.finishedVideo(
-                original: original, kind: kind, title: title, startedAt: startedAt, marks: marks, labels: labels, format: format)
+                original: original, kind: kind, title: title, startedAt: startedAt, marks: marks, labels: labels, format: format,
+                transcribe: MacSettings.transcribes(kind))
         } catch {
             self.error = "De opname kon niet worden afgesloten: \(error.localizedDescription)"
         }

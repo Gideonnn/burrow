@@ -11,6 +11,7 @@ struct PensieveApp: App {
             RootView()
                 .environment(delegate.model)
                 .environment(delegate.recorder)
+                .environment(delegate.dictation)
                 .environment(delegate.services.updater)
                 .frame(minWidth: 980, minHeight: 600)
         }
@@ -19,7 +20,10 @@ struct PensieveApp: App {
         Settings {
             SettingsView()
                 .environment(delegate.model)
-                .frame(width: 620, height: 560)
+                .environment(delegate.recorder)
+                .environment(delegate.dictation)
+                .tint(BurrowColor.pensieve)
+                .frame(width: 640, height: 600)
         }
 
         MenuBarExtra {
@@ -111,6 +115,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @MainActor let model = PensieveModel()
     @MainActor lazy var recorder = RecorderController(model: model)
     @MainActor lazy var dictation = DictationController(model: model)
+    @MainActor private let hud = DictationHUD()
+    @MainActor private lazy var orb = RecordingOrb(recorder: recorder)
     @MainActor lazy var services: AppServices = {
         let model = model
         return AppServices(app: "pensieve", appName: "Pensieve", api: { model.api })
@@ -124,6 +130,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
         Task { @MainActor in startControl() }
+        Task { @MainActor in
+            dictation.onChange = { [hud] in hud.show($0) }
+            if MacSettings.dictationOn { dictation.enable() }
+            orb.start()
+        }
         Task { @MainActor in services.startUpdates() }
         // Uploads that failed earlier get another try every ten minutes.
         Task { @MainActor [model] in
