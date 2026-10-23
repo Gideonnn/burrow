@@ -16,7 +16,7 @@ struct SidebarView: View {
         // highlight, so a place is only ever replaced by another place.
         List(selection: Binding(get: { model.selection }, set: { if let place = $0 { model.selection = place } })) {
             ForEach(model.mailboxGroups) { group in
-                Section(sectionTitle(group.role)) {
+                Section {
                     ForEach(group.mailboxes) { box in
                         mailboxRow(box, in: group)
                         if isOpen(box.id) { folderRows(box) }
@@ -26,20 +26,23 @@ struct SidebarView: View {
                     .onMove(perform: canOrganize && !group.mailboxes.contains { isOpen($0.id) } ? { source, destination in
                         Task { await model.moveMailboxes(in: group.role, from: source, to: destination) }
                     } : nil)
+                } header: {
+                    SectionHeader(title: sectionTitle(group.role))
                 }
             }
-            // A row with a badge is only selectable with its tag.
-            Section("Overal") {
+            // Every row keeps its tag: badged rows once ignored clicks without one
+            // (see the diary, 2026-10-22).
+            Section {
                 NavigationLink(value: SidebarItem.outings) {
-                    Label("Evenementen", systemImage: "ticket")
+                    CountedLabel(title: "Evenementen", icon: "ticket", count: model.outingsBadge)
                 }
-                .badge(model.outingsBadge)
                 .tag(SidebarItem.outings)
                 NavigationLink(value: SidebarItem.tasks) {
-                    Label("Taken", systemImage: "checklist")
+                    CountedLabel(title: "Taken", icon: "checklist", count: model.tasksAwaitingReview)
                 }
-                .badge(model.tasksAwaitingReview)
                 .tag(SidebarItem.tasks)
+            } header: {
+                SectionHeader(title: "Overal")
             }
         }
         .listStyle(.sidebar)
@@ -74,11 +77,7 @@ struct SidebarView: View {
                 // One trailing slot: the unread count, or the toggle in its place.
                 // Both stay laid out, so the row keeps its width when they swap.
                 ZStack(alignment: .trailing) {
-                    // The size of the system's .badge on the other sidebar rows.
-                    Text(unread > 0 ? "\(unread)" : "")
-                        .font(.subheadline)
-                        .monospacedDigit()
-                        .foregroundStyle(.secondary)
+                    SidebarCount(count: unread)
                         .opacity(showsToggle ? 0 : 1)
                         .accessibilityHidden(showsToggle || unread == 0)
                     Button { toggle(box) } label: {
@@ -129,9 +128,8 @@ struct SidebarView: View {
 
     private func folderRow(_ place: SidebarItem, _ icon: String, waiting: Int) -> some View {
         NavigationLink(value: place) {
-            Label(placeName(place), systemImage: icon).padding(.leading, 14)
+            CountedLabel(title: placeName(place), icon: icon, count: waiting).padding(.leading, 14)
         }
-        .badge(waiting)
         .tag(place)
     }
 
@@ -168,6 +166,43 @@ struct SidebarView: View {
             } catch {
                 model.error = error.localizedDescription
             }
+        }
+    }
+}
+
+/// Mail's sidebar counts are semibold, which SwiftUI's `.badge` cannot be, so
+/// every count in the sidebar is this text instead.
+private struct SidebarCount: View {
+    let count: Int
+
+    var body: some View {
+        Text(count > 0 ? count.formatted() : "")
+            .font(.subheadline.weight(.semibold))
+            .monospacedDigit()
+            .foregroundStyle(.secondary)
+            .accessibilityHidden(count == 0)
+    }
+}
+
+/// SwiftUI draws sidebar section headers in tertiary grey; Mail's are secondary.
+private struct SectionHeader: View {
+    let title: String
+
+    var body: some View {
+        Text(title).foregroundStyle(.secondary)
+    }
+}
+
+private struct CountedLabel: View {
+    let title: String
+    let icon: String
+    let count: Int
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Label(title, systemImage: icon)
+            Spacer(minLength: 0)
+            SidebarCount(count: count)
         }
     }
 }
