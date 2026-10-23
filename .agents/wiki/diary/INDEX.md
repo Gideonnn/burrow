@@ -2,6 +2,7 @@
 
 Newest first.
 
+- [2026-10-23 Mail centres its toolbar groups too](2026-10-23-hedwig-toolbar-measured-against-mail.md): measured at four widths: compose, flexible space, groups, flexible space, a 310 pt search field; Hedwig already matched.
 - [2026-10-23 Replies go to Reply-To, decided by the server](2026-10-23-replies-go-to-reply-to.md): one `replyRecipients` rule, its outcome in every message detail, empty `to` on a reply draft means Reply.
 - [2026-10-23 Hedwig's typography measured against Apple Mail](2026-10-23-hedwig-typography-measured-against-mail.md): sizes from pixel measurements, Mail's fonts read through AppleScript, semibold counts instead of `.badge`, Helvetica 12 for unstyled mail.
 - [2026-10-23 Mail's list filter in Hedwig, filtered on the server](2026-10-23-hedwig-list-filter-on-the-server.md): criteria as query params so the whole folder counts, today as `since`, read mail stays until you move on.

@@ -104,9 +104,9 @@ struct MainToolbar: ToolbarContent {
         }
     }
 
-    // Compose at the leading edge of the reading column, the reply and organize groups
-    // between it and the search field (SwiftUI puts a flexible space before search).
-    // Flagging is in the menu (⇧⌘L).
+    // Mail's layout: compose at the reading column's leading edge, then the groups
+    // centred between it and the search field, because this flexible space and the one
+    // SwiftUI puts before search share the slack. Flagging is in the menu (⇧⌘L).
     var body: some ToolbarContent {
         if #available(macOS 26, *) {
             ToolbarItem { compose }

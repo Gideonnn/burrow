@@ -26,6 +26,6 @@ Traps:
 - `.principal` becomes `NSToolbar.centeredItemIdentifiers`, centred on the window, and
   pushed compose behind the groups. Rejected.
 - SwiftUI adds a flexible space before the search field, so one `ToolbarSpacer(.flexible)`
-  after compose centres the groups between compose and the search field. Exact centring
-  on the column is not possible with flexible spaces: they share the slack equally and the
-  search field is much wider than compose.
+  after compose centres the groups between compose and the search field. That is exactly
+  Mail's own layout, not a compromise: centring on the column was never Mail's behaviour
+  (see [the measurement](2026-10-23-hedwig-toolbar-measured-against-mail.md)).
