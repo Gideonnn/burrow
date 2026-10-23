@@ -2,6 +2,7 @@
 
 Newest first.
 
+- [2026-10-23 CI's Xcode differed from the local one](2026-10-23-ci-xcode-differs-from-local.md): a newer Swift on the runner rejected a send of non-Sendable drop providers; the loader runs on the caller's actor and CI pins the local Xcode.
 - [2026-10-23 Keeping a window on screen hid it between Spaces](2026-10-23-window-keeper-hid-windows-between-spaces.md): no screen-change observer, no animation, fit only a settled window on the active Space.
 - [2026-10-22 Pensieve v2: four kinds, video on the Mac, labels per person](2026-10-22-pensieve-v2-engine.md): only the diarizing model gives timestamps, measured part offsets, labels private per person, the shelf that deletes originals only after iCloud has the MP4.
 - [2026-10-22 Every deploy restarted the tunnel: 30 seconds of 530](2026-10-22-deploys-restarted-the-tunnel.md): the install now leaves an unchanged tunnel alone; the apps retry gateway errors quietly and never show HTML.

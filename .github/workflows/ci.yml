@@ -47,8 +47,14 @@ jobs:
   mac:
     # The apps use macOS 26 APIs (Liquid Glass), which need its SDK.
     runs-on: macos-26
+    # The same Xcode as the Mac that builds and releases the apps: each Swift
+    # release checks concurrency differently, and the image's default moves.
+    # Bump together with the local Xcode.
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.0.1.app/Contents/Developer
     steps:
       - uses: actions/checkout@v4
+      - run: swift --version
       - name: BurrowKit
         working-directory: packages/burrow-kit
         run: swift build && swift test

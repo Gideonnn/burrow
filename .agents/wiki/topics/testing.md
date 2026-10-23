@@ -13,3 +13,6 @@ runs every TypeScript suite; `pnpm test` runs them through turbo.
 - **No real mail.** Fixtures use invented people and `example.com` addresses.
 - **Quiet output.** Do not hide failures with `tail` or `grep` in CI; locally, keep the
   output short enough to read.
+- **Same Xcode as CI.** The `mac` CI job pins `DEVELOPER_DIR` to the Xcode the apps are
+  built with locally, because each Swift release checks concurrency differently. When
+  you move the local Xcode, bump the pin in `.github/workflows/ci.yml` in the same change.
