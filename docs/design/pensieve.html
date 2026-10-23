@@ -384,6 +384,89 @@ h2.sec { font-size: 20px; margin-top: 40px; }
 .busy { position: absolute; inset: 0; background: rgba(20, 16, 12, 0.5); display: grid; place-items: center; color: #fff; font-size: 12px; font-weight: 600; text-align: center; }
 .busy svg { width: 46px; height: 46px; display: block; margin: 0 auto 6px; transform: rotate(-90deg); }
 
+/* Inspiration: three very different homes */
+.ricons { display: flex; gap: 6px; }
+.ric { width: 30px; height: 30px; border-radius: 50%; background: var(--surface); box-shadow: var(--shadow-1); color: #FF453A; display: grid; place-items: center; }
+.ric:hover { box-shadow: var(--shadow-2); }
+
+.ag { display: grid; grid-template-rows: 46px 1fr; min-height: 0; background: var(--surface); }
+.ag-head, .ag-body { display: grid; grid-template-columns: 56px repeat(5, minmax(0, 1fr)); }
+.ag-head { border-bottom: 1px solid var(--line); }
+.ag-head div { padding: 9px 10px; font-size: 12px; color: var(--text-2); display: flex; align-items: center; gap: 7px; }
+.ag-head b { font-size: 17px; color: var(--text); font-weight: 600; }
+.ag-head .today b { color: #fff; background: #FF453A; border-radius: 50%; width: 28px; height: 28px; display: inline-grid; place-items: center; font-size: 14px; }
+.ag-body { overflow: auto; padding-top: 10px; }
+.ag-hours div { height: 52px; font-size: 11px; color: var(--text-3); text-align: right; padding-right: 8px; transform: translateY(-7px); }
+.ag-col { position: relative; border-left: 1px solid var(--line); background-image: repeating-linear-gradient(to bottom, var(--line) 0 1px, transparent 1px 52px); height: 572px; }
+.ag-col.future { background-color: var(--surface-2); }
+.ag-b { position: absolute; left: 5px; right: 6px; border-radius: 7px; padding: 4px 8px; font-size: 11.5px; overflow: hidden; line-height: 1.3; cursor: pointer; }
+.ag-b b { display: block; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ag-b span { opacity: 0.75; white-space: nowrap; }
+.ag-b.short { display: flex; gap: 6px; align-items: center; padding-top: 3px; }
+.ag-b.k-video { background: linear-gradient(120deg, #3a2f27, #1d1814); color: #fff; }
+.ag-b.k-screen { background: #2F5F58; color: #fff; }
+.ag-b.k-call { background: color-mix(in srgb, var(--gideon) 15%, var(--surface)); box-shadow: inset 3px 0 0 var(--gideon); }
+.ag-b.k-dict { background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--line); font-family: var(--serif); }
+.ag-b.k-plan { box-shadow: inset 0 0 0 1.5px var(--line-strong); color: var(--text-2); background: repeating-linear-gradient(135deg, transparent 0 6px, var(--hover) 6px 7px); cursor: default; }
+.ag-b .auto { display: inline-flex; gap: 4px; align-items: center; color: #FF453A; font-weight: 600; opacity: 1; margin-top: 2px; }
+.ag-b .auto i { width: 7px; height: 7px; border-radius: 50%; background: #FF453A; }
+.ag-now { position: absolute; left: -1px; right: 0; height: 2px; background: #FF453A; z-index: 2; }
+.ag-now::before { content: ""; position: absolute; left: -5px; top: -4px; width: 10px; height: 10px; border-radius: 50%; background: #FF453A; }
+.ag-now button { position: absolute; right: 6px; top: -12px; height: 24px; padding: 0 10px; border-radius: 999px; background: #FF453A; color: #fff; font-size: 11.5px; font-weight: 600; box-shadow: 0 4px 12px rgba(255, 69, 58, 0.35); }
+
+.ask { background: var(--bg); display: flex; flex-direction: column; align-items: center; padding: 54px 40px 26px; min-height: 0; overflow: auto; }
+.ask-in, .ask-recent { width: 640px; }
+.ask-hi { font-family: var(--serif); font-size: 32px; margin-bottom: 16px; }
+.ask-field { height: 56px; border-radius: 16px; background: var(--surface); box-shadow: var(--shadow-2); display: flex; align-items: center; gap: 12px; padding: 0 18px; font-size: 16px; }
+.ask-field .askq { flex: 1; }
+.ask-ans { margin-top: 14px; background: var(--surface); border-radius: 16px; padding: 18px 20px; box-shadow: var(--shadow-1); font-size: 15px; }
+.ask-ans p { margin: 0; }
+.ask-src { display: flex; gap: 12px; align-items: center; margin-top: 14px; padding: 10px 12px; border-radius: 10px; background: var(--surface-2); }
+.ask-src .qt { flex: 1; font-family: var(--serif); font-size: 14.5px; }
+.ask-src small { display: block; font-family: var(--font); font-size: 11.5px; color: var(--text-2); margin-top: 2px; }
+.ask-play { flex: none; height: 32px; padding: 0 13px 0 10px; border-radius: 999px; background: var(--primary); color: var(--on-primary); font-weight: 600; font-size: 12px; display: inline-flex; gap: 5px; align-items: center; }
+.ask-more { margin-top: 10px; font-size: 12.5px; color: var(--text-2); }
+.ask-sug { margin-top: 16px; display: flex; flex-wrap: wrap; gap: 6px; font-size: 12.5px; color: var(--text-3); align-items: center; }
+.ask-sug span.s { padding: 4px 11px; border-radius: 999px; border: 1px solid var(--line-strong); color: var(--text-2); cursor: pointer; }
+.ask-recent { margin-top: auto; padding-top: 30px; }
+.ask-recent h4 { font-size: 12px; color: var(--text-3); font-weight: 600; margin: 0 0 12px; }
+.ask-row { display: flex; gap: 14px; }
+.bub { width: 82px; text-align: center; font-size: 11.5px; line-height: 1.3; color: var(--text-2); cursor: pointer; }
+.bub .ba { width: 66px; height: 66px; border-radius: 50%; overflow: hidden; position: relative; margin: 0 auto 7px; background: var(--surface); box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px var(--line-strong); }
+.bub.new .ba { box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px var(--primary); }
+.bub .ba > .video { height: 100%; margin: 0; border-radius: 0; aspect-ratio: auto; }
+.bub .ba .video .person { width: 52%; }
+.bub .ba .cwave { inset: 20px 12px; }
+.bub .ba .bq { position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--serif); font-size: 40px; color: var(--primary); line-height: 1; padding-top: 14px; }
+.bub .ba .busy { font-size: 0; }
+.bub .ba .busy svg { width: 30px; height: 30px; margin: 0; }
+
+.st-wrap { position: relative; display: grid; min-height: 0; }
+.st { background: radial-gradient(70% 60% at 25% 0%, rgba(255, 255, 255, 0.45), transparent), var(--bg); padding: 30px 40px 120px; overflow: auto; }
+[data-theme="dark"] .st { background: radial-gradient(70% 60% at 25% 0%, rgba(255, 255, 255, 0.04), transparent), var(--bg); }
+.st-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px 40px; }
+.pile { height: 244px; position: relative; cursor: pointer; }
+.pile .pc { position: absolute; left: 50%; top: 12px; width: 232px; margin-left: -116px; background: #fff; padding: 8px 8px 30px; border-radius: 3px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.14), 0 10px 26px rgba(0, 0, 0, 0.1); transition: transform 0.25s; }
+[data-theme="dark"] .pile .pc { background: #34302C; }
+.pile .pc:nth-child(1) { transform: rotate(-7deg) translate(-8px, 6px); }
+.pile .pc:nth-child(2) { transform: rotate(5deg) translate(8px, 2px); }
+.pile .pc:nth-child(3) { transform: rotate(-1.5deg); }
+.pile:hover .pc:nth-child(1) { transform: rotate(-13deg) translate(-74px, 14px); }
+.pile:hover .pc:nth-child(2) { transform: rotate(11deg) translate(74px, 8px); }
+.pile:hover .pc:nth-child(3) { transform: rotate(0) translateY(-8px); }
+.pc .pa { height: 128px; position: relative; overflow: hidden; background: var(--surface-2); }
+.pc .pa > .video { height: 100%; margin: 0; border-radius: 0; aspect-ratio: auto; }
+.pc .pa .cwave { inset: 22px 14px; }
+.pc .pa .paper { inset: 0; font-size: 12.5px; padding: 12px 12px 0 28px; }
+.pc .pa .paper::before { font-size: 32px; left: 8px; }
+.pc .cap { position: absolute; left: 10px; right: 10px; bottom: 7px; font-family: var(--serif); font-style: italic; font-size: 13px; color: #4a443d; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+[data-theme="dark"] .pc .cap { color: #CFC8BE; }
+.pile .lbl { position: absolute; left: 0; right: 0; bottom: 0; text-align: center; }
+.pile .lbl b { font-family: var(--serif); font-size: 19px; font-weight: 500; }
+.pile .lbl span { display: block; font-size: 12px; color: var(--text-3); }
+.st-dock { position: absolute; left: 50%; bottom: 20px; transform: translateX(-50%); display: flex; gap: 8px; padding: 8px; border-radius: 18px; background: color-mix(in srgb, var(--surface) 80%, transparent); backdrop-filter: blur(14px); box-shadow: var(--shadow-3); }
+.st-dock .recb { box-shadow: none; background: var(--surface-2); }
+
 /* Memory view */
 .mv { display: grid; grid-template-columns: minmax(0, 1fr) 350px; min-height: 0; }
 .mv-main { padding: 18px 24px 24px; overflow: auto; display: flex; flex-direction: column; gap: 14px; }
@@ -530,8 +613,9 @@ h2.sec { font-size: 20px; margin-top: 40px; }
 
   <!-- 1. Home -------------------------------------------------------------->
   <div class="pane on" id="p-home">
+    <div class="bar" style="margin-bottom:10px"><span class="seg" id="homeseg"><button class="on" data-v="hv-home">Huidig</button><button data-v="hv-agenda">Agenda</button><button data-v="hv-vraag">Vraag</button><button data-v="hv-stapels">Stapels</button></span></div>
     <div class="stage"><div class="fit">
-    <div class="mac plain">
+    <div class="mac plain" id="hv-home">
       <div class="tb blend"><span class="lights"><i></i><i></i><i></i></span><span class="title">Pensieve</span><span class="grow"></span>
         <div class="search" style="width:260px"><svg class="i sm"><use href="#i-search"/></svg>Zoek in alles wat er gezegd is</div>
         <span class="fwrap"><button class="fbtn"><svg class="i sm"><use href="#i-gear"/></svg><span class="ftext">Filter</span></button>
@@ -564,8 +648,48 @@ h2.sec { font-size: 20px; margin-top: 40px; }
         <div class="gallery"></div>
       </div>
     </div>
+    <div class="mac plain hv" id="hv-agenda" style="display:none">
+      <div class="tb"><span class="lights"><i></i><i></i><i></i></span><span class="title">Pensieve</span>
+        <span class="center" style="display:flex;gap:10px;align-items:center"><button class="tbicon"><svg class="i"><use href="#i-left"/></svg></button>Week 43 · 20 tot 24 oktober<button class="tbicon"><svg class="i"><use href="#i-chev"/></svg></button></span>
+        <span class="grow"></span>
+        <div class="search" style="width:200px"><svg class="i sm"><use href="#i-search"/></svg>Zoek</div>
+        <div class="ricons"></div>
+      </div>
+      <div class="ag">
+        <div class="ag-head"><div></div><div><b>20</b>ma</div><div><b>21</b>di</div><div class="today"><b>22</b>wo</div><div><b>23</b>do</div><div><b>24</b>vr</div></div>
+        <div class="ag-body"></div>
+      </div>
+    </div>
+    <div class="mac plain hv" id="hv-vraag" style="display:none">
+      <div class="tb blend"><span class="lights"><i></i><i></i><i></i></span><span class="title">Pensieve</span><span class="grow"></span><div class="ricons"></div></div>
+      <div class="ask">
+        <div class="ask-in">
+          <div class="ask-hi">Wat wil je terugvinden?</div>
+          <div class="ask-field"><svg class="i lg" style="color:var(--text-3)"><use href="#i-search"/></svg><span class="askq">Wanneer gaat de site van Studio Vos live?</span><kbd>↵</kbd></div>
+          <div class="ask-ans">
+            <p>Op <b>12 november</b>. Dat spraken jullie gisteren af in het Teams-overleg met Studio Vos. Na 5 november komen er geen nieuwe pagina's meer bij.</p>
+            <div class="ask-src"><span class="qt">"Afgesproken: twaalf november, en na de vijfde geen nieuwe pagina's meer."<small>Gideon in Teams-overleg Studio Vos, gisteren</small></span><button class="ask-play" data-open="call"><svg class="i sm fill"><use href="#i-play"/></svg>10:15</button></div>
+            <div class="ask-more">Ook genoemd in <u>Weekstart werk</u> (maandag, 12:40)</div>
+          </div>
+          <div class="ask-sug">Probeer<span class="s">Wat zei Joris over de energiecrisis?</span><span class="s">Mijn dictaten van deze week</span><span class="s">Alles met Studio Vos</span></div>
+        </div>
+        <div class="ask-recent"><h4>Recent</h4><div class="ask-row"></div></div>
+      </div>
+    </div>
+    <div class="mac plain hv" id="hv-stapels" style="display:none">
+      <div class="tb blend"><span class="lights"><i></i><i></i><i></i></span><span class="title">Pensieve</span><span class="grow"></span><div class="search" style="width:260px"><svg class="i sm"><use href="#i-search"/></svg>Zoek in alles wat er gezegd is</div></div>
+      <div class="st-wrap">
+        <div class="st"><div class="st-grid"></div></div>
+        <div class="st-dock">
+          <button class="recb"><span class="dot"></span>Gesprek</button>
+          <button class="recb"><span class="dot"></span>Video</button>
+          <button class="recb"><span class="dot"></span>Scherm</button>
+          <button class="recb"><span class="dot"></span>Dicteren</button>
+        </div>
+      </div>
+    </div>
     </div></div>
-    <p class="note"><b>Eén rij knoppen, één filter.</b> Elke knop start meteen (met 3, 2, 1 aftellen); de sneltoetsen ⌘1, ⌘2, ⌘3 en ⌥ Spatie doen hetzelfde. Daaronder per dag een rij tegels: het beeld vult de tegel, met alleen titel, duur en label. Soort en label kies je in <b>Filter</b> rechtsboven; klik op een label op een tegel om erop te filteren. Klik op Femke, Joris of Studio Vos om ze te openen.</p>
+    <p class="note" id="home-note"><b>Eén rij knoppen, één filter.</b> Elke knop start meteen (met 3, 2, 1 aftellen); de sneltoetsen ⌘1, ⌘2, ⌘3 en ⌥ Spatie doen hetzelfde. Daaronder per dag een rij tegels: het beeld vult de tegel, met alleen titel, duur en label. Soort en label kies je in <b>Filter</b> rechtsboven; klik op een label op een tegel om erop te filteren. Klik op Femke, Joris of Studio Vos om ze te openen.</p>
   </div>
 
   <!-- 2. Memory view ------------------------------------------------------->
@@ -937,6 +1061,59 @@ home.querySelector('.gallery').onclick = e => {
 };
 home.querySelectorAll('.recb').forEach(b => b.onclick = () => { goto('p-rec'); countdown(); });
 
+const recIcons = [['i-call', 'Gesprek ⌘1'], ['i-cam', 'Video ⌘2'], ['i-screen', 'Scherm ⌘3'], ['i-dict', 'Dicteren ⌥ Spatie']];
+document.querySelectorAll('.hv .ricons').forEach(r => r.innerHTML = recIcons.map(([ic, t]) => `<button class="ric" title="${t}"><svg class="i"><use href="#${ic}"/></svg></button>`).join(''));
+
+const hhmm = h => `${Math.floor(h)}:${String(Math.round((h % 1) * 60)).padStart(2, '0')}`;
+const agendaItems = [
+  [0, 9.5, 25, 'call', 'Weekstart werk'],
+  [0, 13.25, 48, 'video', 'Interview Sanne Visser'],
+  [1, 10.33, 42, 'video', 'Interview Joris Bakker', 'joris'],
+  [1, 16, 34, 'call', 'Teams-overleg Studio Vos', 'call'],
+  [2, 9.2, 1, 'dict', 'Mail aan de aannemer'],
+  [2, 11.5, 13, 'screen', 'Demo nieuwe rapportage'],
+  [2, 14.08, 52, 'video', 'Interview Femke de Wit', 'femke'],
+  [3, 10, 45, 'plan', 'Teams: Studio Vos, fase 2'],
+  [4, 14, 30, 'plan', 'Belafspraak notaris']
+];
+document.querySelector('#hv-agenda .ag-body').innerHTML =
+  `<div class="ag-hours">${Array.from({ length: 11 }, (_, i) => `<div>${i + 8}:00</div>`).join('')}</div>` +
+  [0, 1, 2, 3, 4].map(d => `<div class="ag-col${d > 2 ? ' future' : ''}">${agendaItems.filter(a => a[0] === d).map(([, h, min, k, t, open]) => {
+    const height = k === 'plan' ? 52 : Math.max(24, min / 60 * 52);
+    const when = k === 'plan' ? `${hhmm(h)}` : `${hhmm(h)} · ${min} min`;
+    const auto = k === 'plan' ? '<span class="auto"><i></i>Neemt op bij start</span>' : '';
+    return `<div class="ag-b k-${k}${height < 40 ? ' short' : ''}" style="top:${(h - 8) * 52}px;height:${height}px"${open ? ` data-open="${open}"` : ''}><b>${t}</b><span>${when}</span>${auto}</div>`;
+  }).join('')}${d === 2 ? '<div class="ag-now" style="top:' + (15.17 - 8) * 52 + 'px"><button>● Neem nu op</button></div>' : ''}</div>`).join('');
+
+const bubArt = m => m.kind === 'video' ? frame(scenes[m.scene]) : m.kind === 'screen' ? screenFrame() + ring(m.busy) : m.kind === 'call' ? `<div class="cwave">${bars(14, 0, m.a, m.b)}</div>` : '<span class="bq">“</span>';
+document.querySelector('#hv-vraag .ask-row').innerHTML = memories.map(m => `<div class="bub${m.needs ? ' new' : ''}"${m.open ? ` data-open="${m.open}"` : ''}><div class="ba">${bubArt(m)}</div>${m.title}</div>`).join('');
+
+const piles = [['Vandaag', m => m.day === 0], ...Object.entries(labelNames).map(([l, n]) => [n, m => m.labels.includes(l)])];
+const when = ['vandaag', 'gisteren', 'vorige week'];
+document.querySelector('#hv-stapels .st-grid').innerHTML = piles.map(([name, f]) => {
+  const list = memories.filter(f).slice(0, 3);
+  const cards = list.slice().reverse().map(m => `<div class="pc"${m.open ? ` data-open="${m.open}"` : ''}><div class="pa">${art(m)}</div><span class="cap">${m.title}</span></div>`);
+  while (cards.length < 3) cards.unshift('<div class="pc"><div class="pa"></div></div>');
+  return `<div class="pile">${cards.join('')}<div class="lbl"><b>${name}</b><span>${list.length} ${list.length === 1 ? 'opname' : 'opnames'} · laatste ${when[list[0].day]}</span></div></div>`;
+}).join('');
+
+document.querySelectorAll('.hv [data-open]').forEach(el => el.addEventListener('click', e => { e.stopPropagation(); goto('p-mem'); openMem(el.dataset.open); }));
+document.querySelectorAll('.hv .ric, .hv .recb, .ag-now button').forEach(b => b.addEventListener('click', () => { goto('p-rec'); countdown(); }));
+
+const homeNotes = {
+  'hv-home': document.getElementById('home-note').innerHTML,
+  'hv-agenda': '<b>Agenda.</b> Opnames staan in de week waarin ze gebeurden, zo hoog als ze lang duurden, tussen je afspraken. Geplande Teams-afspraken staan gestreept; Pensieve neemt ze vanzelf op zodra ze beginnen. De rode lijn is nu; klik op <b>Neem nu op</b> om meteen te beginnen. Goed als je opnames vooral uit afspraken komen.',
+  'hv-vraag': '<b>Vraag.</b> Zoeken is het startpunt: stel een vraag en Pensieve antwoordt uit al je transcripten, met het citaat en een knop om precies op dat moment af te spelen. Je recente opnames staan klein onderaan als rondjes; een groene rand betekent nog geen transcript. Opnemen zit in de vier rode knopjes rechtsboven.',
+  'hv-stapels': '<b>Stapels.</b> Elk label is een stapel foto\'s op tafel, met de nieuwste bovenop. Beweeg erover en de stapel waaiert uit. Hier zijn labels dus de ordening zelf, in plaats van een stil filter. Opnemen doe je met het dock onderin.'
+};
+document.getElementById('homeseg').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
+  document.querySelectorAll('#homeseg button').forEach(x => x.classList.toggle('on', x === b));
+  document.querySelectorAll('#p-home .fit > .mac').forEach(m => m.style.display = m.id === b.dataset.v ? '' : 'none');
+  document.getElementById('home-note').innerHTML = homeNotes[b.dataset.v];
+  fit();
+};
+
 function countdown() {
   const c = document.getElementById('countdown');
   let n = 3;
@@ -1012,6 +1189,7 @@ applyFilters();
 const shrinkBg = document.getElementById('shrink-bg');
 shrinkBg.innerHTML = home.innerHTML;
 fit();
+document.querySelector(`#homeseg [data-v="${location.hash.slice(1)}"]`)?.click();
 </script>
 </body>
 </html>
