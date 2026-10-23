@@ -2,6 +2,7 @@ import {
   type AttachmentSummary,
   aiSearchRequest,
   createDraftRequest,
+  type FolderCount,
   mailFolder,
   mailboxOrderRequest,
   type MailboxSummary,
@@ -19,7 +20,7 @@ import {
   requireRight,
 } from '@burrow/platform';
 import { zValidator } from '@hono/zod-validator';
-import { and, desc, eq, lt } from 'drizzle-orm';
+import { and, count, desc, eq, inArray, lt, sql } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import { z } from 'zod';
@@ -138,6 +139,27 @@ export function hedwigRoutes({
       .get('/admin/mailboxes', requireRight('admin'), (c) =>
         c.json(c.var.db.select(mailboxColumns).from(mailboxes).all()),
       )
+      // Every message, not the newest page a list loads, for the sidebar and
+      // list headers.
+      .get('/mailboxes/counts', requireRight('read'), (c) => {
+        const ids = c.var.access.mailboxIds;
+        if (!ids.length) return c.json<FolderCount[]>([]);
+        return c.json<FolderCount[]>(
+          c.var.db
+            .select({
+              mailboxId: messages.mailboxId,
+              folder: messages.folder,
+              total: count(),
+              unread: sql<number>`coalesce(sum(${messages.unread}), 0)`.mapWith(
+                Number,
+              ),
+            })
+            .from(messages)
+            .where(inArray(messages.mailboxId, [...ids]))
+            .groupBy(messages.mailboxId, messages.folder)
+            .all(),
+        );
+      })
       .get(
         '/mailboxes/:mailboxId/messages',
         requireRight('read'),

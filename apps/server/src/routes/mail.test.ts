@@ -1,5 +1,6 @@
 import {
   attachmentSummary,
+  folderCounts,
   messageDetail,
   messageSummary,
 } from '@burrow/contracts';
@@ -80,6 +81,61 @@ describe('sync and list', () => {
     const [message] = await syncAndList(h, evaKey, h.evas.id);
     expect((await h.call(token, `/api/messages/${message!.id}`)).status).toBe(
       404,
+    );
+  });
+});
+
+describe('counts', () => {
+  async function counts(h: ReturnType<typeof setup>, token: string) {
+    const res = await h.call(token, '/api/mailboxes/counts');
+    expect(res.status).toBe(200);
+    return folderCounts.parse(await res.json());
+  }
+
+  it('counts every unread inbox message, not only the newest page', async () => {
+    const h = setup();
+    const token = h.key(h.gideon.id, ['read', 'organize']);
+    for (let i = 0; i < 130; i++) {
+      h.provider(h.home.id).deliver({
+        subject: `Mail ${i}`,
+        unread: i < 120,
+        receivedAt: new Date(Date.UTC(2026, 9, 1, 0, i)),
+      });
+    }
+    h.provider(h.home.id).deliver({ subject: 'Archived', folder: 'archive' });
+    const [newest] = await syncAndList(h, token, h.home.id);
+    await h.call(token, `/api/messages/${newest!.id}/actions`, {
+      method: 'POST',
+      body: JSON.stringify({ ops: [{ op: 'archive' }] }),
+    });
+
+    expect(
+      (await counts(h, token)).toSorted((a, b) =>
+        a.folder.localeCompare(b.folder),
+      ),
+    ).toEqual([
+      { mailboxId: h.home.id, folder: 'archive', total: 2, unread: 1 },
+      { mailboxId: h.home.id, folder: 'inbox', total: 129, unread: 120 },
+    ]);
+  });
+
+  it('only counts the mailboxes the key may see', async () => {
+    const h = setup();
+    const work = h.mailbox(h.gideon.id, 'gideon@work.example.com');
+    h.provider(h.home.id).deliver({ subject: 'Home' });
+    h.provider(work.id).deliver({ subject: 'Work' });
+    h.provider(h.evas.id).deliver({ subject: 'Eva' });
+    const all = h.key(h.gideon.id, ['read']);
+    await syncAndList(h, all, h.home.id);
+    await syncAndList(h, all, work.id);
+    await syncAndList(h, h.key(h.eva.id, ['read']), h.evas.id);
+
+    const homeOnly = h.key(h.gideon.id, ['read'], [h.home.id]);
+    expect((await counts(h, homeOnly)).map((c) => c.mailboxId)).toEqual([
+      h.home.id,
+    ]);
+    expect((await counts(h, all)).map((c) => c.mailboxId).toSorted()).toEqual(
+      [h.home.id, work.id].toSorted(),
     );
   });
 });

@@ -35,6 +35,16 @@ export const messageSummary = z.object({
 });
 export type MessageSummary = z.infer<typeof messageSummary>;
 
+// A folder without mail is left out of the counts.
+export const folderCount = z.object({
+  mailboxId: z.string(),
+  folder: mailFolder,
+  total: z.number().int(),
+  unread: z.number().int(),
+});
+export type FolderCount = z.infer<typeof folderCount>;
+export const folderCounts = z.array(folderCount);
+
 export const messageDetail = messageSummary.extend({
   cc: z.array(address),
   bodyText: z.string().nullable(),
