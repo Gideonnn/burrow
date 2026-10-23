@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="color-scheme" content="light dark" />
-<title>Pensieve · ontwerp v4</title>
+<title>Pensieve · ontwerp v5</title>
 <style>
 :root, [data-theme="light"] {
   --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
@@ -325,41 +325,26 @@ h2.sec { font-size: 20px; margin-top: 40px; }
 @media (max-width: 760px) { .choices, .floaters { grid-template-columns: 1fr; } }
 
 
-/* v4 home: no banner; a shutter like the Camera app and two ways to lay out memories */
+/* v5 home: record buttons, one filter menu and a row of tiles per day */
 .mac.plain { grid-template-rows: 52px 1fr; }
 .tb .center { position: absolute; left: 50%; transform: translateX(-50%); font-weight: 600; }
 .tb .back { display: inline-flex; align-items: center; gap: 2px; height: 28px; padding: 0 10px 0 6px; border-radius: 7px; color: var(--text-2); font-size: 13px; }
 .tb .back:hover { background: var(--hover); }
 .tb.blend { background: var(--bg); border-bottom-color: transparent; }
 
-.home { display: flex; flex-direction: column; min-height: 0; background: var(--bg); position: relative; }
-.hello { display: flex; align-items: center; gap: 24px; padding: 8px 28px 0; flex: none; }
-.hello .greet { flex: 1; min-width: 0; }
-.hello h1 { font-family: var(--serif); font-size: 34px; font-weight: 500; letter-spacing: -0.01em; line-height: 1.1; }
-.hello p { margin: 6px 0 0; color: var(--text-2); font-size: 13px; }
-.hello p b { color: var(--text); font-weight: 600; }
+.home { display: flex; flex-direction: column; min-height: 0; background: var(--bg); }
+.recrow { display: flex; gap: 10px; padding: 10px 28px 4px; flex: none; }
+.recb { height: 46px; padding: 0 18px 0 14px; border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-1); display: inline-flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 500; transition: box-shadow 0.15s, transform 0.15s; }
+.recb:hover { box-shadow: var(--shadow-2); transform: translateY(-1px); }
+.recb .dot { width: 10px; height: 10px; border-radius: 50%; background: #FF453A; }
+.recb kbd { margin-left: 2px; background: none; border: 0; padding: 0; color: var(--text-3); }
 
-.recorder { display: flex; align-items: center; gap: 14px; z-index: 3; }
-.rmodes { display: flex; gap: 2px; padding: 3px; border-radius: 999px; background: var(--surface); box-shadow: var(--shadow-1); }
-.rmode { height: 34px; padding: 0 13px 0 11px; border-radius: 999px; display: inline-flex; align-items: center; gap: 7px; font-size: 13px; color: var(--text-2); white-space: nowrap; }
-.rmode:hover { color: var(--text); }
-.rmode.on { background: var(--primary-tint); color: var(--primary); font-weight: 600; }
-.rmode kbd { display: none; background: none; border: 0; padding: 0; color: inherit; opacity: 0.6; font-weight: 400; }
-.rmode.on kbd { display: inline; }
-.shutter { width: 60px; height: 60px; border-radius: 50%; border: 3px solid var(--text); display: grid; place-items: center; flex: none; }
-.shutter i { width: 46px; height: 46px; border-radius: 50%; background: #FF453A; color: #fff; display: grid; place-items: center; transition: transform 0.15s; }
-.shutter:hover i { transform: scale(0.9); }
-
-.filters { display: flex; gap: 2px; align-items: center; padding: 14px 28px 0; flex: none; }
-.pill { height: 30px; padding: 0 10px; font-size: 13px; color: var(--text-2); display: inline-flex; align-items: center; white-space: nowrap; }
-.pill:hover { color: var(--text); }
-.pill.on { color: var(--text); font-weight: 600; box-shadow: inset 0 -2px 0 var(--text); }
-.lblwrap { position: relative; margin-left: 8px; }
-.lblmenu { height: 28px; padding: 0 8px 0 10px; border-radius: 7px; font-size: 12.5px; color: var(--text-2); display: inline-flex; align-items: center; gap: 5px; }
-.lblmenu:hover, .lblmenu.open { background: var(--hover); color: var(--text); }
-.lblmenu.active { color: var(--text); font-weight: 500; }
-.lblmenu .x { color: var(--text-3); margin-left: 2px; }
-.pop { position: absolute; top: 32px; left: 0; z-index: 5; width: 210px; background: var(--surface); border-radius: 10px; box-shadow: var(--shadow-2); padding: 5px; display: none; }
+.fwrap { position: relative; }
+.fbtn { height: 28px; padding: 0 9px; border-radius: 7px; font-size: 12.5px; color: var(--text-2); display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.fbtn:hover, .fbtn.open { background: var(--hover); color: var(--text); }
+.fbtn.active { color: var(--primary); font-weight: 600; }
+.fbtn .x { color: var(--text-3); margin-left: 2px; }
+.pop { position: absolute; top: 32px; right: 0; z-index: 5; width: 210px; background: var(--surface); border-radius: 10px; box-shadow: var(--shadow-2); padding: 5px; display: none; }
 .pop.open { display: block; }
 .pop .h { font-size: 11px; color: var(--text-3); padding: 4px 8px; }
 .pop .r { display: flex; align-items: center; gap: 8px; padding: 5px 8px; border-radius: 6px; font-size: 12.5px; cursor: pointer; }
@@ -372,77 +357,32 @@ h2.sec { font-size: 20px; margin-top: 40px; }
 .tag { cursor: pointer; }
 .tag:hover { text-decoration: underline; }
 .chip.quiet { background: none; border-color: var(--line-strong); color: var(--text-2); }
-.filters .grow { flex: 1; }
-.filters .who { font-size: 12.5px; color: var(--text-2); display: inline-flex; gap: 6px; align-items: center; }
 
-.gallery { overflow: auto; flex: 1; min-height: 0; padding: 6px 28px 28px; }
-.mem { position: relative; cursor: pointer; text-align: left; }
+.gallery { overflow: auto; flex: 1; min-height: 0; padding: 0 28px 28px; }
+.dayh { font-size: 13px; font-weight: 600; margin: 22px 0 10px; }
+.dayh span { color: var(--text-3); font-weight: 400; margin-left: 6px; }
+.cards { display: flex; gap: 12px; height: 220px; }
+.mem { flex: var(--w) 1 0; min-width: 0; position: relative; cursor: pointer; text-align: left; transition: transform 0.15s; }
+.mem:hover { transform: translateY(-2px); }
 .mem:not([data-open]) { cursor: default; }
 .mem .art { position: absolute; inset: 0; overflow: hidden; border-radius: 16px; background: var(--surface); box-shadow: var(--shadow-1); transition: box-shadow 0.15s; }
+.mem:hover .art { box-shadow: var(--shadow-2); }
 .mem .art > .video { margin: 0; border-radius: 0; height: 100%; aspect-ratio: auto; }
 .mem .art > .video .person { width: 30%; }
-.mem.k-call .art { background: linear-gradient(160deg, var(--surface), var(--surface-2)); }
 .mem .ov { position: absolute; left: 0; right: 0; bottom: 0; padding: 30px 14px 12px; display: flex; flex-direction: column; gap: 1px; border-radius: 0 0 16px 16px; }
 .mem .ov b { font-size: 14.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.mem .ov .m { font-size: 12px; display: flex; gap: 5px; align-items: center; color: var(--text-2); white-space: nowrap; }
-.mem .ov .m .grow { flex: 1; }
-.mem .ov .s { font-size: 12.5px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.mem.k-dict .ov .s { font-family: var(--serif); font-style: italic; }
+.mem .ov .m { font-size: 12px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mem.dark .ov { background: linear-gradient(transparent, rgba(0, 0, 0, 0.66)); color: #fff; }
-.mem.dark .ov .m, .mem.dark .ov .s { color: rgba(255, 255, 255, 0.75); }
-.mem .corner { position: absolute; top: 10px; right: 10px; display: flex; gap: 6px; }
+.mem.dark .ov .m { color: rgba(255, 255, 255, 0.75); }
+.mem .corner { position: absolute; top: 10px; right: 10px; }
 .glass { height: 28px; padding: 0 11px; border-radius: 999px; background: #fff; color: #1F5F57; font-size: 12px; font-weight: 600; display: inline-flex; gap: 5px; align-items: center; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25); }
 .glass:hover { background: #EAF6F3; }
-.cwave { position: absolute; inset: 18px 16px 66px; display: flex; align-items: center; gap: 2px; }
+.cwave { position: absolute; inset: 22px 18px 70px; display: flex; align-items: center; gap: 2px; }
 .cwave i { flex: 1; border-radius: 2px; }
 .paper { position: absolute; inset: 0 0 62px; padding: 18px 18px 0 36px; font-family: var(--serif); font-size: 15px; line-height: 1.42; overflow: hidden; -webkit-mask-image: linear-gradient(#000 65%, transparent); mask-image: linear-gradient(#000 65%, transparent); }
 .paper::before { content: "\201C"; position: absolute; left: 12px; top: 6px; font-size: 44px; line-height: 1; color: var(--primary); opacity: 0.55; }
-.frames { display: flex; gap: 2px; height: 100%; background: #111; }
-.frames .video { flex: none; width: 136px; height: 100%; margin: 0; border-radius: 0; aspect-ratio: auto; }
-.frames .video .person { width: 46%; height: 84%; }
 .busy { position: absolute; inset: 0; background: rgba(20, 16, 12, 0.5); display: grid; place-items: center; color: #fff; font-size: 12px; font-weight: 600; text-align: center; }
-.busy small { display: block; font-weight: 400; opacity: 0.8; }
 .busy svg { width: 46px; height: 46px; display: block; margin: 0 auto 6px; transform: rotate(-90deg); }
-.mem .when { display: none; }
-
-/* Fotoboek: one justified row of tiles per day */
-.v-a .day-group { display: grid; grid-template-columns: 124px minmax(0, 1fr); gap: 16px; padding: 18px 0 2px; }
-.v-a .day-group + .day-group { border-top: 1px solid var(--line); margin-top: 16px; }
-.v-a .dayh { font-family: var(--serif); font-size: 20px; line-height: 1.15; }
-.v-a .dayh span { display: block; white-space: nowrap; font-family: var(--font); font-size: 12px; color: var(--text-3); margin-top: 4px; }
-.v-a .cards { display: flex; gap: 12px; height: 214px; }
-.v-a .mem { flex: var(--w) 1 0; min-width: 0; transition: transform 0.15s; }
-.v-a .mem:hover { transform: translateY(-2px); }
-.v-a .mem:hover .art { box-shadow: var(--shadow-2); }
-.v-a .mem .s { display: none; }
-
-/* Tape: a strip per memory on a time line, as long as the recording */
-.v-b .recorder { position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); padding: 7px 7px 7px 7px; border-radius: 999px; background: color-mix(in srgb, var(--surface) 82%, transparent); backdrop-filter: blur(16px); box-shadow: var(--shadow-3); }
-.v-b .rmodes { background: none; box-shadow: none; }
-.v-b .shutter { width: 52px; height: 52px; }
-.v-b .shutter i { width: 40px; height: 40px; }
-.v-b .gallery { padding-bottom: 120px; }
-.v-b .day-group { padding-left: 92px; }
-.v-b .dayh { margin: 18px 0 10px -92px; font-family: var(--serif); font-size: 20px; display: flex; align-items: baseline; gap: 10px; }
-.v-b .dayh span { font-family: var(--font); font-size: 12px; color: var(--text-3); }
-.v-b .cards { display: flex; flex-direction: column; gap: 10px; position: relative; }
-.v-b .cards::before { content: ""; position: absolute; left: -18px; top: -8px; bottom: -8px; width: 2px; border-radius: 1px; background: var(--line); }
-.v-b .mem { width: var(--len); height: 78px; transition: transform 0.15s; }
-.v-b .mem:hover { transform: translateX(3px); }
-.v-b .mem:hover .art { box-shadow: var(--shadow-2); }
-.v-b .mem::before { content: ""; position: absolute; left: -22px; top: 50%; width: 10px; height: 10px; margin-top: -5px; border-radius: 50%; background: var(--bg); border: 2px solid var(--line-strong); }
-.v-b .mem .when { display: block; position: absolute; left: -92px; width: 58px; top: 50%; transform: translateY(-50%); text-align: right; font-size: 12px; color: var(--text-3); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.v-b .mem .art, .v-b .mem .ov { border-radius: 14px; }
-.v-b .mem .ov { top: 0; right: auto; width: min(380px, 82%); padding: 0 16px; justify-content: center; border-radius: 14px 0 0 14px; }
-.v-b .mem.dark .ov { background: linear-gradient(90deg, rgba(0, 0, 0, 0.74) 45%, transparent); }
-.v-b .mem:not(.dark) .ov { background: linear-gradient(90deg, var(--surface) 60%, transparent); }
-.v-b .ov .m .grow, .v-b .ov .m .av { display: none; }
-.v-b .mem .corner { top: 50%; transform: translateY(-50%); right: 12px; }
-.v-b .cwave { inset: 12px 14px; }
-.v-b .paper { display: none; }
-.v-b .busy { place-items: center end; padding-right: 18px; background: rgba(20, 16, 12, 0.3); }
-.v-b .busy > div { display: flex; align-items: center; gap: 8px; text-align: left; }
-.v-b .busy svg { width: 26px; height: 26px; margin: 0; }
 
 /* Memory view */
 .mv { display: grid; grid-template-columns: minmax(0, 1fr) 350px; min-height: 0; }
@@ -573,8 +513,8 @@ h2.sec { font-size: 20px; margin-top: 40px; }
 
 <div class="doc">
   <div class="hero">
-    <h1>Pensieve · ontwerp v4</h1>
-    <p class="lead">Geen mailprogramma en geen grote balk. Bovenin staan alleen de dag en een rode sluiter, zoals in de Camera-app. Daaronder staan je opnames, in twee varianten om uit te kiezen: <b>Fotoboek</b> (een rij tegels per dag, waarin het beeld de tegel vult) of <b>Tape</b> (stroken op een tijdlijn, zo lang als de opname). Open je een opname, dan zie je het beeld groot, een tijdlijn met sprekers en momenten, en het transcript dat meeloopt als songtekst.</p>
+    <h1>Pensieve · ontwerp v5</h1>
+    <p class="lead">Zo simpel mogelijk. Bovenin vier knoppen die meteen opnemen. Daaronder je opnames, per dag een rij tegels waarin het beeld de tegel vult: video als still, gesprekken als golfvorm in de kleuren van de sprekers, dictaten als citaat. Soort en label filter je met één menu. Open je een opname, dan zie je het beeld groot, een tijdlijn met sprekers en momenten, en het transcript dat meeloopt als songtekst.</p>
   </div>
 
   <div class="bar" id="tabs">
@@ -590,52 +530,42 @@ h2.sec { font-size: 20px; margin-top: 40px; }
 
   <!-- 1. Home -------------------------------------------------------------->
   <div class="pane on" id="p-home">
-    <div class="bar" style="margin-bottom:10px"><span class="seg" id="homeseg"><button class="on" data-v="a">Fotoboek</button><button data-v="b">Tape</button></span></div>
     <div class="stage"><div class="fit">
     <div class="mac plain">
       <div class="tb blend"><span class="lights"><i></i><i></i><i></i></span><span class="title">Pensieve</span><span class="grow"></span>
-        <div class="search" style="width:280px"><svg class="i sm"><use href="#i-search"/></svg>Zoek in alles wat er gezegd is</div>
-        <button class="tbicon" title="Instellingen" data-goto="p-set"><svg class="i"><use href="#i-gear"/></svg></button>
-      </div>
-      <div class="home v-a" id="home-body">
-        <div class="hello">
-          <div class="greet"><h1>Woensdag 22 oktober</h1><p>Drie opnames vandaag. <b>Interview Femke de Wit</b> wacht nog op een transcript.</p></div>
-          <div class="recorder">
-            <div class="rmodes">
-              <button class="rmode on" data-icon="i-call" data-name="een gesprek"><svg class="i"><use href="#i-call"/></svg>Gesprek<kbd>⌘1</kbd></button>
-              <button class="rmode" data-icon="i-cam" data-name="video"><svg class="i"><use href="#i-cam"/></svg>Video<kbd>⌘2</kbd></button>
-              <button class="rmode" data-icon="i-screen" data-name="je scherm"><svg class="i"><use href="#i-screen"/></svg>Scherm<kbd>⌘3</kbd></button>
-              <button class="rmode" data-icon="i-dict" data-name="een dictaat"><svg class="i"><use href="#i-dict"/></svg>Dicteren<kbd>⌥ Spatie</kbd></button>
-            </div>
-            <button class="shutter" title="Neem een gesprek op"><i><svg class="i lg"><use href="#i-call"/></svg></i></button>
+        <div class="search" style="width:260px"><svg class="i sm"><use href="#i-search"/></svg>Zoek in alles wat er gezegd is</div>
+        <span class="fwrap"><button class="fbtn"><svg class="i sm"><use href="#i-gear"/></svg><span class="ftext">Filter</span></button>
+          <div class="pop">
+            <div class="h">Soort</div>
+            <div class="r on" data-kind="all"><svg class="i sm ck"><use href="#i-check"/></svg>Alles</div>
+            <div class="r" data-kind="call"><svg class="i sm ck"><use href="#i-check"/></svg>Gesprekken</div>
+            <div class="r" data-kind="video"><svg class="i sm ck"><use href="#i-check"/></svg>Video</div>
+            <div class="r" data-kind="screen"><svg class="i sm ck"><use href="#i-check"/></svg>Scherm</div>
+            <div class="r" data-kind="dict"><svg class="i sm ck"><use href="#i-check"/></svg>Dictaten</div>
+            <div class="sep2"></div>
+            <div class="h">Label</div>
+            <div class="r" data-label="interview"><svg class="i sm ck"><use href="#i-check"/></svg>Interviews<span class="n">2</span></div>
+            <div class="r" data-label="werk"><svg class="i sm ck"><use href="#i-check"/></svg>Werk<span class="n">2</span></div>
+            <div class="r" data-label="klant"><svg class="i sm ck"><use href="#i-check"/></svg>Studio Vos<span class="n">1</span></div>
+            <div class="r" data-label="thuis"><svg class="i sm ck"><use href="#i-check"/></svg>Thuis<span class="n">2</span></div>
+            <div class="r" data-label="ideeen"><svg class="i sm ck"><use href="#i-check"/></svg>Ideeën<span class="n">1</span></div>
+            <div class="sep2"></div>
+            <div class="r manage">Labels beheren…</div>
           </div>
-        </div>
-        <div class="filters">
-          <button class="pill on" data-kind="all">Alles</button>
-          <button class="pill" data-kind="call">Gesprekken</button>
-          <button class="pill" data-kind="video">Video</button>
-          <button class="pill" data-kind="screen">Scherm</button>
-          <button class="pill" data-kind="dict">Dictaten</button>
-          <span class="lblwrap"><button class="lblmenu"><svg class="i sm"><use href="#i-tag"/></svg><span class="lbltext">Label</span><svg class="i sm" style="transform:rotate(90deg)"><use href="#i-chev"/></svg></button>
-            <div class="pop">
-              <div class="h">Toon alleen</div>
-              <div class="r" data-label="interview"><svg class="i sm ck"><use href="#i-check"/></svg>Interviews<span class="n">2</span></div>
-              <div class="r" data-label="werk"><svg class="i sm ck"><use href="#i-check"/></svg>Werk<span class="n">2</span></div>
-              <div class="r" data-label="klant"><svg class="i sm ck"><use href="#i-check"/></svg>Studio Vos<span class="n">1</span></div>
-              <div class="r" data-label="thuis"><svg class="i sm ck"><use href="#i-check"/></svg>Thuis<span class="n">2</span></div>
-              <div class="r" data-label="ideeen"><svg class="i sm ck"><use href="#i-check"/></svg>Ideeën<span class="n">1</span></div>
-              <div class="sep2"></div>
-              <div class="r manage">Labels beheren…</div>
-            </div>
-          </span>
-          <span class="grow"></span>
-          <span class="who"><span class="av g">G</span><span class="av e" style="margin-left:-8px;border:2px solid var(--bg)">E</span>Iedereen</span>
+        </span>
+      </div>
+      <div class="home" id="home-body">
+        <div class="recrow">
+          <button class="recb" title="⌘1"><span class="dot"></span>Gesprek</button>
+          <button class="recb" title="⌘2"><span class="dot"></span>Video</button>
+          <button class="recb" title="⌘3"><span class="dot"></span>Scherm</button>
+          <button class="recb" title="⌥ Spatie"><span class="dot"></span>Dicteren</button>
         </div>
         <div class="gallery"></div>
       </div>
     </div>
     </div></div>
-    <p class="note" id="home-note"></p>
+    <p class="note"><b>Eén rij knoppen, één filter.</b> Elke knop start meteen (met 3, 2, 1 aftellen); de sneltoetsen ⌘1, ⌘2, ⌘3 en ⌥ Spatie doen hetzelfde. Daaronder per dag een rij tegels: het beeld vult de tegel, met alleen titel, duur en label. Soort en label kies je in <b>Filter</b> rechtsboven; klik op een label op een tegel om erop te filteren. Klik op Femke, Joris of Studio Vos om ze te openen.</p>
   </div>
 
   <!-- 2. Memory view ------------------------------------------------------->
@@ -810,7 +740,7 @@ ovens en twee vaste krachten.
   <div class="choices">
     <div class="card"><h3>Opnemen</h3><ul>
       <li><b>Vier soorten</b> in plaats van één: Gesprek (bestaat al), Video, Scherm en Dicteren. Video en scherm via ScreenCaptureKit en AVFoundation, dicteren met een globale sneltoets.</li>
-      <li><b>Eén klik</b> op de sluiter, die de vorige soort onthoudt; geen venster vooraf. Titel en labels komen uit de agenda of de vorige opname van die soort en zijn tijdens en na het opnemen aan te passen.</li>
+      <li><b>Eén klik</b>: geen venster vooraf. Titel en labels komen uit de agenda of de vorige opname van die soort en zijn tijdens en na het opnemen aan te passen.</li>
       <li><b>Markeer moment</b> tijdens elke opname; de markeringen komen terug op de tijdlijn en in de samenvatting.</li>
     </ul></div>
     <div class="card"><h3>Verkleinen en opruimen</h3><ul>
@@ -821,7 +751,7 @@ ovens en twee vaste krachten.
       <li><b>Verklein video</b> werkt ook voor video's van buiten Pensieve, zoals van een iPhone: drie kwaliteiten met een geschatte grootte, en desgewenst de limiet van school.</li>
     </ul></div>
     <div class="card"><h3>Terugkijken</h3><ul>
-      <li>Geen lijst maar <b>beeld</b>: video als still of filmstrip, gesprekken als golfvorm in de kleuren van de sprekers, dictaten als citaat. Zo herken je een opname zonder de titel te lezen.</li>
+      <li>Geen lijst maar <b>beeld</b>: video als still, gesprekken als golfvorm in de kleuren van de sprekers, dictaten als citaat. Zo herken je een opname zonder de titel te lezen.</li>
       <li>De <b>tijdlijn</b> met sprekers komt uit het transcript met sprekerherkenning; de momenten uit Markeer.</li>
       <li>Het transcript loopt mee met afspelen; zoeken springt naar de zin.</li>
       <li>Bij video en scherm stuurt <b>Maak transcript</b> alleen het geluid naar de server. Ondertitels (<code>.srt</code>) komen erbij.</li>
@@ -928,67 +858,49 @@ function runTranscript() {
 }
 
 const labelNames = { interview: 'Interviews', werk: 'Werk', klant: 'Studio Vos', thuis: 'Thuis', ideeen: 'Ideeën' };
-const kindIcon = { call: 'i-call', video: 'i-cam', screen: 'i-screen', dict: 'i-dict' };
 const weights = { video: 2, screen: 1.7, call: 1.45, dict: 1.15 };
 const scenes = {
   femke: ['', '', ''],
   joris: ['radial-gradient(ellipse at 50% 120%, #6a5a40 0%, #33291c 45%, #17130d 100%)', '#8a6f55', '#9a8a7a']
 };
-const days = [['Vandaag', 'woensdag 22 oktober'], ['Gisteren', 'dinsdag 21 oktober'], ['Vorige week', '13 tot 17 oktober']];
+const days = [['Vandaag', 'woensdag 22 oktober'], ['Gisteren', 'dinsdag 21 oktober'], ['Vorige week', '']];
 const memories = [
-  { day: 0, time: '14:05', kind: 'video', labels: ['interview'], title: 'Interview Femke de Wit', dur: '52:10', min: 52, who: 'e', open: 'femke', scene: 'femke', needs: true },
-  { day: 0, time: '11:30', kind: 'screen', labels: ['werk'], title: 'Demo nieuwe rapportage', dur: '12:40', min: 13, who: 'g', busy: 64, summary: 'Wordt verkleind van 2,1 GB naar ± 150 MB.' },
-  { day: 0, time: '09:12', kind: 'dict', labels: ['thuis'], title: 'Mail aan de aannemer', dur: '1:12', min: 1, who: 'g', note: 'geplakt in Mail', text: 'Hoi Ruben, de kozijnen aan de achterkant kunnen volgende week geplaatst worden, als het droog blijft. Kun je laten weten of dinsdag of woensdag beter uitkomt?' },
-  { day: 1, time: '16:00', kind: 'call', labels: ['werk', 'klant'], title: 'Teams-overleg Studio Vos', dur: '34:12', min: 34, who: 'g', open: 'call', a: 'var(--gideon)', b: '#5E8A6E', summary: 'Lancering schuift naar 12 november; fase 2 krijgt een eigen offerte.' },
-  { day: 1, time: '10:20', kind: 'video', labels: ['interview'], title: 'Interview Joris Bakker', dur: '41:37', min: 42, who: 'e', open: 'joris', scene: 'joris', summary: '"Brood is geduld dat je kunt eten." Twintig jaar zuurdesem in de Kerkstraat.' },
-  { day: 2, time: 'do 16 okt', kind: 'call', labels: ['thuis'], title: 'Terugbelafspraak huisarts', dur: '6:02', min: 6, who: 'e', a: 'var(--eva)', b: '#8C7F70', summary: 'Uitslag goed, controle over drie maanden.' },
-  { day: 2, time: 'ma 13 okt', kind: 'dict', labels: ['ideeen'], title: 'Idee: boekenkast op zolder', dur: '0:48', min: 1, who: 'g', text: 'Onder het schuine dak, drie vakken diep, met schuifdeuren zodat het stof eraf blijft. Hout van de oude vloer hergebruiken.' }
+  { day: 0, kind: 'video', labels: ['interview'], title: 'Interview Femke de Wit', dur: '52:10', open: 'femke', scene: 'femke', needs: true },
+  { day: 0, kind: 'screen', labels: ['werk'], title: 'Demo nieuwe rapportage', dur: '12:40', busy: 64 },
+  { day: 0, kind: 'dict', labels: ['thuis'], title: 'Mail aan de aannemer', dur: '1:12', text: 'Hoi Ruben, de kozijnen aan de achterkant kunnen volgende week geplaatst worden, als het droog blijft. Kun je laten weten of dinsdag of woensdag beter uitkomt?' },
+  { day: 1, kind: 'call', labels: ['werk', 'klant'], title: 'Teams-overleg Studio Vos', dur: '34:12', open: 'call', a: 'var(--gideon)', b: '#5E8A6E' },
+  { day: 1, kind: 'video', labels: ['interview'], title: 'Interview Joris Bakker', dur: '41:37', open: 'joris', scene: 'joris' },
+  { day: 2, kind: 'call', labels: ['thuis'], title: 'Terugbelafspraak huisarts', dur: '6:02', a: 'var(--eva)', b: '#8C7F70' },
+  { day: 2, kind: 'dict', labels: ['ideeen'], title: 'Idee: boekenkast op zolder', dur: '0:48', text: 'Onder het schuine dak, drie vakken diep, met schuifdeuren zodat het stof eraf blijft. Hout van de oude vloer hergebruiken.' }
 ];
-const notes = {
-  a: '<b>Fotoboek.</b> Geen balk meer: bovenaan de dag, rechts een sluiter zoals in de Camera-app. Kies een soort en druk op de rode knop, of start meteen met ⌘1, ⌘2, ⌘3 of ⌥ Spatie (met 3, 2, 1 aftellen). De sluiter onthoudt de vorige soort, dus meestal is het één klik. Opnames staan per dag in één rij, zoals foto\'s: het beeld vult de tegel en de titel staat erop. Labels zijn grijze tekst; klik erop of gebruik <b>Label</b> om te filteren. Klik op Femke, Joris of Studio Vos om ze te openen.',
-  b: '<b>Tape.</b> Elke opname is een strook op een tijdlijn, en hoe langer de opname, hoe langer de strook: een interview van een uur loopt bijna over de hele breedte, een dictaat is kort. Video als filmstrip, gesprekken als golfvorm in de kleuren van de sprekers, dictaten als citaat. De sluiter zweeft onderin en blijft staan als je scrolt.'
-};
 
-const frame = (s, i = 0) => `<div class="video"><div class="scene" style="background:${s[0]}"></div><div class="person" style="left:${50 + Math.sin(i * 1.3) * 7}%"><i class="torso" style="background:${s[1]}"></i><i class="hair" style="background:${s[2]}"></i><i class="head"></i></div></div>`;
+const frame = s => `<div class="video"><div class="scene" style="background:${s[0]}"></div><div class="person"><i class="torso" style="background:${s[1]}"></i><i class="hair" style="background:${s[2]}"></i><i class="head"></i></div></div>`;
 const screenFrame = () => `<div class="video"><div class="screenshot"><div class="sbar"></div><div class="col"><i style="height:60%"></i><i style="height:85%"></i><i style="height:40%"></i></div></div></div>`;
-const ring = pct => `<div class="busy"><div><svg viewBox="0 0 46 46"><circle cx="23" cy="23" r="19" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="4"/><circle cx="23" cy="23" r="19" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-dasharray="119.4" stroke-dashoffset="${(119.4 * (1 - pct / 100)).toFixed(1)}"/></svg><span>Verkleinen · ${pct}%</span></div></div>`;
+const ring = pct => `<div class="busy"><div><svg viewBox="0 0 46 46"><circle cx="23" cy="23" r="19" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="4"/><circle cx="23" cy="23" r="19" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-dasharray="119.4" stroke-dashoffset="${(119.4 * (1 - pct / 100)).toFixed(1)}"/></svg>Verkleinen · ${pct}%</div></div>`;
 
-function art(m, v) {
-  const strip = f => `<div class="frames">${Array.from({ length: 9 }, (_, i) => f(i)).join('')}</div>`;
-  if (m.kind === 'video') return v === 'b' ? strip(i => frame(scenes[m.scene], i)) : frame(scenes[m.scene]);
-  if (m.kind === 'screen') return (v === 'b' ? strip(screenFrame) : screenFrame()) + (m.busy ? ring(m.busy) : '');
-  if (m.kind === 'call') return `<div class="cwave">${bars(v === 'b' ? 150 : 46, 0, m.a, m.b)}</div>`;
+function art(m) {
+  if (m.kind === 'video') return frame(scenes[m.scene]);
+  if (m.kind === 'screen') return screenFrame() + (m.busy ? ring(m.busy) : '');
+  if (m.kind === 'call') return `<div class="cwave">${bars(46, 0, m.a, m.b)}</div>`;
   return `<div class="paper">${m.text}</div>`;
 }
 
-function card(m, v) {
+function card(m) {
   const dark = m.kind === 'video' || m.kind === 'screen';
   const tags = m.labels.map(l => `<span class="tag" data-label="${l}">${labelNames[l]}</span>`).join(', ');
-  const summary = m.kind === 'dict' ? m.text : m.summary;
-  return `<div class="mem k-${m.kind}${dark ? ' dark' : ''}" data-k="${m.kind} ${m.labels.join(' ')}"${m.open ? ` data-open="${m.open}"` : ''} style="--w:${weights[m.kind]};--len:${40 + 60 * Math.min(m.min, 60) / 60}%">
-    <span class="when">${m.time}</span>
-    <div class="art">${art(m, v)}</div>
-    <div class="ov"><b>${m.title}</b><span class="m"><svg class="i sm"><use href="#${kindIcon[m.kind]}"/></svg><span>${m.dur}${m.note ? ' · ' + m.note : ''} · ${tags}</span><span class="grow"></span><span class="av ${m.who}">${m.who.toUpperCase()}</span></span>${summary ? `<span class="s">${summary}</span>` : ''}</div>
-    <div class="corner">${m.needs ? '<span class="glass" data-act="transcript"><svg class="i sm"><use href="#i-doc"/></svg>Maak transcript</span>' : ''}</div>
+  return `<div class="mem k-${m.kind}${dark ? ' dark' : ''}" data-k="${m.kind} ${m.labels.join(' ')}"${m.open ? ` data-open="${m.open}"` : ''} style="--w:${weights[m.kind]}">
+    <div class="art">${art(m)}</div>
+    <div class="ov"><b>${m.title}</b><span class="m">${m.dur} · ${tags}</span></div>
+    ${m.needs ? '<div class="corner"><span class="glass" data-act="transcript"><svg class="i sm"><use href="#i-doc"/></svg>Maak transcript</span></div>' : ''}
   </div>`;
 }
 
 const home = document.getElementById('home-body');
+const filterWrap = document.querySelector('#p-home .fwrap');
+home.querySelector('.gallery').innerHTML = days.map(([name, date], d) => `<div class="day-group"><div class="dayh">${name}<span>${date}</span></div><div class="cards">${memories.filter(m => m.day === d).map(card).join('')}</div></div>`).join('');
+
 let kind = 'all';
 const labels = new Set();
-function renderHome(v) {
-  home.className = 'home v-' + v;
-  home.querySelector('.gallery').innerHTML = days.map(([name, date], d) => `<div class="day-group"><div class="dayh">${name}<span>${date}</span></div><div class="cards">${memories.filter(m => m.day === d).map(m => card(m, v)).join('')}</div></div>`).join('');
-  document.getElementById('home-note').innerHTML = notes[v];
-  document.querySelectorAll('#homeseg button').forEach(b => b.classList.toggle('on', b.dataset.v === v));
-  applyFilters();
-  const bg = document.getElementById('shrink-bg');
-  bg.className = home.className;
-  bg.innerHTML = home.innerHTML;
-  fit();
-}
-document.getElementById('homeseg').onclick = e => { const b = e.target.closest('button'); if (b) renderHome(b.dataset.v); };
-
 function applyFilters() {
   home.querySelectorAll('.mem').forEach(m => {
     const k = m.dataset.k.split(' ');
@@ -998,24 +910,20 @@ function applyFilters() {
   home.querySelectorAll('.day-group').forEach(g => {
     g.style.display = [...g.querySelectorAll('.mem')].some(m => m.style.display !== 'none') ? '' : 'none';
   });
-  home.querySelectorAll('[data-kind]').forEach(p => p.classList.toggle('on', p.dataset.kind === kind));
-  home.querySelectorAll('.pop [data-label]').forEach(r => r.classList.toggle('on', labels.has(r.dataset.label)));
-  const names = [...home.querySelectorAll('.pop [data-label]')].filter(r => labels.has(r.dataset.label)).map(r => r.firstChild.nextSibling.textContent);
-  const btn = home.querySelector('.lblmenu');
-  btn.classList.toggle('active', labels.size > 0);
-  btn.querySelector('.lbltext').innerHTML = labels.size ? names.join(', ') + ' <span class="x" data-clear>×</span>' : 'Label';
+  const rows = [...filterWrap.querySelectorAll('.r[data-kind], .r[data-label]')];
+  rows.forEach(r => r.classList.toggle('on', r.dataset.kind ? r.dataset.kind === kind : labels.has(r.dataset.label)));
+  const names = rows.filter(r => r.classList.contains('on') && r.dataset.kind !== 'all').map(r => r.firstChild.nextSibling.textContent);
+  const btn = filterWrap.querySelector('.fbtn');
+  btn.classList.toggle('active', names.length > 0);
+  btn.querySelector('.ftext').innerHTML = names.length ? names.join(', ') + ' <span class="x" data-clear>×</span>' : 'Filter';
 }
-home.querySelector('.filters').onclick = e => {
-  const p = e.target.closest('.pill'); if (!p) return;
-  kind = p.dataset.kind;
-  applyFilters();
-};
-home.querySelector('.lblmenu').onclick = e => {
-  if (e.target.closest('[data-clear]')) { labels.clear(); applyFilters(); return; }
-  home.querySelector('.pop').classList.toggle('open');
+filterWrap.querySelector('.fbtn').onclick = e => {
+  if (e.target.closest('[data-clear]')) { kind = 'all'; labels.clear(); applyFilters(); return; }
+  filterWrap.querySelector('.pop').classList.toggle('open');
   e.currentTarget.classList.toggle('open');
 };
-home.querySelectorAll('.pop [data-label]').forEach(r => r.onclick = () => {
+filterWrap.querySelectorAll('.r[data-kind]').forEach(r => r.onclick = () => { kind = r.dataset.kind; applyFilters(); });
+filterWrap.querySelectorAll('.r[data-label]').forEach(r => r.onclick = () => {
   labels.has(r.dataset.label) ? labels.delete(r.dataset.label) : labels.add(r.dataset.label);
   applyFilters();
 });
@@ -1027,17 +935,7 @@ home.querySelector('.gallery').onclick = e => {
   openMem(m.dataset.open);
   if (e.target.closest('[data-act=transcript]')) runTranscript();
 };
-
-const shutter = home.querySelector('.shutter');
-home.querySelectorAll('.rmode').forEach(b => {
-  b.onclick = () => {
-    home.querySelectorAll('.rmode').forEach(x => x.classList.toggle('on', x === b));
-    shutter.querySelector('use').setAttribute('href', '#' + b.dataset.icon);
-    shutter.title = 'Neem ' + b.dataset.name + ' op';
-  };
-  b.ondblclick = () => shutter.click();
-});
-shutter.onclick = () => { goto('p-rec'); countdown(); };
+home.querySelectorAll('.recb').forEach(b => b.onclick = () => { goto('p-rec'); countdown(); });
 
 function countdown() {
   const c = document.getElementById('countdown');
@@ -1110,7 +1008,10 @@ function fit() {
 addEventListener('resize', fit);
 
 openMem('joris');
-renderHome('a');
+applyFilters();
+const shrinkBg = document.getElementById('shrink-bg');
+shrinkBg.innerHTML = home.innerHTML;
+fit();
 </script>
 </body>
 </html>
