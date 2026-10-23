@@ -384,6 +384,63 @@ h2.sec { font-size: 20px; margin-top: 40px; }
 .busy { position: absolute; inset: 0; background: rgba(20, 16, 12, 0.5); display: grid; place-items: center; color: #fff; font-size: 12px; font-weight: 600; text-align: center; }
 .busy svg { width: 46px; height: 46px; display: block; margin: 0 auto 6px; transform: rotate(-90deg); }
 
+/* Vertrouwd: the current app, one step further */
+.o-win { grid-template-rows: 52px 1fr; }
+.o-win .tb { display: grid; grid-template-columns: 210px 340px 1fr; padding: 0; gap: 0; }
+.o-win .tb > div { display: flex; align-items: center; gap: 8px; height: 100%; padding: 0 12px; min-width: 0; }
+.o-win .tb > div:first-child { background: var(--sidebar); padding-left: 14px; }
+.o-win .tb .t { font-weight: 700; font-size: 15px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.o-win .tb > div:last-child { justify-content: flex-end; }
+.o-body { display: grid; grid-template-columns: 210px 340px minmax(0, 1fr); min-height: 0; }
+.o-side { background: var(--sidebar); padding: 4px 8px 10px; display: flex; flex-direction: column; min-height: 0; }
+.o-side .sb-row svg { color: var(--primary); }
+.o-side .grow { flex: 1; }
+.o-status { display: flex; gap: 8px; align-items: flex-start; padding: 8px; font-size: 11.5px; color: var(--text-2); line-height: 1.35; }
+.o-status i { width: 8px; height: 8px; border-radius: 50%; background: var(--success); margin-top: 4px; flex: none; }
+.o-status b { display: block; color: var(--text); font-weight: 600; }
+.o-list { border-right: 1px solid var(--line); border-left: 1px solid var(--line); overflow: auto; min-height: 0; }
+.o-list .day { position: sticky; top: 0; background: var(--surface); z-index: 1; }
+.o-list .row { grid-template-columns: 46px 1fr; align-items: center; border-bottom: 0; margin: 0 6px; padding: 7px 8px; border-radius: 8px; }
+.o-list .row.on { background: var(--sel); color: var(--text); }
+.o-list .row.on .when, .o-list .row.on .l2 { color: var(--text-2); opacity: 1; }
+.o-th { width: 46px; height: 34px; border-radius: 7px; overflow: hidden; position: relative; background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--line); }
+.o-th > .video { height: 100%; margin: 0; border-radius: 0; aspect-ratio: auto; }
+.o-th > .video .person { width: 46%; }
+.o-th .cwave { inset: 8px 5px; gap: 1px; }
+.o-th .bq { position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--serif); font-size: 26px; color: var(--primary); padding-top: 10px; line-height: 1; }
+.o-list .l2 { display: flex; gap: 5px; align-items: center; }
+.o-list .l2 .grow { flex: 1; }
+.o-list .l2 .txt { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.o-list .l2 svg { color: var(--text-3); }
+.o-act { font-size: 11.5px; font-weight: 600; color: var(--primary); white-space: nowrap; display: inline-flex; gap: 5px; align-items: center; }
+.o-act .spin { width: 10px; height: 10px; border-width: 1.5px; }
+.o-act.going { color: var(--text-2); font-weight: 500; }
+.o-rec { display: inline-flex; height: 30px; border-radius: 999px; background: #FF453A; color: #fff; font-weight: 600; font-size: 13px; position: relative; }
+.o-rec button { display: inline-flex; align-items: center; gap: 7px; padding: 0 10px 0 11px; }
+.o-rec button:first-child i { width: 10px; height: 10px; border-radius: 50%; background: #fff; }
+.o-rec button + button { border-left: 1px solid rgba(255, 255, 255, 0.35); padding: 0 8px 0 6px; }
+.o-rec .pop { right: 0; left: auto; top: 36px; color: var(--text); font-weight: 400; }
+.o-rec .pop kbd { margin-left: auto; }
+.o-detail { overflow: auto; min-height: 0; padding: 16px 22px 30px; display: flex; flex-direction: column; gap: 14px; }
+.o-detail .video { margin: 0; flex: none; height: 270px; aspect-ratio: auto; }
+.o-detail .video .person { width: 24%; }
+.o-detail .bigwave { height: 150px; }
+.o-head { display: flex; gap: 12px; align-items: flex-start; }
+.o-head h2 { font-size: 19px; font-weight: 700; }
+.o-head .grow { flex: 1; min-width: 0; }
+.o-head .meta { margin-top: 3px; }
+.o-head .meta .tag { color: var(--text-2); }
+.o-head .meta .addl { color: var(--text-3); cursor: pointer; }
+.o-more { display: flex; flex-direction: column; gap: 18px; border-top: 1px solid var(--line); padding-top: 16px; }
+.o-more h3 { font-size: 12px; font-weight: 600; color: var(--text-2); margin-bottom: 6px; }
+.o-more p, .o-more ul { font-size: 13px; margin: 0; }
+.o-more ul { padding-left: 18px; }
+.o-hero { position: relative; height: 240px; border-radius: 12px; overflow: hidden; background: var(--surface-2); flex: none; }
+.o-hero > .video { height: 100%; margin: 0; border-radius: 0; }
+.o-hero .cwave { inset: 40px 28px; }
+.o-hero .paper { inset: 0; -webkit-mask-image: none; mask-image: none; font-size: 18px; padding: 28px 32px 0 56px; }
+.o-hero .paper::before { left: 22px; top: 18px; }
+
 /* Inspiration: three very different homes */
 .ricons { display: flex; gap: 6px; }
 .ric { width: 30px; height: 30px; border-radius: 50%; background: var(--surface); box-shadow: var(--shadow-1); color: #FF453A; display: grid; place-items: center; }
@@ -597,7 +654,7 @@ h2.sec { font-size: 20px; margin-top: 40px; }
 <div class="doc">
   <div class="hero">
     <h1>Pensieve · ontwerp v5</h1>
-    <p class="lead">Zo simpel mogelijk. Bovenin vier knoppen die meteen opnemen. Daaronder je opnames, per dag een rij tegels waarin het beeld de tegel vult: video als still, gesprekken als golfvorm in de kleuren van de sprekers, dictaten als citaat. Soort en label filter je met één menu. Open je een opname, dan zie je het beeld groot, een tijdlijn met sprekers en momenten, en het transcript dat meeloopt als songtekst.</p>
+    <p class="lead">Het thuisscherm in vijf varianten; kies er een boven het venster. <b>Vertrouwd</b> bouwt voort op de huidige app (zijbalk, lijst, detail); <b>Tegels</b>, <b>Agenda</b>, <b>Vraag</b> en <b>Stapels</b> zijn inspiratie. Open je een opname, dan zie je het beeld, een tijdlijn met sprekers en momenten, en het transcript dat meeloopt als songtekst.</p>
   </div>
 
   <div class="bar" id="tabs">
@@ -613,9 +670,58 @@ h2.sec { font-size: 20px; margin-top: 40px; }
 
   <!-- 1. Home -------------------------------------------------------------->
   <div class="pane on" id="p-home">
-    <div class="bar" style="margin-bottom:10px"><span class="seg" id="homeseg"><button class="on" data-v="hv-home">Huidig</button><button data-v="hv-agenda">Agenda</button><button data-v="hv-vraag">Vraag</button><button data-v="hv-stapels">Stapels</button></span></div>
+    <div class="bar" style="margin-bottom:10px"><span class="seg" id="homeseg"><button class="on" data-v="hv-vertrouwd">Vertrouwd</button><button data-v="hv-home">Tegels</button><button data-v="hv-agenda">Agenda</button><button data-v="hv-vraag">Vraag</button><button data-v="hv-stapels">Stapels</button></span></div>
     <div class="stage"><div class="fit">
-    <div class="mac plain" id="hv-home">
+    <div class="mac o-win" id="hv-vertrouwd">
+      <div class="tb">
+        <div><span class="lights"><i></i><i></i><i></i></span><span class="grow" style="flex:1"></span><button class="tbicon" title="Zijbalk"><svg class="i"><use href="#i-all"/></svg></button></div>
+        <div><span class="t" id="o-title">Alle opnames</span>
+          <span class="lblwrap" style="position:relative"><button class="fbtn" id="o-lbl"><svg class="i sm"><use href="#i-tag"/></svg><span class="ftext">Label</span></button>
+            <div class="pop" style="left:auto;right:0">
+              <div class="h">Toon alleen</div>
+              <div class="r" data-label="interview"><svg class="i sm ck"><use href="#i-check"/></svg>Interviews<span class="n">2</span></div>
+              <div class="r" data-label="werk"><svg class="i sm ck"><use href="#i-check"/></svg>Werk<span class="n">2</span></div>
+              <div class="r" data-label="klant"><svg class="i sm ck"><use href="#i-check"/></svg>Studio Vos<span class="n">1</span></div>
+              <div class="r" data-label="thuis"><svg class="i sm ck"><use href="#i-check"/></svg>Thuis<span class="n">2</span></div>
+              <div class="r" data-label="ideeen"><svg class="i sm ck"><use href="#i-check"/></svg>Ideeën<span class="n">1</span></div>
+              <div class="sep2"></div>
+              <div class="r manage">Labels beheren…</div>
+            </div>
+          </span>
+        </div>
+        <div>
+          <span class="o-rec"><button id="o-recgo" title="⌘N"><i></i><span>Gesprek</span></button><button id="o-recmenu"><svg class="i sm" style="transform:rotate(90deg)"><use href="#i-chev"/></svg></button>
+            <div class="pop" id="o-recpop">
+              <div class="r" data-k="Gesprek"><svg class="i sm"><use href="#i-call"/></svg>Gesprek<kbd>⌘1</kbd></div>
+              <div class="r" data-k="Video"><svg class="i sm"><use href="#i-cam"/></svg>Video<kbd>⌘2</kbd></div>
+              <div class="r" data-k="Scherm"><svg class="i sm"><use href="#i-screen"/></svg>Scherm<kbd>⌘3</kbd></div>
+              <div class="r" data-k="Dicteren"><svg class="i sm"><use href="#i-dict"/></svg>Dicteren<kbd>⌥ Spatie</kbd></div>
+            </div>
+          </span>
+          <div class="search" style="width:250px"><svg class="i sm"><use href="#i-search"/></svg>Zoek in opnames en transcripten</div>
+        </div>
+      </div>
+      <div class="o-body">
+        <div class="o-side">
+          <div class="sb-label">Opnames</div>
+          <div class="sb-row on" data-scope="all"><svg class="i"><use href="#i-all"/></svg>Alle opnames<span class="n"></span></div>
+          <div class="sb-row" data-scope="mine"><svg class="i"><use href="#i-person"/></svg>Van mij<span class="n"></span></div>
+          <div class="sb-row" data-scope="shared"><svg class="i"><use href="#i-people"/></svg>Gedeeld met mij<span class="n"></span></div>
+          <div class="sb-label">Soort</div>
+          <div class="sb-row" data-scope="call"><svg class="i"><use href="#i-call"/></svg>Gesprekken<span class="n"></span></div>
+          <div class="sb-row" data-scope="video"><svg class="i"><use href="#i-cam"/></svg>Video<span class="n"></span></div>
+          <div class="sb-row" data-scope="screen"><svg class="i"><use href="#i-screen"/></svg>Scherm<span class="n"></span></div>
+          <div class="sb-row" data-scope="dict"><svg class="i"><use href="#i-dict"/></svg>Dictaten<span class="n"></span></div>
+          <div class="sb-label">Hulpmiddelen</div>
+          <div class="sb-row" data-goto="p-shrink"><svg class="i"><use href="#i-down"/></svg>Verklein een video…</div>
+          <span class="grow"></span>
+          <div class="o-status"><i></i><span><b>burrow.example.nl</b>Gideon · alles staat in iCloud</span></div>
+        </div>
+        <div class="o-list"></div>
+        <div class="o-detail"></div>
+      </div>
+    </div>
+    <div class="mac plain" id="hv-home" style="display:none">
       <div class="tb blend"><span class="lights"><i></i><i></i><i></i></span><span class="title">Pensieve</span><span class="grow"></span>
         <div class="search" style="width:260px"><svg class="i sm"><use href="#i-search"/></svg>Zoek in alles wat er gezegd is</div>
         <span class="fwrap"><button class="fbtn"><svg class="i sm"><use href="#i-gear"/></svg><span class="ftext">Filter</span></button>
@@ -940,7 +1046,7 @@ const mems = {
       <div class="video"><div class="scene"></div><div class="person"><i class="torso"></i><i class="hair"></i><i class="head"></i></div><div class="vctl"><svg class="i fill"><use href="#i-play"/></svg><span>11:24</span><span class="track"><i></i></span><span>52:10</span></div></div>
       <div class="strip"><span class="empty-hint">Wie wanneer praat verschijnt hier na het transcript.</span><span class="mk" style="left:8%"><svg class="i sm fill"><use href="#i-pin"/></svg></span><span class="mk" style="left:29.8%"><svg class="i sm fill"><use href="#i-pin"/></svg></span><span class="ph" style="left:21.9%"></span></div>`,
     side: () => `
-      <div class="bigcta" id="cta"><b>Maak transcript en samenvatting</b><span>Alleen het geluid gaat naar de server. Klaar in ± 4 minuten, met sprekers, citaten en ondertitels.</span><button onclick="runTranscript()"><svg class="i sm"><use href="#i-doc"/></svg>Maak transcript</button></div>
+      <div class="bigcta" id="cta"><b>Maak transcript en samenvatting</b><span>Alleen het geluid gaat naar de server. Klaar in ± 4 minuten, met sprekers, citaten en ondertitels.</span><button onclick="runTranscript(this)"><svg class="i sm"><use href="#i-doc"/></svg>Maak transcript</button></div>
       <div><h3>Gemarkeerd tijdens het opnemen</h3><div class="moment"><span class="ts">04:10</span>Eerste oven, 2009</div><div class="moment"><span class="ts">15:33</span>Mooie quote over glazuur</div></div>
       <div><h3>Labels</h3><div class="labels" style="margin:0"><span class="chip quiet">Interviews</span><span class="chip add"><svg class="i sm"><use href="#i-plus"/></svg>Label</span></div></div>
       <div><h3>In iCloud</h3>${fileList([['i-film', 'interview-femke-de-wit.mp4', '790 MB'], ['i-wave', 'audio.m4a', '12 MB'], ['i-trash', 'origineel.mov', '5,9 GB', true]])}<p style="font-size:12px;color:var(--text-2);margin-top:6px">Het origineel is om 10:41 verwijderd, nadat de kleine versie veilig in iCloud stond.</p></div>`
@@ -977,8 +1083,8 @@ function openMem(v) {
 }
 document.getElementById('memseg').onclick = e => { const b = e.target.closest('button'); if (b) openMem(b.dataset.v); };
 
-function runTranscript() {
-  document.getElementById('cta').innerHTML = `<b>Transcript wordt gemaakt</b><span>Geluid geüpload · transcriberen 35% · nog ± 3 minuten</span><span class="prog" style="display:block"><i style="width:35%"></i></span>`;
+function runTranscript(btn) {
+  (btn ? btn.closest('.bigcta') : document.querySelector('#mv .bigcta')).innerHTML = `<b>Transcript wordt gemaakt</b><span>Geluid geüpload · transcriberen 35% · nog ± 3 minuten</span><span class="prog" style="display:block"><i style="width:35%"></i></span>`;
 }
 
 const labelNames = { interview: 'Interviews', werk: 'Werk', klant: 'Studio Vos', thuis: 'Thuis', ideeen: 'Ideeën' };
@@ -1101,11 +1207,13 @@ document.querySelectorAll('.hv [data-open]').forEach(el => el.addEventListener('
 document.querySelectorAll('.hv .ric, .hv .recb, .ag-now button').forEach(b => b.addEventListener('click', () => { goto('p-rec'); countdown(); }));
 
 const homeNotes = {
+  'hv-vertrouwd': '<b>Vertrouwd.</b> De huidige app, een stap verder. De zijbalk krijgt de soorten (Gesprekken, Video, Scherm, Dictaten) en <b>Verklein een video…</b>. De lijst toont een klein beeld per opname, de duur, labels als grijze tekst en wat er nog moet gebeuren: <b>Transcript</b> of de voortgang van het verkleinen. De rode knop neemt op in de vorige soort; het pijltje ernaast kiest een andere. Labels filter je met <b>Label</b> boven de lijst of door op een label te klikken.',
   'hv-home': document.getElementById('home-note').innerHTML,
   'hv-agenda': '<b>Agenda.</b> Opnames staan in de week waarin ze gebeurden, zo hoog als ze lang duurden, tussen je afspraken. Geplande Teams-afspraken staan gestreept; Pensieve neemt ze vanzelf op zodra ze beginnen. De rode lijn is nu; klik op <b>Neem nu op</b> om meteen te beginnen. Goed als je opnames vooral uit afspraken komen.',
   'hv-vraag': '<b>Vraag.</b> Zoeken is het startpunt: stel een vraag en Pensieve antwoordt uit al je transcripten, met het citaat en een knop om precies op dat moment af te spelen. Je recente opnames staan klein onderaan als rondjes; een groene rand betekent nog geen transcript. Opnemen zit in de vier rode knopjes rechtsboven.',
   'hv-stapels': '<b>Stapels.</b> Elk label is een stapel foto\'s op tafel, met de nieuwste bovenop. Beweeg erover en de stapel waaiert uit. Hier zijn labels dus de ordening zelf, in plaats van een stil filter. Opnemen doe je met het dock onderin.'
 };
+document.getElementById('home-note').innerHTML = homeNotes['hv-vertrouwd'];
 document.getElementById('homeseg').onclick = e => {
   const b = e.target.closest('button'); if (!b) return;
   document.querySelectorAll('#homeseg button').forEach(x => x.classList.toggle('on', x === b));
@@ -1113,6 +1221,94 @@ document.getElementById('homeseg').onclick = e => {
   document.getElementById('home-note').innerHTML = homeNotes[b.dataset.v];
   fit();
 };
+
+const oWin = document.getElementById('hv-vertrouwd');
+const oWhen = ['Vandaag', 'Gisteren', 'Vorige week'];
+const oTimes = ['14:05', '11:30', '09:12', '16:00', '10:20', 'do 16 okt', 'ma 13 okt'];
+let oScope = 'all';
+let oSel = memories[0];
+const oLabels = new Set();
+const oScopes = { all: () => true, mine: m => m.who !== 'e', shared: m => m.who === 'e' };
+const oWho = { 'Interview Femke de Wit': 'e', 'Interview Joris Bakker': 'e', 'Terugbelafspraak huisarts': 'e' };
+memories.forEach((m, i) => { m.time = oTimes[i]; m.who = oWho[m.title] || 'g'; });
+const oMatch = m => (oScopes[oScope] ? oScopes[oScope](m) : m.kind === oScope) && (!oLabels.size || m.labels.some(l => oLabels.has(l)));
+const oThumb = m => m.kind === 'video' ? frame(scenes[m.scene]) : m.kind === 'screen' ? screenFrame() : m.kind === 'call' ? `<div class="cwave">${bars(12, 0, m.a, m.b)}</div>` : '<span class="bq">“</span>';
+const oStatus = m => m.needs ? '<span class="o-act" data-act="transcript"><svg class="i sm"><use href="#i-doc"/></svg>Transcript</span>'
+  : m.busy ? `<span class="o-act going"><span class="spin"></span>Verkleinen ${m.busy}%</span>`
+  : m.who === 'e' ? '<span class="av e">E</span>' : '';
+const oTags = m => m.labels.map(l => `<span class="tag" data-label="${l}">${labelNames[l]}</span>`).join(', ');
+
+function oRender() {
+  oWin.querySelectorAll('.o-side [data-scope]').forEach(r => {
+    r.classList.toggle('on', r.dataset.scope === oScope);
+    const s = r.dataset.scope;
+    r.querySelector('.n').textContent = memories.filter(m => oScopes[s] ? oScopes[s](m) : m.kind === s).length;
+  });
+  document.getElementById('o-title').textContent = oWin.querySelector(`.o-side [data-scope="${oScope}"]`).textContent.replace(/\d+$/, '');
+  const shown = memories.filter(oMatch);
+  oWin.querySelector('.o-list').innerHTML = oWhen.map((name, d) => {
+    const rows = shown.filter(m => m.day === d);
+    return rows.length ? `<div class="day">${name}</div>` + rows.map(m => `<div class="row${m === oSel ? ' on' : ''}" data-i="${memories.indexOf(m)}"><span class="o-th">${oThumb(m)}</span><div><div class="l1"><b>${m.title}</b><span class="when">${m.time}</span></div><div class="l2"><svg class="i sm"><use href="#${kindIcons[m.kind]}"/></svg><span class="txt">${m.dur}${m.labels.length ? ' · ' + oTags(m) : ''}</span><span class="grow"></span>${oStatus(m)}</div></div></div>`).join('') : '';
+  }).join('') || '<div class="day" style="padding:20px 14px">Niets gevonden met dit filter.</div>';
+  oWin.querySelectorAll('#o-lbl + .pop [data-label]').forEach(r => r.classList.toggle('on', oLabels.has(r.dataset.label)));
+  const names = [...oLabels].map(l => labelNames[l]);
+  const btn = document.getElementById('o-lbl');
+  btn.classList.toggle('active', names.length > 0);
+  btn.querySelector('.ftext').innerHTML = names.length ? names.join(', ') + ' <span class="x" data-clear>×</span>' : 'Label';
+  oDetail();
+}
+
+function oDetail() {
+  const m = oSel;
+  const d = oWin.querySelector('.o-detail');
+  const head = `<div class="o-head"><div class="grow"><h2>${m.title}</h2><div class="meta">${oWhen[m.day]} ${m.time.includes(':') ? m.time : ''} · ${m.dur} · <span class="av ${m.who}">${m.who.toUpperCase()}</span>${m.who === 'e' ? 'Eva' : 'Gideon'} · ${oTags(m)} <span class="addl">+ Label</span></div></div>
+    ${m.kind === 'video' || m.kind === 'screen' ? '<button class="tbicon" title="Verklein…" data-goto="p-shrink"><svg class="i"><use href="#i-down"/></svg></button>' : ''}<button class="tbicon" title="Toon in Finder"><svg class="i"><use href="#i-folder"/></svg></button><button class="btn"><svg class="i sm"><use href="#i-share"/></svg>Deel</button></div>`;
+  if (m.open) {
+    d.innerHTML = head + mems[m.open].main() + `<div class="o-more">${mems[m.open].side()}</div>`;
+    d.querySelectorAll('.lyrics p').forEach(p => p.onclick = () => {
+      const i = Number(p.dataset.i);
+      p.parentElement.querySelectorAll('p').forEach((x, j) => { x.className = j < i ? 'past' : j === i ? 'now' : ''; });
+    });
+  } else {
+    const extra = m.kind === 'dict' ? '<div><button class="btn"><svg class="i sm"><use href="#i-copy"/></svg>Kopieer tekst</button></div>'
+      : m.busy ? `<p style="color:var(--text-2);font-size:13px;margin:0">Wordt verkleind van 2,1 GB naar ± 150 MB. Daarna gaat hij naar iCloud en verdwijnt het origineel.</p>`
+      : '<p style="color:var(--text-2);font-size:13px;margin:0">Uitslag goed, controle over drie maanden.</p>';
+    d.innerHTML = head + `<div class="o-hero">${art(m)}</div>` + extra;
+  }
+  d.querySelectorAll('[data-goto]').forEach(b => b.onclick = () => goto(b.dataset.goto));
+}
+
+const kindIcons = { call: 'i-call', video: 'i-cam', screen: 'i-screen', dict: 'i-dict' };
+oWin.querySelector('.o-side').onclick = e => {
+  const r = e.target.closest('[data-scope]'); if (!r) return;
+  oScope = r.dataset.scope;
+  if (!oMatch(oSel)) oSel = memories.find(oMatch) || oSel;
+  oRender();
+};
+oWin.querySelector('.o-list').onclick = e => {
+  const t = e.target.closest('.tag');
+  if (t) { oLabels.clear(); oLabels.add(t.dataset.label); oRender(); return; }
+  const r = e.target.closest('.row'); if (!r) return;
+  oSel = memories[Number(r.dataset.i)];
+  oRender();
+  if (e.target.closest('[data-act=transcript]')) runTranscript(oWin.querySelector('.o-detail .bigcta button'));
+};
+document.getElementById('o-lbl').onclick = e => {
+  if (e.target.closest('[data-clear]')) { oLabels.clear(); oRender(); return; }
+  e.currentTarget.nextElementSibling.classList.toggle('open');
+};
+oWin.querySelectorAll('#o-lbl + .pop [data-label]').forEach(r => r.onclick = () => {
+  oLabels.has(r.dataset.label) ? oLabels.delete(r.dataset.label) : oLabels.add(r.dataset.label);
+  if (!oMatch(oSel)) oSel = memories.find(oMatch) || oSel;
+  oRender();
+});
+document.getElementById('o-recgo').onclick = () => { goto('p-rec'); countdown(); };
+document.getElementById('o-recmenu').onclick = () => document.getElementById('o-recpop').classList.toggle('open');
+document.querySelectorAll('#o-recpop [data-k]').forEach(r => r.onclick = () => {
+  document.querySelector('#o-recgo span').textContent = r.dataset.k;
+  document.getElementById('o-recpop').classList.remove('open');
+});
+oRender();
 
 function countdown() {
   const c = document.getElementById('countdown');
