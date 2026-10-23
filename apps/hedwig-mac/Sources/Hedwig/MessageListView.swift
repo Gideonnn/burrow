@@ -139,9 +139,8 @@ struct MessageRow: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
-                if message.flagged || !message.labels.isEmpty || showMailbox || category != nil {
+                if message.flagged || !message.labels.isEmpty || showMailbox {
                     HStack(spacing: 5) {
-                        if let category { Tag(text: category, color: .teal) }
                         if message.flagged { Tag(text: "Antwoord nodig", color: .orange) }
                         ForEach(message.labels, id: \.self) { Tag(text: $0, color: .secondary) }
                         if showMailbox, let box = model.mailbox(message.mailboxId) {
@@ -154,8 +153,6 @@ struct MessageRow: View {
         }
         .padding(.vertical, 4)
     }
-
-    private var category: String? { message.facts?.categoryTitle }
 }
 
 struct Tag: View {
