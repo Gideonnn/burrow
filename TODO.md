@@ -199,7 +199,9 @@ calendars. Drop "Van mij", "Gedeeld met mij" and Pensieve's share routes.
 (2) watch `iCloud Drive/Pensieve` both ways: added files and folders become recordings
 (a loose file gets its own folder and `audio.m4a`), renames, Finder tags and edited
 markdown come back, deletions turn the recording grey with "Zet terug" from Dobby's
-copy, which Dobby keeps 30 days (setting).
+copy, which Dobby keeps 30 days (setting); (3) when the server regenerates a transcript
+or summary it overwrites the file, after renaming the previous one with a timestamp
+(`transcript-2026-10-22-1405.md`) so edits made in Finder stay recoverable.
 **Why:** decided 2026-10-23: Dobby holds every file in Burrow, iCloud is what the
 operator manages in Finder.
 **Scope:** two to three days; the watcher and its conflict rules are most of it.
@@ -208,8 +210,9 @@ operator manages in Finder.
 
 **What:** `Stuur` creates a link to one file or a zip of the folder: one download by
 default (3 or 10 on request), always 24 hours, counted when a download completes,
-revocable; a public receive page without account, cookies or trackers, `noindex`, with
-the states "open", "downloaded" and "no longer works". List open links per recording
+revocable; download only, no browser playback (the page shows a still frame); a public
+receive page without account, cookies or trackers, `noindex`, with the states "open",
+"downloaded" and "no longer works". List open links per recording
 and under "Open deellinks".
 **Why:** sending to people without a Mac, without a third-party service.
 **Scope:** a day for server and page, half a day for the Mac popover.

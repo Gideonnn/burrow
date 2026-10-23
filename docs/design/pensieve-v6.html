@@ -708,7 +708,7 @@ h2.sec { font-size: 20px; margin-top: 40px; }
         <div class="fine">Er staat hier niets meer.</div>
       </div></div></div><p class="cap2">Gebruikt of verlopen</p></div>
     </div>
-    <p class="note"><b>Wat de ontvanger ziet.</b> Een gewone webpagina op Dobby, zonder account, app, cookies of trackers; zoekmachines mogen hem niet indexeren. De link bevat een lang willekeurig stuk dat niet te raden is. Een download telt pas als hij helemaal binnen is, dus een afgebroken download op 4G kost geen poging. Na de laatste download of na 24 uur werkt de link niet meer; het bestand zelf blijft op Dobby en in iCloud.</p>
+    <p class="note"><b>Wat de ontvanger ziet.</b> Een gewone webpagina op Dobby, zonder account, app, cookies of trackers; zoekmachines mogen hem niet indexeren. De link bevat een lang willekeurig stuk dat niet te raden is. Een download telt pas als hij helemaal binnen is, dus een afgebroken download op 4G kost geen poging. Afspelen in de browser kan niet: de pagina toont één stilstaand beeld en de downloadknop. Na de laatste download of na 24 uur werkt de link niet meer; het bestand zelf blijft op Dobby en in iCloud.</p>
   </div>
 
   <!-- 4. Recording --------------------------------------------------------->
@@ -807,7 +807,7 @@ h2.sec { font-size: 20px; margin-top: 40px; }
           <ol class="rules">
             <li><b>Erin zetten is toevoegen.</b> Een map of bestand in Pensieve verschijnt in de app. Een losse video of geluidsopname, zoals deze presentatie van een iPhone, krijgt een eigen map met het geluid ernaast; het bestand zelf blijft zoals het is.</li>
             <li><b>Hernoemen is hernoemen.</b> Een andere mapnaam geeft een andere titel. Finder-tags zijn de labels, in beide richtingen.</li>
-            <li><b>Bewerken telt.</b> Pas je <code>transcript.md</code> of <code>samenvatting.md</code> aan, dan neemt de app je tekst over en zoekt erin.</li>
+            <li><b>Bewerken telt.</b> Pas je <code>transcript.md</code> of <code>samenvatting.md</code> aan, dan neemt de app je tekst over en zoekt erin. Maakt de server hem later opnieuw, dan krijgt jouw versie een datum in de naam, zoals <code>transcript-2026-10-22-1405.md</code>, en is de nieuwe weer <code>transcript.md</code>. Er gaat niets verloren.</li>
             <li><b>Weggooien is grijs.</b> Een verwijderde map wordt grijs in de app; <b>Zet terug</b> haalt hem van Dobby terug in iCloud. Gooi je één bestand weg, zoals de video, dan zegt de opname dat dat bestand mist.</li>
             <li><b>Dobby heeft alles.</b> Van elke map een kopie, ook de video: daar komen deellinks vandaan en het is de backup.</li>
           </ol>
@@ -876,13 +876,15 @@ h2.sec { font-size: 20px; margin-top: 40px; }
       <li>Het deelmenu van macOS (AirDrop, Mail, Berichten) en een <b>deellink</b> voor wie geen Mac heeft.</li>
       <li>Standaard <b>één download</b>, altijd <b>24 uur</b> geldig; bij het maken kies je 3 of 10 downloads.</li>
       <li>Een download telt pas als hij af is. Links zijn in te trekken; daarna werkt de pagina niet meer.</li>
-      <li>De ontvanger heeft alleen een browser nodig: geen account, geen app, geen trackers.</li>
+      <li>De ontvanger heeft alleen een browser nodig: geen account, geen app, geen trackers. Video is alleen te downloaden, niet in de browser af te spelen.</li>
+    </ul></div>
+    <div class="card"><h3>Besloten</h3><ul>
+      <li>Dobby bewaart wat je in iCloud weggooit <b>30 dagen</b>; instelbaar naar 90 dagen of altijd.</li>
+      <li>Een deellink is <b>alleen downloaden</b>, geen afspelen in de browser.</li>
+      <li>Maakt de server een transcript of samenvatting opnieuw, dan <b>overschrijft</b> hij hem. De vorige versie blijft staan onder een naam met datum, zodat je hem terug kunt halen.</li>
     </ul></div>
     <div class="card"><h3>Open vragen</h3><ul>
-      <li>Hoe lang bewaart Dobby wat je in iCloud weggooit? Voorstel: 30 dagen, instelbaar.</li>
-      <li>Mag de ontvanger een video eerst in de browser bekijken, zonder dat het als download telt?</li>
       <li>De nachtelijke backup op Dobby bewaart nu alleen de database, niet de bestanden. Een backup buiten huis (B2) is nodig voordat Dobby de enige tweede kopie is.</li>
-      <li>Wat als je in Finder een transcript bewerkt én de server het opnieuw maakt? Voorstel: je eigen tekst wint, de nieuwe komt ernaast.</li>
     </ul></div>
   </div>
 </div>

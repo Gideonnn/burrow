@@ -35,3 +35,9 @@ good but used a lot of space without being more useful. Not built yet; see `TODO
   relay is needed anyway, and WebRTC on the Mac is heavy); a key in the link fragment
   with browser decryption (pointless once Dobby holds the file); LocalSend (receiver
   needs an app).
+- **Follow-ups settled the same day.** Dobby keeps what is deleted in iCloud for 30 days
+  (setting: 30, 90 days or forever). Share links are download only; the receive page
+  shows a still frame, no browser playback. When the server makes a transcript or
+  summary again, it overwrites `transcript.md`/`samenvatting.md` but first renames the
+  previous version with a timestamp (`transcript-2026-10-22-1405.md`), so an edit made
+  in Finder can always be recovered.
