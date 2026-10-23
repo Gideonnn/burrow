@@ -35,6 +35,31 @@ export const messageSummary = z.object({
 });
 export type MessageSummary = z.infer<typeof messageSummary>;
 
+// The list filter, like Mail's: a message must match every criterion. "toMe"
+// means the mailbox's own address is in To. Clients send "today" as `since`,
+// because only they know where today starts.
+export const messageFilter = z.enum([
+  'unread',
+  'flagged',
+  'attachments',
+  'toMe',
+]);
+export type MessageFilter = z.infer<typeof messageFilter>;
+
+export const messageListQuery = z.object({
+  folder: mailFolder.default('inbox'),
+  limit: z.coerce.number().int().min(1).max(200).default(50),
+  before: z.iso.datetime().optional(),
+  since: z.iso.datetime().optional(),
+  // Comma-separated, as in `filter=unread,attachments`.
+  filter: z
+    .string()
+    .transform((value) => value.split(',').filter(Boolean))
+    .pipe(z.array(messageFilter))
+    .optional(),
+});
+export type MessageListQuery = z.infer<typeof messageListQuery>;
+
 // A folder without mail is left out of the counts.
 export const folderCount = z.object({
   mailboxId: z.string(),

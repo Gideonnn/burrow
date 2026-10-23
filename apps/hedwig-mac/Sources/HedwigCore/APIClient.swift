@@ -6,9 +6,14 @@ extension APIClient {
 
     public func me() async throws -> Me { try await call("GET", "api/me") }
 
-    public func messages(mailboxId: String, folder: MailFolder, before: Date? = nil, limit: Int = 100) async throws -> [MessageSummary] {
+    /// `filter` names the criteria a message must all match (`unread`, `flagged`, `attachments`, `toMe`).
+    public func messages(
+        mailboxId: String, folder: MailFolder, before: Date? = nil, limit: Int = 100, filter: [String] = [], since: Date? = nil
+    ) async throws -> [MessageSummary] {
         var query = [URLQueryItem(name: "folder", value: folder.rawValue), URLQueryItem(name: "limit", value: String(limit))]
         if let before { query.append(URLQueryItem(name: "before", value: Self.isoFractional.string(from: before))) }
+        if let since { query.append(URLQueryItem(name: "since", value: Self.isoFractional.string(from: since))) }
+        if !filter.isEmpty { query.append(URLQueryItem(name: "filter", value: filter.joined(separator: ","))) }
         return try await call("GET", "api/mailboxes/\(mailboxId)/messages", query: query)
     }
 

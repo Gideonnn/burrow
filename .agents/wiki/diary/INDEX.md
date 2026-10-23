@@ -2,6 +2,7 @@
 
 Newest first.
 
+- [2026-10-23 Mail's list filter in Hedwig, filtered on the server](2026-10-23-hedwig-list-filter-on-the-server.md): criteria as query params so the whole folder counts, today as `since`, read mail stays until you move on.
 - [2026-10-23 Hedwig's toolbar native, like Apple Mail](2026-10-23-hedwig-toolbar-native-like-mail.md): ControlGroups instead of hand-made glass, and the list column needs a toolbar item before compose can sit at the reading column's edge.
 - [2026-10-23 Hedwig's reader header scrolls with the mail](2026-10-23-reader-header-scrolls-with-the-mail.md): Mail's header order, one ScrollView with a web view as tall as its mail, quirks mode locked the height, Reply-To kept by the server.
 - [2026-10-23 Pensieve v6: iCloud is the source, Dobby keeps every file, links replace sharing](2026-10-23-pensieve-files-live-on-dobby.md): video goes to Dobby too, the app follows the iCloud folder with grey restorable deletions, and Stuur makes one-download 24-hour links instead of sharing between people.

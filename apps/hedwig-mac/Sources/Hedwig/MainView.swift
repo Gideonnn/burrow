@@ -24,9 +24,12 @@ struct MainView: View {
                 }
             }
             .navigationSplitViewColumnWidth(min: 300, ideal: 360, max: 480)
-            // Any toolbar item in this column makes SwiftUI track the divider to the reading
-            // column, so MainToolbar starts at that column's leading edge like Mail.
-            .toolbar { if #available(macOS 26, *) { ToolbarSpacer(.flexible) } }
+            // A toolbar item in this column also makes SwiftUI track the divider to the
+            // reading column, so MainToolbar starts at that column's leading edge like Mail.
+            .toolbar {
+                if #available(macOS 26, *) { ToolbarSpacer(.flexible) }
+                ToolbarItem { ListFilterButton() }
+            }
         } detail: {
             Group {
                 if model.isSearching {
@@ -45,6 +48,31 @@ struct MainView: View {
         .searchable(text: $model.searchText, placement: .toolbar, prompt: "Zoek")
         .onSubmit(of: .search) { Task { await model.searchWithAI() } }
         .modifier(SearchFocus(request: model.searchFocusRequest))
+    }
+}
+
+/// Like Mail's: a click turns the filter on or off, the menu picks what it filters on.
+private struct ListFilterButton: View {
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        @Bindable var model = model
+        Menu {
+            Section("Filter op") {
+                ForEach(ListFilter.allCases, id: \.self) { criterion in
+                    Toggle(isOn: Binding(get: { model.filterCriteria.contains(criterion) }, set: { _ in model.toggle(criterion) })) {
+                        Label(criterion.title, systemImage: criterion.systemImage)
+                    }
+                }
+            }
+        } label: {
+            // The toolbar draws menu icons as templates, so the filled symbol is the highlight.
+            Label("Filter", systemImage: model.filterOn ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease")
+        } primaryAction: {
+            model.filterOn.toggle()
+        }
+        .help(model.filterOn ? "Zet het filter uit (⌘L)" : "Filter de lijst (⌘L)")
+        .disabled(model.placeScope == nil || model.isSearching)
     }
 }
 

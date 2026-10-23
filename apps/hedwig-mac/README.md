@@ -55,6 +55,10 @@ and optionally `HEDWIG_OPEN` with any place `burrowctl hedwig show` takes (`filt
   also while Hedwig is closed; Settings › Agent and Settings › Runners show and pause it.
 - Messages show the summary and a lock for sensitive mail (the category only in the reader) once the
   server has facts for them; search hides login codes unless "Toon ook codes" is on.
+- The filter above the list works like Mail's: a click (or ⌘L) shows only Ongelezen, or
+  what the chevron menu picks (Antwoord nodig, Met bijlagen, Aan mij, Van vandaag; all
+  must match). The server filters the whole folder; the criteria are remembered, the
+  filter starts off. Mail you read stays in the list until you move on.
 - The dot at the bottom of the sidebar turns orange while the server cannot be reached
   (a deploy, the tunnel); Hedwig retries by itself and reloads once it is back.
 - Settings: the bot instructions and learned rules, adding accounts (admin keys), the

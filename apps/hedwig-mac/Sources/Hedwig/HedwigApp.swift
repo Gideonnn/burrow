@@ -82,6 +82,9 @@ struct HedwigCommands: Commands {
             Divider()
             Button("Zoek") { model.searchFocusRequest += 1 }
                 .keyboardShortcut("f")
+            Button(model.filterOn ? "Zet filter uit" : "Filter de lijst") { model.filterOn.toggle() }
+                .keyboardShortcut("l")
+                .disabled(model.placeScope == nil)
             Button("Vernieuw") { Task { await model.refresh() } }
                 .keyboardShortcut("n", modifiers: [.command, .shift])
         }

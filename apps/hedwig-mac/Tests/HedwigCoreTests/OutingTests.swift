@@ -42,7 +42,7 @@ import Testing
         let model = model(server)
         await model.start()
         model.selection = .inbox(mailboxId: "mb1")
-        await model.loadSelection()
+        await model.selectionLoad?.value
         await model.openSelected()
         #expect(model.showsOutingCard)
         #expect(model.outing == nil)
@@ -68,7 +68,7 @@ import Testing
         let model = model(server)
         await model.start()
         model.selection = .inbox(mailboxId: "mb1")
-        await model.loadSelection()
+        await model.selectionLoad?.value
         await model.openSelected()
         #expect(!model.showsOutingCard)
     }

@@ -68,7 +68,25 @@ public final class AppModel {
     public var isSearching: Bool { !searchQuery.isEmpty }
     public internal(set) var messages: [MessageSummary] = []
     public var selectedMessageId: String? {
-        didSet { if oldValue != selectedMessageId { messageLoad = Task { await openSelected() } } }
+        didSet {
+            guard oldValue != selectedMessageId else { return }
+            // Read mail stays under "Ongelezen" until you move on, like Mail.
+            if let oldValue, let old = messages.first(where: { $0.id == oldValue }), !matchesFilter(old) {
+                messages.removeAll { $0.id == oldValue }
+            }
+            messageLoad = Task { await openSelected() }
+        }
+    }
+    /// Mail's list filter: the criteria are remembered, the filter itself starts off.
+    public var filterOn = false {
+        didSet { if oldValue != filterOn { reloadForFilter() } }
+    }
+    public var filterCriteria: Set<ListFilter> = [.unread] {
+        didSet {
+            guard oldValue != filterCriteria else { return }
+            ListFilter.save(filterCriteria, to: defaults)
+            if filterOn { reloadForFilter() }
+        }
     }
     public private(set) var detail: MessageDetail?
     public private(set) var insights: MessageInsights?
@@ -111,6 +129,7 @@ public final class AppModel {
     public var composing = 0
 
     private let store: ConnectionStore
+    @ObservationIgnored private let defaults: UserDefaults
     private let makeClient: @Sendable (Connection) -> APIClient
     private var eventsTask: Task<Void, Never>?
     // The loads the two selections start, so a caller can wait for them.
@@ -122,9 +141,12 @@ public final class AppModel {
         store: ConnectionStore = ConnectionStore(app: "hedwig"),
         makeClient: @escaping @Sendable (Connection) -> APIClient = { APIClient(baseURL: $0.serverURL, token: $0.token) },
         connection: Connection? = nil,
-        reachability: ServerReachability = ServerReachability()
+        reachability: ServerReachability = ServerReachability(),
+        defaults: UserDefaults = .standard
     ) {
         self.store = store
+        self.defaults = defaults
+        filterCriteria = ListFilter.load(from: defaults)
         self.makeClient = makeClient
         self.reachability = reachability
         // HEDWIG_SERVER and HEDWIG_KEY connect without touching the Keychain,
@@ -309,12 +331,14 @@ public final class AppModel {
         guard let api, let selection else { return }
         isLoading = true
         defer { isLoading = false }
+        let shown = messages
+        let filter = serverFilter
         do {
             switch selection {
             case .inbox(let id):
-                messages = try await api.messages(mailboxId: id, folder: .inbox)
+                messages = try await api.messages(mailboxId: id, folder: .inbox, filter: filter?.criteria ?? [], since: filter?.since)
             case .folder(let folder, let id):
-                let list = try await api.messages(mailboxId: id, folder: folder)
+                let list = try await api.messages(mailboxId: id, folder: folder, filter: filter?.criteria ?? [], since: filter?.since)
                 if folder == .spam || folder == .archive {
                     await refreshFiltered()
                     messages = reviewFirst(list)
@@ -333,12 +357,25 @@ public final class AppModel {
                 await refreshOutings()
                 messages = []
             }
+            if keepSelection, filter != nil { keepSelectedMessage(from: shown) }
             if !keepSelection || !messages.contains(where: { $0.id == selectedMessageId }) {
                 selectedMessageId = messages.first?.id
             }
         } catch {
             report(error, quiet: true)
         }
+    }
+
+    /// The open mail stays in a filtered list after it stopped matching, at its old place.
+    private func keepSelectedMessage(from shown: [MessageSummary]) {
+        guard let id = selectedMessageId, !messages.contains(where: { $0.id == id }),
+              let index = shown.firstIndex(where: { $0.id == id }), stillBelongs(shown[index]) else { return }
+        messages.insert(shown[index], at: min(index, messages.count))
+    }
+
+    private func reloadForFilter() {
+        guard !isSearching, selection != nil else { return }
+        selectionLoad = Task { await loadSelection(keepSelection: true) }
     }
 
     public func refresh() async {

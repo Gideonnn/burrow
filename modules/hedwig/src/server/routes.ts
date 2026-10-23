@@ -3,10 +3,11 @@ import {
   aiSearchRequest,
   createDraftRequest,
   type FolderCount,
-  mailFolder,
   mailboxOrderRequest,
   type MailboxSummary,
   messageActionsRequest,
+  type MessageFilter,
+  messageListQuery,
   type SearchResponse,
   type SearchScope,
   searchScope,
@@ -20,7 +21,7 @@ import {
   requireRight,
 } from '@burrow/platform';
 import { zValidator } from '@hono/zod-validator';
-import { and, count, desc, eq, inArray, lt, sql } from 'drizzle-orm';
+import { and, count, desc, eq, gte, inArray, lt, sql } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import { z } from 'zod';
@@ -40,11 +41,6 @@ import { mailboxes, messages } from './schema';
 import { inScope, type SearchService, searchMessages, words } from './search';
 import type { TriageService } from './triage';
 
-const listQuery = z.object({
-  folder: mailFolder.default('inbox'),
-  limit: z.coerce.number().int().min(1).max(200).default(50),
-  before: z.iso.datetime().optional(),
-});
 const searchQuery = searchScope.extend({
   q: z.string().trim().min(1).max(500),
   limit: z.coerce.number().int().min(1).max(200).default(50),
@@ -62,6 +58,18 @@ const searchedMailboxes = (access: Access, scope: SearchScope) => {
   if (!scope.mailboxId) return access.mailboxIds;
   if (!canSeeMailbox(access, scope.mailboxId)) throw notFound();
   return [scope.mailboxId];
+};
+const filterCondition = (criterion: MessageFilter, address: string) => {
+  switch (criterion) {
+    case 'unread':
+      return eq(messages.unread, true);
+    case 'flagged':
+      return eq(messages.flagged, true);
+    case 'attachments':
+      return eq(messages.hasAttachments, true);
+    case 'toMe':
+      return sql`exists (select 1 from json_each(${messages.to}) where lower(json_extract(value, '$.email')) = ${address.toLowerCase()})`;
+  }
 };
 const confirmRequest = z.object({ ids: z.array(z.string()).min(1) });
 
@@ -163,11 +171,24 @@ export function hedwigRoutes({
       .get(
         '/mailboxes/:mailboxId/messages',
         requireRight('read'),
-        zValidator('query', listQuery),
+        zValidator('query', messageListQuery),
         (c) => {
           const mailboxId = c.req.param('mailboxId');
           if (!canSeeMailbox(c.var.access, mailboxId)) throw notFound();
-          const { folder, limit, before } = c.req.valid('query');
+          const {
+            folder,
+            limit,
+            before,
+            since,
+            filter = [],
+          } = c.req.valid('query');
+          const address = filter.includes('toMe')
+            ? (c.var.db
+                .select({ address: mailboxes.address })
+                .from(mailboxes)
+                .where(eq(mailboxes.id, mailboxId))
+                .get()?.address ?? '')
+            : '';
           const rows = c.var.db
             .select()
             .from(messages)
@@ -176,6 +197,10 @@ export function hedwigRoutes({
                 eq(messages.mailboxId, mailboxId),
                 eq(messages.folder, folder),
                 before ? lt(messages.receivedAt, new Date(before)) : undefined,
+                since ? gte(messages.receivedAt, new Date(since)) : undefined,
+                ...filter.map((criterion) =>
+                  filterCondition(criterion, address),
+                ),
               ),
             )
             .orderBy(desc(messages.receivedAt))

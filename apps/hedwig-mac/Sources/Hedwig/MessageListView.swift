@@ -21,7 +21,11 @@ struct MessageListView: View {
             if model.isSearching {
                 if model.messages.isEmpty && !model.aiSearching { ContentUnavailableView.search(text: model.searchText) }
             } else if model.messages.isEmpty && !model.isLoading {
-                ContentUnavailableView("Geen berichten", systemImage: "tray")
+                if model.isFiltering {
+                    ContentUnavailableView("Geen berichten", systemImage: "line.3.horizontal.decrease", description: Text("Niets past bij het filter."))
+                } else {
+                    ContentUnavailableView("Geen berichten", systemImage: "tray")
+                }
             }
         }
         .navigationTitle(title)
@@ -59,6 +63,7 @@ struct MessageListView: View {
 
     private var subtitle: String {
         if model.isSearching { return model.messages.count == 1 ? "1 resultaat" : "\(model.messages.count) resultaten" }
+        if let filter = model.filterDescription { return filter }
         let (total, unread) = model.placeCount
         let count = unread > 0 ? "\(total) berichten, \(unread) ongelezen" : "\(total) berichten"
         return openReviews.isEmpty ? count : "\(count), \(openReviews.count) te controleren"

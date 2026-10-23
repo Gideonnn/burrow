@@ -85,6 +85,107 @@ describe('sync and list', () => {
   });
 });
 
+describe('list filter', () => {
+  async function filtered(
+    h: ReturnType<typeof setup>,
+    token: string,
+    query: string,
+  ) {
+    const res = await h.call(
+      token,
+      `/api/mailboxes/${h.home.id}/messages?${query}`,
+    );
+    expect(res.status).toBe(200);
+    return list.parse(await res.json()).map((m) => m.subject);
+  }
+
+  function deliverMix(h: ReturnType<typeof setup>) {
+    const box = h.provider(h.home.id);
+    box.deliver({
+      subject: 'Unread to me',
+      to: [{ email: 'Gideon@example.com' }],
+      receivedAt: new Date('2026-10-19T10:00:00Z'),
+    });
+    box.deliver({
+      subject: 'Read and flagged',
+      unread: false,
+      flagged: true,
+      to: [{ email: 'list@example.com' }],
+      receivedAt: new Date('2026-10-19T09:00:00Z'),
+    });
+    box.deliver({
+      subject: 'Unread with a file',
+      to: [{ email: 'list@example.com' }],
+      attachments: [
+        { name: 'plan.pdf', contentType: 'application/pdf', data: 'x' },
+      ],
+      receivedAt: new Date('2026-10-18T09:00:00Z'),
+    });
+  }
+
+  it('lists only mail matching every criterion', async () => {
+    const h = setup();
+    const token = h.key(h.gideon.id, ['read']);
+    deliverMix(h);
+    await syncAndList(h, token, h.home.id);
+
+    expect(await filtered(h, token, 'filter=unread')).toEqual([
+      'Unread to me',
+      'Unread with a file',
+    ]);
+    expect(await filtered(h, token, 'filter=flagged')).toEqual([
+      'Read and flagged',
+    ]);
+    expect(await filtered(h, token, 'filter=attachments')).toEqual([
+      'Unread with a file',
+    ]);
+    expect(await filtered(h, token, 'filter=toMe')).toEqual(['Unread to me']);
+    expect(await filtered(h, token, 'filter=unread,attachments')).toEqual([
+      'Unread with a file',
+    ]);
+    expect(
+      await filtered(h, token, 'since=2026-10-19T00:00:00.000Z&filter=unread'),
+    ).toEqual(['Unread to me']);
+  });
+
+  it('filters the whole folder, not only the newest page', async () => {
+    const h = setup();
+    const token = h.key(h.gideon.id, ['read']);
+    for (let i = 0; i < 150; i++) {
+      h.provider(h.home.id).deliver({
+        subject: `Mail ${i}`,
+        unread: i === 0,
+        receivedAt: new Date(Date.UTC(2026, 9, 1, 0, i)),
+      });
+    }
+    await syncAndList(h, token, h.home.id);
+    expect(await filtered(h, token, 'filter=unread&limit=100')).toEqual([
+      'Mail 0',
+    ]);
+  });
+
+  it('rejects an unknown criterion', async () => {
+    const h = setup();
+    const token = h.key(h.gideon.id, ['read']);
+    const res = await h.call(
+      token,
+      `/api/mailboxes/${h.home.id}/messages?filter=unread,secret`,
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it('still hides another person’s mailbox', async () => {
+    const h = setup();
+    const token = h.key(h.gideon.id, ['read']);
+    h.provider(h.evas.id).deliver({ subject: 'Private' });
+    const res = await h.call(
+      token,
+      `/api/mailboxes/${h.evas.id}/messages?filter=unread`,
+    );
+    expect(res.status).toBe(404);
+  });
+});
+
 describe('counts', () => {
   async function counts(h: ReturnType<typeof setup>, token: string) {
     const res = await h.call(token, '/api/mailboxes/counts');

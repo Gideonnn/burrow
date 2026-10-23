@@ -64,7 +64,7 @@ import Testing
         let server = server()
         let model = model(server)
         model.selection = .inbox(mailboxId: "mb1")
-        await model.loadSelection()
+        await model.selectionLoad?.value
         #expect(model.selectedMessageId == "m1")
 
         await model.perform([.archive], on: "m1")
@@ -79,7 +79,7 @@ import Testing
         server.on("POST", "/api/search/ai", json: #"{"explanation":"Facturen van de tandarts","results":[\#(Fixture.message("m8", subject: "Uw nota"))]}"#)
         let model = model(server)
         model.selection = .inbox(mailboxId: "mb1")
-        await model.loadSelection()
+        await model.selectionLoad?.value
 
         model.searchText = "factuur"
         await model.searchLoad?.value
@@ -129,7 +129,7 @@ import Testing
         let model = model(server)
         await model.start()
         model.selection = .inbox(mailboxId: "mb1")
-        await model.loadSelection()
+        await model.selectionLoad?.value
         await model.openSelected()
         #expect(model.detail?.unread == false)
         #expect(model.messages.first?.unread == false)
@@ -143,7 +143,7 @@ import Testing
         let model = model(server)
         await model.start()
         model.selection = .inbox(mailboxId: "mb1")
-        await model.loadSelection()
+        await model.selectionLoad?.value
 
         let shown = try await model.prepareDraft(to: "", subject: "", body: "Ja, gezellig!", replyTo: "m1")
         #expect(shown["draft"] as? String == "d1")
@@ -160,7 +160,7 @@ import Testing
         let model = model(server)
         await model.start()
         model.selection = .inbox(mailboxId: "mb1")
-        await model.loadSelection()
+        await model.selectionLoad?.value
         await model.openSelected()
         let reply = try #require(model.reply())
         #expect(reply.to == "Marieke <marieke@example.nl>")
