@@ -74,7 +74,9 @@ struct SidebarView: View {
                 // One trailing slot: the unread count, or the toggle in its place.
                 // Both stay laid out, so the row keeps its width when they swap.
                 ZStack(alignment: .trailing) {
+                    // The size of the system's .badge on the other sidebar rows.
                     Text(unread > 0 ? "\(unread)" : "")
+                        .font(.subheadline)
                         .monospacedDigit()
                         .foregroundStyle(.secondary)
                         .opacity(showsToggle ? 0 : 1)
