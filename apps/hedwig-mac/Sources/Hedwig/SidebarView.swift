@@ -65,8 +65,8 @@ struct SidebarView: View {
     private func mailboxRow(_ box: MailboxSummary, in group: AppModel.MailboxGroup) -> some View {
         let open = isOpen(box.id)
         let unread = model.unreadCounts[box.id] ?? 0
-        // Folders are rarely needed, so the toggle only shows on hover or for the open mailbox.
-        let showsToggle = hovered == box.id || model.selection?.mailboxId == box.id
+        // Folders are rarely needed, so the toggle only shows on hover or while they show.
+        let showsToggle = if case .toggle = MailboxRowSlot(unread: unread, hovered: hovered == box.id, open: open) { true } else { false }
         return NavigationLink(value: SidebarItem.inbox(mailboxId: box.id)) {
             HStack(spacing: 6) {
                 Label(mailboxTitle(box), systemImage: "tray")

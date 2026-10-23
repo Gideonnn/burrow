@@ -37,7 +37,8 @@ and optionally `HEDWIG_OPEN` with any place `burrowctl hedwig show` takes (`filt
   with its reason: "Klopt" confirms, "Geen spam" or "Terug naar inbox" restores. A count
   on Spam or Archief shows what still waits; the mailbox row shows only its unread
   inbox count from the server (all mail, not the loaded page), which the folder chevron
-  replaces on hover or selection. The list header counts the whole folder the same way.
+  replaces on hover or while the folders show. The list header counts the whole folder
+  the same way.
 - Spam stays unread and never loads remote images, not even on request, until you say
   "Geen spam"; then it goes back to the inbox as read.
 - "Evenementen": the household's outings, each with one status sentence; Details holds
