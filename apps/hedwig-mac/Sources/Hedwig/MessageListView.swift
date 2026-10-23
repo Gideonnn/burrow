@@ -65,7 +65,7 @@ struct MessageListView: View {
         if model.isSearching { return model.messages.count == 1 ? "1 resultaat" : "\(model.messages.count) resultaten" }
         if let filter = model.filterDescription { return filter }
         let (total, unread) = model.placeCount
-        let count = unread > 0 ? "\(total) berichten, \(unread) ongelezen" : "\(total) berichten"
+        let count = MailFormat().count(total: total, unread: unread)
         return openReviews.isEmpty ? count : "\(count), \(openReviews.count) te controleren"
     }
 }
@@ -121,23 +121,24 @@ struct MessageRow: View {
             Circle()
                 .fill(message.unread ? Color.accentColor : .clear)
                 .frame(width: 8, height: 8)
-                .padding(.top, 5)
-            VStack(alignment: .leading, spacing: 2) {
+                .padding(.top, 4)
+            // Mail's list: the sender at 13 pt semibold, the rest in its 11 pt list font.
+            VStack(alignment: .leading, spacing: 3) {
                 HStack(alignment: .firstTextBaseline) {
                     Text(message.from.display)
-                        .font(.headline)
+                        .font(.body.weight(.semibold))
                         .lineLimit(1)
                     Spacer()
+                    Group {
                         if message.facts?.sensitive == true {
-                        Image(systemName: "lock.fill").font(.caption).foregroundStyle(.secondary)
-                            .help("Bevat gevoelige gegevens; gaat nooit naar een cloud-AI")
+                            Image(systemName: "lock.fill")
+                                .help("Bevat gevoelige gegevens; gaat nooit naar een cloud-AI")
+                        }
+                        if message.hasAttachments { Image(systemName: "paperclip") }
+                        Text(shortDate(message.receivedAt))
                     }
-                    if message.hasAttachments {
-                        Image(systemName: "paperclip").font(.caption).foregroundStyle(.secondary)
-                    }
-                    Text(shortDate(message.receivedAt))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
                 }
                 Text(message.subject).font(.subheadline).lineLimit(1)
                 Text(message.facts?.summary ?? message.snippet.split(whereSeparator: \.isNewline).joined(separator: " "))
@@ -174,12 +175,4 @@ struct Tag: View {
     }
 }
 
-func shortDate(_ date: Date) -> String {
-    let calendar = Calendar.current
-    if calendar.isDateInToday(date) { return date.formatted(date: .omitted, time: .shortened) }
-    if calendar.isDateInYesterday(date) { return "Gisteren" }
-    if let days = calendar.dateComponents([.day], from: date, to: .now).day, days < 7 {
-        return date.formatted(.dateTime.weekday(.abbreviated))
-    }
-    return date.formatted(date: .numeric, time: .omitted)
-}
+func shortDate(_ date: Date) -> String { MailFormat().listDate(date) }
