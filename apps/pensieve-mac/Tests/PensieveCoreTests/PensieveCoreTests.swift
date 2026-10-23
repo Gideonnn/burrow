@@ -83,6 +83,22 @@ func temporaryDirectory() -> URL {
         #expect(server.requests("PUT", "/api/uploads/u1").first == "RIFFWAVE")
     }
 
+    @Test func choosingAKindFiltersTheListButTheSidebarStillCountsEveryKind() async throws {
+        let server = server()
+        server.on("GET", "/api/pensieve/recordings", json: "[\(Fixture.recording("r1")),\(Fixture.recording("r2", kind: "video")),\(Fixture.recording("r3", kind: "video"))]")
+        server.on("GET", "/api/pensieve/recordings/r2", json: Fixture.detail("r2", kind: "video"))
+        let model = model(server, outbox: Outbox(dir: temporaryDirectory()))
+        await model.start()
+        #expect(model.selectedId == "r1")
+
+        model.kindFilter = .video
+
+        #expect(model.recordings.map(\.id) == ["r2", "r3"])
+        #expect(model.count(of: .call) == 1)
+        #expect(model.count(of: .video) == 2)
+        #expect(model.selectedId == "r2")
+    }
+
     @Test func aRecordingWaitsInTheOutboxWhenTheServerIsUnreachable() async throws {
         let server = server()
         server.on("POST", "/api/pensieve/recordings", status: 503, json: #"{"error":"down"}"#)

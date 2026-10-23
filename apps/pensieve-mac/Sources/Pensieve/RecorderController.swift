@@ -1,3 +1,4 @@
+import AVFoundation
 import Foundation
 import Observation
 import PensieveCapture
@@ -40,6 +41,12 @@ final class RecorderController {
     }
 
     var isRecording: Bool { active != nil }
+
+    /// The camera, for the preview on the recording stage.
+    var cameraSession: AVCaptureSession? {
+        if case .video(let capture) = active { return capture.session }
+        return nil
+    }
 
     func refreshMicrophones() {
         microphones = PensieveCapture.microphones()

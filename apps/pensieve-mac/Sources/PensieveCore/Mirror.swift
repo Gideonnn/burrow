@@ -25,8 +25,10 @@ public struct Mirror: Sendable {
         self.isUploaded = isUploaded
     }
 
+    /// PENSIEVE_FOLDER points a demo against a test server elsewhere.
     public static var defaultRoot: URL {
-        FileManager.default.homeDirectoryForCurrentUser
+        if let folder = ProcessInfo.processInfo.environment["PENSIEVE_FOLDER"] { return URL(fileURLWithPath: folder, isDirectory: true) }
+        return FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent("Library/Mobile Documents/com~apple~CloudDocs/Pensieve", isDirectory: true)
     }
 
@@ -257,6 +259,8 @@ public struct Mirror: Sendable {
     }
 
     // MARK: Markers
+
+    public func folders() -> [String: URL] { markers().mapValues(\.folder) }
 
     func writeMarker(_ marker: Marker, in folder: URL) throws {
         let encoder = JSONEncoder()

@@ -11,14 +11,15 @@ public final class PensieveModel {
     public private(set) var connection: Connection?
     public private(set) var profile: Profile?
     public private(set) var people: [Person] = []
-    public private(set) var recordings: [RecordingSummary] = []
+    /// Every kind, so the sidebar can count them; `recordings` is what the list shows.
+    public private(set) var all: [RecordingSummary] = []
     public var scope: RecordingScope = .all {
         didSet { if oldValue != scope { Task { await reload() } } }
     }
     public var query = ""
     /// Only this kind; nil shows every kind.
     public var kindFilter: RecordingKind? {
-        didSet { if oldValue != kindFilter { Task { await reload() } } }
+        didSet { if oldValue != kindFilter { keepSelection() } }
     }
     /// Only recordings with any of these labels.
     public var labelFilter: Set<String> = [] {
@@ -101,7 +102,7 @@ public final class PensieveModel {
         store.clear()
         connection = nil
         profile = nil
-        recordings = []
+        all = []
         detail = nil
         selectedId = nil
     }
@@ -175,6 +176,39 @@ public final class PensieveModel {
         await sendPending()
     }
 
+    public var recordings: [RecordingSummary] {
+        guard let kindFilter else { return all }
+        return all.filter { $0.kind == kindFilter }
+    }
+
+    public func count(of kind: RecordingKind) -> Int { all.filter { $0.kind == kind }.count }
+
+    /// Each recording's folder in iCloud Drive, by id, as of the last copy.
+    public private(set) var folders: [String: URL] = [:]
+
+    public func folder(of id: String) -> URL? { folders[id] }
+
+    /// The shareable MP4 in the recording's folder, else the one or the raw
+    /// original still on this Mac.
+    public func video(of id: String) -> URL? {
+        let fm = FileManager.default
+        if let folder = folders[id],
+           let mp4 = (try? fm.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil))?
+               .filter({ $0.pathExtension == "mp4" }).sorted(by: { $0.lastPathComponent < $1.lastPathComponent }).first {
+            return mp4
+        }
+        guard let item = shelf.item(forRecording: id) else { return nil }
+        let url = shelf.url(item.video ?? item.original)
+        return fm.fileExists(atPath: url.path) ? url : nil
+    }
+
+    /// The file to share or reveal: the video, else the audio in the folder.
+    public func file(of id: String) -> URL? {
+        if let video = video(of: id) { return video }
+        let audio = folders[id]?.appendingPathComponent(Naming.audio)
+        return audio.flatMap { FileManager.default.fileExists(atPath: $0.path) ? $0 : nil }
+    }
+
     public var mirrorEnabled: Bool { profile?.settings?["pensieve.mirror"]?.bool ?? true }
 
     // MARK: Lists
@@ -182,14 +216,18 @@ public final class PensieveModel {
     public func reload() async {
         guard let api else { return }
         do {
-            recordings = try await api.recordings(
-                scope: scope, query: query.isEmpty ? nil : query, kind: kindFilter, labels: labelFilter.sorted())
+            all = try await api.recordings(scope: scope, query: query.isEmpty ? nil : query, labels: labelFilter.sorted())
             labels = (try? await api.labels()) ?? labels
-            if selectedId == nil || !recordings.contains(where: { $0.id == selectedId }) {
-                selectedId = recordings.first?.id
-            }
+            folders = mirror.folders()
+            keepSelection()
         } catch {
             report(error, quiet: true)
+        }
+    }
+
+    private func keepSelection() {
+        if selectedId == nil || !recordings.contains(where: { $0.id == selectedId }) {
+            selectedId = recordings.first?.id
         }
     }
 
@@ -281,7 +319,7 @@ public final class PensieveModel {
 
     /// Title and labels for a new recording of this kind.
     public func suggestion(for kind: RecordingKind) -> (title: String, labels: [String]) {
-        RecordingDefaults.suggestion(for: kind, after: recordings)
+        RecordingDefaults.suggestion(for: kind, after: all)
     }
 
     /// Sends every pending upload, oldest first. Stops at the first failure;
@@ -389,6 +427,7 @@ public final class PensieveModel {
             let all = try await api.recordings(scope: .all)
             try await mirror.sync(mirrorEnabled ? all : all.filter { $0.kind.hasVideo && $0.mine }, api: api, shelf: shelf)
             lastMirror = Date()
+            folders = mirror.folders()
         } catch {
             report(error, quiet: true) { "De kopie in iCloud Drive lukte niet: \($0)" }
         }

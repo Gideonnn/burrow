@@ -62,12 +62,24 @@ struct PensieveCommands: Commands {
 
     var body: some Commands {
         CommandGroup(after: .newItem) {
-            Button("Nieuwe opname") { NewRecordingRequest.shared.open = true }
-                .keyboardShortcut("n")
-                .disabled(recorder.isRecording || model.connection == nil)
+            Button("Nieuwe opname") {
+                record(RecordingKind(rawValue: UserDefaults.standard.string(forKey: RecordingKind.lastKey) ?? "") ?? .call, model: model, recorder: recorder)
+            }
+            .keyboardShortcut("n")
+            .disabled(recorder.isRecording || model.connection == nil)
+            ForEach(Array(RecordingKind.recordable.enumerated()), id: \.offset) { index, kind in
+                Button("Neem \(kind.title.lowercased()) op") { record(kind, model: model, recorder: recorder) }
+                    .keyboardShortcut(KeyEquivalent(Character("\(index + 1)")))
+                    .disabled(recorder.isRecording || model.connection == nil)
+            }
+            Button("Markeer moment") { recorder.mark() }
+                .keyboardShortcut("m", modifiers: [.command, .shift])
+                .disabled(!recorder.isRecording)
             Button("Stop opname") { Task { await recorder.stop() } }
                 .keyboardShortcut(".")
                 .disabled(!recorder.isRecording)
+            Divider()
+            Button("Verklein video…") { ShrinkRequest.shared.choose() }
             Divider()
             Button("Importeer RecHoarder-opnames…") { Task { await importRecHoarder(model) } }
                 .disabled(model.connection == nil)
@@ -79,15 +91,6 @@ struct PensieveCommands: Commands {
                 .keyboardShortcut("r")
         }
     }
-}
-
-/// The sheet that asks for a title opens from menus, the toolbar and the
-/// menu bar alike.
-@MainActor
-@Observable
-final class NewRecordingRequest {
-    static let shared = NewRecordingRequest()
-    var open = false
 }
 
 @MainActor

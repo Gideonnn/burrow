@@ -23,4 +23,5 @@ pnpm pensieve:release                # publish a signed build to every Mac
   `mark`, `share` (asks you), `stop`; never start a recording.
 - The real-encoder test runs when ffmpeg is installed (it makes the sample video).
 
-For a test server: `PENSIEVE_SERVER=http://127.0.0.1:4717 PENSIEVE_KEY=bk_… .build/debug/Pensieve`.
+For a test server: `PENSIEVE_SERVER=http://127.0.0.1:4717 PENSIEVE_KEY=bk_… .build/debug/Pensieve`;
+add `PENSIEVE_FOLDER=/tmp/pensieve-demo` to keep its copy out of iCloud Drive.
