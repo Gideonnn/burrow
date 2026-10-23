@@ -111,6 +111,14 @@ public struct MessageSummary: Codable, Hashable, Identifiable, Sendable {
     public var facts: MessageFacts?
 }
 
+/// How much mail one folder of a mailbox holds; the server leaves out empty folders.
+public struct FolderCount: Codable, Hashable, Sendable {
+    public var mailboxId: String
+    public var folder: MailFolder
+    public var total: Int
+    public var unread: Int
+}
+
 public struct MessageDetail: Codable, Hashable, Identifiable, Sendable {
     public var id: String
     public var mailboxId: String

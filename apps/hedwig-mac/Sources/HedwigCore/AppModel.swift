@@ -101,7 +101,8 @@ public final class AppModel {
     public var selectedTaskId: String?
     /// The household's runners and the work waiting for this person.
     public private(set) var runners: RunnersResponse?
-    public private(set) var unreadCounts: [String: Int] = [:]
+    /// The server's count per mailbox and folder, over all mail and not only the loaded page.
+    public private(set) var folderCounts: [FolderCount] = []
     public private(set) var isLoading = false
     public var error: String?
     /// Whether the server answers; while it does not, loads retry quietly.
@@ -348,13 +349,28 @@ public final class AppModel {
     }
 
     func refreshCounts() async {
-        guard let api else { return }
-        var counts: [String: Int] = [:]
-        for box in me?.mailboxes ?? [] {
-            let inbox = (try? await api.messages(mailboxId: box.id, folder: .inbox)) ?? []
-            counts[box.id] = inbox.filter(\.unread).count
+        guard let api, let counts = try? await api.counts() else { return }
+        folderCounts = counts
+    }
+
+    public func count(mailboxId: String, folder: MailFolder) -> FolderCount? {
+        folderCounts.first { $0.mailboxId == mailboxId && $0.folder == folder }
+    }
+
+    /// Unread inbox mail per mailbox, for the sidebar.
+    public var unreadCounts: [String: Int] {
+        Dictionary(folderCounts.filter { $0.folder == .inbox }.map { ($0.mailboxId, $0.unread) }, uniquingKeysWith: +)
+    }
+
+    /// The open folder's size for the list header: the server's count, or the loaded list without one.
+    public var placeCount: (total: Int, unread: Int) {
+        let counted: FolderCount? = switch selection {
+        case .inbox(let id): count(mailboxId: id, folder: .inbox)
+        case .folder(let folder, let id): count(mailboxId: id, folder: folder)
+        default: nil
         }
-        unreadCounts = counts
+        if let counted, !isSearching { return (counted.total, counted.unread) }
+        return (messages.count, messages.filter(\.unread).count)
     }
 
     func refreshFiltered() async {
@@ -403,6 +419,7 @@ public final class AppModel {
             if message.unread, message.folder != .spam, me?.can(.organize) == true {
                 message = try await api.apply([.markRead], to: id)
                 replace(message.summary)
+                await refreshCounts()
             }
             if selectedMessageId == id {
                 detail = message

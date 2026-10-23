@@ -12,6 +12,8 @@ extension APIClient {
         return try await call("GET", "api/mailboxes/\(mailboxId)/messages", query: query)
     }
 
+    public func counts() async throws -> [FolderCount] { try await call("GET", "api/mailboxes/counts") }
+
     /// Every word must appear. Login codes and other low-priority mail only with `includeLow`.
     public func search(_ query: String, in scope: SearchScope = .everywhere, includeLow: Bool = false, limit: Int = 100) async throws -> SearchResponse {
         var items = [URLQueryItem(name: "q", value: query), URLQueryItem(name: "limit", value: String(limit))] + scope.queryItems

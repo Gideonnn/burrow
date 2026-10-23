@@ -59,8 +59,8 @@ struct MessageListView: View {
 
     private var subtitle: String {
         if model.isSearching { return model.messages.count == 1 ? "1 resultaat" : "\(model.messages.count) resultaten" }
-        let unread = model.messages.filter(\.unread).count
-        let count = unread > 0 ? "\(model.messages.count) berichten, \(unread) ongelezen" : "\(model.messages.count) berichten"
+        let (total, unread) = model.placeCount
+        let count = unread > 0 ? "\(total) berichten, \(unread) ongelezen" : "\(total) berichten"
         return openReviews.isEmpty ? count : "\(count), \(openReviews.count) te controleren"
     }
 }
