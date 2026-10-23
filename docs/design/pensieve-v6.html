@@ -1,0 +1,1282 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="color-scheme" content="light dark" />
+<title>Pensieve · ontwerp v6</title>
+<style>
+:root, [data-theme="light"] {
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --serif: "New York", "Iowan Old Style", Georgia, serif;
+  --mono: ui-monospace, "SF Mono", Menlo, monospace;
+  --bg: #F4F1EC; --surface: #FFFFFF; --surface-2: #F8F6F2; --sidebar: #ECE8E1;
+  --line: #E2DDD5; --line-strong: #CFC9BF;
+  --text: #1F1C18; --text-2: #6B655D; --text-3: #857E74;
+  --sel: #E4DFD6; --hover: rgba(31, 28, 24, 0.05);
+  --primary: #237A6F; --primary-tint: rgba(35, 122, 111, 0.12); --on-primary: #fff;
+  --success: #2A7549; --warning: #9A5B00; --danger: #C8372D; --info: #2F6FB5;
+  --danger-tint: rgba(200, 55, 45, 0.12); --info-tint: rgba(47, 111, 181, 0.12);
+  --gideon: #3B4A6B; --eva: #8A4FA3;
+  --l-interview: #B9436B; --l-werk: #2F6FB5; --l-thuis: #43753A; --l-ideeen: #9A5B00; --l-klant: #5A5FBF;
+  --shadow-1: 0 1px 2px rgba(31, 28, 24, 0.08), 0 0 0 1px rgba(31, 28, 24, 0.05);
+  --shadow-2: 0 6px 20px rgba(31, 28, 24, 0.14), 0 0 0 1px rgba(31, 28, 24, 0.06);
+  --shadow-3: 0 24px 70px rgba(31, 28, 24, 0.22), 0 0 0 1px rgba(31, 28, 24, 0.08);
+}
+[data-theme="dark"] {
+  --bg: #1C1A17; --surface: #242120; --surface-2: #2B2825; --sidebar: #2B2825;
+  --line: #35312D; --line-strong: #4A453F;
+  --text: #F2EEE8; --text-2: #A39C92; --text-3: #7C756B;
+  --sel: #3A3632; --hover: rgba(242, 238, 232, 0.06);
+  --primary: #6FCDBF; --primary-tint: rgba(111, 205, 191, 0.16); --on-primary: #1C1A17;
+  --success: #5FCB85; --warning: #F0B24A; --danger: #F07A6E; --info: #7FB2F0;
+  --danger-tint: rgba(240, 122, 110, 0.16); --info-tint: rgba(127, 178, 240, 0.16);
+  --gideon: #9FB0D6; --eva: #CFA3E6;
+  --l-interview: #F08BAE; --l-werk: #7FB2F0; --l-thuis: #8BCB7C; --l-ideeen: #F0B24A; --l-klant: #A3A7F2;
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.06);
+  --shadow-2: 0 6px 20px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.07);
+  --shadow-3: 0 24px 70px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.09);
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: var(--font); font-size: 14px; line-height: 1.5; background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; }
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+h1, h2, h3 { margin: 0; letter-spacing: -0.01em; }
+p { margin: 0 0 10px; }
+kbd { font-family: var(--mono); font-size: 11px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; color: var(--text-2); }
+
+.doc { max-width: 1240px; margin: 0 auto; padding: 28px 20px 80px; }
+.hero h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; }
+.hero .lead { color: var(--text-2); max-width: 860px; margin: 6px 0 16px; font-size: 15px; }
+.bar { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+.bar .tab { border: 1px solid var(--line-strong); background: var(--surface); border-radius: 999px; padding: 5px 13px; font-size: 13px; }
+.bar .tab.on { background: var(--text); color: var(--bg); border-color: var(--text); }
+.bar .grow { flex: 1; }
+.pane { display: none; }
+.pane.on { display: block; }
+.note { color: var(--text-2); max-width: 900px; margin: 14px 0 0; font-size: 13.5px; }
+.note b { color: var(--text); }
+
+/* Scales the 1180px window mockup down to narrow columns. */
+.stage { width: 100%; position: relative; }
+.stage > .fit { width: 1180px; transform-origin: 0 0; }
+
+svg.i { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+svg.i.lg { width: 20px; height: 20px; } svg.i.xl { width: 28px; height: 28px; stroke-width: 1.5; } svg.i.sm { width: 13px; height: 13px; }
+svg.i.fill { fill: currentColor; stroke: none; }
+
+.mac { width: 1180px; border-radius: 12px; overflow: hidden; background: var(--surface); box-shadow: var(--shadow-3); font-size: 13px; display: grid; grid-template-rows: 52px 1fr; height: 720px; position: relative; }
+.mac .tb { display: flex; align-items: center; gap: 10px; padding: 0 14px; background: var(--sidebar); border-bottom: 1px solid var(--line); }
+.lights { display: flex; gap: 8px; margin-right: 8px; }
+.lights i { width: 12px; height: 12px; border-radius: 50%; display: block; }
+.lights i:nth-child(1) { background: #FF5F57; } .lights i:nth-child(2) { background: #FEBC2E; } .lights i:nth-child(3) { background: #28C840; }
+.tb .title { font-weight: 600; } .tb .sub { color: var(--text-2); font-size: 12px; } .tb .grow { flex: 1; }
+.search { white-space: nowrap; overflow: hidden; display: flex; align-items: center; gap: 6px; width: 260px; height: 28px; padding: 0 9px; border-radius: 7px; background: var(--surface); border: 1px solid var(--line); color: var(--text-3); font-size: 12.5px; }
+.recbtn { height: 30px; padding: 0 14px 0 10px; border-radius: 999px; background: var(--danger); color: #fff; display: inline-flex; align-items: center; gap: 7px; font-weight: 600; font-size: 13px; }
+.recbtn i { width: 10px; height: 10px; border-radius: 50%; background: #fff; display: block; }
+.tbicon { width: 30px; height: 28px; display: grid; place-items: center; border-radius: 6px; color: var(--text-2); }
+.tbicon:hover { background: var(--hover); }
+
+.body3 { display: grid; grid-template-columns: 210px 340px 1fr; min-height: 0; }
+.side { background: var(--sidebar); border-right: 1px solid var(--line); padding: 10px 8px; overflow: auto; }
+.sb-label { font-size: 11px; font-weight: 600; color: var(--text-3); padding: 12px 8px 4px; text-transform: none; }
+.sb-label:first-child { padding-top: 2px; }
+.sb-row { display: flex; align-items: center; gap: 8px; padding: 5px 8px; border-radius: 6px; cursor: pointer; color: var(--text); }
+.sb-row:hover { background: var(--hover); }
+.sb-row.on { background: var(--sel); font-weight: 500; }
+.sb-row svg { color: var(--primary); }
+.sb-row .n { margin-left: auto; color: var(--text-3); font-size: 12px; font-variant-numeric: tabular-nums; }
+.sb-row .dot { width: 10px; height: 10px; border-radius: 50%; margin: 0 3px; }
+.sb-row.add { color: var(--text-2); } .sb-row.add svg { color: var(--text-3); }
+
+.list { border-right: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; }
+.list-hd { padding: 10px 12px 8px; border-bottom: 1px solid var(--line); display: flex; gap: 6px; flex-wrap: wrap; align-items: center; min-height: 45px; }
+.list-hd .t { font-weight: 700; font-size: 15px; margin-right: 4px; }
+.chip { display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 8px; border-radius: 999px; font-size: 12px; background: var(--surface-2); border: 1px solid var(--line); color: var(--text-2); white-space: nowrap; }
+.chip .dot { width: 8px; height: 8px; border-radius: 50%; }
+.chip.x { background: var(--primary-tint); border-color: transparent; color: var(--primary); font-weight: 500; cursor: pointer; }
+.scroll { overflow: auto; min-height: 0; flex: 1; }
+.day { font-size: 11px; font-weight: 600; color: var(--text-3); padding: 10px 12px 3px; }
+.row { display: grid; grid-template-columns: 34px 1fr; gap: 10px; padding: 9px 12px; border-bottom: 1px solid var(--line); cursor: pointer; }
+.row:hover { background: var(--hover); }
+.row.on { background: var(--primary); color: #fff; }
+[data-theme="dark"] .row.on { color: #1C1A17; }
+.row .ri { width: 34px; height: 34px; border-radius: 9px; background: var(--primary-tint); color: var(--primary); display: grid; place-items: center; }
+.row.on .ri { background: rgba(255,255,255,0.22); color: inherit; }
+.row > div { min-width: 0; }
+.row .l1 { display: flex; gap: 8px; align-items: baseline; }
+.row .l1 b { flex: 1; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row .when { font-size: 12px; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.row .l2 { font-size: 12.5px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row .tags { display: flex; gap: 5px; margin-top: 5px; align-items: center; }
+.row .tags .grow { flex: 1; }
+.row.on .when, .row.on .l2 { color: inherit; opacity: 0.85; }
+.row.on .chip { background: rgba(255,255,255,0.2); border-color: transparent; color: inherit; }
+.row.on .chip .dot { box-shadow: 0 0 0 1.5px rgba(255,255,255,0.7); }
+.prog { height: 4px; border-radius: 2px; background: var(--line); overflow: hidden; margin-top: 6px; }
+.prog i { display: block; height: 100%; background: var(--info); border-radius: 2px; }
+.row.on .prog { background: rgba(255,255,255,0.3); } .row.on .prog i { background: currentColor; }
+.av { width: 20px; height: 20px; border-radius: 50%; display: inline-grid; place-items: center; color: #fff; font-size: 9px; font-weight: 700; background: var(--p, var(--text-3)); flex: none; }
+.av.g { --p: var(--gideon); } .av.e { --p: var(--eva); }
+[data-theme="dark"] .av { color: #1C1A17; }
+.spin { width: 14px; height: 14px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: spin 0.9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.detail { display: flex; flex-direction: column; min-height: 0; }
+.d-body { padding: 18px 22px 30px; }
+.d-title { display: flex; align-items: flex-start; gap: 12px; }
+.d-title h2 { flex: 1; font-size: 20px; font-weight: 700; }
+.meta { display: flex; gap: 8px; align-items: center; color: var(--text-2); font-size: 12.5px; margin-top: 6px; flex-wrap: wrap; }
+.labels { display: flex; gap: 6px; margin-top: 10px; align-items: center; flex-wrap: wrap; }
+.labels .add { color: var(--text-3); border-style: dashed; cursor: pointer; }
+.btn { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; border-radius: 7px; font-size: 13px; font-weight: 500; background: var(--surface); border: 1px solid var(--line-strong); white-space: nowrap; }
+.btn:hover { background: var(--surface-2); }
+.btn.primary { background: var(--primary); border-color: transparent; color: var(--on-primary); }
+.btn.big { height: 36px; padding: 0 16px; font-size: 14px; border-radius: 9px; }
+.btn.ghost { border-color: transparent; background: none; color: var(--text-2); }
+
+.video { margin-top: 16px; border-radius: 10px; overflow: hidden; background: #111; aspect-ratio: 16 / 9; position: relative; }
+.video .scene { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 120%, #5a4a3c 0%, #2b2420 45%, #151210 100%); }
+.video .person { position: absolute; left: 50%; bottom: 0; width: 34%; height: 78%; transform: translateX(-50%); }
+.video .person i { position: absolute; left: 50%; transform: translateX(-50%); background: #c9a58a; display: block; }
+.video .person .head { top: 0; width: 38%; aspect-ratio: 1 / 1.2; border-radius: 50%; background: #d6b296; }
+.video .person .hair { top: -4%; width: 44%; aspect-ratio: 1 / 1.05; border-radius: 50% 50% 40% 40%; background: #3a2a20; }
+.video .person .torso { bottom: 0; width: 100%; height: 48%; border-radius: 48% 48% 0 0; background: #6f8a7e; }
+.video .screenshot { position: absolute; inset: 0; background: #f6f5f2; padding: 6% 7%; }
+.video .screenshot .sbar { height: 7%; background: #e6e2db; border-radius: 4px; margin-bottom: 4%; }
+.video .screenshot .col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4%; height: 55%; align-items: end; }
+.video .screenshot .col i { display: block; background: #237A6F; border-radius: 4px 4px 0 0; opacity: 0.75; }
+.video .vctl { position: absolute; left: 12px; right: 12px; bottom: 10px; display: flex; align-items: center; gap: 10px; color: #fff; font-size: 12px; background: rgba(0,0,0,0.45); backdrop-filter: blur(8px); border-radius: 8px; padding: 6px 10px; }
+.video .vctl .track { flex: 1; height: 4px; background: rgba(255,255,255,0.3); border-radius: 2px; position: relative; }
+.video .vctl .track i { position: absolute; left: 0; top: 0; bottom: 0; width: 22%; background: #fff; border-radius: 2px; }
+.video .live { position: absolute; top: 12px; left: 12px; display: inline-flex; gap: 6px; align-items: center; background: rgba(0,0,0,0.5); color: #fff; padding: 3px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.video .live i { width: 8px; height: 8px; border-radius: 50%; background: #FF453A; animation: pulse 1.4s infinite; }
+@keyframes pulse { 50% { opacity: 0.35; } }
+
+.cta { margin-top: 16px; border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; background: var(--surface-2); display: flex; align-items: center; gap: 14px; }
+.cta .ic { width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center; background: var(--primary-tint); color: var(--primary); flex: none; }
+.cta .tx { flex: 1; }
+.cta .tx b { display: block; }
+.cta .tx span { color: var(--text-2); font-size: 12.5px; }
+
+.file { margin-top: 12px; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.file .fr { display: flex; align-items: center; gap: 10px; padding: 9px 14px; border-bottom: 1px solid var(--line); font-size: 12.5px; }
+.file .fr:last-child { border-bottom: 0; }
+.file .fr .k { color: var(--text-2); width: 120px; flex: none; }
+.file .fr .v { flex: 1; }
+.file .fr .ok { color: var(--success); display: inline-flex; gap: 5px; align-items: center; }
+.file .fr .gone { color: var(--text-3); text-decoration: line-through; }
+
+.seg { display: inline-flex; background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 2px; gap: 2px; }
+.seg button { height: 24px; padding: 0 12px; border-radius: 6px; font-size: 12.5px; color: var(--text-2); }
+.seg button.on { background: var(--surface); color: var(--text); box-shadow: var(--shadow-1); font-weight: 500; }
+.tabsrow { display: flex; align-items: center; gap: 10px; margin-top: 18px; }
+.tabsrow .grow { flex: 1; }
+.notes section { margin-top: 16px; }
+.notes h3 { font-size: 13px; font-weight: 600; color: var(--text-2); margin-bottom: 4px; }
+.notes ul { margin: 0; padding-left: 18px; }
+.notes li { margin-bottom: 3px; }
+.ts { font-family: var(--mono); font-size: 11.5px; color: var(--primary); margin-right: 8px; cursor: pointer; }
+.tr p { display: grid; grid-template-columns: 58px 70px 1fr; gap: 6px; margin: 0 0 8px; }
+.tr .who { font-weight: 600; font-size: 12.5px; }
+.dict { margin-top: 16px; font-size: 16px; line-height: 1.6; padding: 16px 18px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2); }
+.audio { margin-top: 14px; display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; }
+.audio .play { width: 30px; height: 30px; border-radius: 50%; background: var(--primary); color: var(--on-primary); display: grid; place-items: center; }
+.wave { flex: 1; height: 28px; display: flex; align-items: center; gap: 2px; }
+.wave i { flex: 1; background: var(--line-strong); border-radius: 1px; }
+.wave i.p { background: var(--primary); }
+.audio .time { font-size: 12px; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.steps { margin-top: 16px; border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+.steps .st { display: flex; align-items: center; gap: 10px; padding: 5px 0; font-size: 13px; }
+.steps .st .s { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; border: 1.5px solid var(--line-strong); color: var(--text-3); flex: none; }
+.steps .st.done .s { background: var(--success); border-color: var(--success); color: #fff; }
+.steps .st.run .s { border: 0; color: var(--info); }
+.steps .st .r { margin-left: auto; color: var(--text-2); font-size: 12px; font-variant-numeric: tabular-nums; }
+.steps .st.todo { color: var(--text-2); }
+.empty { display: grid; place-items: center; height: 100%; color: var(--text-3); }
+
+/* New recording sheet */
+.dim { z-index: 10; position: absolute; inset: 52px 0 0 0; background: rgba(20, 16, 12, 0.28); display: grid; place-items: start center; padding-top: 34px; }
+.sheet { width: 640px; background: var(--surface); border-radius: 14px; box-shadow: var(--shadow-3); padding: 20px 22px 18px; }
+.sheet h2 { font-size: 17px; font-weight: 700; }
+.sheet .sub { color: var(--text-2); font-size: 12.5px; margin-top: 2px; }
+.modes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 16px; }
+.mode { border: 1.5px solid var(--line); border-radius: 12px; padding: 14px 12px 12px; text-align: left; display: flex; flex-direction: column; gap: 6px; min-height: 150px; }
+.mode:hover { border-color: var(--line-strong); }
+.mode.on { border-color: var(--primary); background: var(--primary-tint); }
+.mode .mi { width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center; background: var(--surface-2); color: var(--primary); border: 1px solid var(--line); }
+.mode.on .mi { background: var(--primary); color: var(--on-primary); border-color: transparent; }
+.mode b { font-size: 14px; }
+.mode span { font-size: 12px; color: var(--text-2); line-height: 1.35; }
+.mode kbd { margin-top: auto; align-self: flex-start; }
+.form { margin-top: 16px; display: grid; grid-template-columns: 90px 1fr; gap: 10px 12px; align-items: center; font-size: 13px; }
+.form .k { color: var(--text-2); text-align: right; }
+.field { height: 30px; border: 1px solid var(--line-strong); border-radius: 7px; padding: 0 10px; display: flex; align-items: center; color: var(--text-3); background: var(--surface); }
+.devices { display: flex; gap: 14px; color: var(--text-2); font-size: 12.5px; align-items: center; flex-wrap: wrap; }
+.devices span { display: inline-flex; gap: 5px; align-items: center; }
+.devices a { color: var(--primary); cursor: pointer; }
+.after { margin-top: 14px; padding: 10px 12px; border-radius: 9px; background: var(--surface-2); font-size: 12.5px; color: var(--text-2); display: flex; gap: 8px; align-items: flex-start; }
+.after svg { color: var(--primary); margin-top: 2px; }
+.sheet .foot { display: flex; align-items: center; gap: 8px; margin-top: 16px; }
+.sheet .foot .grow { flex: 1; }
+.toggle { width: 32px; height: 19px; border-radius: 999px; background: var(--line-strong); position: relative; flex: none; cursor: pointer; }
+.toggle::after { content: ""; position: absolute; top: 2px; left: 2px; width: 15px; height: 15px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,0.3); transition: left 0.15s; }
+.toggle.on { background: var(--primary); } .toggle.on::after { left: 15px; }
+
+/* Recording screen */
+.recwrap { display: grid; grid-template-columns: 1fr 300px; min-height: 0; }
+.recmain { padding: 20px 22px; display: flex; flex-direction: column; }
+.recmain .video { margin-top: 0; flex: none; }
+.ctlbar { display: flex; align-items: center; gap: 10px; margin-top: 14px; }
+.ctlbar .stop { height: 40px; padding: 0 18px; border-radius: 999px; background: var(--danger); color: #fff; font-weight: 600; display: inline-flex; gap: 8px; align-items: center; }
+.ctlbar .time { font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; margin-right: 6px; }
+.ctlbar .grow { flex: 1; }
+.recside { border-left: 1px solid var(--line); background: var(--surface-2); padding: 18px 16px; display: flex; flex-direction: column; gap: 16px; }
+.recside h3 { font-size: 12px; font-weight: 600; color: var(--text-2); margin-bottom: 6px; }
+.meter { display: grid; grid-template-columns: 74px 1fr; gap: 8px; align-items: center; font-size: 12px; margin-bottom: 6px; }
+.meter .m { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.meter .m i { display: block; height: 100%; background: linear-gradient(90deg, var(--success), var(--success) 70%, var(--warning)); border-radius: 3px; }
+.marks div { font-size: 12.5px; padding: 4px 0; border-bottom: 1px solid var(--line); }
+.estimate { font-size: 12.5px; color: var(--text-2); }
+.estimate b { color: var(--text); }
+
+.floaters { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 26px; }
+.desk { border-radius: 12px; height: 230px; position: relative; overflow: hidden; background: linear-gradient(135deg, #8aa7b8, #c2b39a); box-shadow: var(--shadow-2); }
+.desk .menubar { height: 24px; background: rgba(255,255,255,0.55); backdrop-filter: blur(10px); display: flex; align-items: center; justify-content: flex-end; gap: 14px; padding: 0 12px; font-size: 12px; color: #1F1C18; }
+.desk .menubar .pv { display: inline-flex; align-items: center; gap: 6px; background: rgba(200, 55, 45, 0.92); color: #fff; padding: 1px 8px; border-radius: 5px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.desk .menubar .pv i { width: 7px; height: 7px; border-radius: 50%; background: #fff; display: block; animation: pulse 1.4s infinite; }
+.desk .menu { position: absolute; right: 70px; top: 28px; width: 250px; background: rgba(250, 248, 245, 0.96); color: #1F1C18; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.25); padding: 6px; font-size: 12.5px; }
+.desk .menu .mrow { display: flex; align-items: center; gap: 8px; padding: 5px 8px; border-radius: 6px; }
+.desk .menu .mrow.hl { background: #237A6F; color: #fff; }
+.desk .menu .mrow kbd { margin-left: auto; background: none; border: 0; color: inherit; opacity: 0.6; }
+.desk .menu .sep { height: 1px; background: rgba(0,0,0,0.1); margin: 4px 6px; }
+.desk .menu .mt { padding: 4px 8px 6px; font-size: 11.5px; color: #6B655D; }
+.desk .doc-w { position: absolute; left: 24px; top: 46px; width: 300px; height: 150px; background: #fff; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.2); padding: 14px 16px; font-size: 12.5px; color: #1F1C18; }
+.desk .doc-w .caret { display: inline-block; width: 1.5px; height: 14px; background: #237A6F; vertical-align: -2px; animation: pulse 1s infinite; }
+.desk .doc-w .ghost { color: #857E74; }
+.hud { white-space: nowrap; position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; background: rgba(28, 26, 23, 0.88); color: #fff; padding: 8px 14px 8px 10px; border-radius: 999px; font-size: 12.5px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+.hud .mic { width: 26px; height: 26px; border-radius: 50%; background: #FF453A; display: grid; place-items: center; }
+.hud .bars { display: flex; gap: 2px; align-items: center; height: 18px; }
+.hud .bars i { width: 3px; background: #fff; border-radius: 2px; animation: bar 0.8s ease-in-out infinite; }
+@keyframes bar { 50% { transform: scaleY(0.4); } }
+.hud kbd { background: rgba(255,255,255,0.15); color: #fff; border: 0; }
+.cap { font-size: 12.5px; color: var(--text-2); margin-top: 8px; }
+.cap b { color: var(--text); }
+
+/* Finder */
+.finder .body2 { display: grid; grid-template-columns: 190px 1fr; min-height: 0; }
+.fcols { display: grid; grid-template-columns: 290px 270px 1fr; min-height: 0; }
+.fcol { border-right: 1px solid var(--line); overflow: auto; padding: 6px 0; }
+.fi { white-space: nowrap; display: flex; align-items: center; gap: 8px; padding: 4px 10px; font-size: 12.5px; }
+.fi.on { background: var(--primary); color: var(--on-primary); }
+.fi.sel { background: var(--sel); }
+.fi svg { color: #3E8EDE; }
+.fi.on svg { color: inherit; }
+.fi .dots { margin-left: auto; display: flex; gap: 2px; }
+.fi .dots i { width: 8px; height: 8px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.8); }
+.fi .sz { margin-left: auto; color: var(--text-3); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+.fi.on .sz { color: inherit; opacity: 0.8; }
+.fprev { padding: 18px; font-size: 12.5px; }
+.fprev pre { font-family: var(--mono); font-size: 11.5px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 12px; white-space: pre-wrap; margin: 10px 0 0; color: var(--text); line-height: 1.5; }
+
+/* Settings */
+.settings { width: 760px; height: auto; grid-template-rows: 52px auto; margin: 0 auto; }
+.settings .tb { justify-content: center; position: relative; }
+.settings .tb .lights { position: absolute; left: 14px; }
+.stabs { display: flex; gap: 4px; }
+.stabs span { padding: 4px 12px; border-radius: 6px; font-size: 12.5px; color: var(--text-2); display: inline-flex; gap: 5px; align-items: center; }
+.stabs span.on { background: var(--sel); color: var(--text); font-weight: 500; }
+.sbody { padding: 18px 26px 24px; background: var(--surface-2); }
+.group { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; margin-bottom: 16px; }
+.group .gh { font-size: 12px; font-weight: 600; color: var(--text-2); padding: 0 4px 6px; }
+.grow-row { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-bottom: 1px solid var(--line); font-size: 13px; }
+.grow-row:last-child { border-bottom: 0; }
+.grow-row .lb { flex: 1; }
+.grow-row .lb span { display: block; color: var(--text-2); font-size: 12px; }
+.grow-row .val { color: var(--text-2); display: inline-flex; gap: 6px; align-items: center; }
+
+.qopts { display: grid; gap: 8px; margin-top: 8px; }
+.q { display: grid; grid-template-columns: 22px 1fr auto; gap: 10px; align-items: center; padding: 11px 14px; border: 1.5px solid var(--line); border-radius: 11px; cursor: pointer; text-align: left; }
+.q:hover { border-color: var(--line-strong); }
+.q.on { border-color: var(--primary); background: var(--primary-tint); }
+.q .radio { width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(--line-strong); display: grid; place-items: center; }
+.q.on .radio { border-color: var(--primary); }
+.q.on .radio::after { content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--primary); }
+.q b { font-size: 14px; }
+.q .rec { font-size: 11px; font-weight: 600; color: var(--primary); background: var(--primary-tint); border-radius: 999px; padding: 1px 7px; margin-left: 6px; }
+.q .d { display: block; font-size: 12px; color: var(--text-2); }
+.q .size { text-align: right; font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.q .size small { display: block; font-size: 11.5px; font-weight: 400; color: var(--text-2); }
+.q.too { opacity: 0.5; cursor: not-allowed; }
+.q.too .size small { color: var(--danger); }
+.srcfile { display: flex; align-items: center; gap: 12px; margin-top: 14px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); }
+.srcfile .thumb { width: 64px; height: 40px; border-radius: 6px; background: linear-gradient(135deg, #5d7c8f, #a99a7c); flex: none; }
+.srcfile .tx { flex: 1; font-size: 12.5px; color: var(--text-2); }
+.srcfile .tx b { display: block; color: var(--text); font-size: 13px; }
+.shrink-k { font-size: 12px; font-weight: 600; color: var(--text-2); margin-top: 16px; }
+.done-box { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 10px; background: color-mix(in srgb, var(--success) 12%, transparent); font-size: 13px; }
+.done-box .ok { width: 28px; height: 28px; border-radius: 50%; background: var(--success); color: #fff; display: grid; place-items: center; flex: none; }
+.choices { margin-top: 36px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; box-shadow: var(--shadow-1); font-size: 13.5px; }
+.card h3 { font-size: 14px; margin-bottom: 6px; }
+.card ul { margin: 0; padding-left: 18px; color: var(--text-2); }
+.card li { margin-bottom: 4px; }
+.card li b { color: var(--text); font-weight: 600; }
+h2.sec { font-size: 20px; margin-top: 40px; }
+@media (max-width: 760px) { .choices, .floaters { grid-template-columns: 1fr; } }
+
+
+/* v5 home: record buttons, one filter menu and a row of tiles per day */
+.mac.plain { grid-template-rows: 52px 1fr; }
+.tb .center { position: absolute; left: 50%; transform: translateX(-50%); font-weight: 600; }
+.tb .back { display: inline-flex; align-items: center; gap: 2px; height: 28px; padding: 0 10px 0 6px; border-radius: 7px; color: var(--text-2); font-size: 13px; }
+.tb .back:hover { background: var(--hover); }
+.tb.blend { background: var(--bg); border-bottom-color: transparent; }
+
+.home { display: flex; flex-direction: column; min-height: 0; background: var(--bg); }
+.recrow { display: flex; gap: 10px; padding: 10px 28px 4px; flex: none; }
+.recb { height: 46px; padding: 0 18px 0 14px; border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-1); display: inline-flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 500; transition: box-shadow 0.15s, transform 0.15s; }
+.recb:hover { box-shadow: var(--shadow-2); transform: translateY(-1px); }
+.recb .dot { width: 10px; height: 10px; border-radius: 50%; background: #FF453A; }
+.recb kbd { margin-left: 2px; background: none; border: 0; padding: 0; color: var(--text-3); }
+
+.fwrap { position: relative; }
+.fbtn { height: 28px; padding: 0 9px; border-radius: 7px; font-size: 12.5px; color: var(--text-2); display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.fbtn:hover, .fbtn.open { background: var(--hover); color: var(--text); }
+.fbtn.active { color: var(--primary); font-weight: 600; }
+.fbtn .x { color: var(--text-3); margin-left: 2px; }
+.pop { position: absolute; top: 32px; right: 0; z-index: 5; width: 210px; background: var(--surface); border-radius: 10px; box-shadow: var(--shadow-2); padding: 5px; display: none; }
+.pop.open { display: block; }
+.pop .h { font-size: 11px; color: var(--text-3); padding: 4px 8px; }
+.pop .r { display: flex; align-items: center; gap: 8px; padding: 5px 8px; border-radius: 6px; font-size: 12.5px; cursor: pointer; }
+.pop .r:hover { background: var(--hover); }
+.pop .r .ck { width: 14px; color: var(--primary); visibility: hidden; }
+.pop .r.on .ck { visibility: visible; }
+.pop .r .n { margin-left: auto; color: var(--text-3); font-size: 11.5px; }
+.pop .sep2 { height: 1px; background: var(--line); margin: 4px 6px; }
+.pop .r.manage { color: var(--text-2); }
+.tag { cursor: pointer; }
+.tag:hover { text-decoration: underline; }
+.chip.quiet { background: none; border-color: var(--line-strong); color: var(--text-2); }
+
+.gallery { overflow: auto; flex: 1; min-height: 0; padding: 0 28px 28px; }
+.dayh { font-size: 13px; font-weight: 600; margin: 22px 0 10px; }
+.dayh span { color: var(--text-3); font-weight: 400; margin-left: 6px; }
+.cards { display: flex; gap: 12px; height: 220px; }
+.mem { flex: var(--w) 1 0; min-width: 0; position: relative; cursor: pointer; text-align: left; transition: transform 0.15s; }
+.mem:hover { transform: translateY(-2px); }
+.mem:not([data-open]) { cursor: default; }
+.mem .art { position: absolute; inset: 0; overflow: hidden; border-radius: 16px; background: var(--surface); box-shadow: var(--shadow-1); transition: box-shadow 0.15s; }
+.mem:hover .art { box-shadow: var(--shadow-2); }
+.mem .art > .video { margin: 0; border-radius: 0; height: 100%; aspect-ratio: auto; }
+.mem .art > .video .person { width: 30%; }
+.mem .ov { position: absolute; left: 0; right: 0; bottom: 0; padding: 30px 14px 12px; display: flex; flex-direction: column; gap: 1px; border-radius: 0 0 16px 16px; }
+.mem .ov b { font-size: 14.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mem .ov .m { font-size: 12px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mem.dark .ov { background: linear-gradient(transparent, rgba(0, 0, 0, 0.66)); color: #fff; }
+.mem.dark .ov .m { color: rgba(255, 255, 255, 0.75); }
+.mem .corner { position: absolute; top: 10px; right: 10px; }
+.glass { height: 28px; padding: 0 11px; border-radius: 999px; background: #fff; color: #1F5F57; font-size: 12px; font-weight: 600; display: inline-flex; gap: 5px; align-items: center; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25); }
+.glass:hover { background: #EAF6F3; }
+.cwave { position: absolute; inset: 22px 18px 70px; display: flex; align-items: center; gap: 2px; }
+.cwave i { flex: 1; border-radius: 2px; }
+.paper { position: absolute; inset: 0 0 62px; padding: 18px 18px 0 36px; font-family: var(--serif); font-size: 15px; line-height: 1.42; overflow: hidden; -webkit-mask-image: linear-gradient(#000 65%, transparent); mask-image: linear-gradient(#000 65%, transparent); }
+.paper::before { content: "\201C"; position: absolute; left: 12px; top: 6px; font-size: 44px; line-height: 1; color: var(--primary); opacity: 0.55; }
+.busy { position: absolute; inset: 0; background: rgba(20, 16, 12, 0.5); display: grid; place-items: center; color: #fff; font-size: 12px; font-weight: 600; text-align: center; }
+.busy svg { width: 46px; height: 46px; display: block; margin: 0 auto 6px; transform: rotate(-90deg); }
+
+/* Vertrouwd: the current app, one step further */
+.o-win { grid-template-rows: 52px 1fr; }
+.o-win .tb { display: grid; grid-template-columns: 210px 340px 1fr; padding: 0; gap: 0; }
+.o-win .tb > div { display: flex; align-items: center; gap: 8px; height: 100%; padding: 0 12px; min-width: 0; }
+.o-win .tb > div:first-child { background: var(--sidebar); padding-left: 14px; }
+.o-win .tb .t { font-weight: 700; font-size: 15px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.o-win .tb > div:last-child { justify-content: flex-end; }
+.o-body { display: grid; grid-template-columns: 210px 340px minmax(0, 1fr); min-height: 0; }
+.o-side { background: var(--sidebar); padding: 4px 8px 10px; display: flex; flex-direction: column; min-height: 0; }
+.o-side .sb-row svg { color: var(--primary); }
+.o-side .grow { flex: 1; }
+.o-status { display: flex; gap: 8px; align-items: flex-start; padding: 8px; font-size: 11.5px; color: var(--text-2); line-height: 1.35; }
+.o-status i { width: 8px; height: 8px; border-radius: 50%; background: var(--success); margin-top: 4px; flex: none; }
+.o-status b { display: block; color: var(--text); font-weight: 600; }
+.o-list { border-right: 1px solid var(--line); border-left: 1px solid var(--line); overflow: auto; min-height: 0; }
+.o-list .day { position: sticky; top: 0; background: var(--surface); z-index: 1; }
+.o-list .row { grid-template-columns: 46px 1fr; align-items: center; border-bottom: 0; margin: 0 6px; padding: 7px 8px; border-radius: 8px; }
+.o-list .row.on { background: var(--sel); color: var(--text); }
+.o-list .row.on .when, .o-list .row.on .l2 { color: var(--text-2); opacity: 1; }
+.o-th { width: 46px; height: 34px; border-radius: 7px; overflow: hidden; position: relative; background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--line); }
+.o-th > .video { height: 100%; margin: 0; border-radius: 0; aspect-ratio: auto; }
+.o-th > .video .person { width: 46%; }
+.o-th .cwave { inset: 8px 5px; gap: 1px; }
+.o-th .bq { position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--serif); font-size: 26px; color: var(--primary); padding-top: 10px; line-height: 1; }
+.o-list .l2 { display: flex; gap: 5px; align-items: center; }
+.o-list .l2 .grow { flex: 1; }
+.o-list .l2 .txt { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.o-list .l2 svg { color: var(--text-3); }
+.o-act { font-size: 11.5px; font-weight: 600; color: var(--primary); white-space: nowrap; display: inline-flex; gap: 5px; align-items: center; }
+.o-act .spin { width: 10px; height: 10px; border-width: 1.5px; }
+.o-act.going { color: var(--text-2); font-weight: 500; }
+.o-rec { display: inline-flex; height: 30px; border-radius: 999px; background: #FF453A; color: #fff; font-weight: 600; font-size: 13px; position: relative; }
+.o-rec button { display: inline-flex; align-items: center; gap: 7px; padding: 0 10px 0 11px; }
+.o-rec button:first-child i { width: 10px; height: 10px; border-radius: 50%; background: #fff; }
+.o-rec button + button { border-left: 1px solid rgba(255, 255, 255, 0.35); padding: 0 8px 0 6px; }
+.o-rec .pop { right: 0; left: auto; top: 36px; color: var(--text); font-weight: 400; }
+.o-rec .pop kbd { margin-left: auto; }
+.o-detail { overflow: auto; min-height: 0; padding: 16px 22px 30px; display: flex; flex-direction: column; gap: 14px; }
+.o-detail .video { margin: 0; flex: none; height: 270px; aspect-ratio: auto; }
+.o-detail .video .person { width: 24%; }
+.o-detail .bigwave { height: 150px; }
+.o-head { display: flex; gap: 12px; align-items: flex-start; }
+.o-head h2 { font-size: 19px; font-weight: 700; }
+.o-head .grow { flex: 1; min-width: 0; }
+.o-head .meta { margin-top: 3px; }
+.o-head .meta .tag { color: var(--text-2); }
+.o-head .meta .addl { color: var(--text-3); cursor: pointer; }
+.o-more { display: flex; flex-direction: column; gap: 18px; border-top: 1px solid var(--line); padding-top: 16px; }
+.o-more h3 { font-size: 12px; font-weight: 600; color: var(--text-2); margin-bottom: 6px; }
+.o-more p, .o-more ul { font-size: 13px; margin: 0; }
+.o-more ul { padding-left: 18px; }
+.o-hero { position: relative; height: 240px; border-radius: 12px; overflow: hidden; background: var(--surface-2); flex: none; }
+.o-hero > .video { height: 100%; margin: 0; border-radius: 0; }
+.o-hero .cwave { inset: 40px 28px; }
+.o-hero .paper { inset: 0; -webkit-mask-image: none; mask-image: none; font-size: 18px; padding: 28px 32px 0 56px; }
+.o-hero .paper::before { left: 22px; top: 18px; }
+
+/* Memory view */
+.mv { display: grid; grid-template-columns: minmax(0, 1fr) 350px; min-height: 0; }
+.mv-main { padding: 18px 24px 24px; overflow: auto; display: flex; flex-direction: column; gap: 14px; }
+.mv-main .video { margin-top: 0; flex: none; height: 310px; aspect-ratio: auto; }
+.mv-main .video .person { width: 22%; }
+.bigwave { height: 200px; border-radius: 14px; display: flex; align-items: center; gap: 3px; padding: 0 22px; background: linear-gradient(160deg, var(--surface-2), var(--sel)); position: relative; flex: none; }
+.bigwave i { flex: 1; border-radius: 2px; }
+.bigwave .play { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 56px; height: 56px; border-radius: 50%; background: var(--primary); color: var(--on-primary); display: grid; place-items: center; box-shadow: var(--shadow-2); }
+.strip { position: relative; height: 58px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--line); flex: none; }
+.strip .band { position: absolute; top: 24px; height: 14px; border-radius: 3px; opacity: 0.85; }
+.strip .mk { position: absolute; top: 5px; transform: translateX(-50%); color: var(--l-interview); display: flex; flex-direction: column; align-items: center; }
+.strip .mk span { font-size: 10px; white-space: nowrap; color: var(--text-2); position: absolute; top: 44px; }
+.strip .ph { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--text); border-radius: 1px; }
+.strip .ph::before { content: ""; position: absolute; top: -3px; left: -4px; width: 10px; height: 10px; border-radius: 50%; background: var(--text); }
+.strip .empty-hint { position: absolute; left: 14px; top: 23px; font-size: 12px; color: var(--text-3); }
+.legend { display: flex; gap: 14px; font-size: 12px; color: var(--text-2); align-items: center; margin-top: -4px; }
+.legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; margin-right: 5px; vertical-align: -1px; }
+.legend .grow { flex: 1; }
+.lyrics { font-size: 16.5px; line-height: 1.5; padding: 4px 2px; }
+.lyrics p { margin: 0 0 12px; color: var(--text-3); cursor: pointer; transition: color 0.2s; }
+.lyrics p:hover { color: var(--text-2); }
+.lyrics p.past { color: var(--text-2); }
+.lyrics p.now { color: var(--text); font-size: 19px; font-weight: 600; }
+.lyrics .who { display: block; font-size: 11px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; margin-bottom: 1px; }
+.lyrics .ts { font-weight: 400; }
+.mv-side { border-left: 1px solid var(--line); background: var(--surface-2); padding: 18px; overflow: auto; display: flex; flex-direction: column; gap: 18px; }
+.mv-side h3 { font-size: 12px; font-weight: 600; color: var(--text-2); margin-bottom: 6px; }
+.mv-side p { font-size: 13px; margin: 0; }
+.mv-side ul { margin: 0; padding-left: 18px; font-size: 13px; }
+.mv-side li { margin-bottom: 4px; }
+.quote { font-family: "New York", "Iowan Old Style", Georgia, serif; font-size: 15px; line-height: 1.4; padding: 8px 12px; border-left: 3px solid var(--l-interview); background: var(--surface); border-radius: 0 8px 8px 0; margin-bottom: 8px; }
+.quote small { display: block; font-family: var(--font); font-size: 11.5px; color: var(--text-2); margin-top: 3px; }
+.moment { display: flex; gap: 8px; font-size: 12.5px; padding: 3px 0; align-items: baseline; }
+.files { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+.files div { display: flex; align-items: center; gap: 8px; padding: 7px 10px; font-size: 12px; border-bottom: 1px solid var(--line); }
+.files div:last-child { border-bottom: 0; }
+.files .n { flex: 1; font-family: var(--mono); font-size: 11.5px; }
+.files .sz { color: var(--text-2); font-variant-numeric: tabular-nums; }
+.files .gone .n, .files .gone .sz { color: var(--text-3); text-decoration: line-through; }
+.bigcta { border-radius: 14px; padding: 16px; color: #EAF6F3; background: radial-gradient(120% 140% at 0% 0%, #3E9A8E 0%, #1F5F57 55%, #163634 100%); }
+.bigcta b { display: block; font-size: 15px; color: #fff; }
+.bigcta span { display: block; font-size: 12.5px; opacity: 0.8; margin: 4px 0 12px; }
+.bigcta button { height: 34px; padding: 0 14px; border-radius: 9px; background: #fff; color: #1F5F57; font-weight: 600; display: inline-flex; gap: 6px; align-items: center; }
+.bigcta .prog { background: rgba(255,255,255,0.25); } .bigcta .prog i { background: #fff; }
+
+/* Recording stage */
+.mac.darkwin .tb { background: #121615; border-color: #1E2524; color: #EAF6F3; }
+.mac.darkwin .tb .sub { color: rgba(234,246,243,0.6); }
+.stagev { background: radial-gradient(90% 70% at 50% 0%, #1F5F57 0%, #121615 75%); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 18px 22px 22px; gap: 16px; color: #EAF6F3; position: relative; }
+.stagev .video { width: 760px; margin: 0; box-shadow: 0 30px 80px rgba(0,0,0,0.5); }
+.stagev .title-chip { position: absolute; left: 22px; top: 18px; display: flex; flex-direction: column; gap: 6px; }
+.stagev .title-chip b { font-size: 15px; }
+.stagev .title-chip .ed { font-size: 11.5px; opacity: 0.6; }
+.stagev .chip { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.15); color: #EAF6F3; }
+.stagev .side-marks { position: absolute; right: 22px; top: 18px; width: 170px; font-size: 12px; }
+.stagev .side-marks h4 { margin: 0 0 6px; font-size: 11px; font-weight: 600; opacity: 0.6; }
+.stagev .side-marks div { padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.08); }
+.stagev .side-marks .ts { color: #6FCDBF; }
+.stagev .side-marks .est { margin-top: 14px; opacity: 0.7; line-height: 1.4; }
+.ctlpill { display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); border-radius: 999px; padding: 6px; backdrop-filter: blur(10px); }
+.ctlpill .t { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; padding: 0 12px 0 10px; display: flex; gap: 9px; align-items: center; }
+.ctlpill .t i { width: 10px; height: 10px; border-radius: 50%; background: #FF453A; animation: pulse 1.4s infinite; }
+.ctlpill .lvl { display: flex; gap: 2px; align-items: center; height: 20px; margin-right: 8px; }
+.ctlpill .lvl i { width: 3px; background: #6FCDBF; border-radius: 2px; animation: bar 0.8s ease-in-out infinite; }
+.ctlpill button { height: 38px; padding: 0 15px; border-radius: 999px; color: #fff; display: inline-flex; gap: 7px; align-items: center; font-weight: 500; }
+.ctlpill button:hover { background: rgba(255,255,255,0.1); }
+.ctlpill button.stop { background: #FF453A; font-weight: 600; }
+.ctlpill kbd { background: rgba(255,255,255,0.15); color: #fff; border: 0; }
+.countdown { position: absolute; inset: 0; display: grid; place-items: center; font-size: 120px; font-weight: 700; color: rgba(255,255,255,0.9); background: rgba(0,0,0,0.35); }
+
+.desk.tall { height: 270px; }
+.callwin { position: absolute; left: 22px; top: 44px; width: 330px; height: 200px; border-radius: 10px; background: #2b2d42; box-shadow: 0 10px 30px rgba(0,0,0,0.3); display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 30px 8px 8px; }
+.callwin::before { content: "Teams · Studio Vos"; position: absolute; left: 12px; top: 7px; font-size: 11px; color: rgba(255,255,255,0.7); }
+.callwin i { border-radius: 6px; background: linear-gradient(160deg, #4b4f73, #383b57); display: grid; place-items: center; }
+.callwin i::after { content: attr(data-n); width: 34px; height: 34px; border-radius: 50%; background: rgba(255,255,255,0.18); color: #fff; font-style: normal; font-size: 13px; font-weight: 600; display: grid; place-items: center; }
+.orbwin { position: absolute; right: 26px; top: 40px; width: 176px; padding: 14px 12px 12px; border-radius: 24px; background: rgba(20, 28, 27, 0.88); backdrop-filter: blur(16px); color: #fff; display: flex; flex-direction: column; align-items: center; gap: 8px; box-shadow: 0 16px 40px rgba(0,0,0,0.35); }
+.ring { width: 92px; height: 92px; position: relative; display: grid; place-items: center; }
+.ring .o { position: absolute; inset: 0; border-radius: 50%; border: 3px solid rgba(163,167,242,0.75); animation: breathe 1.7s ease-in-out infinite; }
+.ring .in { position: absolute; inset: 14px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #8FE0D3, #237A6F); animation: breathe 1.1s ease-in-out infinite reverse; }
+@keyframes breathe { 50% { transform: scale(0.9); opacity: 0.75; } }
+.ring span { position: relative; z-index: 1; font-weight: 700; font-size: 15px; font-variant-numeric: tabular-nums; }
+.orbwin .lv { font-size: 10.5px; opacity: 0.75; display: flex; gap: 10px; }
+.orbwin .lv i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px; vertical-align: -0.5px; }
+.orbwin .acts { display: flex; gap: 6px; }
+.orbwin .acts button { width: 34px; height: 34px; border-radius: 50%; background: rgba(255,255,255,0.12); color: #fff; display: grid; place-items: center; }
+.orbwin .acts button.stop { background: #FF453A; }
+/* v6: the window states, Stuur, the receive page and the iCloud rules */
+.o-win { position: relative; }
+.o-list .row.gone { opacity: 0.5; }
+.o-list .row.gone .o-th { filter: grayscale(1); }
+.o-list .row.gone b { text-decoration: line-through; text-decoration-color: var(--text-3); }
+.o-badge { font-size: 11px; font-weight: 600; color: var(--primary); background: var(--primary-tint); border-radius: 999px; padding: 1px 7px; white-space: nowrap; }
+.o-badge.grey { color: var(--text-2); background: var(--hover); }
+.o-link { font-size: 11.5px; color: var(--text-2); display: inline-flex; gap: 4px; align-items: center; white-space: nowrap; }
+.o-banner { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border-radius: 12px; font-size: 13px; background: var(--primary-tint); }
+.o-banner.grey { background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--line); }
+.o-banner .ic { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; background: var(--surface); color: var(--primary); flex: none; }
+.o-banner .tx { flex: 1; }
+.o-banner .tx b { display: block; }
+.o-banner .tx span { color: var(--text-2); }
+.o-banner .acts { display: flex; gap: 6px; margin-top: 10px; }
+.o-steps { display: flex; gap: 14px; font-size: 12px; color: var(--text-2); margin-top: 8px; flex-wrap: wrap; }
+.o-steps span { display: inline-flex; gap: 5px; align-items: center; }
+.o-steps .ok { color: var(--success); }
+.o-steps .spin { width: 10px; height: 10px; border-width: 1.5px; }
+.o-dim { filter: grayscale(1); opacity: 0.45; }
+.o-links .lrow { display: flex; gap: 10px; align-items: center; font-size: 12.5px; padding: 8px 10px; border-radius: 10px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); }
+.o-links .lrow .n { flex: 1; min-width: 0; }
+.o-links .lrow .n b { display: block; font-family: var(--mono); font-size: 11.5px; font-weight: 500; }
+.o-links .lrow .n span { color: var(--text-2); }
+
+.o-send { position: absolute; top: 100px; right: 18px; width: 360px; z-index: 6; background: var(--surface); border-radius: 14px; box-shadow: var(--shadow-3); padding: 14px; display: none; font-size: 13px; }
+.o-send.open { display: block; }
+.o-send .sh { font-size: 12px; color: var(--text-2); margin-bottom: 10px; }
+.o-send .sh b { color: var(--text); }
+.o-send .apps { display: flex; gap: 6px; }
+.o-send .apps span { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px; font-size: 11.5px; color: var(--text-2); padding: 6px 0; border-radius: 10px; cursor: pointer; }
+.o-send .apps span:hover { background: var(--hover); }
+.o-send .apps i { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-style: normal; font-weight: 700; }
+.o-send .apps .airdrop { background: radial-gradient(circle, #5AC8FA 0 30%, #1E88E5 31% 50%, #64B5F6 51%); }
+.o-send .apps .mail { background: linear-gradient(#5EB0FF, #1976D2); border-radius: 10px; }
+.o-send .apps .msg { background: linear-gradient(#6EE07A, #25B33A); border-radius: 10px; }
+.o-send .apps .more { background: var(--sel); color: var(--text-2); }
+.o-send .sep { height: 1px; background: var(--line); margin: 12px -14px; }
+.o-send .lk b { display: block; font-size: 13.5px; }
+.o-send .lk .d { display: block; font-size: 12px; color: var(--text-2); margin: 2px 0 10px; }
+.o-send .frow { display: flex; align-items: center; gap: 10px; padding: 5px 0; font-size: 12.5px; }
+.o-send .frow > span:first-child { width: 78px; color: var(--text-2); flex: none; }
+.o-send .pick { flex: 1; min-width: 0; height: 28px; border-radius: 7px; box-shadow: inset 0 0 0 1px var(--line-strong); display: flex; align-items: center; gap: 6px; padding: 0 8px; cursor: pointer; position: relative; }
+.o-send .pick .v { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.o-send .pick .pop { top: 32px; left: 0; right: 0; width: auto; }
+.o-send .pick .pop .r small { margin-left: auto; color: var(--text-3); }
+.o-send .mk { width: 100%; justify-content: center; margin-top: 10px; height: 34px; }
+.o-send .made { display: none; }
+.o-send.done .made { display: block; }
+.o-send.done .lk { display: none; }
+.o-send .url { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
+.o-send .url code { flex: 1; min-width: 0; height: 30px; display: flex; align-items: center; padding: 0 9px; border-radius: 7px; background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--line); font-size: 11.5px; overflow: hidden; white-space: nowrap; }
+.o-send .qrrow { display: flex; gap: 14px; align-items: center; margin-top: 12px; }
+.o-send .qr { width: 104px; height: 104px; padding: 6px; background: #fff; border-radius: 8px; flex: none; }
+.o-send .qrrow .tx { font-size: 12px; color: var(--text-2); }
+.o-send .qrrow .tx b { color: var(--text); font-size: 13px; }
+
+.phones { display: flex; gap: 36px; flex-wrap: wrap; justify-content: center; padding: 10px 0; }
+.phone { width: 300px; height: 620px; border-radius: 46px; background: #0d0d0d; padding: 11px; box-shadow: var(--shadow-3); flex: none; }
+.phone .scr { height: 100%; border-radius: 36px; overflow: hidden; background: #F4F1EC; color: #1F1C18; display: flex; flex-direction: column; font-size: 14px; }
+.phone .urlbar { margin: 46px 14px 0; height: 34px; border-radius: 10px; background: rgba(31, 28, 24, 0.07); display: flex; align-items: center; justify-content: center; gap: 5px; font-size: 13px; color: #6B655D; }
+.phone .pg { flex: 1; padding: 26px 22px 22px; display: flex; flex-direction: column; }
+.phone .brand { display: flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; color: #237A6F; }
+.phone .brand i { width: 18px; height: 18px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #8FE0D3, #237A6F); }
+.phone h3 { font-family: var(--serif); font-size: 25px; font-weight: 500; margin: 18px 0 14px; line-height: 1.15; }
+.phone .file { background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.05); }
+.phone .file .video { margin: 0; border-radius: 0; height: 140px; aspect-ratio: auto; }
+.phone .file .video .person { width: 26%; }
+.phone .file .fx { padding: 10px 12px 12px; }
+.phone .file .fx b { display: block; font-family: var(--mono); font-size: 12.5px; font-weight: 500; }
+.phone .file .fx span { font-size: 12.5px; color: #6B655D; }
+.phone .dl { margin-top: 16px; height: 50px; border-radius: 14px; background: #237A6F; color: #fff; font-weight: 600; font-size: 16px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.phone .fine { margin-top: auto; font-size: 12px; color: #6B655D; line-height: 1.45; text-align: center; }
+.phone .big-ok { width: 64px; height: 64px; border-radius: 50%; background: rgba(42, 117, 73, 0.12); color: #2A7549; display: grid; place-items: center; margin: 40px auto 6px; }
+.phone .big-ok.grey { background: rgba(31, 28, 24, 0.07); color: #857E74; }
+.phone .center { text-align: center; }
+.phone .center p { color: #6B655D; font-size: 14px; }
+.cap2 { text-align: center; font-size: 12.5px; color: var(--text-2); margin-top: 12px; }
+
+.rules { margin: 10px 0 0; padding-left: 18px; color: var(--text-2); font-size: 12.5px; }
+.rules li { margin-bottom: 6px; }
+.rules b { color: var(--text); }
+.fi .nw { margin-left: 6px; font-size: 10.5px; font-weight: 600; color: var(--primary); background: var(--primary-tint); border-radius: 999px; padding: 0 6px; }
+.fi.on .nw { color: inherit; background: rgba(255, 255, 255, 0.25); }
+
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></symbol>
+  <symbol id="i-call" viewBox="0 0 24 24"><path d="M4 14a8 8 0 0 1 16 0M4 14v3a2 2 0 0 0 2 2h1.5v-6H4M20 14v3a2 2 0 0 1-2 2h-1.5v-6H20"/></symbol>
+  <symbol id="i-cam" viewBox="0 0 24 24"><rect x="3" y="6.5" width="12.5" height="11" rx="2.5"/><path d="M15.5 10.5l5-3v9l-5-3z"/></symbol>
+  <symbol id="i-screen" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12.5" rx="2"/><path d="M8.5 20h7M12 16.5V20"/></symbol>
+  <symbol id="i-dict" viewBox="0 0 24 24"><path d="M4 6h11M4 11h8M4 16h6"/><rect x="15" y="9" width="4.5" height="8" rx="2.25"/><path d="M13.5 15.5a3.75 3.75 0 0 0 7.5 0M17.25 19.5V21"/></symbol>
+  <symbol id="i-wave" viewBox="0 0 24 24"><path d="M3 12h1.5M7 8.5v7M11 5v14M15 8v8M19 10.5v3M21.5 12H21"/></symbol>
+  <symbol id="i-tag" viewBox="0 0 24 24"><path d="M3.5 12.2V4.5a1 1 0 0 1 1-1h7.7l8.3 8.3-8.7 8.7z"/><circle cx="8" cy="8" r="1.4"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></symbol>
+  <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M7 18.5h10.5a4 4 0 0 0 .3-8 6 6 0 0 0-11.6 1.3A3.6 3.6 0 0 0 7 18.5z"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7.5a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v7.5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+  <symbol id="i-doc" viewBox="0 0 24 24"><path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 13h6M10 17h4"/></symbol>
+  <symbol id="i-film" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 3v18M16 3v18M4 8h4M4 16h4M16 8h4M16 16h4"/></symbol>
+  <symbol id="i-sub" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M7 12.5h3M12.5 12.5H17M7 15.5h7"/></symbol>
+  <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3l1.8 4.7 4.7 1.8-4.7 1.8L12 16l-1.8-4.7-4.7-1.8 4.7-1.8zM18.5 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><path d="M8.5 5.5v13M15.5 5.5v13"/></symbol>
+  <symbol id="i-stop" viewBox="0 0 24 24"><rect x="6.5" y="6.5" width="11" height="11" rx="2"/></symbol>
+  <symbol id="i-share" viewBox="0 0 24 24"><path d="M12 3.5v11M7.5 8l4.5-4.5L16.5 8M5 12.5V19a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6.5"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9.5 7V4.5h5V7M6.5 7l1 13h9l1-13"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="11.5" height="11.5" rx="2"/><path d="M15.5 8.5V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v9.5a1 1 0 0 0 1 1h3.5"/></symbol>
+  <symbol id="i-pin" viewBox="0 0 24 24"><path d="M6 3.5h12v17l-6-4-6 4z"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M7 7l10 10M17 7L7 17"/></symbol>
+  <symbol id="i-person" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4.5 20.5a7.5 7.5 0 0 1 15 0"/></symbol>
+  <symbol id="i-people" viewBox="0 0 24 24"><circle cx="9" cy="8.5" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M15.5 5.2a3.5 3.5 0 0 1 0 6.6M17.5 14.2a6.5 6.5 0 0 1 4 5.8"/></symbol>
+  <symbol id="i-all" viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></symbol>
+  <symbol id="i-finder" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="3"/><path d="M12 3.5c-1.5 4-1.5 9 0 17M8 9v1.5M16 9v1.5M8 15.5c2.5 1.5 5.5 1.5 8 0"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 4v11M7.5 10.5L12 15l4.5-4.5M5 20h14"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="M9.5 6l6 6-6 6"/></symbol>
+</svg>
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="i-left" viewBox="0 0 24 24"><path d="M14.5 6l-6 6 6 6"/></symbol>
+  <symbol id="i-quote" viewBox="0 0 24 24"><path d="M5 17c2.5-1 4-3 4-6V7H5v4h3M14 17c2.5-1 4-3 4-6V7h-4v4h3"/></symbol>
+</svg>
+
+<div class="doc">
+  <div class="hero">
+    <h1>Pensieve · ontwerp v6</h1>
+    <p class="lead">Voortgebouwd op de huidige app: zijbalk, lijst en detail, compact. Nieuw zijn vier soorten opnames (Gesprek, Video, Scherm, Dicteren), een klein beeld per opname, labels als stil filter, en <b>Stuur</b> met een deellink die één keer werkt en na 24 uur verloopt. De map <code>iCloud Drive/Pensieve</code> is de bron: wat je daar neerzet verschijnt in de app, wat je weghaalt wordt grijs. Dobby heeft van alles een kopie, ook video.</p>
+  </div>
+
+  <div class="bar" id="tabs">
+    <button class="tab on" data-p="p-home">Venster</button>
+    <button class="tab" data-p="p-send">Stuur</button>
+    <button class="tab" data-p="p-get">Ontvangen</button>
+    <button class="tab" data-p="p-rec">Opnemen</button>
+    <button class="tab" data-p="p-shrink">Verkleinen</button>
+    <button class="tab" data-p="p-icloud">iCloud Drive</button>
+    <button class="tab" data-p="p-set">Instellingen</button>
+    <span class="grow"></span>
+    <span class="seg" id="theme"><button class="on" data-t="light">Licht</button><button data-t="dark">Donker</button></span>
+  </div>
+
+  <!-- 1. Window ------------------------------------------------------------->
+  <div class="pane on" id="p-home">
+    <div class="stage"><div class="fit"><div class="mac o-win" data-win="main"></div></div></div>
+    <p class="note"><b>Het venster.</b> De zijbalk heeft de soorten, <b>Open deellinks</b>, <b>Verwijderd</b> en <b>Verklein een video…</b>. Elke rij toont een klein beeld, de duur, labels als grijze tekst en wat er speelt: <b>Transcript</b>, verkleinen, <b>Nieuw uit iCloud</b>, een open link of <b>Verwijderd</b>. De rode knop neemt op in de vorige soort; het pijltje kiest een andere. Probeer <b>Presentatie aardrijkskunde</b> (net in iCloud gezet), <b>Interview Sanne Visser</b> (in Finder weggegooid, met <b>Zet terug</b>), <b>Interview Joris Bakker</b> (open deellink) en <b>Interview Femke de Wit</b> (nog geen transcript).</p>
+  </div>
+
+  <!-- 2. Send --------------------------------------------------------------->
+  <div class="pane" id="p-send">
+    <div class="stage"><div class="fit"><div class="mac o-win" data-win="send"></div></div></div>
+    <p class="note"><b>Stuur.</b> Bovenin het gewone deelmenu van macOS. Daaronder de deellink: kies het bestand (video, geluid, transcript, samenvatting of alles als zip) en hoe vaak het gedownload mag worden, standaard één keer. De link verloopt altijd na 24 uur. Na <b>Maak link</b> staat hij op het klembord; de QR-code is voor iemand naast je. Dobby heeft het bestand al, dus er hoeft niets te uploaden. Open links staan bij de opname en onder <b>Open deellinks</b>, en zijn in te trekken.</p>
+  </div>
+
+  <!-- 3. Receive ------------------------------------------------------------>
+  <div class="pane" id="p-get">
+    <div class="phones">
+      <div><div class="phone"><div class="scr"><div class="urlbar">burrow.example.nl</div><div class="pg">
+        <span class="brand"><i></i>Pensieve</span>
+        <h3>Gideon stuurt je een video</h3>
+        <div class="file"><span class="vslot"></span><div class="fx"><b>interview-joris-bakker.mp4</b><span>640 MB · 41 minuten</span></div></div>
+        <div class="dl"><svg class="i"><use href="#i-down"/></svg>Download</div>
+        <div class="fine">Deze link werkt één keer en verloopt vandaag om 16:12.<br />Geen account of app nodig.</div>
+      </div></div></div><p class="cap2">Openen</p></div>
+      <div><div class="phone"><div class="scr"><div class="urlbar">burrow.example.nl</div><div class="pg center">
+        <span class="brand" style="justify-content:center"><i></i>Pensieve</span>
+        <div class="big-ok"><svg class="i xl"><use href="#i-check"/></svg></div>
+        <h3>Gedownload</h3>
+        <p><code>interview-joris-bakker.mp4</code> staat in je Downloads.</p>
+        <div class="fine">Deze link is nu gebruikt en werkt niet meer.</div>
+      </div></div></div><p class="cap2">Na de download</p></div>
+      <div><div class="phone"><div class="scr"><div class="urlbar">burrow.example.nl</div><div class="pg center">
+        <span class="brand" style="justify-content:center"><i></i>Pensieve</span>
+        <div class="big-ok grey"><svg class="i xl"><use href="#i-x"/></svg></div>
+        <h3>Deze link werkt niet meer</h3>
+        <p>Hij is al gebruikt of verlopen. Vraag Gideon om een nieuwe.</p>
+        <div class="fine">Er staat hier niets meer.</div>
+      </div></div></div><p class="cap2">Gebruikt of verlopen</p></div>
+    </div>
+    <p class="note"><b>Wat de ontvanger ziet.</b> Een gewone webpagina op Dobby, zonder account, app, cookies of trackers; zoekmachines mogen hem niet indexeren. De link bevat een lang willekeurig stuk dat niet te raden is. Een download telt pas als hij helemaal binnen is, dus een afgebroken download op 4G kost geen poging. Na de laatste download of na 24 uur werkt de link niet meer; het bestand zelf blijft op Dobby en in iCloud.</p>
+  </div>
+
+  <!-- 4. Recording --------------------------------------------------------->
+  <div class="pane" id="p-rec">
+    <div class="stage"><div class="fit">
+    <div class="mac darkwin" style="height:640px">
+      <div class="tb"><span class="lights"><i></i><i></i><i></i></span><span class="title">Pensieve</span><span class="sub">Video</span></div>
+      <div class="stagev">
+        <div class="title-chip"><b>Interview</b><span class="ed">klik om de titel te wijzigen</span><span><span class="chip">Interviews</span> <span class="chip">+</span></span></div>
+        <div class="side-marks"><h4>GEMARKEERD</h4><div><span class="ts">04:10</span>Eerste oven, 2009</div><div><span class="ts">15:33</span>Mooie quote</div><div class="est">Wordt na afloop ± 280 MB plus het geluid apart. Het origineel gaat daarna weg.</div></div>
+        <div class="video" id="rec-video"><div class="scene"></div><div class="person"><i class="torso"></i><i class="hair"></i><i class="head"></i></div><div class="countdown" id="countdown" style="display:none">3</div></div>
+        <div class="ctlpill">
+          <span class="t"><i></i>18:42</span>
+          <span class="lvl"><i style="height:8px"></i><i style="height:15px;animation-delay:.1s"></i><i style="height:11px;animation-delay:.2s"></i><i style="height:18px;animation-delay:.3s"></i><i style="height:9px;animation-delay:.15s"></i></span>
+          <button><svg class="i"><use href="#i-pin"/></svg>Markeer <kbd>M</kbd></button>
+          <button><svg class="i"><use href="#i-pause"/></svg>Pauze</button>
+          <button class="stop" data-goto="p-home"><svg class="i fill"><use href="#i-stop"/></svg>Stop <kbd>⌘.</kbd></button>
+        </div>
+      </div>
+    </div>
+    </div></div>
+    <div class="floaters">
+      <div>
+        <div class="desk tall">
+          <div class="menubar"><span>Teams</span><span class="pv"><i></i>34:12</span><span>wo 22 okt 14:34</span></div>
+          <div class="callwin"><i data-n="G"></i><i data-n="L"></i></div>
+          <div class="orbwin">
+            <div class="ring"><span class="o"></span><span class="in"></span><span>34:12</span></div>
+            <div class="lv"><span><i style="background:#8FE0D3"></i>Jij</span><span><i style="background:#A3A7F2"></i>Mac</span></div>
+            <div class="acts"><button title="Markeer"><svg class="i sm"><use href="#i-pin"/></svg></button><button title="Pauze"><svg class="i sm"><use href="#i-pause"/></svg></button><button class="stop" title="Stop"><svg class="i sm fill"><use href="#i-stop"/></svg></button></div>
+          </div>
+        </div>
+        <p class="cap"><b>Gesprek en scherm.</b> Pensieve krimpt tot een klein bolletje dat boven alles zweeft en ademt met het geluid: de binnenste bol is jouw stem, de buitenste ring de ander. Sleep het waar je wilt; de menubalk telt mee.</p>
+      </div>
+      <div>
+        <div class="desk tall">
+          <div class="menubar"><span>Mail</span><span>wo 22 okt 08:52</span></div>
+          <div class="doc-w">Hoi Ruben,<br /><br />De kozijnen aan de achterkant kunnen <span class="ghost">volgende week geplaatst worden, als</span><span class="caret"></span></div>
+          <div class="hud"><span class="mic"><svg class="i sm"><use href="#i-mic"/></svg></span><span class="bars"><i style="height:8px"></i><i style="height:16px;animation-delay:.1s"></i><i style="height:12px;animation-delay:.2s"></i><i style="height:18px;animation-delay:.3s"></i><i style="height:10px;animation-delay:.15s"></i></span>Luistert · laat <kbd>⌥ Spatie</kbd> los om te plakken</div>
+        </div>
+        <p class="cap"><b>Dicteren.</b> Houd <kbd>⌥ Spatie</kbd> ingedrukt in elke app, praat, laat los: de tekst verschijnt waar de cursor staat en komt als briefje in Pensieve.</p>
+      </div>
+    </div>
+    <p class="note"><b>Video krijgt het podium.</b> Donker, het beeld in het midden, alles wat afleidt aan de rand. Eén pil met tijd, niveau, Markeer, Pauze en Stop. Klik in het venster op de rode knop om het aftellen te zien.</p>
+  </div>
+
+  <!-- 5. Shrink ------------------------------------------------------------>
+  <div class="pane" id="p-shrink">
+    <div class="stage"><div class="fit">
+    <div class="mac o-win" style="height:700px">
+      <div style="display:contents;pointer-events:none" data-win="shrink"></div>
+      <div class="dim" style="padding-top:24px">
+        <div class="sheet" style="width:580px">
+          <h2>Verklein video</h2>
+          <div class="sub">Voor inleveren op school, mailen of uploaden. Het origineel blijft staan.</div>
+          <div class="srcfile"><span class="thumb"></span><span class="tx"><b>presentatie-aardrijkskunde.mov</b>6:24 · 4K van iPhone · 1,2 GB</span><button class="btn">Kies andere…</button></div>
+          <div class="shrink-k">Maximaal toegestaan</div>
+          <div style="margin-top:6px"><span class="seg" id="limit"><button class="on" data-l="0">Geen limiet</button><button data-l="25">25 MB</button><button data-l="50">50 MB</button><button data-l="100">100 MB</button><button data-l="other">Anders…</button></span></div>
+          <div class="shrink-k">Kwaliteit</div>
+          <div class="qopts" id="qopts">
+            <button class="q" data-mb="88"><span class="radio"></span><span><b>Hoog</b> · 1080p<span class="d">Scherp, ook op een digibord</span></span><span class="size">± 88 MB<small>13,8 MB per minuut</small></span></button>
+            <button class="q on" data-mb="44"><span class="radio"></span><span><b>Normaal</b> · 720p<span class="rec">Aanbevolen</span><span class="d">Goed op een laptop, past bij de meeste opdrachten</span></span><span class="size">± 44 MB<small>6,9 MB per minuut</small></span></button>
+            <button class="q" data-mb="22"><span class="radio"></span><span><b>Klein</b> · 480p<span class="d">Kleinst, nog goed te volgen; tekst op dia's wordt wat zacht</span></span><span class="size">± 22 MB<small>3,4 MB per minuut</small></span></button>
+          </div>
+          <div class="after"><svg class="i sm"><use href="#i-spark"/></svg><span id="shrink-hint">Opgeslagen naast het origineel als <code>presentatie-aardrijkskunde-720p.mp4</code>. Het geluid blijft goed verstaanbaar in alle drie.</span></div>
+          <div class="foot" id="shrink-foot"><span style="color:var(--text-3);font-size:12px">± 1 minuut op deze Mac</span><span class="grow"></span><button class="btn">Annuleer</button><button class="btn primary big" onclick="runShrink()"><svg class="i"><use href="#i-down"/></svg>Verklein</button></div>
+        </div>
+      </div>
+    </div>
+    </div></div>
+    <p class="note"><b>Drie keuzes en een limiet.</b> Sleep een video op het venster, kies <b>Archief › Verklein video…</b>, of klik in Finder met rechts op <b>Snelle acties › Verklein met Pensieve</b>; bij een eigen opname staat de knop rechtsboven. Vul je de limiet van school in, dan gaan opties die te groot worden uit en kiest Pensieve de mooiste die past. Met een limiet mikt Pensieve op 95% ervan en controleert het resultaat. Een video wordt nooit groter dan het origineel.</p>
+  </div>
+
+  <!-- 6. iCloud ------------------------------------------------------------->
+  <div class="pane" id="p-icloud">
+    <div class="stage"><div class="fit">
+    <div class="mac finder" style="height:540px">
+      <div class="tb"><span class="lights"><i></i><i></i><i></i></span><span class="title">Pensieve</span><span class="sub">iCloud Drive</span><span class="grow"></span><div class="search" style="width:200px"><svg class="i sm"><use href="#i-search"/></svg>Zoek</div></div>
+      <div class="fcols">
+        <div class="fcol">
+          <div class="fi"><svg class="i"><use href="#i-folder"/></svg>2026-10-22_interview-femke-de-wit</div>
+          <div class="fi on"><svg class="i"><use href="#i-folder"/></svg>2026-10-22_presentatie-aardrijkskunde<span class="nw">nieuw</span></div>
+          <div class="fi"><svg class="i"><use href="#i-folder"/></svg>2026-10-22_demo-nieuwe-rapportage</div>
+          <div class="fi"><svg class="i"><use href="#i-folder"/></svg>2026-10-21_teams-overleg-studio-vos</div>
+          <div class="fi"><svg class="i"><use href="#i-folder"/></svg>2026-10-21_interview-joris-bakker</div>
+          <div class="fi"><svg class="i"><use href="#i-folder"/></svg>2026-10-16_terugbelafspraak-huisarts</div>
+          <div class="fi"><svg class="i"><use href="#i-folder"/></svg>dictaten</div>
+        </div>
+        <div class="fcol">
+          <div class="fi on"><svg class="i"><use href="#i-film"/></svg>presentatie-aardrijkskunde.mov<span class="sz">1,2 GB</span></div>
+          <div class="fi"><svg class="i"><use href="#i-wave"/></svg>audio.m4a<span class="sz">6 MB</span></div>
+          <div class="fi" style="color:var(--text-3)"><svg class="i" style="color:var(--text-3)"><use href="#i-doc"/></svg>.pensieve.json<span class="sz">1 kB</span></div>
+        </div>
+        <div class="fprev">
+          <b>Zo volgt de app deze map</b>
+          <ol class="rules">
+            <li><b>Erin zetten is toevoegen.</b> Een map of bestand in Pensieve verschijnt in de app. Een losse video of geluidsopname, zoals deze presentatie van een iPhone, krijgt een eigen map met het geluid ernaast; het bestand zelf blijft zoals het is.</li>
+            <li><b>Hernoemen is hernoemen.</b> Een andere mapnaam geeft een andere titel. Finder-tags zijn de labels, in beide richtingen.</li>
+            <li><b>Bewerken telt.</b> Pas je <code>transcript.md</code> of <code>samenvatting.md</code> aan, dan neemt de app je tekst over en zoekt erin.</li>
+            <li><b>Weggooien is grijs.</b> Een verwijderde map wordt grijs in de app; <b>Zet terug</b> haalt hem van Dobby terug in iCloud. Gooi je één bestand weg, zoals de video, dan zegt de opname dat dat bestand mist.</li>
+            <li><b>Dobby heeft alles.</b> Van elke map een kopie, ook de video: daar komen deellinks vandaan en het is de backup.</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+    </div></div>
+    <p class="note"><b>iCloud is de bron, Dobby de kluis.</b> Je beheert je opnames gewoon in Finder; de app volgt. Dobby bewaart van alles een kopie, ook van wat je weggooit, tot de bewaartermijn om is (standaard 30 dagen). Later kan Dobby alles nog eens versleuteld naar een opslag buiten huis sturen, zoals B2.</p>
+  </div>
+
+  <!-- 7. Settings ---------------------------------------------------------->
+  <div class="pane" id="p-set">
+    <div class="mac settings">
+      <div class="tb"><span class="lights"><i></i><i></i><i></i></span><span class="stabs"><span class="on"><svg class="i sm"><use href="#i-gear"/></svg>Algemeen</span><span><svg class="i sm"><use href="#i-mic"/></svg>Apparaten</span><span><svg class="i sm"><use href="#i-tag"/></svg>Labels</span><span><svg class="i sm"><use href="#i-cloud"/></svg>Server</span></span></div>
+      <div class="sbody">
+        <div class="gh" style="font-size:12px;font-weight:600;color:var(--text-2);padding:0 4px 6px">Automatisch na de opname</div>
+        <div class="group">
+          <div class="grow-row"><svg class="i" style="color:var(--primary)"><use href="#i-call"/></svg><span class="lb">Gesprekken<span>Transcript en samenvatting</span></span><span class="toggle on"></span></div>
+          <div class="grow-row"><svg class="i" style="color:var(--primary)"><use href="#i-dict"/></svg><span class="lb">Dictaten<span>Tekst plakken waar de cursor staat</span></span><span class="toggle on"></span></div>
+          <div class="grow-row"><svg class="i" style="color:var(--primary)"><use href="#i-cam"/></svg><span class="lb">Video<span>Transcript pas als je op de knop drukt</span></span><span class="toggle"></span></div>
+          <div class="grow-row"><svg class="i" style="color:var(--primary)"><use href="#i-screen"/></svg><span class="lb">Scherm<span>Transcript pas als je op de knop drukt</span></span><span class="toggle"></span></div>
+        </div>
+        <div class="gh" style="font-size:12px;font-weight:600;color:var(--text-2);padding:0 4px 6px">Bestanden</div>
+        <div class="group">
+          <div class="grow-row"><span class="lb">Formaat van video<span>Het bestand dat je deelt en bewaart</span></span><span class="seg"><button>Klein · 720p</button><button class="on">Normaal · 1080p</button><button>Hoog</button></span></div>
+          <div class="grow-row"><span class="lb">Maximaal per bestand<span>Langere opnames worden scherper verkleind, nooit in stukken geknipt</span></span><span class="seg"><button>500 MB</button><button class="on">2 GB</button><button>Geen</button></span></div>
+          <div class="grow-row"><span class="lb">Origineel verwijderen<span>Zodra de kleine versie in iCloud en op Dobby staat</span></span><span class="toggle on"></span></div>
+          <div class="grow-row"><span class="lb">Geluid ernaast<span>Altijd een <code>audio.m4a</code> in de map, ook bij video, zodat opnieuw transcriberen kan zonder de video</span></span><span class="val">Altijd</span></div>
+          <div class="grow-row"><span class="lb">Map<span>De bron: wat je hier neerzet, hernoemt of weggooit, volgt de app. Eén map per opname, namen in kleine letters, labels als Finder-tags</span></span><span class="val"><svg class="i sm"><use href="#i-cloud"/></svg>iCloud Drive/Pensieve<button class="btn" style="height:24px;margin-left:6px">Wijzig…</button></span></div>
+        </div>
+        <div class="gh" style="font-size:12px;font-weight:600;color:var(--text-2);padding:0 4px 6px">Dobby</div>
+        <div class="group">
+          <div class="grow-row"><span class="lb">Kopie van alles<span>Video, geluid en tekst; de backup en de bron van deellinks</span></span><span class="val">212 GB van 1 TB</span></div>
+          <div class="grow-row"><span class="lb">Weggegooid in iCloud<span>Zo lang bewaart Dobby nog een kopie om terug te zetten</span></span><span class="seg"><button class="on">30 dagen</button><button>90 dagen</button><button>Altijd</button></span></div>
+        </div>
+        <div class="gh" style="font-size:12px;font-weight:600;color:var(--text-2);padding:0 4px 6px">Deellinks</div>
+        <div class="group">
+          <div class="grow-row"><span class="lb">Standaard<span>Bij het maken kies je 3 of 10 downloads; een link verloopt altijd na 24 uur</span></span><span class="val">1 download · 24 uur</span></div>
+        </div>
+        <div class="gh" style="font-size:12px;font-weight:600;color:var(--text-2);padding:0 4px 6px">Sneltoetsen</div>
+        <div class="group">
+          <div class="grow-row"><span class="lb">Nieuwe opname</span><span class="val"><kbd>⌘N</kbd> in de app</span></div>
+          <div class="grow-row"><span class="lb">Dicteren (ingedrukt houden)</span><span class="val"><kbd>⌥ Spatie</kbd> overal</span></div>
+          <div class="grow-row"><span class="lb">Stop</span><span class="val"><kbd>⌘.</kbd></span></div>
+        </div>
+      </div>
+    </div>
+    <p class="note"><b>Alles heeft een goede standaard;</b> deze pagina hoeft niemand te openen om te beginnen. Taal, sprekers herkennen en welke bot de samenvatting schrijft blijven server-instellingen. Onderling delen is weg, dus er is geen tabblad Delen.</p>
+  </div>
+
+  <h2 class="sec">Wat er verandert</h2>
+  <div class="choices">
+    <div class="card"><h3>Venster</h3><ul>
+      <li>Voortgebouwd op de huidige app: zijbalk, lijst en detail. <b>Van mij</b> en <b>Gedeeld met mij</b> vervallen, want we delen niets onderling.</li>
+      <li>De zijbalk krijgt de <b>soorten</b>, <b>Open deellinks</b>, <b>Verwijderd</b> en <b>Verklein een video…</b>.</li>
+      <li>Elke rij toont een <b>klein beeld</b> en wat er nog speelt. Labels zijn grijze tekst en een stil filter boven de lijst.</li>
+      <li>De rode knop neemt op in de vorige soort; het pijltje kiest een andere. Sneltoetsen ⌘1, ⌘2, ⌘3 en ⌥ Spatie.</li>
+    </ul></div>
+    <div class="card"><h3>Bestanden</h3><ul>
+      <li><b>iCloud is de bron.</b> De app volgt <code>iCloud Drive/Pensieve</code>: toevoegen, hernoemen, tags en bewerkte tekst komen binnen; weggooien maakt een opname grijs.</li>
+      <li><b>Dobby heeft alles</b>, ook video (1 TB, ± 400 tot 830 MB per uur video). Het is de backup en de bron van deellinks.</li>
+      <li>Het origineel gaat pas weg als de kleine versie in iCloud én op Dobby staat. Het geluid staat altijd ernaast als <code>audio.m4a</code>.</li>
+      <li>Map- en bestandsnamen in kleine letters; labels zijn Finder-tags.</li>
+    </ul></div>
+    <div class="card"><h3>Stuur</h3><ul>
+      <li>Het deelmenu van macOS (AirDrop, Mail, Berichten) en een <b>deellink</b> voor wie geen Mac heeft.</li>
+      <li>Standaard <b>één download</b>, altijd <b>24 uur</b> geldig; bij het maken kies je 3 of 10 downloads.</li>
+      <li>Een download telt pas als hij af is. Links zijn in te trekken; daarna werkt de pagina niet meer.</li>
+      <li>De ontvanger heeft alleen een browser nodig: geen account, geen app, geen trackers.</li>
+    </ul></div>
+    <div class="card"><h3>Open vragen</h3><ul>
+      <li>Hoe lang bewaart Dobby wat je in iCloud weggooit? Voorstel: 30 dagen, instelbaar.</li>
+      <li>Mag de ontvanger een video eerst in de browser bekijken, zonder dat het als download telt?</li>
+      <li>De nachtelijke backup op Dobby bewaart nu alleen de database, niet de bestanden. Een backup buiten huis (B2) is nodig voordat Dobby de enige tweede kopie is.</li>
+      <li>Wat als je in Finder een transcript bewerkt én de server het opnieuw maakt? Voorstel: je eigen tekst wint, de nieuwe komt ernaast.</li>
+    </ul></div>
+  </div>
+</div>
+
+
+<script>
+function bars(n, past, a, b) {
+  let h = '';
+  for (let i = 0; i < n; i++) {
+    const v = 22 + Math.abs(Math.sin(i * 1.7) * 42 + Math.sin(i * 0.37) * 30);
+    const col = a ? (Math.floor(i / 7) % 3 === 1 ? b : a) : '';
+    const style = col ? `background:${col};opacity:${i < past || !past ? 0.85 : 0.35}` : '';
+    h += `<i class="${!a && i < past ? 'p' : ''}" style="height:${Math.min(92, v)}%;${style}"></i>`;
+  }
+  return h;
+}
+
+const quotes = (items) => items.map(([t, ts]) => `<div class="quote">"${t}"<small><span class="ts">${ts}</span></small></div>`).join('');
+const fileList = (rows) => `<div class="files">${rows.map(([ic, n, sz, gone]) => `<div class="${gone ? 'gone' : ''}"><svg class="i sm"><use href="#${ic}"/></svg><span class="n">${n}</span><span class="sz">${sz}</span></div>`).join('')}</div>`;
+const lyrics = (lines, now) => `<div class="lyrics">${lines.map(([who, col, ts, t], i) => `<p class="${i < now ? 'past' : i === now ? 'now' : ''}" data-i="${i}"><span class="who" style="color:${col}">${who} <span class="ts">${ts}</span></span>${t}</p>`).join('')}</div>`;
+const strip = (bands, marks, at) => `<div class="strip">${bands.map(([l, w, c]) => `<span class="band" style="left:${l}%;width:${w}%;background:${c}"></span>`).join('')}${marks.map(([l, t]) => `<span class="mk" style="left:${l}%"><svg class="i sm fill"><use href="#i-pin"/></svg></span>`).join('')}<span class="ph" style="left:${at}%"></span></div>`;
+
+function speakerBands(a, b, seed) {
+  const out = []; let x = 1.5, who = 0;
+  while (x < 98) {
+    const w = Math.min(98 - x, (who ? 6 : 3) + Math.abs(Math.sin(x * seed)) * (who ? 9 : 4));
+    out.push([x, w - 0.4, who ? b : a]); x += w; who = 1 - who;
+  }
+  return out;
+}
+
+const mems = {
+  joris: {
+    title: 'Interview Joris Bakker',
+    main: () => `
+      <div class="video"><div class="scene" style="background:radial-gradient(ellipse at 50% 120%, #6a5a40 0%, #33291c 45%, #17130d 100%)"></div><div class="person"><i class="torso" style="background:#8a6f55"></i><i class="hair" style="background:#9a8a7a"></i><i class="head"></i></div><div class="vctl"><svg class="i"><use href="#i-pause"/></svg><span>07:14</span><span class="track"><i style="width:17%"></i></span><span>41:37</span></div></div>
+      ${strip(speakerBands('var(--eva)', '#B08057', 0.9), [[17.3], [69], [79.5]], 17.4)}
+      <div class="legend"><span><i style="background:var(--eva)"></i>Eva</span><span><i style="background:#B08057"></i>Joris</span><span><svg class="i sm fill" style="color:var(--l-interview);vertical-align:-2px"><use href="#i-pin"/></svg> gemarkeerd</span><span class="grow"></span><span>1×</span></div>
+      ${lyrics([
+        ['Eva', 'var(--eva)', '06:41', 'En waarom zuurdesem? Dat is toch veel meer werk dan gist.'],
+        ['Joris', '#B08057', '06:48', 'Veel meer werk. Maar het brood vertelt je wat het nodig heeft, als je luistert.'],
+        ['Joris', '#B08057', '07:12', 'Brood is geduld dat je kunt eten.'],
+        ['Eva', 'var(--eva)', '07:20', 'Mooi. Merk je dat de klanten dat ook proeven?'],
+        ['Joris', '#B08057', '07:26', 'De vaste klanten wel. Die zeggen het als het deeg een slechte dag had.']
+      ], 2)}`,
+    side: () => `
+      <div><h3>Kern</h3><p>Joris runt al twintig jaar een zuurdesembakkerij in de Kerkstraat. Hij vertelt over de energiecrisis van 2022 en waarom hij toen juist een tweede oven kocht.</p></div>
+      <div><h3>Citaten</h3>${quotes([['Brood is geduld dat je kunt eten.', '07:12'], ['De buurt kwam niet voor het brood terug, maar voor het praatje.', '28:40']])}</div>
+      <div><h3>Hoofdstukken</h3><div class="moment"><span class="ts">02:05</span>Begin in de garage van zijn ouders</div><div class="moment"><span class="ts">14:30</span>Energiecrisis en de tweede oven</div><div class="moment"><span class="ts">33:10</span>Zijn dochter wil het overnemen</div></div>
+      <div><h3>In iCloud</h3>${fileList([['i-film', 'interview-joris-bakker.mp4', '640 MB'], ['i-wave', 'audio.m4a', '10 MB'], ['i-doc', 'samenvatting.md', '3 kB'], ['i-doc', 'transcript.md', '39 kB'], ['i-sub', 'ondertitels.srt', '50 kB']])}</div>`
+  },
+  femke: {
+    title: 'Interview Femke de Wit',
+    main: () => `
+      <div class="video"><div class="scene"></div><div class="person"><i class="torso"></i><i class="hair"></i><i class="head"></i></div><div class="vctl"><svg class="i fill"><use href="#i-play"/></svg><span>11:24</span><span class="track"><i></i></span><span>52:10</span></div></div>
+      <div class="strip"><span class="empty-hint">Wie wanneer praat verschijnt hier na het transcript.</span><span class="mk" style="left:8%"><svg class="i sm fill"><use href="#i-pin"/></svg></span><span class="mk" style="left:29.8%"><svg class="i sm fill"><use href="#i-pin"/></svg></span><span class="ph" style="left:21.9%"></span></div>`,
+    side: () => `
+      <div class="bigcta" id="cta"><b>Maak transcript en samenvatting</b><span>Alleen het geluid wordt getranscribeerd. Klaar in ± 4 minuten, met sprekers, citaten en ondertitels.</span><button onclick="runTranscript(this)"><svg class="i sm"><use href="#i-doc"/></svg>Maak transcript</button></div>
+      <div><h3>Gemarkeerd tijdens het opnemen</h3><div class="moment"><span class="ts">04:10</span>Eerste oven, 2009</div><div class="moment"><span class="ts">15:33</span>Mooie quote over glazuur</div></div>
+      <div><h3>Labels</h3><div class="labels" style="margin:0"><span class="chip quiet">Interviews</span><span class="chip add"><svg class="i sm"><use href="#i-plus"/></svg>Label</span></div></div>
+      <div><h3>In iCloud</h3>${fileList([['i-film', 'interview-femke-de-wit.mp4', '790 MB'], ['i-wave', 'audio.m4a', '12 MB'], ['i-trash', 'origineel.mov', '5,9 GB', true]])}<p style="font-size:12px;color:var(--text-2);margin-top:6px">Het origineel is om 10:41 verwijderd, nadat de kleine versie in iCloud en op Dobby stond.</p></div>`
+  },
+  call: {
+    title: 'Teams-overleg Studio Vos',
+    main: () => `
+      <div class="bigwave">${bars(110, 0, 'var(--gideon)', '#5E8A6E')}<span class="play"><svg class="i lg fill"><use href="#i-play"/></svg></span></div>
+      ${strip(speakerBands('var(--gideon)', '#5E8A6E', 1.3), [[24.4], [63.6]], 30)}
+      <div class="legend"><span><i style="background:var(--gideon)"></i>Gideon</span><span><i style="background:#5E8A6E"></i>Lotte</span><span class="grow"></span><span>10:15 / 34:12</span></div>
+      ${lyrics([
+        ['Gideon', 'var(--gideon)', '09:58', 'Dan de lancering. Wat als we het een week opschuiven, naar de twaalfde?'],
+        ['Lotte', '#5E8A6E', '10:06', 'Dat zou kunnen, als de teksten dan wel eind oktober bij jullie liggen.'],
+        ['Gideon', 'var(--gideon)', '10:15', 'Afgesproken: twaalf november, en na de vijfde geen nieuwe pagina\'s meer.'],
+        ['Lotte', '#5E8A6E', '10:24', 'Prima. Fase 2 wil ik wel apart zien, met een eigen offerte.']
+      ], 2)}`,
+    side: () => `
+      <div><h3>Samenvatting</h3><p>De lancering schuift naar 12 november. Fase 2 krijgt een eigen offerte; Studio Vos wil eerst de cijfers van de eerste maand zien.</p></div>
+      <div><h3>Besluiten</h3><div class="moment"><span class="ts">10:15</span>Lancering 12 november, geen nieuwe pagina's na 5 november</div><div class="moment"><span class="ts">21:45</span>Fase 2 apart offreren in december</div></div>
+      <div><h3>Actiepunten</h3><ul><li>Gideon: planning delen voor vrijdag</li><li>Lotte: teksten productpagina's aanleveren, 31 oktober</li></ul></div>
+      <div><h3>In iCloud</h3>${fileList([['i-wave', 'audio.m4a', '8 MB'], ['i-doc', 'samenvatting.md', '3 kB'], ['i-doc', 'transcript.md', '31 kB']])}</div>`
+  }
+};
+
+function runTranscript(btn) {
+  (btn ? btn.closest('.bigcta') : document.querySelector('#mv .bigcta')).innerHTML = `<b>Transcript wordt gemaakt</b><span>Geluid geüpload · transcriberen 35% · nog ± 3 minuten</span><span class="prog" style="display:block"><i style="width:35%"></i></span>`;
+}
+
+const labelNames = { interview: 'Interviews', werk: 'Werk', klant: 'Studio Vos', thuis: 'Thuis', ideeen: 'Ideeën' };
+const kindIcons = { call: 'i-call', video: 'i-cam', screen: 'i-screen', dict: 'i-dict' };
+const scenes = {
+  femke: ['', '', ''],
+  joris: ['radial-gradient(ellipse at 50% 120%, #6a5a40 0%, #33291c 45%, #17130d 100%)', '#8a6f55', '#9a8a7a'],
+  pres: ['linear-gradient(#dfe6e9, #9fb3bd)', '#3d5a6c', '#5a3d2b'],
+  sanne: ['radial-gradient(ellipse at 50% 120%, #4a5a6a 0%, #222c35 45%, #10161b 100%)', '#7b8fa3', '#c9a77c']
+};
+const dayNames = ['Vandaag', 'Gisteren', 'Eerder'];
+const memories = [
+  { day: 0, time: '14:05', kind: 'video', labels: ['interview'], title: 'Interview Femke de Wit', dur: '52:10', size: '790 MB', open: 'femke', scene: 'femke', needs: true },
+  { day: 0, time: '13:40', kind: 'video', labels: [], title: 'Presentatie aardrijkskunde', dur: '6:24', size: '1,2 GB', scene: 'pres', found: true },
+  { day: 0, time: '11:30', kind: 'screen', labels: ['werk'], title: 'Demo nieuwe rapportage', dur: '12:40', size: '150 MB', busy: 64 },
+  { day: 0, time: '09:12', kind: 'dict', labels: ['thuis'], title: 'Mail aan de aannemer', dur: '1:12', text: 'Hoi Ruben, de kozijnen aan de achterkant kunnen volgende week geplaatst worden, als het droog blijft. Kun je laten weten of dinsdag of woensdag beter uitkomt?' },
+  { day: 1, time: '16:00', kind: 'call', labels: ['werk', 'klant'], title: 'Teams-overleg Studio Vos', dur: '34:12', open: 'call', a: 'var(--gideon)', b: '#5E8A6E' },
+  { day: 1, time: '10:20', kind: 'video', labels: ['interview'], title: 'Interview Joris Bakker', dur: '41:37', size: '640 MB', open: 'joris', scene: 'joris', link: true },
+  { day: 2, time: 'do 16 okt', kind: 'call', labels: ['thuis'], title: 'Terugbelafspraak huisarts', dur: '6:02', a: 'var(--eva)', b: '#8C7F70', summary: 'Uitslag goed, controle over drie maanden.' },
+  { day: 2, time: 'wo 15 okt', kind: 'video', labels: ['interview'], title: 'Interview Sanne Visser', dur: '48:20', scene: 'sanne', gone: true },
+  { day: 2, time: 'ma 13 okt', kind: 'dict', labels: ['ideeen'], title: 'Idee: boekenkast op zolder', dur: '0:48', text: 'Onder het schuine dak, drie vakken diep, met schuifdeuren zodat het stof eraf blijft. Hout van de oude vloer hergebruiken.' }
+];
+const slug = t => t.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+const frame = s => `<div class="video"><div class="scene" style="background:${s[0]}"></div><div class="person"><i class="torso" style="background:${s[1]}"></i><i class="hair" style="background:${s[2]}"></i><i class="head"></i></div></div>`;
+const screenFrame = () => `<div class="video"><div class="screenshot"><div class="sbar"></div><div class="col"><i style="height:60%"></i><i style="height:85%"></i><i style="height:40%"></i></div></div></div>`;
+const ring = pct => `<div class="busy"><div><svg viewBox="0 0 46 46"><circle cx="23" cy="23" r="19" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="4"/><circle cx="23" cy="23" r="19" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-dasharray="119.4" stroke-dashoffset="${(119.4 * (1 - pct / 100)).toFixed(1)}"/></svg>Verkleinen · ${pct}%</div></div>`;
+function art(m) {
+  if (m.kind === 'video') return frame(scenes[m.scene]);
+  if (m.kind === 'screen') return screenFrame() + (m.busy ? ring(m.busy) : '');
+  if (m.kind === 'call') return `<div class="cwave">${bars(46, 0, m.a, m.b)}</div>`;
+  return `<div class="paper">${m.text}</div>`;
+}
+const thumb = m => m.kind === 'video' ? frame(scenes[m.scene]) : m.kind === 'screen' ? screenFrame() : m.kind === 'call' ? `<div class="cwave">${bars(12, 0, m.a, m.b)}</div>` : '<span class="bq">“</span>';
+const tagsOf = m => m.labels.map(l => `<span class="tag" data-label="${l}">${labelNames[l]}</span>`).join(', ');
+const status = m => m.gone ? '<span class="o-badge grey">Verwijderd</span>'
+  : m.found ? '<span class="o-badge">Nieuw uit iCloud</span>'
+  : m.needs ? '<span class="o-act" data-act="transcript"><svg class="i sm"><use href="#i-doc"/></svg>Transcript</span>'
+  : m.busy ? `<span class="o-act going"><span class="spin"></span>Verkleinen ${m.busy}%</span>`
+  : m.link ? '<span class="o-link"><svg class="i sm"><use href="#i-share"/></svg>Link · nog 1 u</span>' : '';
+
+function qr(seed = 7) {
+  let x = seed, cells = '';
+  const rnd = () => (x = (x * 9301 + 49297) % 233280) / 233280;
+  const finder = (cx, cy) => (i, j) => Math.max(Math.abs(i - cx), Math.abs(j - cy));
+  for (let i = 0; i < 25; i++) for (let j = 0; j < 25; j++) {
+    const near = [[3, 3], [21, 3], [3, 21]].map(([a, b]) => finder(a, b)(i, j)).find(d => d <= 4);
+    const on = near !== undefined ? near !== 2 && near !== 4 : rnd() > 0.52;
+    if (on) cells += `<rect x="${i}" y="${j}" width="1" height="1"/>`;
+  }
+  return `<svg viewBox="0 0 25 25" fill="#1F1C18" shape-rendering="crispEdges">${cells}</svg>`;
+}
+
+const winHTML = () => `
+  <div class="tb">
+    <div><span class="lights"><i></i><i></i><i></i></span><span class="grow" style="flex:1"></span><button class="tbicon" title="Zijbalk"><svg class="i"><use href="#i-all"/></svg></button></div>
+    <div><span class="t o-title">Alle opnames</span>
+      <span style="position:relative"><button class="fbtn o-lbl"><svg class="i sm"><use href="#i-tag"/></svg><span class="ftext">Label</span></button>
+        <div class="pop" style="left:auto;right:0">
+          <div class="h">Toon alleen</div>
+          ${Object.entries(labelNames).map(([l, n]) => `<div class="r" data-label="${l}"><svg class="i sm ck"><use href="#i-check"/></svg>${n}<span class="n">${memories.filter(m => m.labels.includes(l)).length}</span></div>`).join('')}
+          <div class="sep2"></div><div class="r manage">Labels beheren…</div>
+        </div>
+      </span>
+    </div>
+    <div>
+      <span class="o-rec"><button class="o-recgo" title="⌘N"><i></i><span>Gesprek</span></button><button class="o-recmenu"><svg class="i sm" style="transform:rotate(90deg)"><use href="#i-chev"/></svg></button>
+        <div class="pop o-recpop">
+          <div class="r" data-k="Gesprek"><svg class="i sm"><use href="#i-call"/></svg>Gesprek<kbd>⌘1</kbd></div>
+          <div class="r" data-k="Video"><svg class="i sm"><use href="#i-cam"/></svg>Video<kbd>⌘2</kbd></div>
+          <div class="r" data-k="Scherm"><svg class="i sm"><use href="#i-screen"/></svg>Scherm<kbd>⌘3</kbd></div>
+          <div class="r" data-k="Dicteren"><svg class="i sm"><use href="#i-dict"/></svg>Dicteren<kbd>⌥ Spatie</kbd></div>
+        </div>
+      </span>
+      <div class="search" style="width:250px"><svg class="i sm"><use href="#i-search"/></svg>Zoek in opnames en transcripten</div>
+    </div>
+  </div>
+  <div class="o-body">
+    <div class="o-side">
+      <div class="sb-label">Opnames</div>
+      <div class="sb-row" data-scope="all"><svg class="i"><use href="#i-all"/></svg>Alle opnames<span class="n"></span></div>
+      <div class="sb-label">Soort</div>
+      <div class="sb-row" data-scope="call"><svg class="i"><use href="#i-call"/></svg>Gesprekken<span class="n"></span></div>
+      <div class="sb-row" data-scope="video"><svg class="i"><use href="#i-cam"/></svg>Video<span class="n"></span></div>
+      <div class="sb-row" data-scope="screen"><svg class="i"><use href="#i-screen"/></svg>Scherm<span class="n"></span></div>
+      <div class="sb-row" data-scope="dict"><svg class="i"><use href="#i-dict"/></svg>Dictaten<span class="n"></span></div>
+      <div class="sb-label">Overzicht</div>
+      <div class="sb-row" data-scope="links"><svg class="i"><use href="#i-share"/></svg>Open deellinks<span class="n"></span></div>
+      <div class="sb-row" data-scope="gone"><svg class="i"><use href="#i-trash"/></svg>Verwijderd<span class="n"></span></div>
+      <div class="sb-label">Hulpmiddelen</div>
+      <div class="sb-row" data-goto="p-shrink"><svg class="i"><use href="#i-down"/></svg>Verklein een video…</div>
+      <span class="grow"></span>
+      <div class="o-status"><i></i><span><b>burrow.example.nl</b>iCloud en Dobby zijn bij</span></div>
+    </div>
+    <div class="o-list"></div>
+    <div class="o-detail"></div>
+  </div>
+  <div class="o-send">
+    <div class="sh">Stuur <b class="o-send-t"></b></div>
+    <div class="apps"><span><i class="airdrop"></i>AirDrop</span><span><i class="mail">✉</i>Mail</span><span><i class="msg">✆</i>Berichten</span><span><i class="more">···</i>Meer</span></div>
+    <div class="sep"></div>
+    <div class="lk">
+      <b>Deellink</b><span class="d">Werkt in elke browser, ook zonder Mac of account. Dobby heeft het bestand al, dus de link werkt meteen.</span>
+      <div class="frow"><span>Bestand</span><span class="pick"><svg class="i sm"><use href="#i-film"/></svg><span class="v"></span><svg class="i sm" style="transform:rotate(90deg)"><use href="#i-chev"/></svg><div class="pop"></div></span></div>
+      <div class="frow"><span>Downloads</span><span class="seg o-dls"><button class="on" data-n="1">1 keer</button><button data-n="3">3 keer</button><button data-n="10">10 keer</button></span></div>
+      <div class="frow"><span>Verloopt</span><span>na 24 uur</span></div>
+      <button class="btn primary mk"><svg class="i sm"><use href="#i-share"/></svg>Maak link</button>
+    </div>
+    <div class="made">
+      <b style="font-size:13.5px">Link gemaakt en gekopieerd</b>
+      <div class="url"><code>https://burrow.example.nl/s/k7Qm2xWp9aLr</code><button class="btn"><svg class="i sm"><use href="#i-copy"/></svg>Kopieer</button></div>
+      <div class="qrrow"><div class="qr">${qr()}</div><div class="tx"><b class="o-made-n"></b><br />Verloopt over 24 uur. Scan de code met een telefoon om hem daar te openen.<br /><button class="btn ghost" style="padding:0;margin-top:6px;color:var(--danger)">Trek in</button></div></div>
+    </div>
+  </div>`;
+
+function vertrouwd(root, { sel = 0, send = false } = {}) {
+  root.innerHTML = winHTML();
+  const $ = q => root.querySelector(q);
+  const $$ = q => [...root.querySelectorAll(q)];
+  let scope = 'all';
+  let current = memories[sel];
+  const labels = new Set();
+  const scopes = { all: () => true, links: m => m.link && !m.gone, gone: m => m.gone };
+  const match = m => (scopes[scope] ? scopes[scope](m) : m.kind === scope) && (!labels.size || m.labels.some(l => labels.has(l)));
+
+  function render() {
+    $$('.o-side [data-scope]').forEach(r => {
+      const s = r.dataset.scope;
+      r.classList.toggle('on', s === scope);
+      r.querySelector('.n').textContent = memories.filter(m => (scopes[s] ? scopes[s](m) : m.kind === s) && (s === 'gone' || !m.gone)).length;
+    });
+    $('.o-title').textContent = $(`.o-side [data-scope="${scope}"]`).textContent.replace(/\d+$/, '');
+    const shown = memories.filter(match);
+    $('.o-list').innerHTML = dayNames.map((name, d) => {
+      const rows = shown.filter(m => m.day === d);
+      return rows.length ? `<div class="day">${name}</div>` + rows.map(m => `<div class="row${m === current ? ' on' : ''}${m.gone ? ' gone' : ''}" data-i="${memories.indexOf(m)}"><span class="o-th">${thumb(m)}</span><div><div class="l1"><b>${m.title}</b><span class="when">${m.time}</span></div><div class="l2"><svg class="i sm"><use href="#${kindIcons[m.kind]}"/></svg><span class="txt">${m.dur}${m.labels.length ? ' · ' + tagsOf(m) : ''}</span><span class="grow"></span>${status(m)}</div></div></div>`).join('') : '';
+    }).join('') || '<div class="day" style="padding:20px 14px">Niets gevonden.</div>';
+    $$('.o-lbl + .pop [data-label]').forEach(r => r.classList.toggle('on', labels.has(r.dataset.label)));
+    const names = [...labels].map(l => labelNames[l]);
+    $('.o-lbl').classList.toggle('active', names.length > 0);
+    $('.o-lbl .ftext').innerHTML = names.length ? names.join(', ') + ' <span class="x" data-clear>×</span>' : 'Label';
+    detail();
+  }
+
+  function detail() {
+    const m = current;
+    const d = $('.o-detail');
+    const when = `${dayNames[m.day] === 'Eerder' ? '' : dayNames[m.day] + ' '}${m.time} · ${m.dur}`;
+    const head = `<div class="o-head"><div class="grow"><h2>${m.title}</h2><div class="meta">${when}${m.labels.length ? ' · ' + tagsOf(m) : ''} <span class="addl">+ Label</span></div></div>
+      ${!m.gone && (m.kind === 'video' || m.kind === 'screen') ? '<button class="tbicon" title="Verklein…" data-goto="p-shrink"><svg class="i"><use href="#i-down"/></svg></button>' : ''}<button class="tbicon" title="Toon in Finder"><svg class="i"><use href="#i-folder"/></svg></button>${m.gone ? '' : '<button class="btn o-stuur"><svg class="i sm"><use href="#i-share"/></svg>Stuur</button>'}</div>`;
+    if (m.gone) {
+      d.innerHTML = head + `<div class="o-banner grey"><span class="ic"><svg class="i"><use href="#i-trash"/></svg></span><div class="tx"><b>Verwijderd uit iCloud op 23 oktober</b><span>De map <code>2026-10-15_${slug(m.title)}</code> staat niet meer in iCloud Drive. Dobby bewaart een kopie tot 22 november.</span><div class="acts"><button class="btn primary o-restore">Zet terug in iCloud</button><button class="btn ghost">Nu definitief verwijderen</button></div></div></div><div class="o-hero o-dim">${art(m)}</div>`;
+    } else if (m.found) {
+      d.innerHTML = head + `<div class="o-banner"><span class="ic"><svg class="i"><use href="#i-cloud"/></svg></span><div class="tx"><b>Gevonden in iCloud Drive/Pensieve</b><span><code>presentatie-aardrijkskunde.mov</code> van een iPhone, 4K, 1,2 GB. Pensieve zette er een map omheen en het geluid ernaast; het bestand zelf blijft zoals het is.</span><div class="o-steps"><span class="ok"><svg class="i sm"><use href="#i-check"/></svg>Map gemaakt</span><span class="ok"><svg class="i sm"><use href="#i-check"/></svg>audio.m4a</span><span><span class="spin"></span>Naar Dobby 40%</span></div><div class="acts"><button class="btn primary" data-goto="p-shrink"><svg class="i sm"><use href="#i-down"/></svg>Verklein…</button><button class="btn"><svg class="i sm"><use href="#i-doc"/></svg>Maak transcript</button></div></div></div><div class="o-hero">${art(m)}</div>`;
+    } else if (m.open) {
+      const links = m.link ? `<div class="o-links"><h3>Open deellinks</h3><div class="lrow"><svg class="i"><use href="#i-share"/></svg><span class="n"><b>interview-joris-bakker.mp4</b><span>0 van 1 keer gedownload · verloopt vandaag om 16:12</span></span><button class="btn ghost" style="color:var(--danger)">Trek in</button></div></div>` : '';
+      d.innerHTML = head + mems[m.open].main() + `<div class="o-more">${links}${mems[m.open].side()}</div>`;
+      d.querySelectorAll('.lyrics p').forEach(p => p.onclick = () => {
+        const i = Number(p.dataset.i);
+        p.parentElement.querySelectorAll('p').forEach((x, j) => { x.className = j < i ? 'past' : j === i ? 'now' : ''; });
+      });
+    } else {
+      const extra = m.kind === 'dict' ? '<div><button class="btn"><svg class="i sm"><use href="#i-copy"/></svg>Kopieer tekst</button></div>'
+        : m.busy ? '<p style="color:var(--text-2);font-size:13px;margin:0">Wordt verkleind van 2,1 GB naar ± 150 MB. Daarna gaat hij naar iCloud en Dobby, en verdwijnt het origineel.</p>'
+        : `<p style="color:var(--text-2);font-size:13px;margin:0">${m.summary || ''}</p>`;
+      d.innerHTML = head + `<div class="o-hero">${art(m)}</div>` + extra;
+    }
+    d.querySelectorAll('[data-goto]').forEach(b => b.onclick = () => goto(b.dataset.goto));
+    d.querySelector('.o-restore')?.addEventListener('click', () => { m.gone = false; render(); });
+    d.querySelector('.o-stuur')?.addEventListener('click', () => openSend());
+    $('.o-send').classList.remove('open', 'done');
+  }
+
+  function openSend() {
+    const m = current;
+    const files = [
+      m.kind === 'video' || m.kind === 'screen' ? [m.found ? 'presentatie-aardrijkskunde.mov' : `${slug(m.title)}.mp4`, m.size, 'i-film'] : null,
+      ['audio.m4a', '10 MB', 'i-wave'],
+      m.open || m.kind === 'dict' ? ['transcript.md', '39 kB', 'i-doc'] : null,
+      m.open ? ['samenvatting.md', '3 kB', 'i-doc'] : null,
+      ['Alles in één zip', m.size || '12 MB', 'i-folder']
+    ].filter(Boolean);
+    const pick = $('.o-send .pick');
+    const set = f => { pick.querySelector('.v').textContent = `${f[0]} · ${f[1]}`; pick.querySelector('use').setAttribute('href', '#' + f[2]); };
+    set(files[0]);
+    pick.querySelector('.pop').innerHTML = files.map((f, i) => `<div class="r" data-f="${i}"><svg class="i sm"><use href="#${f[2]}"/></svg>${f[0]}<small>${f[1]}</small></div>`).join('');
+    pick.onclick = e => {
+      const r = e.target.closest('[data-f]');
+      if (r) { set(files[Number(r.dataset.f)]); pick.querySelector('.pop').classList.remove('open'); e.stopPropagation(); return; }
+      pick.querySelector('.pop').classList.toggle('open');
+    };
+    $('.o-send-t').textContent = m.title;
+    $('.o-send').classList.add('open');
+    $('.o-send').classList.remove('done');
+  }
+  $$('.o-dls button').forEach(b => b.onclick = () => $$('.o-dls button').forEach(x => x.classList.toggle('on', x === b)));
+  $('.o-send .mk').onclick = () => {
+    const n = $('.o-dls .on').dataset.n;
+    $('.o-made-n').textContent = n === '1' ? 'Eén keer te downloaden' : `${n} keer te downloaden`;
+    $('.o-send').classList.add('done');
+  };
+
+  $('.o-side').onclick = e => {
+    const g = e.target.closest('[data-goto]'); if (g) { goto(g.dataset.goto); return; }
+    const r = e.target.closest('[data-scope]'); if (!r) return;
+    scope = r.dataset.scope;
+    if (!match(current)) current = memories.find(match) || current;
+    render();
+  };
+  $('.o-list').onclick = e => {
+    const t = e.target.closest('.tag');
+    if (t) { labels.clear(); labels.add(t.dataset.label); render(); return; }
+    const r = e.target.closest('.row'); if (!r) return;
+    current = memories[Number(r.dataset.i)];
+    render();
+    if (e.target.closest('[data-act=transcript]')) runTranscript(root.querySelector('.o-detail .bigcta button'));
+  };
+  $('.o-lbl').onclick = e => {
+    if (e.target.closest('[data-clear]')) { labels.clear(); render(); return; }
+    e.currentTarget.nextElementSibling.classList.toggle('open');
+  };
+  $$('.o-lbl + .pop [data-label]').forEach(r => r.onclick = () => {
+    labels.has(r.dataset.label) ? labels.delete(r.dataset.label) : labels.add(r.dataset.label);
+    if (!match(current)) current = memories.find(match) || current;
+    render();
+  });
+  $('.o-recgo').onclick = () => { goto('p-rec'); countdown(); };
+  $('.o-recmenu').onclick = () => $('.o-recpop').classList.toggle('open');
+  $$('.o-recpop [data-k]').forEach(r => r.onclick = () => {
+    $('.o-recgo span').textContent = r.dataset.k;
+    $('.o-recpop').classList.remove('open');
+  });
+  render();
+  if (send) openSend();
+}
+
+function countdown() {
+  const c = document.getElementById('countdown');
+  let n = 3;
+  c.style.display = ''; c.textContent = n;
+  const t = setInterval(() => {
+    n--;
+    if (n === 0) { clearInterval(t); c.style.display = 'none'; } else c.textContent = n;
+  }, 650);
+}
+
+const limitSeg = document.getElementById('limit');
+const qopts = [...document.querySelectorAll('#qopts .q')];
+const qnames = { 88: '1080p', 44: '720p', 22: '480p' };
+qopts.forEach(q => q.dataset.per = q.querySelector('small').textContent);
+function pickQ(q) {
+  if (q.classList.contains('too')) return;
+  qopts.forEach(x => x.classList.toggle('on', x === q));
+  document.getElementById('shrink-hint').innerHTML = `Opgeslagen naast het origineel als <code>presentatie-aardrijkskunde-${qnames[q.dataset.mb]}.mp4</code>. Het geluid blijft goed verstaanbaar in alle drie.`;
+}
+qopts.forEach(q => q.onclick = () => pickQ(q));
+limitSeg.onclick = e => {
+  const b = e.target.closest('button'); if (!b || b.dataset.l === 'other') return;
+  limitSeg.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+  const limit = Number(b.dataset.l);
+  qopts.forEach(q => {
+    const too = limit > 0 && Number(q.dataset.mb) > limit * 0.95;
+    q.classList.toggle('too', too);
+    q.querySelector('small').textContent = too ? `te groot voor ${limit} MB` : q.dataset.per;
+  });
+  const fits = qopts.filter(q => !q.classList.contains('too'));
+  pickQ(limit > 0 ? fits[0] : qopts[1]);
+};
+function runShrink() {
+  const q = qopts.find(x => x.classList.contains('on'));
+  const foot = document.getElementById('shrink-foot');
+  foot.innerHTML = `<span style="flex:1"><span style="font-size:12.5px;color:var(--text-2)">Verkleinen · 40% · nog ± 35 seconden</span><span class="prog" style="display:block"><i style="width:40%"></i></span></span><button class="btn ghost">Stop</button>`;
+  setTimeout(() => {
+    const mb = Math.round(Number(q.dataset.mb) * 0.94);
+    foot.innerHTML = `<div class="done-box" style="flex:1"><span class="ok"><svg class="i sm"><use href="#i-check"/></svg></span><span style="flex:1"><b>Klaar: ${mb} MB</b><br /><span style="color:var(--text-2);font-size:12px">presentatie-aardrijkskunde-${qnames[q.dataset.mb]}.mp4, naast het origineel</span></span><button class="btn">Toon in Finder</button><button class="btn primary"><svg class="i sm"><use href="#i-share"/></svg>Deel…</button></div>`;
+  }, 1400);
+}
+
+
+function goto(p) {
+  document.querySelectorAll('#tabs .tab').forEach(t => t.classList.toggle('on', t.dataset.p === p));
+  document.querySelectorAll('.pane').forEach(x => x.classList.toggle('on', x.id === p));
+  fit();
+}
+document.getElementById('tabs').onclick = e => { const t = e.target.closest('.tab'); if (t) goto(t.dataset.p); };
+document.querySelectorAll('[data-goto]').forEach(b => b.addEventListener('click', () => goto(b.dataset.goto)));
+
+document.getElementById('theme').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
+  document.documentElement.dataset.theme = b.dataset.t;
+  document.querySelectorAll('#theme button').forEach(x => x.classList.toggle('on', x === b));
+};
+if (matchMedia('(prefers-color-scheme: dark)').matches) document.querySelector('#theme [data-t=dark]').click();
+
+function fit() {
+  document.querySelectorAll('.pane.on .stage').forEach(s => {
+    const f = s.firstElementChild;
+    const scale = Math.min(1, s.clientWidth / 1180);
+    f.style.transform = `scale(${scale})`;
+    s.style.height = f.offsetHeight * scale + 'px';
+  });
+  const set = document.querySelector('.mac.settings');
+  set.style.zoom = Math.min(1, set.parentElement.clientWidth / 760);
+}
+addEventListener('resize', fit);
+
+document.querySelectorAll('[data-win]').forEach(w => vertrouwd(w, { main: {}, send: { sel: 5, send: true }, shrink: { sel: 5 } }[w.dataset.win]));
+document.querySelectorAll('.phone .vslot').forEach(e => e.outerHTML = frame(scenes.joris));
+fit();
+document.querySelector(`#tabs [data-p="${location.hash.slice(1)}"]`)?.click();
+</script>
+</body>
+</html>

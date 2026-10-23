@@ -181,15 +181,47 @@ clients still see errors.
 
 ## Pensieve v2: the UI on the new engine
 
-**What:** the screens of `docs/design/pensieve.html` on the engine of
-`docs/plans/2026-10-22-pensieve-v2.md`: the gallery with kind and label filters, the
-memory view (timeline from segments and marks, transcript following playback, side
-panel), the recording stage and pill with Markeer, the floating orb, the dictation HUD
-(and switching on `DictationController`), the Verklein video sheet, Settings › Labels
-and the Mac settings for video format, size cap and automatic transcripts per kind;
-pause; title and labels from the calendar once Burrow has calendars.
-**Why:** the engine landed without UI so the design can settle first.
+**What:** the screens of `docs/design/pensieve-v6.html` on the engine of
+`docs/plans/2026-10-22-pensieve-v2.md`: the three-column window with kinds in the
+sidebar, thumbnails and pending work per row, the quiet label filter and the record
+button that remembers the kind; the detail (timeline from segments and marks, transcript
+following playback); the recording stage with Markeer, the floating orb, the dictation
+HUD (and switching on `DictationController`), the Verklein video sheet, Settings ›
+Labels and the Mac settings; pause; title and labels from the calendar once Burrow has
+calendars. Drop "Van mij", "Gedeeld met mij" and Pensieve's share routes.
+**Why:** the engine landed without UI so the design could settle first.
 **Scope:** several days; the plan lists what each screen needs.
+
+## Pensieve: every file on Dobby, the iCloud folder as the source
+
+**What:** (1) upload the compressed MP4 (and imported files) to Dobby next to
+`audio.m4a`, resumable, and delete the original only once it is in iCloud and on Dobby;
+(2) watch `iCloud Drive/Pensieve` both ways: added files and folders become recordings
+(a loose file gets its own folder and `audio.m4a`), renames, Finder tags and edited
+markdown come back, deletions turn the recording grey with "Zet terug" from Dobby's
+copy, which Dobby keeps 30 days (setting).
+**Why:** decided 2026-10-23: Dobby holds every file in Burrow, iCloud is what the
+operator manages in Finder.
+**Scope:** two to three days; the watcher and its conflict rules are most of it.
+
+## Pensieve: share links served by Dobby
+
+**What:** `Stuur` creates a link to one file or a zip of the folder: one download by
+default (3 or 10 on request), always 24 hours, counted when a download completes,
+revocable; a public receive page without account, cookies or trackers, `noindex`, with
+the states "open", "downloaded" and "no longer works". List open links per recording
+and under "Open deellinks".
+**Why:** sending to people without a Mac, without a third-party service.
+**Scope:** a day for server and page, half a day for the Mac popover.
+
+## Dobby: back up the files off the machine
+
+**What:** `infra/dobby/backup.sh` copies only the database. Add the files folder
+(`~/.local/share/burrow/files`) to an encrypted off-site backup, for example restic or
+rclone to Backblaze B2, with a restore drill.
+**Why:** with every file on Dobby, one disk failure should not lose the only copy of
+anything not in iCloud.
+**Scope:** half a day plus the operator's B2 account.
 
 ## Pensieve: speakers across parts and a timestamp model after February 2027
 

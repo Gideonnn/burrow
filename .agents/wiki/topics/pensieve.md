@@ -7,7 +7,9 @@ microphone when asked) and a **dictation** (hold Option+Space anywhere, talk, th
 pasted at the cursor). The server gets only audio: it compresses, transcribes and writes
 notes. Video stays on the Mac and in iCloud. It replaced RecHoarder (`~/git/rechoarder`),
 whose capture code lives on in `apps/pensieve-mac/Sources/PensieveCapture`. Plan:
-`docs/plans/2026-10-22-pensieve-v2.md`; design: `docs/design/pensieve.html`.
+`docs/plans/2026-10-22-pensieve-v2.md`; design: `docs/design/pensieve-v6.html`, which also
+moves video to Dobby, follows the iCloud folder and replaces sharing with links (not built
+yet, see the [diary](../diary/2026-10-23-pensieve-files-live-on-dobby.md)).
 
 ## The pipeline
 
