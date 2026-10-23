@@ -144,7 +144,8 @@ extension PastedContents {
     public static let dropTypes: [UTType] = [.fileURL, .image, .url, .plainText]
 
     /// Reads dropped items: files first, then image bytes, links and text.
-    public static func load(_ providers: [NSItemProvider]) async -> PastedContents {
+    /// Runs on the caller's actor because `NSItemProvider` is not Sendable.
+    public nonisolated(nonsending) static func load(_ providers: [NSItemProvider]) async -> PastedContents {
         var contents = PastedContents()
         for provider in providers {
             if provider.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) {
@@ -166,13 +167,13 @@ extension PastedContents {
 }
 
 extension NSItemProvider {
-    fileprivate func loadData(_ type: UTType) async -> Data? {
+    fileprivate nonisolated(nonsending) func loadData(_ type: UTType) async -> Data? {
         await withCheckedContinuation { done in
             _ = loadDataRepresentation(forTypeIdentifier: type.identifier) { data, _ in done.resume(returning: data) }
         }
     }
 
-    fileprivate func load<T: _ObjectiveCBridgeable & Sendable>(_ type: T.Type) async -> T? where T._ObjectiveCType: NSItemProviderReading {
+    fileprivate nonisolated(nonsending) func load<T: _ObjectiveCBridgeable & Sendable>(_ type: T.Type) async -> T? where T._ObjectiveCType: NSItemProviderReading {
         await withCheckedContinuation { done in
             _ = loadObject(ofClass: type) { value, _ in done.resume(returning: value) }
         }
