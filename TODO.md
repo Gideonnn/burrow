@@ -184,7 +184,8 @@ clients still see errors.
 **What:** the screens of `docs/design/pensieve-v6.html` on the engine of
 `docs/plans/2026-10-22-pensieve-v2.md`: the three-column window with kinds in the
 sidebar, thumbnails and pending work per row, the quiet label filter and the record
-button that remembers the kind; the detail (timeline from segments and marks, transcript
+button that remembers the kind, with the toolbar, search capsule and sidebar status card
+as in Hedwig; the detail (timeline from segments and marks, transcript
 following playback); the recording stage with Markeer, the floating orb, the dictation
 HUD (and switching on `DictationController`), the Verklein video sheet, Settings ›
 Labels and the Mac settings; pause; title and labels from the calendar once Burrow has

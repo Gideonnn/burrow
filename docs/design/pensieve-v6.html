@@ -384,23 +384,46 @@ h2.sec { font-size: 20px; margin-top: 40px; }
 .busy { position: absolute; inset: 0; background: rgba(20, 16, 12, 0.5); display: grid; place-items: center; color: #fff; font-size: 12px; font-weight: 600; text-align: center; }
 .busy svg { width: 46px; height: 46px; display: block; margin: 0 auto 6px; transform: rotate(-90deg); }
 
-/* Vertrouwd: the current app, one step further */
-.o-win { grid-template-rows: 52px 1fr; }
-.o-win .tb { display: grid; grid-template-columns: 210px 340px 1fr; padding: 0; gap: 0; }
-.o-win .tb > div { display: flex; align-items: center; gap: 8px; height: 100%; padding: 0 12px; min-width: 0; }
-.o-win .tb > div:first-child { background: var(--sidebar); padding-left: 14px; }
-.o-win .tb .t { font-weight: 700; font-size: 15px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.o-win .tb > div:last-child { justify-content: flex-end; }
+/* Vertrouwd: the current app, aligned with Hedwig as it ships on macOS 26 */
+.mac { --surface: #FFFFFF; --surface-2: #F5F5F5; --sidebar: #F2F2F2; --sel: #E2E2E2; --side-sel: rgba(0, 0, 0, 0.06); --line: #E6E6E6; --hover: rgba(0, 0, 0, 0.04); --popover: #FFFFFF; --glass: rgba(255, 255, 255, 0.86); --glass-line: rgba(0, 0, 0, 0.1); }
+[data-theme="dark"] .mac { --surface: #1B1B1B; --surface-2: #232323; --sidebar: #242424; --sel: #3E3E3E; --side-sel: rgba(255, 255, 255, 0.07); --line: #313131; --hover: rgba(255, 255, 255, 0.05); --popover: #2A2A2A; --glass: #2E2E2E; --glass-line: rgba(255, 255, 255, 0.1); }
+.mac .pop, .o-send { background: var(--popover); }
+.o-win { grid-template-rows: 56px 1fr; }
+.o-win .tb { display: grid; grid-template-columns: 210px 340px 1fr; padding: 0; gap: 0; background: var(--surface); border-bottom: 0; }
+.o-win .tb > div { display: flex; align-items: center; gap: 10px; height: 100%; padding: 0 12px; min-width: 0; }
+.o-win .tb > div:first-child { background: var(--sidebar); padding-left: 16px; }
+.o-win .tb > div + div { border-bottom: 1px solid var(--line); }
+.o-win .tb > div:last-child { border-left: 1px solid var(--line); }
+.o-win .tb .tt { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.25; }
+.o-win .tb .t { font-weight: 700; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.o-win .tb .st { font-size: 12px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tb-round, .tb-cap, .gsearch { height: 34px; background: var(--glass); box-shadow: inset 0 0 0 1px var(--glass-line), 0 1px 3px rgba(0, 0, 0, 0.08); flex: none; }
+.tb-round { width: 34px; border-radius: 50%; display: grid; place-items: center; color: var(--text); }
+.tb-cap { display: inline-flex; align-items: center; padding: 0 3px; border-radius: 17px; position: relative; color: var(--text); }
+.tb-cap > button { width: 34px; height: 28px; border-radius: 14px; display: grid; place-items: center; color: inherit; }
+.tb-cap > button:hover, .tb-round:hover { background: var(--hover); }
+.tb-cap > button:disabled { opacity: 0.35; pointer-events: none; }
+.tb-cap .sep { width: 1px; height: 16px; background: var(--glass-line); flex: none; }
+.tb-cap.disabled > button { opacity: 0.35; pointer-events: none; }
+.tb-cap.text > button { width: auto; display: inline-flex; gap: 7px; align-items: center; padding: 0 10px; font-size: 13px; font-weight: 500; }
+.tb-cap.text > button.narrow { padding: 0 7px; }
+.o-lbl .ftext:empty { display: none; }
+.tb-cap.text > button.o-lbl { padding: 0 9px; min-width: 28px; justify-content: center; }
+.gsearch { flex: 0 1 240px; min-width: 120px; border-radius: 17px; display: flex; align-items: center; gap: 7px; padding: 0 13px; color: var(--text-3); font-size: 13px; white-space: nowrap; overflow: hidden; }
 .o-body { display: grid; grid-template-columns: 210px 340px minmax(0, 1fr); min-height: 0; }
-.o-side { background: var(--sidebar); padding: 4px 8px 10px; display: flex; flex-direction: column; min-height: 0; }
-.o-side .sb-row svg { color: var(--primary); }
+.o-side { background: var(--sidebar); padding: 2px 10px 10px; display: flex; flex-direction: column; min-height: 0; }
+.o-side .sb-row { padding: 7px 8px; border-radius: 8px; }
+.o-side .sb-row.on { background: var(--side-sel); font-weight: 600; }
+.o-side .sb-row svg { color: var(--text-2); }
 .o-side .grow { flex: 1; }
-.o-status { display: flex; gap: 8px; align-items: flex-start; padding: 8px; font-size: 11.5px; color: var(--text-2); line-height: 1.35; }
-.o-status i { width: 8px; height: 8px; border-radius: 50%; background: var(--success); margin-top: 4px; flex: none; }
+.o-status { display: flex; gap: 9px; align-items: center; padding: 9px 10px; border-radius: 10px; background: var(--side-sel); font-size: 11.5px; color: var(--text-2); line-height: 1.35; }
+.o-status i { width: 8px; height: 8px; border-radius: 50%; background: var(--success); flex: none; }
 .o-status b { display: block; color: var(--text); font-weight: 600; }
-.o-list { border-right: 1px solid var(--line); border-left: 1px solid var(--line); overflow: auto; min-height: 0; }
+.o-list { border-right: 1px solid var(--line); overflow: auto; min-height: 0; padding-bottom: 8px; }
 .o-list .day { position: sticky; top: 0; background: var(--surface); z-index: 1; }
-.o-list .row { grid-template-columns: 46px 1fr; align-items: center; border-bottom: 0; margin: 0 6px; padding: 7px 8px; border-radius: 8px; }
+.o-list .row { grid-template-columns: 46px 1fr; align-items: center; border-bottom: 0; margin: 0 8px; padding: 8px 8px; border-radius: 10px; position: relative; }
+.o-list .row + .row::before { content: ""; position: absolute; top: 0; left: 64px; right: 8px; height: 1px; background: var(--line); }
+.o-list .row.on::before, .o-list .row.on + .row::before { display: none; }
 .o-list .row.on { background: var(--sel); color: var(--text); }
 .o-list .row.on .when, .o-list .row.on .l2 { color: var(--text-2); opacity: 1; }
 .o-th { width: 46px; height: 34px; border-radius: 7px; overflow: hidden; position: relative; background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--line); }
@@ -415,22 +438,25 @@ h2.sec { font-size: 20px; margin-top: 40px; }
 .o-act { font-size: 11.5px; font-weight: 600; color: var(--primary); white-space: nowrap; display: inline-flex; gap: 5px; align-items: center; }
 .o-act .spin { width: 10px; height: 10px; border-width: 1.5px; }
 .o-act.going { color: var(--text-2); font-weight: 500; }
-.o-rec { display: inline-flex; height: 30px; border-radius: 999px; background: #FF453A; color: #fff; font-weight: 600; font-size: 13px; position: relative; }
-.o-rec button { display: inline-flex; align-items: center; gap: 7px; padding: 0 10px 0 11px; }
-.o-rec button:first-child i { width: 10px; height: 10px; border-radius: 50%; background: #fff; }
-.o-rec button + button { border-left: 1px solid rgba(255, 255, 255, 0.35); padding: 0 8px 0 6px; }
-.o-rec .pop { right: 0; left: auto; top: 36px; color: var(--text); font-weight: 400; }
+.o-rec .o-recgo i { width: 15px; height: 15px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px #FF453A; display: grid; place-items: center; }
+.o-rec .o-recgo i::after { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #FF453A; }
+.o-rec .pop { left: 0; right: auto; top: 40px; font-weight: 400; }
 .o-rec .pop kbd { margin-left: auto; }
 .o-detail { overflow: auto; min-height: 0; padding: 16px 22px 30px; display: flex; flex-direction: column; gap: 14px; }
 .o-detail .video { margin: 0; flex: none; height: 270px; aspect-ratio: auto; }
 .o-detail .video .person { width: 24%; }
 .o-detail .bigwave { height: 150px; }
 .o-head { display: flex; gap: 12px; align-items: flex-start; }
-.o-head h2 { font-size: 19px; font-weight: 700; }
+.o-head h2 { font-size: 19px; font-weight: 700; flex: 1; min-width: 0; }
+.o-head .l1 { display: flex; align-items: baseline; gap: 12px; }
+.o-head .l1 .when { font-size: 12.5px; color: var(--text-2); white-space: nowrap; }
+.o-head .pills { display: flex; gap: 5px; align-items: center; margin-top: 7px; font-size: 12px; }
+.o-pill { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 10px; font-size: 11.5px; font-weight: 600; color: var(--primary); background: var(--primary-tint); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary) 50%, transparent); cursor: pointer; }
 .o-head .grow { flex: 1; min-width: 0; }
-.o-head .meta { margin-top: 3px; }
+.o-head .meta { margin-top: 3px; display: flex; gap: 5px; align-items: center; color: var(--text-2); font-size: 12.5px; }
+.o-head .meta svg { color: var(--text-3); }
 .o-head .meta .tag { color: var(--text-2); }
-.o-head .meta .addl { color: var(--text-3); cursor: pointer; }
+.o-head .addl { color: var(--text-3); cursor: pointer; }
 .o-more { display: flex; flex-direction: column; gap: 18px; border-top: 1px solid var(--line); padding-top: 16px; }
 .o-more h3 { font-size: 12px; font-weight: 600; color: var(--text-2); margin-bottom: 6px; }
 .o-more p, .o-more ul { font-size: 13px; margin: 0; }
@@ -552,7 +578,7 @@ h2.sec { font-size: 20px; margin-top: 40px; }
 .o-links .lrow .n b { display: block; font-family: var(--mono); font-size: 11.5px; font-weight: 500; }
 .o-links .lrow .n span { color: var(--text-2); }
 
-.o-send { position: absolute; top: 100px; right: 18px; width: 360px; z-index: 6; background: var(--surface); border-radius: 14px; box-shadow: var(--shadow-3); padding: 14px; display: none; font-size: 13px; }
+.o-send { position: absolute; top: 42px; left: -160px; width: 360px; z-index: 6; color: var(--text); text-align: left; border-radius: 14px; box-shadow: var(--shadow-3); padding: 14px; display: none; font-size: 13px; }
 .o-send.open { display: block; }
 .o-send .sh { font-size: 12px; color: var(--text-2); margin-bottom: 10px; }
 .o-send .sh b { color: var(--text); }
@@ -642,6 +668,7 @@ h2.sec { font-size: 20px; margin-top: 40px; }
   <symbol id="i-x" viewBox="0 0 24 24"><path d="M7 7l10 10M17 7L7 17"/></symbol>
   <symbol id="i-person" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4.5 20.5a7.5 7.5 0 0 1 15 0"/></symbol>
   <symbol id="i-people" viewBox="0 0 24 24"><circle cx="9" cy="8.5" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M15.5 5.2a3.5 3.5 0 0 1 0 6.6M17.5 14.2a6.5 6.5 0 0 1 4 5.8"/></symbol>
+  <symbol id="i-sidebar" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="14" rx="3"/><path d="M9.5 5v14M6 8.5h1.5M6 11h1.5"/></symbol>
   <symbol id="i-all" viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></symbol>
   <symbol id="i-gear" viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></symbol>
   <symbol id="i-finder" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="3"/><path d="M12 3.5c-1.5 4-1.5 9 0 17M8 9v1.5M16 9v1.5M8 15.5c2.5 1.5 5.5 1.5 8 0"/></symbol>
@@ -1024,10 +1051,10 @@ function qr(seed = 7) {
 
 const winHTML = () => `
   <div class="tb">
-    <div><span class="lights"><i></i><i></i><i></i></span><span class="grow" style="flex:1"></span><button class="tbicon" title="Zijbalk"><svg class="i"><use href="#i-all"/></svg></button></div>
-    <div><span class="t o-title">Alle opnames</span>
-      <span style="position:relative"><button class="fbtn o-lbl"><svg class="i sm"><use href="#i-tag"/></svg><span class="ftext">Label</span></button>
-        <div class="pop" style="left:auto;right:0">
+    <div><span class="lights"><i></i><i></i><i></i></span><span class="grow" style="flex:1"></span><button class="tb-round" title="Zijbalk"><svg class="i lg"><use href="#i-sidebar"/></svg></button></div>
+    <div><span class="tt"><span class="t o-title">Alle opnames</span><span class="st o-sub"></span></span>
+      <span style="position:relative"><span class="tb-cap text"><button class="o-lbl" title="Toon alleen een label"><svg class="i"><use href="#i-tag"/></svg><span class="ftext"></span></button></span>
+        <div class="pop" style="left:auto;right:0;top:40px">
           <div class="h">Toon alleen</div>
           ${Object.entries(labelNames).map(([l, n]) => `<div class="r" data-label="${l}"><svg class="i sm ck"><use href="#i-check"/></svg>${n}<span class="n">${memories.filter(m => m.labels.includes(l)).length}</span></div>`).join('')}
           <div class="sep2"></div><div class="r manage">Labels beheren…</div>
@@ -1035,7 +1062,7 @@ const winHTML = () => `
       </span>
     </div>
     <div>
-      <span class="o-rec"><button class="o-recgo" title="⌘N"><i></i><span>Gesprek</span></button><button class="o-recmenu"><svg class="i sm" style="transform:rotate(90deg)"><use href="#i-chev"/></svg></button>
+      <span class="tb-cap text o-rec"><button class="o-recgo" title="Neem op (⌘N)"><i></i><span>Gesprek</span></button><span class="sep"></span><button class="o-recmenu narrow" title="Kies wat je opneemt"><svg class="i sm" style="transform:rotate(90deg)"><use href="#i-chev"/></svg></button>
         <div class="pop o-recpop">
           <div class="r" data-k="Gesprek"><svg class="i sm"><use href="#i-call"/></svg>Gesprek<kbd>⌘1</kbd></div>
           <div class="r" data-k="Video"><svg class="i sm"><use href="#i-cam"/></svg>Video<kbd>⌘2</kbd></div>
@@ -1043,7 +1070,27 @@ const winHTML = () => `
           <div class="r" data-k="Dicteren"><svg class="i sm"><use href="#i-dict"/></svg>Dicteren<kbd>⌥ Spatie</kbd></div>
         </div>
       </span>
-      <div class="search" style="width:250px"><svg class="i sm"><use href="#i-search"/></svg>Zoek in opnames en transcripten</div>
+      <span class="grow" style="flex:1"></span>
+      <span class="tb-cap o-acts"><button class="o-stuur" title="Stuur"><svg class="i lg"><use href="#i-share"/></svg></button><span class="sep"></span><button class="o-shrinkbtn" title="Verklein…" data-goto="p-shrink"><svg class="i lg"><use href="#i-down"/></svg></button><span class="sep"></span><button title="Toon in Finder"><svg class="i lg"><use href="#i-folder"/></svg></button>
+        <div class="o-send">
+          <div class="sh">Stuur <b class="o-send-t"></b></div>
+          <div class="apps"><span><i class="airdrop"></i>AirDrop</span><span><i class="mail">✉</i>Mail</span><span><i class="msg">✆</i>Berichten</span><span><i class="more">···</i>Meer</span></div>
+          <div class="sep"></div>
+          <div class="lk">
+            <b>Deellink</b><span class="d">Werkt in elke browser, ook zonder Mac of account. Dobby heeft het bestand al, dus de link werkt meteen.</span>
+            <div class="frow"><span>Bestand</span><span class="pick"><svg class="i sm"><use href="#i-film"/></svg><span class="v"></span><svg class="i sm" style="transform:rotate(90deg)"><use href="#i-chev"/></svg><div class="pop"></div></span></div>
+            <div class="frow"><span>Downloads</span><span class="seg o-dls"><button class="on" data-n="1">1 keer</button><button data-n="3">3 keer</button><button data-n="10">10 keer</button></span></div>
+            <div class="frow"><span>Verloopt</span><span>na 24 uur</span></div>
+            <button class="btn primary mk"><svg class="i sm"><use href="#i-share"/></svg>Maak link</button>
+          </div>
+          <div class="made">
+            <b style="font-size:13.5px">Link gemaakt en gekopieerd</b>
+            <div class="url"><code>https://burrow.example.nl/s/k7Qm2xWp9aLr</code><button class="btn"><svg class="i sm"><use href="#i-copy"/></svg>Kopieer</button></div>
+            <div class="qrrow"><div class="qr">${qr()}</div><div class="tx"><b class="o-made-n"></b><br />Verloopt over 24 uur. Scan de code met een telefoon om hem daar te openen.<br /><button class="btn ghost" style="padding:0;margin-top:6px;color:var(--danger)">Trek in</button></div></div>
+          </div>
+        </div>
+      </span>
+      <div class="gsearch"><svg class="i"><use href="#i-search"/></svg>Zoek</div>
     </div>
   </div>
   <div class="o-body">
@@ -1065,23 +1112,6 @@ const winHTML = () => `
     </div>
     <div class="o-list"></div>
     <div class="o-detail"></div>
-  </div>
-  <div class="o-send">
-    <div class="sh">Stuur <b class="o-send-t"></b></div>
-    <div class="apps"><span><i class="airdrop"></i>AirDrop</span><span><i class="mail">✉</i>Mail</span><span><i class="msg">✆</i>Berichten</span><span><i class="more">···</i>Meer</span></div>
-    <div class="sep"></div>
-    <div class="lk">
-      <b>Deellink</b><span class="d">Werkt in elke browser, ook zonder Mac of account. Dobby heeft het bestand al, dus de link werkt meteen.</span>
-      <div class="frow"><span>Bestand</span><span class="pick"><svg class="i sm"><use href="#i-film"/></svg><span class="v"></span><svg class="i sm" style="transform:rotate(90deg)"><use href="#i-chev"/></svg><div class="pop"></div></span></div>
-      <div class="frow"><span>Downloads</span><span class="seg o-dls"><button class="on" data-n="1">1 keer</button><button data-n="3">3 keer</button><button data-n="10">10 keer</button></span></div>
-      <div class="frow"><span>Verloopt</span><span>na 24 uur</span></div>
-      <button class="btn primary mk"><svg class="i sm"><use href="#i-share"/></svg>Maak link</button>
-    </div>
-    <div class="made">
-      <b style="font-size:13.5px">Link gemaakt en gekopieerd</b>
-      <div class="url"><code>https://burrow.example.nl/s/k7Qm2xWp9aLr</code><button class="btn"><svg class="i sm"><use href="#i-copy"/></svg>Kopieer</button></div>
-      <div class="qrrow"><div class="qr">${qr()}</div><div class="tx"><b class="o-made-n"></b><br />Verloopt over 24 uur. Scan de code met een telefoon om hem daar te openen.<br /><button class="btn ghost" style="padding:0;margin-top:6px;color:var(--danger)">Trek in</button></div></div>
-    </div>
   </div>`;
 
 function vertrouwd(root, { sel = 0, send = false } = {}) {
@@ -1102,6 +1132,9 @@ function vertrouwd(root, { sel = 0, send = false } = {}) {
     });
     $('.o-title').textContent = $(`.o-side [data-scope="${scope}"]`).textContent.replace(/\d+$/, '');
     const shown = memories.filter(match);
+    const listed = shown.filter(m => scope === 'gone' || !m.gone);
+    const todo = shown.filter(m => m.needs).length;
+    $('.o-sub').textContent = `${listed.length} ${listed.length === 1 ? 'opname' : 'opnames'}${todo ? `, ${todo} zonder transcript` : ''}`;
     $('.o-list').innerHTML = dayNames.map((name, d) => {
       const rows = shown.filter(m => m.day === d);
       return rows.length ? `<div class="day">${name}</div>` + rows.map(m => `<div class="row${m === current ? ' on' : ''}${m.gone ? ' gone' : ''}" data-i="${memories.indexOf(m)}"><span class="o-th">${thumb(m)}</span><div><div class="l1"><b>${m.title}</b><span class="when">${m.time}</span></div><div class="l2"><svg class="i sm"><use href="#${kindIcons[m.kind]}"/></svg><span class="txt">${m.dur}${m.labels.length ? ' · ' + tagsOf(m) : ''}</span><span class="grow"></span>${status(m)}</div></div></div>`).join('') : '';
@@ -1109,16 +1142,18 @@ function vertrouwd(root, { sel = 0, send = false } = {}) {
     $$('.o-lbl + .pop [data-label]').forEach(r => r.classList.toggle('on', labels.has(r.dataset.label)));
     const names = [...labels].map(l => labelNames[l]);
     $('.o-lbl').classList.toggle('active', names.length > 0);
-    $('.o-lbl .ftext').innerHTML = names.length ? names.join(', ') + ' <span class="x" data-clear>×</span>' : 'Label';
+    $('.o-lbl .ftext').innerHTML = names.length ? names.join(', ') + ' <span class="x" data-clear>×</span>' : '';
     detail();
   }
 
   function detail() {
     const m = current;
     const d = $('.o-detail');
-    const when = `${dayNames[m.day] === 'Eerder' ? '' : dayNames[m.day] + ' '}${m.time} · ${m.dur}`;
-    const head = `<div class="o-head"><div class="grow"><h2>${m.title}</h2><div class="meta">${when}${m.labels.length ? ' · ' + tagsOf(m) : ''} <span class="addl">+ Label</span></div></div>
-      ${!m.gone && (m.kind === 'video' || m.kind === 'screen') ? '<button class="tbicon" title="Verklein…" data-goto="p-shrink"><svg class="i"><use href="#i-down"/></svg></button>' : ''}<button class="tbicon" title="Toon in Finder"><svg class="i"><use href="#i-folder"/></svg></button>${m.gone ? '' : '<button class="btn o-stuur"><svg class="i sm"><use href="#i-share"/></svg>Stuur</button>'}</div>`;
+    const when = `${dayNames[m.day] === 'Eerder' ? '' : dayNames[m.day] + ' '}${m.time}`;
+    const pills = m.labels.map(l => `<span class="o-pill">${labelNames[l]}</span>`).join('');
+    const head = `<div class="o-head"><div class="grow"><div class="l1"><h2>${m.title}</h2><span class="when">${when}</span></div><div class="meta"><svg class="i sm"><use href="#${kindIcons[m.kind]}"/></svg>${[m.dur, m.size].filter(Boolean).join(' · ')}</div><div class="pills">${pills}<span class="addl">+ Label</span></div></div></div>`;
+    $('.o-acts').classList.toggle('disabled', !!m.gone);
+    $('.o-shrinkbtn').disabled = !(m.kind === 'video' || m.kind === 'screen');
     if (m.gone) {
       d.innerHTML = head + `<div class="o-banner grey"><span class="ic"><svg class="i"><use href="#i-trash"/></svg></span><div class="tx"><b>Verwijderd uit iCloud op 23 oktober</b><span>De map <code>2026-10-15_${slug(m.title)}</code> staat niet meer in iCloud Drive. Dobby bewaart een kopie tot 22 november.</span><div class="acts"><button class="btn primary o-restore">Zet terug in iCloud</button><button class="btn ghost">Nu definitief verwijderen</button></div></div></div><div class="o-hero o-dim">${art(m)}</div>`;
     } else if (m.found) {
@@ -1138,7 +1173,6 @@ function vertrouwd(root, { sel = 0, send = false } = {}) {
     }
     d.querySelectorAll('[data-goto]').forEach(b => b.onclick = () => goto(b.dataset.goto));
     d.querySelector('.o-restore')?.addEventListener('click', () => { m.gone = false; render(); });
-    d.querySelector('.o-stuur')?.addEventListener('click', () => openSend());
     $('.o-send').classList.remove('open', 'done');
   }
 
@@ -1195,6 +1229,9 @@ function vertrouwd(root, { sel = 0, send = false } = {}) {
     if (!match(current)) current = memories.find(match) || current;
     render();
   });
+  $('.o-stuur').onclick = () => $('.o-send').classList.contains('open') ? $('.o-send').classList.remove('open') : openSend();
+  $('.o-send').onclick = e => e.stopPropagation();
+  $('.o-shrinkbtn').onclick = () => goto('p-shrink');
   $('.o-recgo').onclick = () => { goto('p-rec'); countdown(); };
   $('.o-recmenu').onclick = () => $('.o-recpop').classList.toggle('open');
   $$('.o-recpop [data-k]').forEach(r => r.onclick = () => {
