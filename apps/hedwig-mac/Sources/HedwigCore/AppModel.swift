@@ -645,16 +645,12 @@ public final class AppModel {
     // MARK: Writing
 
     public func reply(all: Bool = false) -> ComposeDraft? {
-        guard let message = detail, let me else { return nil }
-        let own = Set(me.mailboxes.map { $0.address.lowercased() })
-        var cc: [Address] = []
-        if all {
-            cc = (message.to + message.cc).filter { !own.contains($0.email.lowercased()) && $0.email != message.from.email }
-        }
+        guard let message = detail else { return nil }
+        let recipients = (all ? message.replyAll : message.reply) ?? Recipients(to: [message.from], cc: [])
         return ComposeDraft(
             mailboxId: message.mailboxId,
-            to: Address.format([message.from]),
-            cc: Address.format(cc),
+            to: Address.format(recipients.to),
+            cc: Address.format(recipients.cc),
             subject: message.subject.lowercased().hasPrefix("re:") ? message.subject : "Re: \(message.subject)",
             body: "\n\n" + quote(message),
             inReplyTo: message.id)

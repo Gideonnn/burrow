@@ -2,6 +2,7 @@
 
 Newest first.
 
+- [2026-10-23 Replies go to Reply-To, decided by the server](2026-10-23-replies-go-to-reply-to.md): one `replyRecipients` rule, its outcome in every message detail, empty `to` on a reply draft means Reply.
 - [2026-10-23 Hedwig's typography measured against Apple Mail](2026-10-23-hedwig-typography-measured-against-mail.md): sizes from pixel measurements, Mail's fonts read through AppleScript, semibold counts instead of `.badge`, Helvetica 12 for unstyled mail.
 - [2026-10-23 Mail's list filter in Hedwig, filtered on the server](2026-10-23-hedwig-list-filter-on-the-server.md): criteria as query params so the whole folder counts, today as `since`, read mail stays until you move on.
 - [2026-10-23 Hedwig's toolbar native, like Apple Mail](2026-10-23-hedwig-toolbar-native-like-mail.md): ControlGroups instead of hand-made glass, and the list column needs a toolbar item before compose can sit at the reading column's edge.

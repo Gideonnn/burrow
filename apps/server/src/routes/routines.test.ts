@@ -87,6 +87,40 @@ describe('routines', () => {
     expect(s.provider(s.home.id).applied).toHaveLength(1);
   });
 
+  it('addresses a drafted reply like Reply, whatever address the bot wrote', async () => {
+    const s = await setup();
+    await s.post(s.token, '/api/routines', {
+      ...invoiceRoutine,
+      approval: false,
+    });
+    s.decisions.push(
+      {
+        action: { kind: 'label', label: 'Factuur' },
+        reason: 'An invoice.',
+        unsure: false,
+      },
+      {
+        summary: 'Asks for a reply.',
+        draft: {
+          to: [{ email: 'billing@example.com' }],
+          subject: 'Re: Je factuur',
+          body: 'Betaald.',
+        },
+      },
+    );
+    s.provider(s.home.id).deliver({
+      subject: 'Je factuur van oktober',
+      from: { email: 'billing@example.com' },
+      replyTo: [{ email: 'support@example.com' }],
+    });
+    await s.triage.enqueue(await s.mail.sync(s.home.id));
+    await s.workers.drain();
+    const drafts = await (await s.call(s.token, '/api/drafts')).json();
+    expect(drafts).toMatchObject([
+      { to: [{ email: 'support@example.com' }], cc: [] },
+    ]);
+  });
+
   it('refuses a result that tries to delete mail', async () => {
     const s = await setup();
     await s.post(s.token, '/api/routines', {

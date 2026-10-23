@@ -113,7 +113,8 @@ extension AppModel {
         guard let mailboxId else { throw ControlError("there is no mailbox to write from") }
         guard !recipients.isEmpty || original != nil else { throw ControlError("give at least one address in to") }
         let draft = try await api.createDraft(
-            mailboxId: mailboxId, to: recipients.isEmpty ? [original!.from] : recipients,
+            // Without recipients the server addresses a reply like Reply.
+            mailboxId: mailboxId, to: recipients,
             subject: subject.isEmpty ? (original.map { "Re: \($0.subject)" } ?? "") : subject,
             body: body, inReplyTo: original?.id)
         selection = .drafts(mailboxId: mailboxId)

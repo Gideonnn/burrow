@@ -13,6 +13,7 @@ import type {
   ProviderAttachment,
   ProviderMessage,
 } from '../provider';
+import { replyRecipients } from '../reply';
 import { applyOps } from '../server-ops';
 import { mailboxes, messages } from './schema';
 
@@ -337,14 +338,34 @@ export function toSummary(
   };
 }
 
+// The addresses of every mailbox the mailbox's owner has: replying all leaves
+// them out.
+export function ownAddresses(db: Db, mailboxId: string): string[] {
+  const box = db
+    .select({ ownerId: mailboxes.ownerId })
+    .from(mailboxes)
+    .where(eq(mailboxes.id, mailboxId))
+    .get();
+  if (!box) return [];
+  return db
+    .select({ address: mailboxes.address })
+    .from(mailboxes)
+    .where(eq(mailboxes.ownerId, box.ownerId))
+    .all()
+    .map((b) => b.address);
+}
+
 export function toDetail(
   row: MessageRow,
-  facts: MessageFacts | null = null,
+  facts: MessageFacts | null,
+  own: string[],
 ): MessageDetail {
   return {
     ...toSummary(row, facts),
     cc: row.cc,
     replyTo: row.replyTo ?? [],
+    reply: replyRecipients(row, own, false),
+    replyAll: replyRecipients(row, own, true),
     bodyText: row.bodyText,
     bodyHtml: row.bodyHtml,
   };

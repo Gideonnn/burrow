@@ -11,7 +11,12 @@ import { z } from 'zod';
 import { createDraft, DraftError } from './drafts';
 import { redact } from './facts/rules';
 import { factsFor, forKey } from './facts/store';
-import { type MailService, toDetail, toSummary } from './mail-service';
+import {
+  type MailService,
+  ownAddresses,
+  toDetail,
+  toSummary,
+} from './mail-service';
 import { mailboxes } from './schema';
 import { searchMessages, words } from './search';
 
@@ -123,6 +128,7 @@ export function registerHedwigTools(
           const detail = toDetail(
             row,
             factsFor(db, [row.id]).get(row.id) ?? null,
+            ownAddresses(db, row.mailboxId),
           );
           return text({
             ...detail,
@@ -169,7 +175,12 @@ export function registerHedwigTools(
           'Prepare a reply or new message. It appears in Hedwig for the person to review and send; this tool never sends.',
         inputSchema: {
           mailboxId: z.string(),
-          to: z.array(address).min(1),
+          to: z
+            .array(address)
+            .default([])
+            .describe(
+              'Leave empty when replying to address it like Reply: Reply-To, else the sender',
+            ),
           cc: z.array(address).default([]),
           subject: z.string(),
           body: z.string().min(1),

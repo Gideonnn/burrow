@@ -151,7 +151,7 @@ import Testing
         #expect(model.selectedDraftId == "d1")
         let sent = try #require(server.requests("POST", "/api/drafts").first)
         #expect(sent.contains(#""inReplyTo":"m1""#))
-        #expect(sent.contains("marieke@example.nl"))
+        #expect(sent.contains(#""to":[]"#))
         #expect(server.requests("POST", "/api/send").isEmpty)
     }
 
@@ -167,6 +167,26 @@ import Testing
         #expect(reply.subject == "Re: Eerste")
         #expect(reply.inReplyTo == "m1")
         #expect(reply.body.contains("> Zin in eten?"))
+    }
+
+    @Test func replyAndReplyAllAddressWhomTheServerSays() async throws {
+        let server = server()
+        let detail = Fixture.message("m1", subject: "Eerste", unread: false).replacingOccurrences(
+            of: #""bodyHtml":null"#,
+            with: #""bodyHtml":null,"reply":{"to":[{"name":"Bureau","email":"bureau@example.nl"}],"cc":[]},"#
+                + #""replyAll":{"to":[{"name":"Bureau","email":"bureau@example.nl"},{"email":"eva@example.com"}],"cc":[{"email":"bas@example.nl"}]}"#)
+        server.on("GET", "/api/messages/m1", json: detail)
+        let model = model(server)
+        await model.start()
+        model.selection = .inbox(mailboxId: "mb1")
+        await model.selectionLoad?.value
+        await model.openSelected()
+        let reply = try #require(model.reply())
+        #expect(reply.to == "Bureau <bureau@example.nl>")
+        #expect(reply.cc == "")
+        let all = try #require(model.reply(all: true))
+        #expect(all.to == "Bureau <bureau@example.nl>, eva@example.com")
+        #expect(all.cc == "bas@example.nl")
     }
 
     @Test func controlStateDescribesTheScreenAndOpensMessages() async throws {

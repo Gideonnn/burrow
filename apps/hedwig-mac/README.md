@@ -33,7 +33,8 @@ and optionally `HEDWIG_OPEN` with any place `burrowctl hedwig show` takes (`filt
   menu) to its own Archief, Verstuurd, Concepten and Spam. Reading shows HTML without
   JavaScript or remote content (trackers stay blocked) under a header laid out like
   Mail's (sender, subject, Aan/Kopie/Antwoord aan) that scrolls with the message;
-  replying, forwarding.
+  replying (to Reply-To when the mail has one; the server decides who Reply and Reply
+  all address), forwarding.
 - Archive, delete, spam, read and flag act at the provider, so phones see the same.
 - What the bot filtered waits for review in that mailbox's Spam or Archief, on top and
   with its reason: "Klopt" confirms, "Geen spam" or "Terug naar inbox" restores. A count

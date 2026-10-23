@@ -34,6 +34,7 @@ import {
   MailError,
   MailNotFoundError,
   type MailService,
+  ownAddresses,
   toDetail,
   toSummary,
 } from './mail-service';
@@ -272,7 +273,11 @@ export function hedwigRoutes({
         }
         contentAllowed(c.var.access);
         return c.json(
-          toDetail(row, factsFor(c.var.db, [row.id]).get(row.id) ?? null),
+          toDetail(
+            row,
+            factsFor(c.var.db, [row.id]).get(row.id) ?? null,
+            ownAddresses(c.var.db, row.mailboxId),
+          ),
         );
       })
       .get('/messages/:id/attachments', requireRight('read'), async (c) => {
@@ -325,7 +330,9 @@ export function hedwigRoutes({
           if (c.var.access.factsOnly) {
             return c.json(forKey(toSummary(updated, facts), c.var.access));
           }
-          return c.json(toDetail(updated, facts));
+          return c.json(
+            toDetail(updated, facts, ownAddresses(c.var.db, row.mailboxId)),
+          );
         },
       )
       .post(

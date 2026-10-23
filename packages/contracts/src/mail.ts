@@ -70,9 +70,18 @@ export const folderCount = z.object({
 export type FolderCount = z.infer<typeof folderCount>;
 export const folderCounts = z.array(folderCount);
 
+// Who a reply goes to; the server works it out so every client agrees.
+export const recipients = z.object({
+  to: z.array(address),
+  cc: z.array(address),
+});
+export type Recipients = z.infer<typeof recipients>;
+
 export const messageDetail = messageSummary.extend({
   cc: z.array(address),
   replyTo: z.array(address).default([]),
+  reply: recipients,
+  replyAll: recipients,
   bodyText: z.string().nullable(),
   bodyHtml: z.string().nullable(),
 });
@@ -149,7 +158,8 @@ export type Draft = z.infer<typeof draft>;
 
 export const createDraftRequest = z.object({
   mailboxId: z.string(),
-  to: z.array(address).min(1),
+  // May stay empty for a reply: the server then addresses it like Reply.
+  to: z.array(address).default([]),
   cc: z.array(address).default([]),
   subject: z.string(),
   body: z.string().min(1),

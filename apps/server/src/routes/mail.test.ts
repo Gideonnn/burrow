@@ -343,6 +343,68 @@ describe('send', () => {
   });
 });
 
+describe('replies', () => {
+  async function received(h: ReturnType<typeof setup>, token: string) {
+    h.mailbox(h.gideon.id, 'gideon@werk.example');
+    h.provider(h.home.id).deliver({
+      subject: 'Etentje',
+      from: { name: 'Marieke', email: 'marieke@example.nl' },
+      to: [{ email: 'Gideon@Example.com' }, { email: 'eva@example.com' }],
+      cc: [{ email: 'gideon@werk.example' }, { email: 'bas@example.nl' }],
+      replyTo: [{ email: 'bureau@example.nl' }],
+    });
+    const [message] = await syncAndList(h, token, h.home.id);
+    return message!.id;
+  }
+
+  it('tells the client who Reply and Reply all address', async () => {
+    const h = setup();
+    const token = h.key(h.gideon.id, ['read']);
+    const id = await received(h, token);
+    const detail = messageDetail.parse(
+      await (await h.call(token, `/api/messages/${id}`)).json(),
+    );
+    expect(detail.reply).toEqual({
+      to: [{ email: 'bureau@example.nl' }],
+      cc: [],
+    });
+    expect(detail.replyAll).toEqual({
+      to: [{ email: 'bureau@example.nl' }, { email: 'eva@example.com' }],
+      cc: [{ email: 'bas@example.nl' }],
+    });
+  });
+
+  it('addresses a reply draft without recipients like Reply', async () => {
+    const h = setup();
+    const token = h.key(h.gideon.id, ['read', 'draft']);
+    const id = await received(h, token);
+    const res = await h.call(token, '/api/drafts', {
+      method: 'POST',
+      body: JSON.stringify({
+        mailboxId: h.home.id,
+        subject: 'Re: Etentje',
+        body: 'Gezellig',
+        inReplyTo: id,
+      }),
+    });
+    expect(res.status).toBe(201);
+    expect(await res.json()).toMatchObject({
+      to: [{ email: 'bureau@example.nl' }],
+      cc: [],
+    });
+  });
+
+  it('refuses a new draft without recipients', async () => {
+    const h = setup();
+    const token = h.key(h.gideon.id, ['draft']);
+    const res = await h.call(token, '/api/drafts', {
+      method: 'POST',
+      body: JSON.stringify({ mailboxId: h.home.id, subject: 's', body: 'b' }),
+    });
+    expect(res.status).toBe(400);
+  });
+});
+
 describe('attachments', () => {
   const LOGO = 'AAMk/logo+1=';
 

@@ -128,6 +128,9 @@ public struct MessageDetail: Codable, Hashable, Identifiable, Sendable {
     public var cc: [Address]
     // Absent from servers older than Reply-To support.
     public var replyTo: [Address]?
+    // Whom Reply and Reply all address; the server decides so every client agrees.
+    public var reply: Recipients?
+    public var replyAll: Recipients?
     public var subject: String
     public var snippet: String
     public var receivedAt: Date
@@ -150,6 +153,11 @@ public struct MessageDetail: Codable, Hashable, Identifiable, Sendable {
             snippet: snippet, receivedAt: receivedAt, folder: folder, unread: unread, flagged: flagged,
             labels: labels, hasAttachments: hasAttachments, facts: facts)
     }
+}
+
+public struct Recipients: Codable, Hashable, Sendable {
+    public var to: [Address]
+    public var cc: [Address]
 }
 
 public enum ServerOp: Codable, Hashable, Sendable {

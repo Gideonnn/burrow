@@ -60,4 +60,5 @@ outer view, not the web view.
 from Gmail's `Reply-To` header, Graph's `replyTo` and JMAP's `replyTo`, and is stored in
 `messages.reply_to` (migration 0021). It is null for mail synced before; `messageDetail`
 returns `[]` then. The Mac shows the line only when Reply-To differs from the sender
-(`RecipientLines`). Replying still goes to the sender, not to Reply-To.
+(`RecipientLines`). Replying still went to the sender then; since
+[the reply rule](2026-10-23-replies-go-to-reply-to.md) it goes to Reply-To.

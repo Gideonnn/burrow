@@ -218,11 +218,14 @@ export function hedwigModule(platform: Platform, options: HedwigOptions) {
                 factsOnly: false,
                 mailboxIds: [message.mailboxId],
               },
+              // Without recipients the reply is addressed like Reply, not
+              // to whatever address the bot wrote.
               {
+                ...result.draft,
                 mailboxId: message.mailboxId,
+                to: [],
                 cc: [],
                 inReplyTo: message.id,
-                ...result.draft,
               },
             );
           }

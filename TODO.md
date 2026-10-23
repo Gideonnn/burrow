@@ -27,6 +27,17 @@ minutes, for kinds where a small model is good enough (agreed, not built).
 was built" section.
 **Scope:** a day each for (1) and (2), an hour for (3).
 
+## Hedwig: Reply-To for mail synced before it was kept
+
+**What:** messages stored before migration 0021 have `reply_to` null, so Reply answers
+the sender even when the mail had a Reply-To. Fetch the one message from the provider
+when its detail is read with a null `reply_to` (needs a single-message call on the
+Gmail, Graph and JMAP clients and the fake) and store the result, or re-read headers
+for all null rows in one pass per mailbox.
+**Why:** newsletters and shops often want answers at another address; Reply on older
+mail still goes to the sender.
+**Scope:** half a day; `replyRecipients` already treats null as "no Reply-To".
+
 ## Hedwig cards
 
 **What:** build the cards from `docs/design/hedwig-cards.html` in its four steps: the

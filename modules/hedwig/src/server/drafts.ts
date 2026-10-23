@@ -1,6 +1,8 @@
 import type { CreateDraftRequest, Draft } from '@burrow/contracts';
 import type { Access, Db } from '@burrow/platform';
 import { and, desc, eq, inArray } from 'drizzle-orm';
+import { replyRecipients } from '../reply';
+import { ownAddresses } from './mail-service';
 import { drafts, messages } from './schema';
 
 export class DraftError extends Error {}
@@ -12,6 +14,7 @@ export function createDraft(
 ): Draft {
   if (!access.mailboxIds.includes(request.mailboxId))
     throw new DraftError('not found');
+  let to = request.to;
   if (request.inReplyTo) {
     const original = db
       .select()
@@ -23,14 +26,22 @@ export function createDraft(
         'a reply must be drafted in the mailbox that received the message',
       );
     }
+    if (!to.length) {
+      to = replyRecipients(
+        original,
+        ownAddresses(db, original.mailboxId),
+        false,
+      ).to;
+    }
   }
+  if (!to.length) throw new DraftError('give at least one recipient in to');
   const row = db
     .insert(drafts)
     .values({
       mailboxId: request.mailboxId,
       createdBy: access.keyName,
       inReplyTo: request.inReplyTo ?? null,
-      to: request.to,
+      to,
       cc: request.cc,
       subject: request.subject,
       body: request.body,
