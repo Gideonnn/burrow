@@ -15,6 +15,8 @@
     "format:check": "oxfmt --check .",
     "hedwig:install": "./apps/hedwig-mac/scripts/install.sh",
     "hedwig:release": "./apps/hedwig-mac/scripts/release.sh",
+    "lumos:install": "./apps/lumos-mac/scripts/install.sh",
+    "lumos:release": "./apps/lumos-mac/scripts/release.sh",
     "server:deploy": "./infra/dobby/deploy.sh",
     "sops:edit": "sops --input-type dotenv --output-type dotenv",
     "sops:verify": "./infra/scripts/sops-verify.sh",
