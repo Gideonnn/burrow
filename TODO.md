@@ -245,3 +245,18 @@ minutes; (2) choose a transcription model with timestamps before
 locally.
 **Why:** speaker letters restart per part; the only timestamping model is deprecated.
 **Scope:** half a day for (1); (2) depends on what OpenAI offers.
+
+## Lumos: live read-only catalogue (phase 3)
+
+**What:** a Seerr provider for `modules/lumos` (discover, trending, search, details,
+person credits, media status) with TMDB as supplement (videos with publisher and
+language, images, external ids, Dutch synopsis with English fallback), and an IMDb
+ratings job from the non-commercial dataset. Cache catalogue pages about ten minutes;
+on an upstream failure serve the last data with its time and the error.
+**Why:** Lumos runs on isolated fixtures only (`docs/plans/2026-10-25-lumos.md`).
+**Prerequisites:** approval of the phase; a TMDB credential (check what exists through
+approved tooling first); the operator putting `LUMOS_SEERR_URL`, its API key and the
+TMDB token in Burrow's env on Dobby; a test that scans responses for the configured
+secrets; then deploy the module and its migration. Decide whether Seerr requests carry
+the person (`X-API-User`, untested) or one service key.
+**Scope:** two to three days, then requests (phase 4) as their own entry.

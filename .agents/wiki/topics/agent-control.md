@@ -25,7 +25,8 @@ Every app answers `state`, `tree`, `find`, `press`, `type`, `select`, `settings`
 `filtered` opens the first Spam or Archief with mail to review), `open` and `draft`
 (prepares a draft and shows it under that mailbox's Concepten); Pensieve adds `show` (scope, kind,
 labels), `search`, `open`, `rename`, `redo`, `transcribe`, `label`, `mark`, `share`, `stop`,
-`upload` and `mirror`; never a start. `hedwigctl` is the old
+`upload` and `mirror`; never a start. Lumos adds `show` (page and scope), `search`,
+`open` (`movie:9000001`), `trailer`, `stop` and `close`; its list buttons ask the person. `hedwigctl` is the old
 name of `burrowctl hedwig`.
 
 ## The runner: this Mac doing Burrow's tasks

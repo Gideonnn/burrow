@@ -68,10 +68,13 @@ to add one: [modules](modules.md).
   only their audio comes from the Mac app, compressed with ffmpeg, transcribed through
   OpenAI, notes per kind written by the bot Kreacher; labels per person. The `recording`
   subject and trigger. See [Pensieve](pensieve.md).
+- **Lumos** (`modules/lumos`): films and series to watch together; a catalogue provider
+  (only isolated fixtures so far), the household's list and personal lists, verdicts and
+  undo by change id. The media stack on Dobby stays the backend. See [Lumos](lumos.md).
 
 ## Clients
 
-One native app per module (Hedwig.app, Pensieve.app), each logging in with its own
+One native app per module (Hedwig.app, Pensieve.app, Lumos.app), each logging in with its own
 device key through the browser. They share BurrowKit (API client, device login, uploads,
 events, the task runner, signed updates, the control socket) and BurrowUI (login,
 Settings › Huishouden and › Workers, the palette, AppServices). Agents on the Mac operate

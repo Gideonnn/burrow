@@ -25,6 +25,7 @@ module its own (`modules/<name>/…/mcp-tools.ts`).
 | `organize_message` | organize | Archive, spam, inbox, read, flag, labels at the provider |
 | `create_draft` | draft | A draft that appears in Hedwig for a person to send; a reply without `to` is addressed like Reply (Reply-To, else the sender) |
 | `list_recordings`, `search_recordings`, `get_recording` | read | Pensieve: own and shared recordings of every kind, filtered by `kind` and `labels`; `get_recording` gives the transcript with `[mm:ss]` stamps and the marks |
+| `search_titles`, `list_watchlist` | read | Lumos: titles by title, maker, cast, genre or trait (with `dataOrigin`), and the shared or own watch list |
 | `list_recording_labels` | read | The person's own labels with counts |
 | `rename_recording` | organize | A better title for an own recording |
 | `label_recording` | organize | Set the person's labels on a recording they can see |
