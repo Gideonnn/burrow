@@ -4,6 +4,7 @@ export * from './clients';
 export * from './facts';
 export * from './health';
 export * from './login';
+export * from './lumos';
 export * from './mail';
 export * from './outings';
 export * from './pensieve';

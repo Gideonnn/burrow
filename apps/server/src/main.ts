@@ -1,5 +1,6 @@
 import { resolve } from 'node:path';
 import { Accounts, hedwigModule } from '@burrow/hedwig/server';
+import { FixtureCatalogue, lumosModule } from '@burrow/lumos';
 import {
   FfmpegAudio,
   OpenAITranscriber,
@@ -73,6 +74,15 @@ platform.use(
     bot: config.notesBot,
   }).module,
 );
+platform.use(
+  lumosModule(platform, {
+    catalogue:
+      config.lumosCatalogue === 'fixture' ? new FixtureCatalogue() : undefined,
+  }).module,
+);
+if (config.lumosCatalogue === 'fixture') {
+  console.log('Lumos: test catalogue (fixtures), never the real one');
+}
 if (!config.openaiKey) {
   console.log('Pensieve: no OPENAI_API_KEY, so recordings are not transcribed');
 }

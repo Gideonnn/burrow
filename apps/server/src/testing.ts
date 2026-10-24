@@ -11,6 +11,11 @@ import type {
 import { FakeProvider } from '@burrow/hedwig';
 import { type Accounts, hedwigModule, mailboxes } from '@burrow/hedwig/server';
 import {
+  type CatalogueProvider,
+  FixtureCatalogue,
+  lumosModule,
+} from '@burrow/lumos';
+import {
   type Audio,
   pensieveModule,
   type TranscribeOptions,
@@ -36,13 +41,19 @@ export function testHousehold({
   clientsDir,
   devLoginAs,
   accounts: makeAccounts,
+  catalogue = new FixtureCatalogue(),
+  dbPath = ':memory:',
 }: {
   clientsDir?: string;
   devLoginAs?: string;
   // Real accounts (with fake provider clients inside) instead of fakes.
   accounts?: (db: Db) => Accounts;
+  // Lumos's catalogue; null for none ("niet gekoppeld").
+  catalogue?: CatalogueProvider | null;
+  // A file keeps the data across two households, like a server restart.
+  dbPath?: string;
 } = {}) {
-  const db = openDb(':memory:');
+  const db = openDb(dbPath);
   const providers = new Map<string, FakeProvider>();
   // The bot's answers, consumed in order; an Error makes that run fail.
   const decisions: (TriageDecision | MessageInsights | object | Error)[] = [];
@@ -251,6 +262,8 @@ export function testHousehold({
     bot: 'kreacher',
   });
   platform.use(pensieve.module);
+  const lumos = lumosModule(platform, { catalogue: catalogue ?? undefined });
+  platform.use(lumos.module);
   const app = createApp({
     version: 'test',
     platform,
@@ -320,6 +333,7 @@ export function testHousehold({
     workers: platform.workers,
     arrived,
     recordings: pensieve.recordings,
+    lumos: lumos.lumos,
     transcripts,
     transcribeCalls,
     decisions,

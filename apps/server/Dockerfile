@@ -10,6 +10,7 @@ WORKDIR /repo
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY apps/server/package.json apps/server/
 COPY modules/hedwig/package.json modules/hedwig/
+COPY modules/lumos/package.json modules/lumos/
 COPY modules/pensieve/package.json modules/pensieve/
 COPY packages/contracts/package.json packages/contracts/
 COPY packages/platform/package.json packages/platform/
