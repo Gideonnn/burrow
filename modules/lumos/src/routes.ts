@@ -11,6 +11,7 @@ import { createMiddleware } from 'hono/factory';
 import { HTTPException } from 'hono/http-exception';
 import { z } from 'zod';
 import { LumosError, type Lumos, NotConnected } from './lumos';
+import { SeerrError } from './seerr';
 
 const scoped = z.object({ scope: listScope.default('shared') });
 const ref = z.object({
@@ -19,7 +20,7 @@ const ref = z.object({
 });
 
 const asHttp = (error: unknown): never => {
-  if (error instanceof NotConnected) {
+  if (error instanceof NotConnected || error instanceof SeerrError) {
     throw new HTTPException(503, { message: error.message });
   }
   if (error instanceof LumosError) {
@@ -204,6 +205,13 @@ export function lumosRoutes(lumos: Lumos) {
       c.json(
         await attempt(() => lumos.undoVerdict(c.var.access, c.req.param('id'))),
       ),
+    )
+    .post(
+      '/lumos/requests/:mediaType/:tmdbId/retry',
+      requireRight('organize'),
+      zValidator('param', ref),
+      async (c) =>
+        c.json(await attempt(() => lumos.retryRequest(c.req.valid('param')))),
     )
     .post('/lumos/changes/:id/undo', requireRight('organize'), async (c) =>
       c.json(await attempt(() => lumos.undo(c.var.access, c.req.param('id')))),

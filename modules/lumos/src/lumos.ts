@@ -18,14 +18,17 @@ import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
 import {
   type CatalogueProvider,
   type CatalogueTitle,
+  type MediaRequester,
   overlap,
   refKey,
   type TitleRef,
 } from './catalogue';
+import { LumosRequests, requestState } from './requests';
 import {
   type ChangeEffects,
   lumosChanges,
   lumosListItems,
+  type lumosRequests,
   lumosVerdicts,
 } from './schema';
 
@@ -59,6 +62,7 @@ type Context = {
   mine: Set<string>;
   pass: Map<string, VerdictRow>;
   taste: Map<string, VerdictRow>;
+  requests: Map<string, typeof lumosRequests.$inferSelect>;
 };
 
 const noEffects = (): ChangeEffects => ({
@@ -71,12 +75,20 @@ const noEffects = (): ChangeEffects => ({
 // Lumos: a catalogue to browse with lists and verdicts of its own. The
 // household's list and verdicts belong to everyone in it; a personal list is
 // its owner's and nobody else ever sees it, like a recording in Pensieve.
-// Nothing here asks the media server for anything yet.
+// With the live catalogue, a title put on a list is requested from the media
+// server (see requests.ts); the fixtures never request anything.
 export class Lumos {
+  readonly requests?: LumosRequests;
+
   constructor(
     private readonly platform: Platform,
     private readonly catalogue?: CatalogueProvider,
-  ) {}
+    requester?: MediaRequester,
+  ) {
+    if (requester && catalogue?.origin === 'live') {
+      this.requests = new LumosRequests(platform, requester);
+    }
+  }
 
   private get db() {
     return this.platform.db;
@@ -96,6 +108,7 @@ export class Lumos {
     return {
       dataOrigin: this.catalogue?.origin ?? null,
       catalogue: this.catalogue?.name ?? null,
+      requests: Boolean(this.requests),
     };
   }
 
@@ -142,7 +155,8 @@ export class Lumos {
     for (const row of this.activeVerdicts(this.owner(access, scope))) {
       (isPass(row.kind) ? pass : taste).set(refKey(row), row);
     }
-    return { scope, shared, mine, pass, taste };
+    const requests = this.requests?.all() ?? new Map();
+    return { scope, shared, mine, pass, taste, requests };
   }
 
   private activeVerdicts(person: string | null) {
@@ -180,7 +194,7 @@ export class Lumos {
       language: t.language,
       poster: t.poster,
       backdrop: t.backdrop,
-      availability: t.availability,
+      availability: this.availability(t, ctx),
       hasTrailer: t.trailer !== null,
       onList: (ctx.scope === 'shared' ? ctx.shared : ctx.mine).has(key),
       onShared: ctx.shared.has(key),
@@ -189,6 +203,43 @@ export class Lumos {
       taste: taste ? verdictRef(taste) : null,
       match,
     };
+  }
+
+  // Seerr's status lags a fresh request by a cache period.
+  private availability(t: CatalogueTitle, ctx: Context) {
+    const request = ctx.requests.get(refKey(t));
+    if (
+      t.availability === 'not-requested' &&
+      request &&
+      ['pending', 'sent', 'exists'].includes(request.status)
+    ) {
+      return 'requested' as const;
+    }
+    return t.availability;
+  }
+
+  // List entries the provider's pool does not hold, so the list rows are
+  // complete with the live catalogue too.
+  private async withListed(all: CatalogueTitle[], ctx: Context) {
+    const keys = new Set(all.map(refKey));
+    const missing = [...new Set([...ctx.shared, ...ctx.mine])].filter(
+      (k) => !keys.has(k),
+    );
+    const extra = await Promise.all(
+      missing.map((k) => {
+        const [mediaType, id] = k.split(':');
+        return this.catalogue
+          ?.title({
+            mediaType: mediaType as 'movie' | 'tv',
+            tmdbId: Number(id),
+          })
+          .catch(() => undefined);
+      }),
+    );
+    return [
+      ...all,
+      ...extra.flatMap((t) => (t ? [{ ...t, popularity: 0 }] : [])),
+    ];
   }
 
   // The provider's popularity, the scope's list, and "more/less like this".
@@ -236,7 +287,7 @@ export class Lumos {
   async rows(access: Access, scope: ListScope) {
     const catalogue = this.need();
     const ctx = this.context(access, scope);
-    const all = await catalogue.candidates();
+    const all = await this.withListed(await catalogue.candidates(), ctx);
     const pool = new Map(all.map((t) => [refKey(t), t]));
     const ranked = all
       .filter((t) => !ctx.pass.has(refKey(t)))
@@ -336,7 +387,9 @@ export class Lumos {
       {
         key: 'later',
         title: 'Nog niet in Jellyfin',
-        subtitle: 'Op de lijst zetten vraagt nog niets aan',
+        subtitle: this.requests
+          ? 'Op de lijst zetten vraagt het aan'
+          : 'Op de lijst zetten vraagt nog niets aan',
         style: 'wide',
         items: ranked.filter((t) => t.availability !== 'available').map(card),
         empty: null,
@@ -425,6 +478,11 @@ export class Lumos {
       stills: t.stills,
       stillsCredit: t.stillsCredit,
       tmdbUrl: t.tmdbUrl,
+      request: (() => {
+        const row = ctx.requests.get(refKey(t));
+        return row ? requestState(row) : null;
+      })(),
+      download: t.download ?? null,
     };
   }
 
@@ -658,10 +716,23 @@ export class Lumos {
         .all();
       effects.listAdded.push(...added.map((r) => r.id));
       this.undoActive(tx, owner, t, passKinds, effects);
+      // Series: only the chosen seasons, the first when none was chosen.
+      this.requests?.want(
+        tx,
+        t,
+        t.mediaType === 'tv' ? (seasons?.length ? seasons : [1]) : null,
+        access.personId,
+      );
       return this.record(access, effects, tx);
     });
+    this.requests?.schedule();
     this.changed(access, scope);
     return { changeId };
+  }
+
+  retryRequest(ref: TitleRef) {
+    if (!this.requests?.retry(ref)) throw new LumosError('not found');
+    return { ok: true as const };
   }
 
   // Never deletes files or cancels a request; it only leaves the list.

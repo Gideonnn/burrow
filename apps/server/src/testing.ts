@@ -13,6 +13,7 @@ import { type Accounts, hedwigModule, mailboxes } from '@burrow/hedwig/server';
 import {
   type CatalogueProvider,
   FixtureCatalogue,
+  type MediaRequester,
   lumosModule,
 } from '@burrow/lumos';
 import {
@@ -42,6 +43,7 @@ export function testHousehold({
   devLoginAs,
   accounts: makeAccounts,
   catalogue = new FixtureCatalogue(),
+  requester,
   dbPath = ':memory:',
 }: {
   clientsDir?: string;
@@ -50,6 +52,7 @@ export function testHousehold({
   accounts?: (db: Db) => Accounts;
   // Lumos's catalogue; null for none ("niet gekoppeld").
   catalogue?: CatalogueProvider | null;
+  requester?: MediaRequester;
   // A file keeps the data across two households, like a server restart.
   dbPath?: string;
 } = {}) {
@@ -262,7 +265,10 @@ export function testHousehold({
     bot: 'kreacher',
   });
   platform.use(pensieve.module);
-  const lumos = lumosModule(platform, { catalogue: catalogue ?? undefined });
+  const lumos = lumosModule(platform, {
+    catalogue: catalogue ?? undefined,
+    requester,
+  });
   platform.use(lumos.module);
   const app = createApp({
     version: 'test',

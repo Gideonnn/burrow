@@ -2,7 +2,7 @@ import type { SettingDefinition } from '@burrow/contracts';
 import { listScope } from '@burrow/contracts';
 import { mcpText, type Module, type Platform } from '@burrow/platform';
 import { z } from 'zod';
-import type { CatalogueProvider } from './catalogue';
+import type { CatalogueProvider, MediaRequester } from './catalogue';
 import { Lumos, MODULE } from './lumos';
 import { lumosRoutes } from './routes';
 
@@ -22,20 +22,23 @@ const settings: SettingDefinition[] = [
 export type LumosOptions = {
   // Without one Lumos answers "niet gekoppeld"; lists still work.
   catalogue?: CatalogueProvider;
+  // Asks the media server for listed titles; only with the live catalogue.
+  requester?: MediaRequester;
 };
 
 // Lumos, films and series to watch together: a catalogue from a provider,
 // the household's list and each person's own, and "not now" and "seen"
 // that can always be undone. The media server stays Seerr, Radarr, Sonarr
-// and Jellyfin; Lumos does not request anything yet.
+// and Jellyfin; a title on a list is requested there, nothing more.
 export function lumosModule(platform: Platform, options: LumosOptions = {}) {
-  const lumos = new Lumos(platform, options.catalogue);
+  const lumos = new Lumos(platform, options.catalogue, options.requester);
 
   const module: Module = {
     name: MODULE,
     settings,
     api: lumosRoutes(lumos),
     clients: ['lumos'],
+    start: () => lumos.requests?.start(),
     // Read only: requesting media stays with the people.
     mcp: (server, access) => {
       if (!access.rights.has('read')) return;

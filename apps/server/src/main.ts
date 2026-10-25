@@ -1,6 +1,6 @@
 import { resolve } from 'node:path';
 import { Accounts, hedwigModule } from '@burrow/hedwig/server';
-import { FixtureCatalogue, lumosModule } from '@burrow/lumos';
+import { FixtureCatalogue, lumosModule, SeerrCatalogue } from '@burrow/lumos';
 import {
   FfmpegAudio,
   OpenAITranscriber,
@@ -74,14 +74,18 @@ platform.use(
     bot: config.notesBot,
   }).module,
 );
+const seerr = config.seerr ? new SeerrCatalogue(config.seerr) : undefined;
 platform.use(
   lumosModule(platform, {
     catalogue:
-      config.lumosCatalogue === 'fixture' ? new FixtureCatalogue() : undefined,
+      config.lumosCatalogue === 'fixture' ? new FixtureCatalogue() : seerr,
+    requester: seerr,
   }).module,
 );
 if (config.lumosCatalogue === 'fixture') {
   console.log('Lumos: test catalogue (fixtures), never the real one');
+} else if (!seerr) {
+  console.log('Lumos: no LUMOS_SEERR_URL and key, so no catalogue');
 }
 if (!config.openaiKey) {
   console.log('Pensieve: no OPENAI_API_KEY, so recordings are not transcribed');

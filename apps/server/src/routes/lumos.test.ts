@@ -107,6 +107,7 @@ describe('the catalogue', () => {
     expect(await h.json(h.adaKey, '/api/lumos/status')).toEqual({
       dataOrigin: 'fixture',
       catalogue: 'Testgegevens',
+      requests: false,
     });
     const answers = [
       rowsResponse.parse(await h.json(h.adaKey, '/api/lumos/rows')),
@@ -135,6 +136,7 @@ describe('the catalogue', () => {
     expect(await h.json(h.adaKey, '/api/lumos/status')).toEqual({
       dataOrigin: null,
       catalogue: null,
+      requests: false,
     });
   });
 
@@ -272,10 +274,25 @@ describe('lists', () => {
     ).toContain(9_000_019);
   });
 
-  it('never request anything from the media server', async () => {
-    const h = household();
+  it('from the fixtures never request anything from the media server', async () => {
+    const asked: unknown[] = [];
+    const h = household({
+      requester: {
+        state: async (ref) => {
+          asked.push(ref);
+          return { known: false, requestId: null };
+        },
+        request: async (ref) => {
+          asked.push(ref);
+          return { requestId: 1, existed: false };
+        },
+      },
+    });
     await h.add(h.adaKey, 'shared', HOLDOVERS);
     await h.add(h.adaKey, 'mine', SIGNAL_HILL);
+    await h.lumos.requests?.run(new Date(Date.now() + 60_000));
+    expect(h.lumos.requests).toBeUndefined();
+    expect(asked).toEqual([]);
     expect(await h.json(h.adaKey, '/api/tasks')).toEqual([]);
   });
 

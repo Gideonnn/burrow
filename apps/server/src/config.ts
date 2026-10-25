@@ -49,6 +49,7 @@ const env = z.object({
   LUMOS_CATALOGUE: z.enum(['fixture']).optional(),
   // The real catalogue (Seerr); its presence alone rules out the fixtures.
   LUMOS_SEERR_URL: z.string().optional(),
+  LUMOS_SEERR_API_KEY: z.string().optional(),
 });
 
 export type Config = {
@@ -79,6 +80,8 @@ export type Config = {
   ffmpeg: string;
   ffprobe: string;
   lumosCatalogue: 'fixture' | undefined;
+  // Seerr's address and the household's one service key.
+  seerr: { url: string; apiKey: string } | undefined;
 };
 
 export function loadConfig(source: NodeJS.ProcessEnv = process.env): Config {
@@ -133,6 +136,13 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): Config {
     ffmpeg: parsed.BURROW_FFMPEG,
     ffprobe: parsed.BURROW_FFPROBE,
     lumosCatalogue: lumosCatalogue(parsed, Boolean(team)),
+    seerr:
+      parsed.LUMOS_SEERR_URL && parsed.LUMOS_SEERR_API_KEY
+        ? {
+            url: parsed.LUMOS_SEERR_URL,
+            apiKey: parsed.LUMOS_SEERR_API_KEY.trim(),
+          }
+        : undefined,
     microsoft: parsed.MICROSOFT_CLIENT_ID
       ? {
           clientId: parsed.MICROSOFT_CLIENT_ID,

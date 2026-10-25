@@ -2,8 +2,8 @@ import { z } from 'zod';
 import { person } from './access';
 
 // Films and series to watch together. The catalogue comes from a provider on
-// the server (Seerr and TMDB later, isolated fixtures in development); lists
-// and verdicts are Lumos's own.
+// the server (Seerr, which serves TMDB's data; isolated fixtures in
+// development); lists, verdicts and requests are Lumos's own.
 
 export const mediaType = z.enum(['movie', 'tv']);
 export type MediaType = z.infer<typeof mediaType>;
@@ -128,6 +128,32 @@ export const credit = z.object({
 });
 export type Credit = z.infer<typeof credit>;
 
+// Lumos's request to the media server for a title on a list: `pending`
+// waits out the undo window or a retry, `exists` means the server already
+// had or awaited it, `dropped` that the wish was undone before it left.
+export const requestStatus = z.enum([
+  'pending',
+  'sent',
+  'exists',
+  'dropped',
+  'failed',
+]);
+export const requestState = z.object({
+  status: requestStatus,
+  seasons: z.array(z.number().int()).nullable(),
+  error: z.string().nullable(),
+  attempts: z.number().int(),
+  nextAttemptAt: z.string().nullable(),
+  updatedAt: z.string(),
+});
+export type RequestState = z.infer<typeof requestState>;
+
+// From the download client through Seerr; absent when nothing downloads.
+export const download = z.object({
+  progress: z.number().min(0).max(1),
+  eta: z.string().nullable(),
+});
+
 export const titleDetail = titleSummary.extend({
   dataOrigin,
   synopsis: z.string().nullable(),
@@ -140,6 +166,8 @@ export const titleDetail = titleSummary.extend({
   // Credit for the stills, e.g. a licence.
   stillsCredit: z.string().nullable(),
   tmdbUrl: z.string().nullable(),
+  request: requestState.nullable(),
+  download: download.nullable(),
 });
 export type TitleDetail = z.infer<typeof titleDetail>;
 
@@ -234,6 +262,8 @@ export const lumosStatus = z.object({
   // null: no catalogue is connected ("niet gekoppeld").
   dataOrigin: dataOrigin.nullable(),
   catalogue: z.string().nullable(),
+  // Putting a title on a list asks the media server for it.
+  requests: z.boolean(),
 });
 export type LumosStatus = z.infer<typeof lumosStatus>;
 

@@ -35,11 +35,15 @@ export type CatalogueTitle = TitleRef & {
   stills: string[];
   stillsCredit: string | null;
   tmdbUrl: string | null;
+  // How far the media server's download is, when one runs.
+  download?: Download | null;
 };
+
+export type Download = { progress: number; eta: string | null };
 
 export type CatalogueHit = { title: CatalogueTitle; why: string | null };
 
-// Where the catalogue comes from: Seerr with TMDB later, fixtures in
+// Where the catalogue comes from: Seerr (TMDB's data), fixtures in
 // development. The Mac never talks to a provider; keys stay on the server.
 export interface CatalogueProvider {
   readonly origin: DataOrigin;
@@ -57,6 +61,19 @@ export interface CatalogueProvider {
     | { credit: { id: string; name: string }; titles: CatalogueTitle[] }
     | undefined
   >;
+}
+
+// `known`: the media server already has, fetches or awaits the title.
+export type MediaState = { known: boolean; requestId: number | null };
+
+// Asks the media server for a title. Only the live catalogue requests; the
+// fixtures never do.
+export interface MediaRequester {
+  state(ref: TitleRef): Promise<MediaState>;
+  request(
+    ref: TitleRef,
+    seasons: number[] | null,
+  ): Promise<{ requestId: number | null; existed: boolean }>;
 }
 
 // How much two titles share: traits count double, genres once.
