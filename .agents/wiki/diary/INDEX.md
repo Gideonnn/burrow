@@ -2,6 +2,7 @@
 
 Newest first.
 
+- [2026-10-25 Lumos live from Seerr](2026-10-25-lumos-live-from-seerr.md): no TMDB key, one service key, an outbox with an undo window, season 1 by default.
 - [2026-10-25 Lumos: isolated fixtures, private personal lists, undo on the server](2026-10-25-lumos-fixtures-lists-and-undo.md): personal lists stay private, every change undoes by id, fixture rows carry their origin, and the shared list needs its own partial unique index.
 - [2026-10-25 Lumos's trailers play inline; four traps with keys and focus](2026-10-25-lumos-trailers-and-keys-on-the-mac.md): YouTube in a web view with the server as origin and Sintel in AVPlayerView both reported playing and stop on every exit; a bare executable gets no keys, popovers neither.
 - [2026-10-23 Pensieve's v6 window, native like Hedwig](2026-10-23-pensieve-window-like-hedwig.md): system controls instead of drawn ones, shared sidebar pieces in BurrowUI; day sections shrank every row, and `VideoPlayer` crashes in a package executable.

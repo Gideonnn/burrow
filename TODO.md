@@ -246,17 +246,11 @@ locally.
 **Why:** speaker letters restart per part; the only timestamping model is deprecated.
 **Scope:** half a day for (1); (2) depends on what OpenAI offers.
 
-## Lumos: live read-only catalogue (phase 3)
+## Lumos: choose seasons, and the newest digital releases
 
-**What:** a Seerr provider for `modules/lumos` (discover, trending, search, details,
-person credits, media status) with TMDB as supplement (videos with publisher and
-language, images, external ids, Dutch synopsis with English fallback), and an IMDb
-ratings job from the non-commercial dataset. Cache catalogue pages about ten minutes;
-on an upstream failure serve the last data with its time and the error.
-**Why:** Lumos runs on isolated fixtures only (`docs/plans/2026-10-25-lumos.md`).
-**Prerequisites:** approval of the phase; a TMDB credential (check what exists through
-approved tooling first); the operator putting `LUMOS_SEERR_URL`, its API key and the
-TMDB token in Burrow's env on Dobby; a test that scans responses for the configured
-secrets; then deploy the module and its migration. Seerr takes one service key for the
-household: requests need not be private, so no `X-API-User` per person.
-**Scope:** two to three days, then requests (phase 4) as their own entry.
+**What:** a season picker when a series goes on a list (the server already takes
+`seasons`; the Mac sends none, so Lumos asks the first season), and asking more seasons
+of a title that is already requested. A "Nieuw digitaal" row from TMDB's release types
+(`region=NL`, type 4), which Seerr does not offer, would need a TMDB credential.
+**Why:** series now only ever get season 1 unless someone changes it in Seerr.
+**Scope:** a day for the picker; the TMDB row after deciding on a credential.

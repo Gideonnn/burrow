@@ -3,8 +3,8 @@
 Lumos helps the household choose films and series to watch together: a native Mac app
 with image rows and an inspector, and a module on the server with a catalogue provider,
 the household's list, each person's own list, and verdicts that can always be undone.
-The media stack (Seerr, Radarr, Sonarr, Jellyfin) stays the backend; Lumos requests and
-plays nothing yet. Plan and phases: `docs/plans/2026-10-25-lumos.md`. Code:
+The media stack (Seerr, Radarr, Sonarr, Jellyfin) stays the backend: a title put on a list
+is requested from Seerr, which hands it to Radarr or Sonarr; Lumos plays nothing yet. Plan and phases: `docs/plans/2026-10-25-lumos.md`. Code:
 `modules/lumos`, `packages/contracts/src/lumos.ts`, `apps/lumos-mac`.
 
 ## The catalogue
@@ -14,8 +14,24 @@ search (title, maker, cast, genre, trait, year) and a maker's titles. Titles are
 `(mediaType, tmdbId)`: film and series ids collide. Without a provider every catalogue
 route answers 503 "Lumos is niet gekoppeld aan een catalogus"; lists still answer.
 
-The only provider yet is `FixtureCatalogue` (`fixtures.ts`), switched on with
-`LUMOS_CATALOGUE=fixture` for development. It is fenced off:
+**Seerr** (`seerr.ts`, `SeerrCatalogue`) is the real one, on when `LUMOS_SEERR_URL` and
+`LUMOS_SEERR_API_KEY` are both set (on Dobby they are, in the server settings; the media
+stack's admin route copied the key from its root-only secrets). Seerr serves TMDB's data,
+so no TMDB key is needed:
+
+- the pool: trending (two pages), popular films and series, and the 40 titles the media
+  server added last (`/media?filter=available`), cached ten minutes; details five
+  minutes. While Seerr is down the last data is served; without any, routes answer 503.
+- artwork as `image.tmdb.org` URLs; trailers from `relatedVideos` (YouTube, "Trailer"
+  before "Teaser"); scores from `ratingscombined` (IMDb, RT critics and audience) and
+  TMDB's vote average with its count. Synopses are English (`language=en`).
+- availability from Seerr's media status; "downloading" only with a live download status
+  (Seerr's `PROCESSING` alone proves nothing), with progress in the details.
+- every answer is mapped field by field; a test feeds the key and user records through
+  every Seerr answer and checks no Lumos answer carries them.
+
+`FixtureCatalogue` (`fixtures.ts`) is for development, switched on with
+`LUMOS_CATALOGUE=fixture`. It is fenced off:
 
 - every catalogue answer carries `dataOrigin: 'fixture'` and the Mac shows a
   "Testgegevens" badge in the toolbar and the sidebar;
@@ -50,8 +66,20 @@ no score, so it shows none.
 Routes (all under `/api/lumos`, `read` to look, `organize` to change): `status`, `rows`,
 `titles`, `search`, `titles/:mediaType/:tmdbId`, `similar/…`, `credits/:id`,
 `lists/:scope` with `PUT`/`DELETE …/items/:mediaType/:tmdbId`, `verdicts`,
-`DELETE verdicts/:id`, `changes/:id/undo`. MCP: `search_titles` and `list_watchlist`,
+`DELETE verdicts/:id`, `changes/:id/undo`, `requests/…/retry`. MCP: `search_titles` and `list_watchlist`,
 read only. Setting: `lumos.enabled`.
+
+## Requests
+
+`lumos_requests` is an outbox: putting a live title on any list writes its row in the same
+transaction (one row per title, so two people or two lists ask once).
+`LumosRequests` (`requests.ts`) sends it 15 seconds later, so undo stops it; at sending it
+checks the title is still on a list (else `dropped`) and whether Seerr already knows it
+(`exists`, nothing asked), then `POST /request` with Seerr's own defaults (no `is4k`,
+which is a separate 4K server). Failures retry with backoff for eight attempts, then
+`failed` with "Opnieuw proberen" (`POST /api/lumos/requests/:mediaType/:tmdbId/retry`). A
+sent request is never cancelled; removing a title leaves Seerr alone. Series ask the
+chosen seasons, season 1 when none was chosen. The fixtures never request.
 
 ## On the Mac
 
@@ -77,5 +105,5 @@ key presses. `LUMOS_SERVER` and `LUMOS_KEY` connect without the Keychain.
 
 ## Not yet
 
-Seerr and TMDB (phase 3), requests (4), playback (5), history import (6), curated
-snippets and taste ranking (7): see the plan.
+A season picker, playback in Jellyfin (phase 5), history import (6), curated snippets and
+taste ranking (7): see the plan and `TODO.md`.

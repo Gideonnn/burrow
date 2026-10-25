@@ -68,9 +68,9 @@ to add one: [modules](modules.md).
   only their audio comes from the Mac app, compressed with ffmpeg, transcribed through
   OpenAI, notes per kind written by the bot Kreacher; labels per person. The `recording`
   subject and trigger. See [Pensieve](pensieve.md).
-- **Lumos** (`modules/lumos`): films and series to watch together; a catalogue provider
-  (only isolated fixtures so far), the household's list and personal lists, verdicts and
-  undo by change id. The media stack on Dobby stays the backend. See [Lumos](lumos.md).
+- **Lumos** (`modules/lumos`): films and series to watch together; the catalogue from
+  Seerr (fixtures in development), the household's list and personal lists, verdicts, undo
+  by change id, and a Seerr request for every listed title. The media stack on Dobby stays the backend. See [Lumos](lumos.md).
 
 ## Clients
 

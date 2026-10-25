@@ -35,8 +35,8 @@ markdown file. The user-facing app may add a plain alias (Raycast opens Hedwig a
   settings, shares, uploads, the task queue and workers, routines, agents, MCP.
 - `modules/hedwig/`: mail: provider clients, sync, triage, drafts, its routes and tools.
 - `modules/pensieve/`: recordings: compression, transcription, notes, sharing.
-- `modules/lumos/`: films and series to watch together: catalogue, lists, verdicts. Not
-  deployed until its phase is approved; see `docs/plans/2026-10-25-lumos.md`.
+- `modules/lumos/`: films and series to watch together: the catalogue from Seerr, lists,
+  verdicts, and a Seerr request for every listed title; see `docs/plans/2026-10-25-lumos.md`.
 - `apps/server/`: the Burrow server (TypeScript, Hono) composing the platform and the
   modules, plus the device login, CLI and migrations. It runs on Dobby, the home machine;
   the code does not carry the machine's name.
