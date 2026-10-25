@@ -388,9 +388,39 @@ public final class LumosModel {
             guard inspected == ref else { return }
             detail = loaded
             self.similar = Array(similar.prefix(4))
+            followProgress(of: loaded)
         } catch is CancellationError {
         } catch {
             if inspected == ref { report(error) }
+        }
+    }
+
+    private var progressTask: Task<Void, Never>?
+    var progressSeconds: Double? = 20
+
+    /// Seerr tells nobody when a download moves on, so an open title that
+    /// waits or downloads asks again now and then.
+    private func followProgress(of detail: TitleDetail) {
+        progressTask?.cancel()
+        let busy = detail.request?.status == .pending || detail.availability == .downloading
+            || (detail.request?.status == .sent && detail.availability == .requested)
+        guard busy, let seconds = progressSeconds else { return }
+        let ref = detail.ref
+        progressTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(seconds))
+            guard !Task.isCancelled, self?.inspected == ref else { return }
+            await self?.loadDetail(ref)
+        }
+    }
+
+    public func retryRequest(_ ref: TitleRef) async {
+        guard let api else { return }
+        do {
+            try await api.retryRequest(ref)
+            show("Lumos vraagt het opnieuw aan.")
+            if inspected == ref { await loadDetail(ref) }
+        } catch {
+            report(error)
         }
     }
 
@@ -454,7 +484,9 @@ public final class LumosModel {
         if title.onList {
             await perform("\(title.title) van \(list) gehaald.") { try await $0.removeFromList(ref, scope: scope) }
         } else {
-            await perform("\(title.title) staat op \(list).") { try await $0.addToList(ref, scope: scope) }
+            let requests = status?.requests == true && title.availability == .notRequested
+            let label = requests ? "\(title.title) staat op \(list) en wordt zo aangevraagd." : "\(title.title) staat op \(list)."
+            await perform(label) { try await $0.addToList(ref, scope: scope) }
         }
     }
 

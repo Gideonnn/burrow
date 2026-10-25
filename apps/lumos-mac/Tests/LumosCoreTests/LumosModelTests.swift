@@ -85,6 +85,7 @@ final class Household: @unchecked Sendable {
             store: ConnectionStore(service: "app.burrow.lumos.tests"), makeClient: { _ in client },
             connection: Connection(serverURL: URL(string: "http://burrow.test")!, token: "bk_test"))
         model.toastSeconds = nil
+        model.progressSeconds = nil
         return model
     }
 
@@ -296,6 +297,21 @@ final class Household: @unchecked Sendable {
         #expect(withScore.scores.first?.valueText == "89%")
         #expect(withScore.scores.first?.votesText == "2.500+ stemmen")
         #expect(withScore.trailer?.publisher == "Studio")
+    }
+
+    @Test func saysWhatHappenedToTheRequestAndHowFarTheDownloadIs() throws {
+        func decode(_ extra: String) throws -> TitleDetail {
+            var json = Fixture.detail(3, "Charlie")
+            json.removeLast()
+            return try APIClient.decoder.decode(TitleDetail.self, from: Data((json + "," + extra + "}").utf8))
+        }
+        let waiting = try decode(#""request":{"status":"pending","seasons":[1],"error":null,"attempts":0,"nextAttemptAt":"2026-10-25T15:00:15.000Z","updatedAt":"2026-10-25T15:00:00.000Z"},"download":null"#)
+        #expect(waiting.request?.label == "Wordt zo aangevraagd (seizoen 1). Z maakt het ongedaan.")
+        let down = try decode(#""request":{"status":"pending","seasons":null,"error":"Seerr is niet bereikbaar","attempts":2,"nextAttemptAt":null,"updatedAt":"2026-10-25T15:00:00.000Z"},"download":{"progress":0.42,"eta":null}"#)
+        #expect(down.request?.label == "Seerr is niet bereikbaar. Lumos probeert het opnieuw.")
+        #expect(down.download?.progress == 0.42)
+        let old = try APIClient.decoder.decode(TitleDetail.self, from: Data(Fixture.detail(4, "Delta").utf8))
+        #expect(old.request == nil && old.download == nil)
     }
 }
 

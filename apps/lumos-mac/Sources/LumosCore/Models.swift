@@ -209,6 +209,38 @@ public struct Credit: Codable, Sendable, Hashable {
     public var role: String?
 }
 
+/// Lumos's request to the media server for a title on a list.
+public struct RequestState: Codable, Sendable, Equatable {
+    public enum Status: String, Codable, Sendable { case pending, sent, exists, dropped, failed }
+
+    public var status: Status
+    public var seasons: [Int]?
+    public var error: String?
+    public var attempts: Int
+    public var nextAttemptAt: String?
+    public var updatedAt: String
+
+    /// What the inspector says; nil when there is nothing to say.
+    public var label: String? {
+        let seasons = seasons.map { list in
+            " (seizoen " + list.map(String.init).joined(separator: ", ") + ")"
+        } ?? ""
+        switch status {
+        case .pending:
+            return error.map { "\($0). Lumos probeert het opnieuw." } ?? "Wordt zo aangevraagd\(seasons). Z maakt het ongedaan."
+        case .sent: return "Aangevraagd bij Seerr\(seasons)"
+        case .exists: return "Al bekend bij Seerr; niets extra aangevraagd"
+        case .dropped: return nil
+        case .failed: return "Aanvragen lukte niet: \(error ?? "onbekende fout")"
+        }
+    }
+}
+
+public struct Download: Codable, Sendable, Equatable {
+    public var progress: Double
+    public var eta: String?
+}
+
 public struct TitleDetail: Codable, Sendable {
     public var dataOrigin: DataOrigin
     public var mediaType: MediaType
@@ -239,6 +271,8 @@ public struct TitleDetail: Codable, Sendable {
     public var stills: [String]
     public var stillsCredit: String?
     public var tmdbUrl: String?
+    public var request: RequestState?
+    public var download: Download?
 
     public var ref: TitleRef { TitleRef(mediaType: mediaType, tmdbId: tmdbId) }
 
@@ -330,6 +364,8 @@ public struct VerdictsResponse: Codable, Sendable {
 public struct LumosStatus: Codable, Sendable {
     public var dataOrigin: DataOrigin?
     public var catalogue: String?
+    /// Putting a title on a list requests it from the media server.
+    public var requests: Bool?
 }
 
 public struct LumosChange: Codable, Sendable {
@@ -398,6 +434,12 @@ extension APIClient {
 
     public func undoVerdict(_ id: String) async throws -> LumosChange {
         try await call("DELETE", "api/lumos/verdicts/\(id)")
+    }
+
+    struct Done: Decodable { var ok: Bool }
+
+    public func retryRequest(_ ref: TitleRef) async throws {
+        let _: Done = try await call("POST", "api/lumos/requests/\(ref.mediaType.rawValue)/\(ref.tmdbId)/retry")
     }
 
     public func undo(change id: String) async throws -> LumosChange {

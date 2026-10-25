@@ -194,6 +194,7 @@ struct Facts: View {
                 .padding(.top, 16)
             meta.padding(.top, 5)
             actions.padding(.top, 14)
+            progress.padding(.top, 8)
             if let pass = detail.pass {
                 HStack(spacing: 6) {
                     Image(systemName: "eye.slash")
@@ -281,6 +282,32 @@ struct Facts: View {
                     .disabled(true)
                     .help("Afspelen in Jellyfin komt in een volgende stap")
             }
+        }
+    }
+
+    /// The request and the download, as far as Seerr and the download client know.
+    @ViewBuilder private var progress: some View {
+        let request = detail.request
+        if detail.download != nil || request?.label != nil {
+            VStack(alignment: .leading, spacing: 6) {
+                if let download = detail.download {
+                    HStack(spacing: 8) {
+                        ProgressView(value: download.progress).frame(maxWidth: 180)
+                        Text("Gedownload \(Int((download.progress * 100).rounded())) %").monospacedDigit()
+                    }
+                }
+                if let label = request?.label, detail.availability != .available {
+                    Text(label).foregroundStyle(request?.status == .failed ? BurrowColor.danger : .secondary)
+                }
+                if request?.status == .failed {
+                    Button("Opnieuw proberen", systemImage: "arrow.clockwise") {
+                        Task { await model.retryRequest(detail.ref) }
+                    }
+                    .controlSize(.small)
+                    .accessibilityIdentifier("lumos.approve.retryRequest")
+                }
+            }
+            .font(.system(size: 11.5))
         }
     }
 
