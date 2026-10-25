@@ -257,6 +257,6 @@ on an upstream failure serve the last data with its time and the error.
 **Prerequisites:** approval of the phase; a TMDB credential (check what exists through
 approved tooling first); the operator putting `LUMOS_SEERR_URL`, its API key and the
 TMDB token in Burrow's env on Dobby; a test that scans responses for the configured
-secrets; then deploy the module and its migration. Decide whether Seerr requests carry
-the person (`X-API-User`, untested) or one service key.
+secrets; then deploy the module and its migration. Seerr takes one service key for the
+household: requests need not be private, so no `X-API-User` per person.
 **Scope:** two to three days, then requests (phase 4) as their own entry.

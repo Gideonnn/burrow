@@ -28,6 +28,9 @@ follows the private handoff, with these choices where the code argued otherwise:
 - **No `lumos.autoRequest` setting and no request, rating or snippet tables yet.** A
   switch that does nothing misleads, and tables are cheap to add in the phase that fills
   them.
+- **One Seerr service key** for phase 3 and 4 (Gideon's call): requests need not be
+  private, so Lumos does not send `X-API-User` per person. Rejected: a Seerr user per
+  person, which adds a mapping and an untested header for no gain.
 - **Routes adapted to the code**: `GET /lumos/lists/:scope` like the `PUT`, a `titles`
   route for the library pages, `POST /lumos/changes/:id/undo`.
 
