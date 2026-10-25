@@ -6,7 +6,7 @@
 # The media stack keeps Seerr's API key in a root-only folder, so this asks
 # for the sudo password once. It copies the key into the server settings,
 # sets the address Seerr listens on, checks the key with a read-only call and
-# restarts the server.
+# restarts only burrow.service.
 set -euo pipefail
 
 HOST="${DOBBY:-dobby}"
@@ -29,4 +29,4 @@ ssh -t "$HOST" 'set -euo pipefail
     console.log(\"Lumos: Seerr at \" + process.env.LUMOS_URL + \", key set (\" + key.length + \" characters)\");
   "
   unset key
-  ~/burrow/infra/dobby/install.sh | tail -3'
+  systemctl --user restart burrow.service && echo "burrow.service restarted"'
