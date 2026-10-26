@@ -67,6 +67,9 @@ jobs:
       - name: Lumos
         working-directory: apps/lumos-mac
         run: swift build && swift test
+      - name: Hogsmeade
+        working-directory: apps/hogsmeade-mac
+        run: swift build && swift test
 
   image:
     runs-on: ubuntu-latest

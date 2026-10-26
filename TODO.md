@@ -271,3 +271,11 @@ so Geweest becomes a memory and next year's choice is easier.
 **Why:** both designs draw it; nothing stores it yet.
 **Scope:** a `rating` and `note` on the outing, a route, the sticker in both faces;
 half a day.
+
+## Lumos: a season's episodes
+
+**What:** a season on a series' page opens its episodes (Seerr's `/tv/:id/season/:n`):
+titles, air dates, stills, and which ones Jellyfin has.
+**Why:** the page lists the seasons with their counts; which episode to watch next still
+asks Jellyfin or the TV.
+**Scope:** one route and a season page in Lumos; half a day.
