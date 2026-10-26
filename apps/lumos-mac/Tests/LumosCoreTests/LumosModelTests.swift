@@ -468,3 +468,28 @@ private func readBody(_ stream: InputStream) -> String {
     }
     return String(decoding: data, as: UTF8.self)
 }
+
+/// The model's own work must never be what makes a page wait.
+@MainActor
+struct LumosSpeedTests {
+    @Test func layingOutTwoThousandCardsTakesMilliseconds() {
+        let cards = (1...2000).map { TitleRef(mediaType: .movie, tmdbId: $0) }
+        let start = ContinuousClock.now
+        var navigator = CardNavigator(lines: CardNavigator.gridLines(row: "browse-movie", cards: cards, columns: 8, width: 138))
+        var cursor = navigator.first
+        for _ in 0..<500 { cursor = navigator.move(.down, from: cursor) ?? cursor }
+        for _ in 0..<500 { cursor = navigator.move(.right, from: cursor) ?? cursor }
+        let elapsed = ContinuousClock.now - start
+        #expect(navigator.lines.count == 250)
+        #expect(elapsed < .milliseconds(50), "layout and a thousand moves took \(elapsed)")
+    }
+
+    @Test func decodingAPageOfTitlesTakesMilliseconds() throws {
+        let items = (1...200).map { Fixture.title($0, "Title \($0)") }.joined(separator: ",")
+        let json = Data(#"{"dataOrigin":"fixture","page":1,"totalPages":9,"items":[\#(items)],"genres":[]}"#.utf8)
+        let start = ContinuousClock.now
+        for _ in 0..<10 { _ = try APIClient.decoder.decode(BrowseResponse.self, from: json) }
+        let elapsed = ContinuousClock.now - start
+        #expect(elapsed < .milliseconds(200), "ten decodes of 200 titles took \(elapsed)")
+    }
+}

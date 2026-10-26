@@ -41,16 +41,21 @@ public struct CardNavigator: Sendable {
     public var lines: [CardLine]
     /// The last column per line.
     public var remembered: [String: Int] = [:]
+    /// Where each card is, so a move over thousands of cards is a lookup.
+    private var places: [CardID: (line: Int, column: Int)] = [:]
 
     public init(lines: [CardLine] = []) {
         self.lines = lines
+        for (l, line) in lines.enumerated() {
+            for (c, ref) in line.cards.enumerated() {
+                let id = CardID(row: line.row, ref: ref)
+                if places[id] == nil { places[id] = (l, c) }
+            }
+        }
     }
 
     public func position(of card: CardID) -> (line: Int, column: Int)? {
-        for (l, line) in lines.enumerated() where line.row == card.row {
-            if let c = line.cards.firstIndex(of: card.ref) { return (l, c) }
-        }
-        return nil
+        places[card]
     }
 
     public func card(line: Int, column: Int) -> CardID? {
