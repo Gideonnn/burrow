@@ -1,0 +1,629 @@
+<!doctype html>
+<!-- The playful style that became Hogsmeade, drawn 25 October 2026 on invented outings before it was applied to films and series. The wall, the stickers, the stamps, the confetti and the scrapbook are what apps/hogsmeade-mac builds. -->
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hogsmeade, klikbaar prototype</title>
+<style>
+:root {
+  --night: #140F2A; --ink: #1F1C18; --cream: #FBF5E9;
+  --violet: #7A3FC9; --lemon: #F6D45B; --mint: #8EDCC0; --sky: #8CC6F0;
+  --lilac: #C9A8F2; --peach: #F7B389; --candy: #F59BC1; --hot: #E0589A;
+  --round: ui-rounded, "SF Pro Rounded", -apple-system, system-ui, sans-serif;
+  --cond: "Avenir Next Condensed", "Arial Narrow", Impact, sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: #0B0818; color: #fff; font: 15px/1.45 var(--round); padding: 16px 0 24px; }
+a, button { font: inherit; color: inherit; cursor: pointer; }
+button { border: 0; background: none; padding: 0; }
+.wrap { max-width: 1100px; margin: 0 auto; }
+.viewport { position: relative; width: 100%; overflow: hidden; }
+.stage { width: 1100px; height: 720px; position: relative; overflow: hidden; border-radius: 24px; transform-origin: 0 0; background: var(--night); box-shadow: 0 30px 80px rgba(0,0,0,.6); user-select: none; }
+.lights { position: absolute; top: 18px; left: 20px; display: flex; gap: 8px; z-index: 9; }
+.lights i { width: 12px; height: 12px; border-radius: 50%; background: rgba(255,255,255,.22); }
+.screen { position: absolute; inset: 0; opacity: 0; pointer-events: none; transition: opacity .22s, transform .28s; transform: translateY(10px); }
+.screen.on { opacity: 1; pointer-events: auto; transform: none; }
+svg.ic { width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; vertical-align: -.15em; }
+.demo { display: flex; gap: 10px; align-items: center; margin-top: 12px; font-size: 13px; color: #9B93B6; flex-wrap: wrap; }
+.demo button { height: 30px; padding: 0 12px; border-radius: 15px; background: #1E1640; color: #CFC8E2; font-weight: 700; font-size: 13px; }
+.demo button.sel { background: var(--lemon); color: #3B2E00; }
+.demo .hint { margin-left: auto; }
+
+/* shared dark screens */
+.dark { font-family: var(--round); }
+.orb { position: absolute; border-radius: 50%; filter: blur(70px); opacity: .75; pointer-events: none; }
+.o1 { width: 620px; height: 620px; left: -200px; top: -260px; background: #5B2AA8; }
+.o2 { width: 520px; height: 520px; right: -160px; top: 120px; background: #E0589A; opacity: .5; }
+.o3 { width: 360px; height: 360px; left: 420px; bottom: -220px; background: #237A6F; opacity: .5; }
+.topbar { position: absolute; top: 14px; right: 22px; display: flex; gap: 10px; align-items: center; z-index: 5; }
+.pillbtn { height: 36px; padding: 0 14px; border-radius: 18px; background: rgba(255,255,255,.1); backdrop-filter: blur(10px); display: flex; align-items: center; gap: 8px; font: 600 13px var(--round); color: #E7E1F5; }
+.pillbtn input { background: none; border: 0; outline: 0; color: #fff; font: 600 13px var(--round); width: 96px; transition: width .2s; padding: 0; }
+.pillbtn input::placeholder { color: #CFC8E2; }
+.pillbtn.open input, .pillbtn input:focus { width: 170px; }
+.people { display: flex; }
+.people b { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font: 800 13px var(--round); border: 2px solid var(--night); margin-left: -8px; }
+.av-g { background: var(--sky); color: #143557; } .av-e { background: var(--candy); color: #5A1C3A; }
+.av-s { background: var(--mint); color: #0F3B2E; } .av-j { background: var(--peach); color: #5A2A00; }
+.hello { position: absolute; left: 64px; top: 72px; z-index: 3; max-width: 760px; }
+.hello .kick { font: 700 15px var(--round); color: var(--lemon); letter-spacing: .04em; margin-bottom: 4px; text-transform: uppercase; }
+.hello h1 { margin: 0; font: 900 84px/1 var(--round); letter-spacing: -.03em; }
+.hello h1 .n { display: inline-block; background: linear-gradient(90deg, var(--lemon), var(--peach), var(--candy)); -webkit-background-clip: text; background-clip: text; color: transparent; animation: shimmer 3s linear infinite; background-size: 200% 100%; }
+@keyframes shimmer { to { background-position: 200% 0; } }
+.hello .sub { margin-top: 8px; font: 500 18px var(--round); color: #CFC8E2; }
+.hello .sub b { color: #fff; }
+.hello .cta { margin-top: 18px; display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 18px; border-radius: 20px; background: var(--mint); color: #0F3B2E; font: 800 14px var(--round); }
+.hello .cta.todo { background: var(--lemon); color: #3B2E00; }
+.hello .cta.tix { background: #fff; color: var(--violet); }
+.hand { position: absolute; left: 40px; right: 40px; top: 286px; height: 280px; display: flex; align-items: flex-end; justify-content: center; z-index: 4; }
+.hand .poster { margin: 0 calc(var(--ov, 0px) / -2); }
+.poster { width: 170px; height: 246px; border-radius: 18px; position: relative; overflow: hidden; flex: none; transform: rotate(var(--rot)) translateY(var(--dy, 0)); box-shadow: 0 24px 50px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.25); transition: transform .35s cubic-bezier(.2,.8,.2,1), box-shadow .35s, opacity .2s; animation: bob 5s ease-in-out infinite; animation-delay: var(--d, 0s); cursor: pointer; background: #2A2146; }
+.poster:hover { transform: rotate(0deg) translateY(-26px) scale(1.06); box-shadow: 0 40px 70px rgba(0,0,0,.6); z-index: 6; animation: none; }
+.poster.dim { opacity: .18; }
+@keyframes bob { 50% { translate: 0 -8px; } }
+.poster .art { position: absolute; inset: 0; background: var(--art); }
+.poster .art::after { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(var(--ang, 45deg), rgba(255,255,255,.07) 0 7px, transparent 7px 18px); mix-blend-mode: overlay; }
+.poster .glyph { position: absolute; right: -22px; top: 44px; width: 150px; height: 150px; color: rgba(255,255,255,.22); }
+.poster .glyph svg { width: 100%; height: 100%; stroke-width: 1.4; }
+.poster .tt { position: absolute; left: 0; right: 0; bottom: 0; padding: 60px 16px 16px; background: linear-gradient(transparent, rgba(0,0,0,.72)); }
+.poster .tt small { display: block; font: 700 11px var(--round); letter-spacing: .08em; text-transform: uppercase; color: rgba(255,255,255,.75); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.poster .tt h3 { margin: 2px 0 0; font: 700 23px/1 var(--cond); text-transform: uppercase; letter-spacing: .01em; }
+.sticker { position: absolute; left: 12px; top: 12px; width: 58px; height: 58px; border-radius: 50%; background: #fff; color: var(--ink); display: grid; place-items: center; text-align: center; line-height: 1; transform: rotate(-8deg); box-shadow: 0 4px 10px rgba(0,0,0,.3); font: 700 10px var(--round); text-transform: uppercase; }
+.sticker b { display: block; font: 900 22px var(--round); letter-spacing: -.03em; }
+.sticker.q b { font-size: 26px; color: var(--violet); }
+.stamp { position: absolute; right: 10px; top: 20px; padding: 4px 9px; border: 3px solid currentColor; border-radius: 8px; font: 700 15px var(--cond); text-transform: uppercase; letter-spacing: .06em; transform: rotate(10deg); mix-blend-mode: screen; }
+.stamp.ok { color: var(--mint); } .stamp.todo { color: var(--lemon); } .stamp.tix { color: #fff; }
+.poster.past .art { filter: grayscale(.6) brightness(.7); }
+.poster .stars { position: absolute; right: 12px; top: 14px; font: 700 16px var(--round); color: var(--lemon); letter-spacing: 1px; text-shadow: 0 2px 6px rgba(0,0,0,.5); }
+.ride { position: absolute; left: 64px; right: 64px; bottom: 96px; z-index: 3; }
+.ride .line { height: 3px; background: rgba(255,255,255,.18); border-radius: 2px; position: relative; }
+.ride .line i { position: absolute; top: 50%; width: 8px; height: 8px; border-radius: 50%; background: var(--candy); translate: -50% -50%; }
+.ride .line i.first { width: 12px; height: 12px; background: var(--lemon); box-shadow: 0 0 0 5px rgba(246,212,91,.2); }
+.ride .months { display: flex; justify-content: space-between; margin-top: 10px; font: 700 11px var(--round); letter-spacing: .1em; text-transform: uppercase; color: #9B93B6; }
+.ride .now { position: absolute; top: -26px; font: 800 11px var(--round); color: var(--lemon); translate: -50% 0; }
+.island { position: absolute; left: 50%; bottom: 18px; translate: -50% 0; display: flex; align-items: center; gap: 4px; padding: 6px; border-radius: 30px; background: rgba(20,15,42,.6); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,.14); box-shadow: 0 20px 40px rgba(0,0,0,.5); z-index: 8; }
+.island button { display: flex; align-items: center; gap: 7px; height: 40px; padding: 0 16px; border-radius: 22px; font: 700 14px var(--round); color: #CFC8E2; transition: background .15s; }
+.island button:hover { background: rgba(255,255,255,.08); }
+.island button.sel { background: var(--lemon); color: #3B2E00; }
+.island button.plus { width: 40px; padding: 0; justify-content: center; background: rgba(255,255,255,.12); color: #fff; font-size: 20px; }
+.island button .badge { background: var(--hot); color: #fff; font-size: 11px; border-radius: 9px; padding: 1px 6px; }
+
+/* list screens (Geweest, Wensen) */
+.list-head { position: absolute; left: 64px; top: 64px; z-index: 3; }
+.list-head h1 { margin: 0; font: 900 56px/1 var(--round); letter-spacing: -.03em; }
+.list-head p { margin: 6px 0 0; color: #CFC8E2; font-size: 17px; }
+.grid { position: absolute; left: 64px; right: 64px; top: 170px; bottom: 90px; display: flex; flex-wrap: wrap; gap: 18px; align-content: flex-start; overflow: hidden; }
+.grid .poster { animation: none; transform: rotate(var(--rot)); }
+.grid .poster:hover { transform: translateY(-8px) scale(1.04); }
+.wishes { position: absolute; left: 64px; right: 64px; top: 170px; bottom: 90px; display: flex; flex-wrap: wrap; gap: 16px; align-content: flex-start; }
+.wish { width: 300px; height: 150px; border-radius: 18px; border: 2px dashed rgba(255,255,255,.3); padding: 16px 18px; display: flex; flex-direction: column; gap: 6px; transform: rotate(var(--rot)); background: rgba(255,255,255,.04); }
+.wish h3 { margin: 0; font: 700 24px/1 var(--cond); text-transform: uppercase; }
+.wish p { margin: 0; color: #CFC8E2; font-size: 13px; flex: 1; }
+.wish .acts { display: flex; gap: 8px; }
+.wish .acts button { height: 30px; padding: 0 12px; border-radius: 15px; font-weight: 800; font-size: 12px; background: rgba(255,255,255,.12); }
+.wish .acts button.go { background: var(--lemon); color: #3B2E00; }
+.wish.new { border-style: solid; border-color: rgba(255,255,255,.14); }
+.wish.new input { background: rgba(255,255,255,.08); border: 0; border-radius: 10px; padding: 8px 10px; color: #fff; font: 600 14px var(--round); outline: 0; }
+.wish.new input::placeholder { color: #9B93B6; }
+
+/* tonight */
+.tonight { background: linear-gradient(160deg, #3D1B8C 0%, #8A3FD1 40%, #E0589A 75%, #F7B389 100%); }
+.conf { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 2; }
+.conf i { position: absolute; top: -20px; width: 10px; height: 16px; border-radius: 2px; animation: fall linear infinite; opacity: .95; }
+@keyframes fall { to { transform: translateY(760px) rotate(540deg); } }
+.vanavond { position: absolute; left: 54px; top: 56px; padding: 10px 22px; background: var(--lemon); color: #3B2E00; font: 900 34px var(--round); letter-spacing: -.02em; border-radius: 14px; transform: rotate(-6deg); box-shadow: 0 14px 30px rgba(0,0,0,.25); z-index: 4; animation: wiggle 2.4s ease-in-out infinite; }
+@keyframes wiggle { 50% { transform: rotate(-3deg) scale(1.03); } }
+.tn-title { position: absolute; left: 60px; top: 136px; z-index: 3; cursor: pointer; }
+.tn-title h1 { margin: 0; font: 700 108px/.9 var(--cond); text-transform: uppercase; letter-spacing: -.01em; text-shadow: 0 10px 40px rgba(0,0,0,.25); max-width: 560px; }
+.tn-title .meta { margin-top: 14px; font: 600 20px var(--round); color: rgba(255,255,255,.9); display: flex; gap: 18px; flex-wrap: wrap; }
+.tn-title .meta span { display: flex; align-items: center; gap: 7px; }
+.clock { position: absolute; left: 60px; top: 392px; display: inline-flex; align-items: baseline; gap: 10px; padding: 14px 22px; border-radius: 22px; background: rgba(0,0,0,.28); backdrop-filter: blur(14px); border: 1px solid rgba(255,255,255,.25); z-index: 3; }
+.clock .lbl { font: 700 14px var(--round); color: rgba(255,255,255,.8); }
+.clock .digits { font: 900 44px/1 var(--round); font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.clock .digits small { font-size: 18px; color: var(--lemon); margin: 0 6px 0 2px; }
+.stubs { position: absolute; left: 60px; bottom: 36px; height: 176px; width: 420px; z-index: 3; }
+.stub { position: absolute; width: 300px; height: 118px; border-radius: 14px; background: #fff; color: var(--ink); display: grid; grid-template-columns: 1fr 86px; overflow: hidden; box-shadow: 0 22px 44px rgba(0,0,0,.35); transform: rotate(var(--rot)); left: var(--x); top: var(--y); transition: transform .25s; }
+.stub:hover { transform: rotate(0) translateY(-10px); z-index: 2; }
+.stub .main { padding: 14px 16px; }
+.stub .main small { font: 700 10px var(--round); letter-spacing: .1em; text-transform: uppercase; color: #8A7FA8; display: block; }
+.stub .main h4 { margin: 2px 0 6px; font: 700 22px/1 var(--cond); text-transform: uppercase; }
+.stub .main .row { font: 600 12px var(--round); color: #4A4461; }
+.stub .main .holder { margin-top: 6px; display: inline-flex; align-items: center; gap: 6px; font: 800 12px var(--round); }
+.stub .main .holder b { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: 10px; }
+.stub .tear { border-left: 2px dashed #D9D2E6; background: #F6F2FB; display: grid; place-items: center; position: relative; }
+.stub .tear::before, .stub .tear::after { content: ""; position: absolute; left: -9px; width: 16px; height: 16px; border-radius: 50%; background: #B64A9E; }
+.stub .tear::before { top: -8px; } .stub .tear::after { bottom: -8px; }
+.qr { width: 54px; height: 54px; background:
+  linear-gradient(90deg, var(--ink) 0 20%, transparent 20% 30%, var(--ink) 30% 50%, transparent 50% 60%, var(--ink) 60% 80%, transparent 80%) 0 0/100% 22%,
+  linear-gradient(90deg, transparent 0 30%, var(--ink) 30% 70%, transparent 70%) 0 40%/100% 22%,
+  linear-gradient(90deg, var(--ink) 0 20%, transparent 20% 50%, var(--ink) 50% 60%, transparent 60% 80%, var(--ink) 80%) 0 80%/100% 22%; background-repeat: no-repeat; }
+.phone-ok { position: absolute; left: 0; top: -34px; display: inline-flex; align-items: center; gap: 8px; font: 700 13px var(--round); color: #fff; background: rgba(0,0,0,.25); padding: 6px 12px; border-radius: 14px; }
+.phone-ok i { width: 18px; height: 18px; border-radius: 50%; background: var(--mint); color: #0F3B2E; display: grid; place-items: center; font-size: 12px; font-style: normal; }
+.route { position: absolute; right: 54px; top: 110px; width: 380px; height: 300px; border-radius: 24px; overflow: hidden; background: #1A1230; box-shadow: 0 30px 60px rgba(0,0,0,.4); z-index: 3; transform: rotate(2deg); border: 1px solid rgba(255,255,255,.2); }
+.route .gridbg { position: absolute; inset: 0; background: linear-gradient(rgba(255,255,255,.06) 1px, transparent 1px) 0 0/40px 40px, linear-gradient(90deg, rgba(255,255,255,.06) 1px, transparent 1px) 0 0/40px 40px; }
+.route svg.map { position: absolute; inset: 0; width: 100%; height: 100%; }
+.route .lbl { position: absolute; left: 18px; top: 16px; font: 700 12px var(--round); letter-spacing: .1em; text-transform: uppercase; color: #CFC8E2; }
+.route .eta { position: absolute; left: 18px; bottom: 18px; }
+.route .eta b { display: block; font: 900 30px/1 var(--round); }
+.route .eta span { font: 600 13px var(--round); color: #CFC8E2; }
+.route .go { position: absolute; right: 18px; bottom: 18px; height: 40px; padding: 0 16px; border-radius: 20px; background: var(--lemon); color: #3B2E00; font: 800 14px var(--round); display: flex; align-items: center; gap: 8px; }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+.chips { position: absolute; right: 54px; bottom: 60px; width: 380px; display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; z-index: 3; }
+.chips span { display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 14px; border-radius: 18px; background: rgba(255,255,255,.18); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,.3); font: 700 13px var(--round); }
+.chips span.ok { background: rgba(142,220,192,.9); color: #0F3B2E; border-color: transparent; }
+.plezier { position: absolute; right: 60px; top: 48px; font: 700 15px var(--round); color: rgba(255,255,255,.8); transform: rotate(4deg); z-index: 3; }
+.tonight .topbar { top: 76px; }
+.tonight .pillbtn { background: rgba(0,0,0,.25); }
+
+/* detail (plakboek) */
+.scrap { background: var(--cream) radial-gradient(#E6DCC6 1.2px, transparent 1.2px) 0 0/22px 22px; color: var(--ink); }
+.scrap .lights i { background: rgba(0,0,0,.14); }
+.back { position: absolute; left: 100px; top: 16px; display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px 0 10px; border-radius: 16px; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.08); font: 700 13px var(--round); color: var(--violet); z-index: 5; }
+.topright { position: absolute; right: 24px; top: 16px; display: flex; gap: 8px; z-index: 5; }
+.topright button { height: 32px; padding: 0 12px; border-radius: 16px; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.08); display: inline-flex; align-items: center; gap: 6px; font: 700 13px var(--round); color: #5A5272; }
+.topright button.on { background: var(--violet); color: #fff; }
+.photo { position: absolute; left: 56px; top: 86px; width: 480px; height: 400px; background: #fff; padding: 14px 14px 46px; transform: rotate(-2.5deg); box-shadow: 0 18px 40px rgba(60,40,10,.18); }
+.photo .art { height: 100%; position: relative; overflow: hidden; background: var(--art); }
+.photo .art::after { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(-30deg, rgba(255,255,255,.12) 0 10px, transparent 10px 26px); }
+.photo .art .big { position: absolute; left: 22px; bottom: 18px; right: 22px; font: 700 72px/.86 var(--cond); text-transform: uppercase; color: #fff; text-shadow: 0 6px 20px rgba(0,0,0,.3); z-index: 1; }
+.photo .art .big small { display: block; font: 700 22px var(--cond); letter-spacing: .14em; margin-bottom: 8px; color: rgba(0,0,0,.55); text-shadow: none; }
+.photo .cap { position: absolute; left: 14px; right: 14px; bottom: 12px; font: 600 15px var(--round); color: #5A5272; display: flex; justify-content: space-between; }
+.tape { position: absolute; width: 110px; height: 28px; background: var(--c); opacity: .75; transform: rotate(var(--r)); box-shadow: 0 1px 2px rgba(0,0,0,.08); z-index: 2; }
+.tape::before { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(90deg, rgba(255,255,255,.35) 0 2px, transparent 2px 6px); }
+.count { position: absolute; left: 468px; top: 62px; width: 128px; height: 128px; border-radius: 50%; background: var(--lemon); color: #3B2E00; display: grid; place-content: center; text-align: center; transform: rotate(8deg); box-shadow: 0 14px 30px rgba(0,0,0,.18); font: 800 13px/1 var(--round); z-index: 4; animation: wiggle 3s ease-in-out infinite; }
+.count b { display: block; font: 900 56px/1 var(--round); letter-spacing: -.04em; margin: 4px 0; }
+.count.past { background: var(--mint); color: #0F3B2E; } .count.past b { font-size: 26px; }
+.count.today { background: var(--hot); color: #fff; } .count.today b { font-size: 28px; }
+.facts { position: absolute; left: 612px; top: 84px; width: 460px; display: flex; flex-wrap: nowrap; gap: 10px; z-index: 3; }
+.fact { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 16px 0 12px; border-radius: 20px; font: 700 14px var(--round); box-shadow: 0 6px 14px rgba(60,40,10,.12); transform: rotate(var(--r, 0)); white-space: nowrap; }
+.fact.when { background: var(--lemon); color: #3B2E00; }
+.fact.when.q { background: #fff; color: var(--violet); border: 2px dashed var(--lilac); cursor: pointer; }
+.fact.who { background: #fff; color: var(--ink); padding-left: 6px; }
+.fact.who b { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; margin-right: -8px; border: 2px solid #fff; }
+.fact.who span { margin-left: 14px; }
+.calpage { position: absolute; left: 626px; top: 146px; width: 92px; border-radius: 12px; overflow: hidden; background: #fff; box-shadow: 0 10px 24px rgba(60,40,10,.16); transform: rotate(-4deg); text-align: center; }
+.calpage .m { background: var(--hot); color: #fff; font: 800 12px/22px var(--round); letter-spacing: .12em; text-transform: uppercase; }
+.calpage .d { font: 900 46px/1 var(--round); padding: 8px 0 2px; letter-spacing: -.04em; }
+.calpage .w { font: 700 12px var(--round); color: #8A7FA8; padding-bottom: 8px; }
+.mapcard { position: absolute; left: 740px; top: 150px; width: 306px; height: 190px; border-radius: 18px; background: #EAF1E6; overflow: hidden; box-shadow: 0 12px 28px rgba(60,40,10,.16); transform: rotate(1.5deg); }
+.mapcard > svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.mapcard .eta { position: absolute; left: 14px; bottom: 12px; background: #fff; border-radius: 12px; padding: 6px 12px; font: 800 13px var(--round); box-shadow: 0 4px 10px rgba(0,0,0,.1); }
+.mapcard .eta small { display: block; font: 600 11px var(--round); color: #5A5272; }
+.mapcard .go { position: absolute; right: 12px; bottom: 12px; height: 34px; padding: 0 14px; border-radius: 17px; background: var(--violet); color: #fff; font: 800 13px var(--round); display: flex; align-items: center; gap: 6px; }
+.pad { position: absolute; left: 626px; top: 362px; width: 300px; height: 300px; background: #fff; border-radius: 6px; box-shadow: 0 14px 30px rgba(60,40,10,.16); transform: rotate(-1.5deg); padding: 44px 18px 18px; background-image: repeating-linear-gradient(transparent 0 31px, #EAE4F3 31px 32px); background-position: 0 44px; overflow: hidden; }
+.pad::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 30px; background: var(--lilac); border-radius: 6px 6px 0 0; }
+.pad h4 { position: absolute; top: 4px; left: 18px; margin: 0; font: 800 14px/22px var(--round); color: #3B2360; letter-spacing: .06em; text-transform: uppercase; }
+.pad .it { display: flex; align-items: center; gap: 10px; height: 32px; font: 600 15px var(--round); cursor: pointer; }
+.pad .it i { width: 20px; height: 20px; border-radius: 6px; border: 2px solid #B8AED0; flex: none; display: grid; place-items: center; font-size: 12px; font-style: normal; transition: background .15s; }
+.pad .it:hover i { border-color: var(--violet); }
+.pad .it.done { color: #9B93B6; text-decoration: line-through; }
+.pad .it.done i { background: var(--mint); border-color: var(--mint); color: #0F3B2E; }
+.pad .it.auto { color: #5A5272; cursor: default; }
+.pad .it.auto i { border-style: dashed; }
+.pad .it .due { margin-left: auto; font: 800 11px var(--round); color: #7A4E00; background: var(--lemon); border-radius: 8px; padding: 2px 7px; text-decoration: none; }
+.pad .it .due.auto { background: #EAE4F3; color: #5A5272; }
+.pad .it.add { color: var(--violet); }
+.pad .it.add i { border-color: var(--violet); color: var(--violet); }
+.pad .it.add input { flex: 1; border: 0; border-bottom: 2px solid var(--lilac); background: none; outline: 0; font: 600 15px var(--round); color: var(--ink); }
+.ticket { position: absolute; left: 60px; top: 530px; width: 300px; height: 118px; border-radius: 14px; background: #fff; color: var(--ink); display: grid; grid-template-columns: 1fr 86px; overflow: hidden; box-shadow: 0 16px 36px rgba(60,40,10,.18); transform: rotate(2deg); }
+.ticket.none { background: transparent; border: 2px dashed #B8AED0; box-shadow: none; display: grid; place-items: center; grid-template-columns: 1fr; text-align: center; color: #5A5272; font: 700 14px var(--round); padding: 16px; cursor: pointer; }
+.ticket.none b { display: block; color: var(--violet); margin-top: 4px; }
+.ticket .main { padding: 14px 16px; }
+.ticket .main small { font: 700 10px var(--round); letter-spacing: .1em; text-transform: uppercase; color: #8A7FA8; display: block; }
+.ticket .main h4 { margin: 2px 0 6px; font: 700 22px/1 var(--cond); text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ticket .main .row { font: 600 12px var(--round); color: #4A4461; }
+.ticket .tear { border-left: 2px dashed #D9D2E6; background: #F6F2FB; display: grid; place-items: center; position: relative; }
+.ticket .tear::before, .ticket .tear::after { content: ""; position: absolute; left: -9px; width: 16px; height: 16px; border-radius: 50%; background: var(--cream); }
+.ticket .tear::before { top: -8px; } .ticket .tear::after { bottom: -8px; }
+.ticket .tear span { font: 800 12px var(--round); color: #8A7FA8; writing-mode: vertical-rl; transform: rotate(180deg); letter-spacing: .1em; }
+.clip { position: absolute; left: 392px; top: 556px; display: inline-flex; align-items: center; gap: 8px; height: 38px; padding: 0 14px 0 10px; border-radius: 19px; background: #fff; box-shadow: 0 6px 14px rgba(60,40,10,.12); font: 700 13px var(--round); color: #5A5272; transform: rotate(-3deg); cursor: pointer; }
+.clip b { color: var(--ink); }
+.party { position: absolute; left: 392px; top: 606px; display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 18px; border-radius: 22px; background: linear-gradient(90deg, var(--hot), var(--violet)); color: #fff; font: 800 14px var(--round); box-shadow: 0 12px 26px rgba(122,63,201,.35); transition: transform .15s; }
+.party:hover { transform: scale(1.04); }
+.party.muted { background: #E6DFF0; color: #8A7FA8; box-shadow: none; }
+.sticker2 { position: absolute; right: 24px; bottom: 24px; width: 136px; height: 136px; border-radius: 50%; background: var(--mint); color: #0F3B2E; display: grid; place-content: center; text-align: center; transform: rotate(-10deg); font: 800 13px/1.15 var(--round); box-shadow: 0 12px 28px rgba(0,0,0,.15); z-index: 4; }
+.sticker2 .stars { font-size: 22px; letter-spacing: 2px; margin-top: 4px; }
+.sticker2 .stars b { cursor: pointer; font-weight: 400; color: rgba(15,59,46,.35); }
+.sticker2 .stars b.on { color: #0F3B2E; }
+.details { position: absolute; right: 24px; top: 56px; width: 300px; background: #fff; border-radius: 16px; box-shadow: 0 20px 50px rgba(60,40,10,.25); padding: 16px 18px; z-index: 6; font-size: 13px; color: #4A4461; display: none; }
+.details.on { display: block; }
+.details h5 { margin: 10px 0 4px; font: 800 11px var(--round); letter-spacing: .1em; text-transform: uppercase; color: #8A7FA8; }
+.details h5:first-child { margin-top: 0; }
+.details .tag { display: inline-block; background: #F1ECF8; border-radius: 8px; padding: 2px 8px; margin: 2px 4px 2px 0; font-weight: 700; }
+.toast { position: absolute; left: 50%; bottom: 84px; translate: -50% 0; background: rgba(20,15,42,.92); color: #fff; padding: 10px 16px; border-radius: 14px; font: 700 13px var(--round); box-shadow: 0 12px 30px rgba(0,0,0,.4); z-index: 20; opacity: 0; transition: opacity .2s, translate .2s; pointer-events: none; display: flex; gap: 8px; align-items: center; }
+.toast.on { opacity: 1; translate: -50% -6px; }
+.toast i { width: 18px; height: 18px; border-radius: 50%; background: var(--mint); color: #0F3B2E; display: grid; place-items: center; font-size: 12px; font-style: normal; }
+.sheet { position: absolute; inset: 0; background: rgba(10,6,24,.55); backdrop-filter: blur(6px); z-index: 15; display: none; place-items: center; }
+.sheet.on { display: grid; }
+.sheet .panel { width: 440px; background: #1E1640; border: 1px solid rgba(255,255,255,.14); border-radius: 22px; padding: 22px 24px; box-shadow: 0 30px 80px rgba(0,0,0,.6); }
+.sheet h3 { margin: 0 0 6px; font: 900 26px var(--round); }
+.sheet p { margin: 0 0 14px; color: #CFC8E2; font-size: 14px; }
+.sheet input { width: 100%; background: rgba(255,255,255,.08); border: 0; border-radius: 12px; padding: 12px 14px; color: #fff; font: 600 16px var(--round); outline: 0; }
+.sheet .acts { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; }
+.sheet .acts button { height: 36px; padding: 0 16px; border-radius: 18px; font-weight: 800; font-size: 13px; background: rgba(255,255,255,.1); }
+.sheet .acts button.go { background: var(--lemon); color: #3B2E00; }
+.empty { position: absolute; left: 64px; right: 64px; top: 300px; text-align: center; color: #CFC8E2; font-size: 18px; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="pin" viewBox="0 0 24 24"><path d="M12 22s7-7.2 7-12a7 7 0 1 0-14 0c0 4.8 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/></symbol>
+  <symbol id="clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="route" viewBox="0 0 24 24"><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="6" r="2.5"/><path d="M8 18h6a3 3 0 0 0 0-6h-4a3 3 0 0 1 0-6h5"/></symbol>
+  <symbol id="check" viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></symbol>
+  <symbol id="search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></symbol>
+  <symbol id="spark" viewBox="0 0 24 24"><path d="M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2z"/></symbol>
+  <symbol id="music" viewBox="0 0 24 24"><path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/></symbol>
+  <symbol id="mask" viewBox="0 0 24 24"><path d="M4 5c3 2 13 2 16 0v8a8 8 0 0 1-16 0z"/><path d="M8 11c1 1 2 1 3 0M13 11c1 1 2 1 3 0M9 16c2 1.5 4 1.5 6 0"/></symbol>
+  <symbol id="party" viewBox="0 0 24 24"><path d="M5 20l4-11 6 6zM13 4l1 2M19 6l-2 1M18 12l2 1M14 2l.5 2"/></symbol>
+  <symbol id="tent" viewBox="0 0 24 24"><path d="M3 20h18L12 4z"/><path d="M12 20v-7"/></symbol>
+  <symbol id="back" viewBox="0 0 24 24"><path d="M14 6l-6 6 6 6"/></symbol>
+  <symbol id="heart" viewBox="0 0 24 24"><path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.5-7 10-7 10z"/></symbol>
+  <symbol id="cloud" viewBox="0 0 24 24"><path d="M7 18h10a4 4 0 0 0 0-8 6 6 0 0 0-11.5 1.5A3.5 3.5 0 0 0 7 18z"/></symbol>
+  <symbol id="car" viewBox="0 0 24 24"><path d="M4 16l1.5-5h13L20 16"/><rect x="3" y="11" width="18" height="6" rx="2"/><circle cx="7.5" cy="17" r="1.5"/><circle cx="16.5" cy="17" r="1.5"/></symbol>
+  <symbol id="mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></symbol>
+  <symbol id="phone" viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></symbol>
+  <symbol id="wall" viewBox="0 0 24 24"><rect x="3" y="4" width="7" height="16" rx="2"/><rect x="14" y="4" width="7" height="16" rx="2"/></symbol>
+</svg>
+
+<div class="wrap">
+<div class="viewport"><div class="stage" id="stage">
+  <div class="lights"><i></i><i></i><i></i></div>
+
+  <section class="screen dark" id="s-home">
+    <div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div>
+    <div class="topbar">
+      <label class="pillbtn" id="searchpill"><svg class="ic"><use href="#search"/></svg><input id="q" placeholder="Zoek een uitje"></label>
+      <div class="people"><b class="av-g">G</b><b class="av-e">E</b></div>
+    </div>
+    <div class="hello" id="hello"></div>
+    <div class="hand" id="hand"></div>
+    <div class="ride" id="ride"></div>
+  </section>
+
+  <section class="screen dark tonight" id="s-tonight">
+    <div class="conf" id="conf"></div>
+    <div class="vanavond">Vanavond!</div>
+    <div class="plezier" id="plezier"></div>
+    <div class="topbar"><button class="pillbtn" data-go="wall"><svg class="ic"><use href="#wall"/></svg> Alle uitjes</button></div>
+    <div class="tn-title" id="tn-title"></div>
+    <div class="clock"><span class="lbl">Deuren over</span><span class="digits" id="digits"></span></div>
+    <div class="stubs" id="stubs"></div>
+    <div class="route" id="routecard"></div>
+    <div class="chips" id="chips"></div>
+  </section>
+
+  <section class="screen dark" id="s-past">
+    <div class="orb o1" style="background:#237A6F"></div><div class="orb o2" style="background:#5B2AA8"></div>
+    <div class="list-head"><h1>Geweest</h1><p>Herinneringen. Geef sterren, dan weet je volgend jaar wat de moeite was.</p></div>
+    <div class="grid" id="pastgrid"></div>
+  </section>
+
+  <section class="screen dark" id="s-wish">
+    <div class="orb o1" style="background:#E0589A"></div><div class="orb o2" style="background:#237A6F"></div>
+    <div class="list-head"><h1>Wensen</h1><p>Dingen waar jullie nog over twijfelen. Plan het, en het hangt op de wand.</p></div>
+    <div class="wishes" id="wishes"></div>
+  </section>
+
+  <section class="screen scrap" id="s-outing"></section>
+
+  <nav class="island" id="island">
+    <button data-go="home" class="sel"><svg class="ic"><use href="#spark"/></svg> Binnenkort</button>
+    <button data-go="past"><svg class="ic"><use href="#clock"/></svg> Geweest</button>
+    <button data-go="wish"><svg class="ic"><use href="#heart"/></svg> Wensen <span class="badge" id="wishcount"></span></button>
+    <button class="plus" id="addbtn" title="Nieuw uitje">+</button>
+  </nav>
+
+  <div class="sheet" id="sheet">
+    <div class="panel">
+      <h3>Nieuw uitje</h3>
+      <p>Meestal hoeft dit niet: Hedwig ziet de bevestigingsmail en hangt het uitje vanzelf op de wand. Typ hier alleen iets wat nog geen mail heeft.</p>
+      <input id="newname" placeholder="Bijvoorbeeld: Schaatsen op de Jaap Eden">
+      <div class="acts"><button data-close>Laat maar</button><button class="go" id="newgo">Hang op de wand</button></div>
+    </div>
+  </div>
+  <div class="toast" id="toast"><i>✓</i><span></span></div>
+</div></div>
+
+<div class="demo">
+  <span>Prototype · doe alsof het</span>
+  <button data-today="2026-10-26" class="sel">maandag 26 okt is</button>
+  <button data-today="2026-10-28">woensdag 28 okt is, de dag zelf</button>
+  <button data-today="2026-11-27">vrijdag 27 nov is, Foute Vrijdag</button>
+  <span class="hint">Esc gaat terug · klik een poster om hem te openen</span>
+</div>
+</div>
+
+<script>
+// ---------- data (invented people, venues and shops) ----------
+const D = (y, m, d) => new Date(y, m - 1, d);
+let TODAY = D(2026, 10, 26);
+const PEOPLE = { G: 'Gideon', E: 'Eva', S: 'Sanne', J: 'Joris' };
+const ART = {
+  neon: ['linear-gradient(135deg,#FF3CAC,#784BA0 55%,#2B86C5)', 60],
+  fout: ['linear-gradient(135deg,#F6D45B,#F7B389 45%,#E0589A)', -30],
+  water: ['linear-gradient(160deg,#0F3D5E,#237A6F 60%,#8EDCC0)', 0],
+  cabaret: ['linear-gradient(135deg,#A24E1D,#F7B389)', 90],
+  zomer: ['linear-gradient(160deg,#43753A,#8EDCC0 55%,#F6D45B)', 30],
+  retro: ['linear-gradient(135deg,#5A5FBF,#C9A8F2)', 45],
+  circus: ['linear-gradient(135deg,#B9436B,#F6D45B)', -45],
+  ijs: ['linear-gradient(160deg,#8CC6F0,#fff 70%,#C9A8F2)', 20],
+};
+let outings = [
+  { id: 1, title: 'Neon Nineties', kind: 'feest', venue: 'De Kolenloods', city: 'Amsterdam', date: D(2026, 10, 28), doors: '20:00', who: ['G', 'E'], art: 'neon', eta: 25,
+    tickets: { shop: 'Weeztix', count: 2 }, mails: 3, words: ['neon nineties', 'kolenloods', 'weeztix'], lineup: ['DJ Sterrenstof', 'Vera Voorbeeld', 'The Example Brothers'],
+    todos: [{ t: 'Kaartjes naar telefoon', auto: true }, { t: 'Oppas regelen', done: true }, { t: 'Parkeren opzoeken', done: true }] },
+  { id: 2, title: 'Foute Vrijdag XL', kind: 'feest', venue: 'Paradiso', city: 'Amsterdam', date: D(2026, 11, 27), doors: '20:00', who: ['G', 'E', 'S', 'J'], art: 'fout', eta: 25,
+    tickets: { shop: 'Weeztix', count: 4 }, mails: 3, words: ['foute vrijdag', 'paradiso', 'weeztix', 'paylogic'], lineup: ['Foute DJ Team', 'Zangeres Zonder Naam'],
+    todos: [{ t: 'Kaartjes naar telefoon', auto: true }, { t: 'Foute outfit regelen', due: 'vóór 13 nov' }, { t: 'Sanne vragen of ze rijdt' }, { t: 'Oppas regelen', done: true }] },
+  { id: 3, title: 'Stille Wateren', kind: 'theater', venue: 'Stadsschouwburg', city: 'Haarlem', date: D(2026, 12, 12), doors: '19:30', who: ['G', 'E'], art: 'water', eta: 35,
+    tickets: { shop: 'Paylogic', count: 2 }, mails: 2, words: ['stille wateren', 'stadsschouwburg'], lineup: ['Toneelgroep Voorbeeld'],
+    todos: [{ t: 'Kaartjes naar telefoon', auto: true }, { t: 'Vooraf eten reserveren', done: true }] },
+  { id: 4, title: 'Theo Voorbeeld', kind: 'cabaret', venue: 'De Harmonie', city: 'Leeuwarden', date: D(2027, 1, 23), doors: '20:15', who: ['G', 'E'], art: 'cabaret', eta: 95,
+    tickets: null, mails: 1, words: ['theo voorbeeld', 'harmonie'], lineup: ['Theo Voorbeeld, "Nou ja zeg"'],
+    todos: [{ t: 'Kaartjes naar telefoon', auto: true }, { t: 'Hotel of terugrijden?' }] },
+  { id: 5, title: 'Zomerweide', kind: 'festival', venue: 'Zomerweide', city: 'Biddinghuizen', date: D(2027, 6, 19), doors: '12:00', who: ['G', 'E', 'S', 'J'], art: 'zomer', eta: 70,
+    tickets: { shop: 'Weeztix', count: 4 }, mails: 4, words: ['zomerweide', 'festival', 'camping'], lineup: ['nog niet bekend'],
+    todos: [{ t: 'Kaartjes naar telefoon', auto: true }, { t: 'Camping boeken', due: 'vóór 1 mrt' }] },
+  { id: 6, title: "Welcome To The 90's", kind: 'feest', venue: 'De Kolenloods', city: 'Amsterdam', date: D(2026, 10, 3), doors: '21:00', who: ['G', 'E'], art: 'retro', eta: 25,
+    tickets: { shop: 'Weeztix', count: 2 }, mails: 2, words: ['welcome to the 90s'], lineup: ['DJ Retro'], rating: 4, todos: [] },
+  { id: 7, title: 'Zomerweide 2026', kind: 'festival', venue: 'Zomerweide', city: 'Biddinghuizen', date: D(2026, 6, 20), doors: '12:00', who: ['G', 'E', 'S', 'J'], art: 'zomer', eta: 70,
+    tickets: { shop: 'Weeztix', count: 4 }, mails: 5, words: ['zomerweide'], lineup: ['Example Brothers', 'Vera Voorbeeld'], rating: 5, todos: [] },
+  { id: 8, title: 'Cabaret in het park', kind: 'cabaret', venue: 'Openluchttheater', city: 'Amsterdam', date: D(2026, 8, 15), doors: '20:30', who: ['G', 'E'], art: 'cabaret', eta: 20,
+    tickets: null, mails: 0, words: ['openluchttheater'], lineup: ['open podium'], rating: 0, todos: [] },
+];
+let wishes = [
+  { id: 101, title: 'Kerstcircus', note: 'Met de buren, tussen kerst en oud en nieuw.', art: 'circus', kind: 'feest' },
+  { id: 102, title: 'Schaatsen op de Jaap Eden', note: 'Een avond in december, daarna warme chocomel.', art: 'ijs', kind: 'festival' },
+  { id: 103, title: 'Theo Voorbeeld, nieuwe show', note: 'Sanne zei dat de try-out in maart is.', art: 'cabaret', kind: 'cabaret' },
+];
+let nextId = 200;
+
+// ---------- helpers ----------
+const $ = (s, el = document) => el.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const nl = new Intl.DateTimeFormat('nl-NL', { weekday: 'short' });
+const nlLong = new Intl.DateTimeFormat('nl-NL', { weekday: 'long' });
+const MON = ['jan', 'feb', 'mrt', 'apr', 'mei', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
+const wd = d => nl.format(d).replace('.', '');
+const mon = d => MON[d.getMonth()];
+const nights = o => o.date ? Math.round((o.date - TODAY) / 864e5) : null;
+const isPast = o => o.date && nights(o) < 0;
+const isToday = o => o.date && nights(o) === 0;
+const KIND = { feest: 'Feest', theater: 'Theater', cabaret: 'Cabaret', festival: 'Festival' };
+const GLYPH = { feest: 'music', theater: 'mask', cabaret: 'mask', festival: 'tent' };
+const icon = id => `<svg class="ic"><use href="#${id}"/></svg>`;
+const av = p => `<b class="av-${p.toLowerCase()}">${p}</b>`;
+const names = who => { const n = who.map(p => PEOPLE[p]); return n.length <= 2 ? n.join(' en ') : n.slice(0, -1).join(', ') + ' en ' + n.at(-1); };
+const others = who => names(who.filter(p => p !== 'G'));
+const openTodos = o => o.todos.filter(t => !t.done && !t.auto);
+const status = o => {
+  if (!o.date) return { cls: 'tix', label: 'Datum?' };
+  if (!o.tickets) return { cls: 'tix', label: 'Kaartjes?' };
+  if (openTodos(o).length) return { cls: 'todo', label: 'Nog doen' };
+  return { cls: 'ok', label: 'Geregeld!' };
+};
+const dateLabel = o => o.date ? `${wd(o.date)} ${o.date.getDate()} ${mon(o.date)}` : 'nog geen datum';
+const colours = ['#F6D45B', '#8EDCC0', '#8CC6F0', '#C9A8F2', '#F7B389', '#F59BC1', '#fff'];
+function confetti(host, n, once) {
+  host.innerHTML = '';
+  for (let i = 0; i < n; i++) {
+    const p = document.createElement('i');
+    p.style.left = `${Math.random() * 100}%`;
+    p.style.background = colours[i % colours.length];
+    p.style.animationDuration = `${4 + Math.random() * 5}s`;
+    p.style.animationDelay = once ? `${Math.random() * .8}s` : `${-Math.random() * 10}s`;
+    p.style.width = `${7 + Math.random() * 8}px`;
+    p.style.height = `${10 + Math.random() * 10}px`;
+    host.appendChild(p);
+  }
+}
+let toastTimer;
+function toast(msg) {
+  const t = $('#toast'); $('span', t).textContent = msg; t.classList.add('on');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('on'), 2600);
+}
+const isEnter = ev => ev.code === 'Enter' || ev.code === 'NumpadEnter';
+const isEscape = ev => ev.code === 'Escape';
+
+// ---------- navigation ----------
+let screen = 'home', prev = 'home', current = null, wallForced = false;
+function go(name, id) {
+  if (name === 'wall') { wallForced = true; name = 'home'; }
+  if (name === 'outing') { current = outings.find(o => o.id === id); renderOuting(); }
+  if (name !== 'outing') prev = name;
+  screen = name;
+  const tonight = outings.find(isToday);
+  const showTonight = name === 'home' && tonight && !wallForced;
+  for (const s of document.querySelectorAll('.screen')) s.classList.remove('on');
+  if (showTonight) { renderTonight(tonight); $('#s-tonight').classList.add('on'); }
+  else $('#s-' + name).classList.add('on');
+  $('#island').style.display = name === 'outing' ? 'none' : '';
+  for (const b of document.querySelectorAll('#island [data-go]')) b.classList.toggle('sel', b.dataset.go === name);
+  if (name === 'home') renderHome();
+  if (name === 'past') renderPast();
+  if (name === 'wish') renderWishes();
+}
+function back() { if (screen === 'outing') go(prev); else $('#sheet').classList.remove('on'); }
+document.addEventListener('click', ev => {
+  const g = ev.target.closest('[data-go]'); if (g) { go(g.dataset.go, g.dataset.id && +g.dataset.id); return; }
+  const p = ev.target.closest('.poster[data-id]'); if (p) { go('outing', +p.dataset.id); return; }
+  if (ev.target.closest('[data-close]')) $('#sheet').classList.remove('on');
+});
+document.addEventListener('keydown', ev => { if (isEscape(ev)) back(); });
+
+// ---------- home ----------
+function posterHTML(o, i, n, past) {
+  const rot = past ? (i % 2 ? 1.5 : -1.5) : ((i - (n - 1) / 2) * 3.2).toFixed(1);
+  const dy = past ? 0 : Math.abs(i - (n - 1) / 2) * 7;
+  const [art, ang] = ART[o.art]; const st = status(o);
+  const sticker = o.date ? `<div class="sticker">${wd(o.date)}<b>${o.date.getDate()}</b>${mon(o.date)}</div>` : `<div class="sticker q">datum<b>?</b></div>`;
+  const badge = past ? `<div class="stars">${o.rating ? '★'.repeat(o.rating) : '☆☆☆'}</div>` : `<div class="stamp ${st.cls}">${st.label}</div>`;
+  return `<div class="poster${past ? ' past' : ''}" data-id="${o.id}" style="--rot:${rot}deg;--dy:${dy}px;--d:${(i * .37) % 2}s;--art:${art};--ang:${ang}deg">
+    <div class="art"></div><div class="glyph">${icon(GLYPH[o.kind])}</div>${sticker}${badge}
+    <div class="tt"><small>${KIND[o.kind]}${o.venue ? ` · ${esc(o.venue)}` : ''}</small><h3>${esc(o.title)}</h3></div></div>`;
+}
+function renderHome() {
+  const up = outings.filter(o => !isPast(o)).sort((a, b) => (a.date || 9e15) - (b.date || 9e15));
+  const next = up.find(o => o.date && !isToday(o)) || up[0];
+  const h = $('#hello');
+  if (!next) h.innerHTML = `<div class="kick">Hé Gideon</div><h1>Niks gepland</h1><div class="sub">Kijk bij Wensen, of wacht op de volgende bevestigingsmail.</div>`;
+  else {
+    const st = status(next), n = nights(next);
+    const cta = st.cls === 'ok' ? `${icon('check')} Alles staat klaar, kaartjes komen die ochtend op je telefoon`
+      : st.cls === 'todo' ? `${icon('spark')} Nog doen: ${esc(openTodos(next)[0].t)}`
+      : !next.date ? `${icon('clock')} Datum kiezen` : `${icon('phone')} Kaartjes toevoegen`;
+    h.innerHTML = `<div class="kick">Hé Gideon</div>
+      <h1>${next.date ? `Nog <span class="n">${n}</span> ${n === 1 ? 'nachtje' : 'nachtjes'}` : 'Binnenkort'}</h1>
+      <div class="sub">tot <b>${esc(next.title)}</b>${next.venue ? ` in ${esc(next.venue)}` : ''}${next.who.length > 1 ? `, samen met ${others(next.who)}` : ''}.</div>
+      <button class="cta ${st.cls}" data-go="outing" data-id="${next.id}">${cta}</button>`;
+  }
+  const hand = $('#hand'); hand.style.setProperty('--ov', `${up.length > 6 ? (up.length * 170 - 1020) / (up.length - 1) : 0}px`);
+  hand.innerHTML = up.map((o, i) => posterHTML(o, i, up.length)).join('');
+  filterWall();
+  const start = D(2026, 10, 1), span = D(2027, 7, 1) - start;
+  const dots = up.filter(o => o.date).map((o, i) => `<i class="${i === 0 ? 'first' : ''}" style="left:${(100 * (o.date - start) / span).toFixed(1)}%" title="${esc(o.title)}"></i>`).join('');
+  const nowX = (100 * (TODAY - start) / span).toFixed(1);
+  $('#ride').innerHTML = `<div class="line"><span class="now" style="left:${nowX}%">nu</span>${dots}</div>
+    <div class="months">${['okt', 'nov', 'dec', 'jan', 'feb', 'mrt', 'apr', 'mei', 'jun'].map(m => `<span>${m}</span>`).join('')}</div>`;
+}
+function filterWall() {
+  const q = $('#q').value.trim().toLowerCase();
+  for (const p of document.querySelectorAll('#hand .poster')) {
+    const o = outings.find(x => x.id === +p.dataset.id);
+    const hit = !q || [o.title, o.venue, o.city, KIND[o.kind], ...o.words].some(w => w.toLowerCase().includes(q));
+    p.classList.toggle('dim', !hit);
+  }
+}
+$('#q').addEventListener('input', filterWall);
+$('#q').addEventListener('focus', () => $('#searchpill').classList.add('open'));
+$('#q').addEventListener('blur', () => { if (!$('#q').value) $('#searchpill').classList.remove('open'); });
+
+// ---------- tonight ----------
+let clockTimer, left = 4 * 3600 + 12 * 60 + 8;
+function renderTonight(o) {
+  $('#plezier').textContent = o.who.length === 2 ? 'veel plezier, jullie twee' : `veel plezier met z'n ${o.who.length}en`;
+  $('#tn-title').innerHTML = `<h1>${esc(o.title).replace(' ', '<br>')}</h1><div class="meta">
+    <span>${icon('clock')} Deuren ${o.doors}</span><span>${icon('pin')} ${esc(o.venue)}, ${esc(o.city)}</span><span>${icon('heart')} met ${others(o.who)}</span></div>`;
+  $('#tn-title').onclick = () => go('outing', o.id);
+  const holders = o.who.slice(0, 2);
+  $('#stubs').innerHTML = o.tickets ? `<div class="phone-ok"><i>✓</i> Staan op ${o.who.length === 1 ? 'je telefoon' : 'jullie telefoons'}</div>` + holders.map((p, i) =>
+    `<div class="stub" style="--rot:${i ? 3 : -5}deg;--x:${i * 110}px;--y:${20 + i * 34}px"><div class="main"><small>${esc(o.tickets.shop)} · ${esc(o.title)}</small><h4>Toegang</h4>
+     <div class="row">${dateLabel(o)} · deuren ${o.doors}</div><div class="holder">${av(p)} ${PEOPLE[p]}</div></div><div class="tear"><div class="qr"></div></div></div>`).join('')
+    : `<div class="phone-ok" style="background:var(--lemon);color:#3B2E00"><i>!</i> Nog geen kaartjes gevonden</div>`;
+  $('#routecard').innerHTML = `<div class="gridbg"></div><svg class="map" viewBox="0 0 380 300">
+    <path d="M-10 230 C 60 200, 90 240, 150 190 S 250 120, 330 90 L 400 60" stroke="rgba(255,255,255,.1)" stroke-width="18" fill="none"/>
+    <path d="M40 320 C 70 220, 120 220, 170 150 S 260 60, 300 20" stroke="rgba(255,255,255,.08)" stroke-width="10" fill="none"/>
+    <path d="M40 250 C 90 230, 120 210, 160 170 S 250 110, 300 86" stroke="#F6D45B" stroke-width="6" fill="none" stroke-linecap="round" stroke-dasharray="500" stroke-dashoffset="500" style="animation: draw 2.4s ease-out forwards .4s; filter: drop-shadow(0 0 8px rgba(246,212,91,.8))"/>
+    <circle cx="40" cy="250" r="8" fill="#fff"/><circle cx="300" cy="86" r="11" fill="#E0589A" stroke="#fff" stroke-width="3"/>
+    <text x="56" y="256" fill="#fff" font-family="ui-rounded, system-ui" font-weight="700" font-size="12">Thuis</text>
+    <text x="200" y="76" fill="#fff" font-family="ui-rounded, system-ui" font-weight="700" font-size="12">${esc(o.venue)}</text></svg>
+    <div class="lbl">Route</div><div class="eta"><b>${o.eta} min</b><span>vertrek ${leave(o)}, dan sta je op tijd</span></div>
+    <button class="go" onclick="toast('Kaarten opent met de route naar ${esc(o.venue)}')">${icon('car')} Rijden</button>`;
+  const done = o.todos.filter(t => t.done).map(t => `<span class="ok">${icon('check')} ${esc(t.t)}</span>`);
+  $('#chips').innerHTML = [...done, `<span>${icon('cloud')} 9° en droog, jas mee</span>`, `<span>${icon('mail')} ${o.mails} mails</span>`].join('');
+  confetti($('#conf'), 70);
+  clearInterval(clockTimer); left = 4 * 3600 + 12 * 60 + 8;
+  const tick = () => { const s = left--; const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), ss = s % 60;
+    $('#digits').innerHTML = `${h}<small>u</small>${String(m).padStart(2, '0')}<small>m</small>${String(ss).padStart(2, '0')}<small>s</small>`; };
+  tick(); clockTimer = setInterval(tick, 1000);
+}
+function leave(o) { const [h, m] = o.doors.split(':').map(Number); const t = h * 60 + m - o.eta - 15; return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`; }
+
+// ---------- past ----------
+function renderPast() {
+  const past = outings.filter(isPast).sort((a, b) => b.date - a.date);
+  $('#pastgrid').innerHTML = past.length ? past.map((o, i) => posterHTML(o, i, past.length, true)).join('') : `<div class="empty">Nog niks geweest. Dat komt.</div>`;
+}
+
+// ---------- wishes ----------
+function renderWishes() {
+  $('#wishcount').textContent = wishes.length || ''; $('#wishcount').style.display = wishes.length ? '' : 'none';
+  $('#wishes').innerHTML = wishes.map((w, i) => `<div class="wish" style="--rot:${(i % 3 - 1) * 1.6}deg"><h3>${esc(w.title)}</h3><p>${esc(w.note)}</p>
+    <div class="acts"><button class="go" onclick="planWish(${w.id})">${icon('spark')} Plan het</button><button onclick="dropWish(${w.id})">Laat maar</button></div></div>`).join('')
+    + `<div class="wish new" style="--rot:0"><h3>Nieuwe wens</h3><p>Iets wat je niet wilt vergeten.</p><input id="wishname" placeholder="Typ en druk op Enter"></div>`;
+  $('#wishname').addEventListener('keydown', ev => { if (isEnter(ev) && ev.target.value.trim()) { wishes.push({ id: nextId++, title: ev.target.value.trim(), note: 'Nog geen idee wanneer.', art: 'retro', kind: 'feest' }); renderWishes(); } });
+}
+function planWish(id) {
+  const w = wishes.find(x => x.id === id); wishes = wishes.filter(x => x.id !== id);
+  outings.push({ id: w.id, title: w.title, kind: w.kind, venue: '', city: '', date: null, doors: '20:00', who: ['G', 'E'], art: w.art, eta: 30, tickets: null, mails: 0, words: [], lineup: [], todos: [{ t: 'Kaartjes naar telefoon', auto: true }, { t: 'Datum prikken' }] });
+  renderWishes(); toast(`${w.title} hangt op de wand`);
+}
+function dropWish(id) { wishes = wishes.filter(x => x.id !== id); renderWishes(); }
+
+// ---------- outing (plakboek) ----------
+function renderOuting() {
+  const o = current, [art] = ART[o.art], n = nights(o), past = isPast(o), today = isToday(o), st = status(o);
+  const count = !o.date ? `<div class="count" style="background:#fff;color:var(--violet)">datum<b>?</b>kiezen</div>`
+    : past ? `<div class="count past">geweest<b>${Math.abs(n)} ${Math.abs(n) === 1 ? 'nacht' : 'nachten'}</b>geleden</div>`
+    : today ? `<div class="count today">het is<b>vanavond</b>zover</div>` : `<div class="count">nog<b>${n}</b>${n === 1 ? 'nachtje' : 'nachtjes'}</div>`;
+  const todos = o.todos.map((t, i) => t.auto
+    ? `<div class="it auto"><i></i>${esc(t.t)}<span class="due auto">${past ? 'gedaan' : 'vanzelf'}</span></div>`
+    : `<div class="it${t.done ? ' done' : ''}" onclick="toggleTodo(${i})"><i>${t.done ? '✓' : ''}</i>${esc(t.t)}${t.due && !t.done ? `<span class="due">${esc(t.due)}</span>` : ''}</div>`).join('');
+  const tix = o.tickets
+    ? `<div class="ticket"><div class="main"><small>${esc(o.tickets.shop)} · ${o.tickets.count} kaartjes</small><h4>${esc(o.title)}</h4><div class="row">${dateLabel(o)} · deuren ${o.doors}</div>
+       <div class="row" style="margin-top:6px;color:#8A7FA8">op naam van ${names(o.who)}</div></div><div class="tear"><span>SCHEUR HIER</span></div></div>`
+    : `<div class="ticket none" onclick="addTickets()">Nog geen kaartjes<b>${past ? 'Was gratis' : 'Sleep de PDF hierheen, of koop ze'}</b></div>`;
+  const stars = [1, 2, 3, 4, 5].map(k => `<b class="${o.rating >= k ? 'on' : ''}" onclick="rate(${k})">★</b>`).join('');
+  const backLabel = { home: 'Binnenkort', past: 'Geweest', wish: 'Wensen' }[prev];
+  const whoLabel = o.who.length === 1 ? 'alleen' : o.who.length === 2 ? 'met z’n tweeën' : `met z’n ${o.who.length}en`;
+  $('#s-outing').innerHTML = `
+    <button class="back" data-go="${prev}">${icon('back')} ${backLabel}</button>
+    <div class="topright">${!past ? `<button onclick="toast('Patronus stuurt de kaartjes naar ${names(o.who)}')">${icon('phone')} Naar telefoon</button>` : ''}<button onclick="this.classList.toggle('on');$('#details').classList.toggle('on')">Details</button></div>
+    <div class="details" id="details">
+      <h5>Zoekwoorden</h5>${o.words.length ? o.words.map(w => `<span class="tag">${esc(w)}</span>`).join('') : '<span class="tag">nog geen</span>'}
+      <h5>Line-up</h5>${o.lineup.length ? o.lineup.map(esc).join('<br>') : 'nog niet bekend'}
+      <h5>Mails</h5>${o.mails ? `${o.mails} in Hedwig${o.tickets ? `, van ${esc(o.tickets.shop)}` : ''}` : 'geen'}
+      <h5>Adres</h5>${o.venue ? esc(o.venue) : 'nog te kiezen'}${o.city ? `, ${esc(o.city)}` : ''}
+    </div>
+    <div class="photo" style="--art:${art}"><div class="art"><div class="big"><small>${o.venue ? esc(o.venue) : 'plek nog te kiezen'}${o.city ? ` · ${esc(o.city)}` : ''}</small>${esc(o.title)}</div></div>
+      <div class="cap"><span>${o.who.length > 1 ? `met ${others(o.who)}` : 'alleen'}</span><span>${o.tickets ? `poster van ${esc(o.tickets.shop)}` : 'nog geen poster'}</span></div></div>
+    <div class="tape" style="--c:var(--mint);--r:-38deg;left:36px;top:78px"></div><div class="tape" style="--c:var(--candy);--r:32deg;left:430px;top:456px"></div>
+    ${count}
+    <div class="facts">${o.date ? `<span class="fact when" style="--r:-2deg">${icon('clock')} ${dateLabel(o)} · ${o.doors}</span>` : `<span class="fact when q" style="--r:-2deg" onclick="pickDate()">${icon('clock')} Datum kiezen</span>`}
+      <span class="fact who" style="--r:1.5deg">${o.who.map(av).join('')}<span>${whoLabel}</span></span></div>
+    ${o.date ? `<div class="calpage"><div class="m">${mon(o.date)}</div><div class="d">${o.date.getDate()}</div><div class="w">${nlLong.format(o.date)}</div></div>` : ''}
+    <div class="mapcard"><svg viewBox="0 0 306 190">
+      <path d="M-10 150 C 60 120, 90 160, 150 120 S 240 60, 320 40" stroke="#fff" stroke-width="14" fill="none"/><path d="M30 210 C 60 130, 110 140, 150 90 S 230 30, 260 0" stroke="#fff" stroke-width="8" fill="none"/>
+      <path d="M30 150 C 80 130, 110 120, 150 95 S 220 55, 250 50" stroke="#7A3FC9" stroke-width="5" fill="none" stroke-linecap="round"/><circle cx="30" cy="150" r="6" fill="#7A3FC9"/>
+      <g transform="translate(250 50)"><path d="M0 0c-9-9-12-15-12-21a12 12 0 0 1 24 0c0 6-3 12-12 21z" fill="#E0589A" stroke="#fff" stroke-width="2.5" transform="translate(0 2)"/><circle cy="-18" r="4" fill="#fff"/></g></svg>
+      <div class="eta">${o.eta} min<small>met de auto</small></div><button class="go" onclick="toast('Kaarten opent met de route naar ${esc(o.venue)}')">${icon('route')} Route</button></div>
+    <div class="pad"><h4>${past ? 'Gedaan' : 'Nog doen'}</h4>${todos}${!past ? `<div class="it add" onclick="addTodo(this)"><i>+</i><span>Iets toevoegen</span></div>` : ''}</div>
+    ${tix}
+    <div class="clip" onclick="toast('Hedwig opent de ${o.mails} mails over ${esc(o.title)}')">${icon('mail')} <b>${o.mails} mails</b> ${o.mails ? 'in Hedwig' : 'nog niet'}</div>
+    ${past ? `<button class="party muted" onclick="toast('Je herinneringen staan bij Geweest')">${icon('heart')} Foto erbij plakken</button>`
+      : `<button class="party${st.cls === 'ok' ? '' : ' muted'}" onclick="party()">${icon('party')} ${st.cls === 'ok' ? 'Alles geregeld? Vier het' : 'Eerst nog even doen'}</button>`}
+    <div class="sticker2">${past ? 'was het leuk?' : 'na afloop:<br>was het leuk?'}<div class="stars">${stars}</div></div>
+    <div class="conf" id="pconf"></div>`;
+}
+function toggleTodo(i) { current.todos[i].done = !current.todos[i].done; renderOuting(); }
+function addTodo(el) {
+  el.innerHTML = `<i>+</i><input placeholder="Wat moet er nog?">`; el.onclick = null;
+  const inp = $('input', el); inp.focus();
+  inp.addEventListener('keydown', ev => { if (isEnter(ev) && inp.value.trim()) { current.todos.push({ t: inp.value.trim() }); renderOuting(); } if (isEscape(ev)) renderOuting(); });
+  inp.addEventListener('blur', () => { if (!inp.value.trim()) renderOuting(); });
+}
+function addTickets() { current.tickets = { shop: 'eigen PDF', count: current.who.length }; current.mails += 1; renderOuting(); toast('Kaartjes toegevoegd, Patronus stuurt ze op de dag'); }
+function pickDate() { const d = new Date(TODAY); d.setDate(d.getDate() + 20); d.setDate(d.getDate() + ((6 - d.getDay() + 7) % 7)); current.date = d; current.todos = current.todos.filter(t => t.t !== 'Datum prikken'); renderOuting(); toast(`Gepland op ${dateLabel(current)}`); }
+function rate(k) { current.rating = current.rating === k ? 0 : k; renderOuting(); }
+function party() { confetti($('#pconf'), 90, true); setTimeout(() => { $('#pconf').innerHTML = ''; }, 6000); toast('Dan is dit alvast een feestje'); }
+
+// ---------- new outing sheet, demo bar, fit ----------
+$('#addbtn').addEventListener('click', () => { $('#sheet').classList.add('on'); $('#newname').value = ''; $('#newname').focus(); });
+$('#newgo').addEventListener('click', () => {
+  const v = $('#newname').value.trim(); if (!v) return;
+  const id = nextId++;
+  wishes.push({ id, title: v, note: 'Uit de hand toegevoegd.', art: 'retro', kind: 'feest' }); $('#sheet').classList.remove('on'); planWish(id); go('home');
+});
+$('#newname').addEventListener('keydown', ev => { if (isEnter(ev)) $('#newgo').click(); });
+for (const b of document.querySelectorAll('.demo [data-today]')) b.addEventListener('click', () => {
+  for (const x of document.querySelectorAll('.demo [data-today]')) x.classList.remove('sel'); b.classList.add('sel');
+  const [y, m, d] = b.dataset.today.split('-').map(Number); TODAY = D(y, m, d); wallForced = false; go('home');
+});
+function fit() { const vp = $('.viewport'), s = Math.min(1, vp.clientWidth / 1100); $('#stage').style.transform = `scale(${s})`; vp.style.height = `${720 * s}px`; }
+fit(); addEventListener('resize', fit);
+renderWishes(); go('home');
+</script>
+</body>
+</html>

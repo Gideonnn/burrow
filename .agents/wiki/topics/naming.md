@@ -15,6 +15,7 @@ states that Burrow is not affiliated with the rights holders.
 | Hedwig | Mail | Active |
 | Pensieve | Recorded conversations: transcripts and notes (was RecHoarder); later also the searchable archive of documents and notes | Active |
 | Lumos | Films and series to watch together: catalogue, lists, requests to the media server | Active |
+| Hogsmeade | The playful face of Lumos: the same lists, verdicts and catalogue, as a wall of posters with stickers and confetti, so the household can pick which face it likes (`apps/hogsmeade-mac`) | Active |
 | Sorting Hat | Decisions between fixed options (category, priority, sensitive, triage action): the triage skill today, later a small local decision model in the style of Jev | Draft |
 | Portkey | Routines: triggers that start tasks | Planned |
 | Remembrall | Tasks and reminders (Todoist replacement) | Idea |

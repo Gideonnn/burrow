@@ -246,11 +246,11 @@ locally.
 **Why:** speaker letters restart per part; the only timestamping model is deprecated.
 **Scope:** half a day for (1); (2) depends on what OpenAI offers.
 
-## Lumos: choose seasons, and the newest digital releases
+## Lumos: more seasons of a requested series, and the newest digital releases
 
-**What:** a season picker when a series goes on a list (the server already takes
-`seasons`; the Mac sends none, so Lumos asks the first season), and asking more seasons
-of a title that is already requested. A "Nieuw digitaal" row from TMDB's release types
-(`region=NL`, type 4), which Seerr does not offer, would need a TMDB credential.
-**Why:** series now only ever get season 1 unless someone changes it in Seerr.
-**Scope:** a day for the picker; the TMDB row after deciding on a credential.
+**What:** asking more seasons of a series that is already on a list and requested (the
+season menu only works before the first "Ja"), and a "Nieuw digitaal" row from TMDB's
+release types (`region=NL`, type 4), which Seerr does not offer and would need a TMDB
+credential.
+**Why:** a series that went on the list with season 1 can only get more in Seerr itself.
+**Scope:** half a day for the extra seasons; the TMDB row after deciding on a credential.

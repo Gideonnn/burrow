@@ -1,0 +1,360 @@
+<!doctype html>
+<!-- Impression of a stand-alone outings app (the Evenementen page of Hedwig as its own window), drawn 25 October 2026 in the native Burrow style. Not built; Hedwig keeps its outings. -->
+<html lang="nl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="color-scheme" content="light dark" />
+<title>Hogsmeade · evenementen als eigen app · impressie</title>
+<style>
+/* Tokens from burrow-design-system.html, plus the app's own colour. */
+:root {
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --round: ui-rounded, "SF Pro Rounded", -apple-system, BlinkMacSystemFont, sans-serif;
+  --bg: #F4F1EC; --surface: #FFFFFF; --surface-2: #F8F6F2; --sidebar: #ECE8E1;
+  --line: #E2DDD5; --text: #1F1C18; --text-2: #6B655D; --text-3: #857E74;
+  --hover: rgba(31,28,24,.05); --warning: #9A5B00; --warning-tint: rgba(154,91,0,.12);
+  --success: #2A7549; --success-tint: rgba(42,117,73,.12);
+  --app: #7A3FC9; --app-tint: rgba(122,63,201,.12); --on-app: #fff;
+  --lemon: #F6D45B; --mint: #8EDCC0; --sky: #8CC6F0; --lilac: #C9A8F2; --peach: #F7B389; --candy: #F59BC1;
+  --shadow-1: 0 1px 2px rgba(31,28,24,.08), 0 0 0 1px rgba(31,28,24,.05);
+  --shadow-2: 0 6px 20px rgba(31,28,24,.14), 0 0 0 1px rgba(31,28,24,.06);
+}
+.dark {
+  --bg: #1C1A17; --surface: #242120; --surface-2: #2B2825; --sidebar: #2B2825;
+  --line: #35312D; --text: #F2EEE8; --text-2: #A39C92; --text-3: #7C756B;
+  --hover: rgba(242,238,232,.06); --warning: #F0B24A; --warning-tint: rgba(240,178,74,.16);
+  --success: #5FCB85; --success-tint: rgba(95,203,133,.16);
+  --app: #C9A6FF; --app-tint: rgba(201,166,255,.16); --on-app: #1C1A17;
+  --shadow-1: 0 1px 2px rgba(0,0,0,.4), 0 0 0 1px rgba(255,255,255,.06);
+  --shadow-2: 0 6px 20px rgba(0,0,0,.5), 0 0 0 1px rgba(255,255,255,.07);
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: var(--font); font-size: 14px; line-height: 1.45; -webkit-font-smoothing: antialiased; }
+h1,h2,h3,h4,p { margin: 0; }
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+svg.i { width: 16px; height: 16px; flex: none; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+.doc { display: flex; flex-direction: column; gap: 28px; padding: 4px 0 24px; }
+.cap { font-size: 13px; color: var(--muted-foreground, #888); margin-bottom: 8px; }
+.cap b { color: var(--foreground, inherit); }
+.fit { width: 100%; }
+.fit > .mac { width: 1100px; transform-origin: 0 0; }
+
+/* The window */
+.mac { background: var(--bg); color: var(--text); border-radius: 12px; box-shadow: var(--shadow-2); overflow: hidden; display: flex; flex-direction: column; height: 700px; }
+.tb { display: grid; grid-template-columns: 220px 1fr; height: 52px; background: var(--surface); border-bottom: 1px solid var(--line); }
+.tb > div { display: flex; align-items: center; gap: 10px; padding: 0 14px; min-width: 0; }
+.tb > div:first-child { background: var(--sidebar); padding-left: 16px; }
+.lights { display: inline-flex; gap: 8px; margin-right: 6px; }
+.lights i { width: 12px; height: 12px; border-radius: 50%; background: #FF5F57; box-shadow: inset 0 0 0 .5px rgba(0,0,0,.15); }
+.lights i:nth-child(2) { background: #FEBC2E; } .lights i:nth-child(3) { background: #28C840; }
+.tb .t { font-weight: 700; font-size: 15px; font-family: var(--round); }
+.tb .st { font-size: 12px; color: var(--text-2); }
+.tb .grow { flex: 1; }
+.tbtn { height: 30px; min-width: 30px; padding: 0 10px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; color: var(--text-2); font-size: 13px; }
+.tbtn:hover { background: var(--hover); color: var(--text); }
+.tbtn.primary { background: var(--app); color: var(--on-app); font-weight: 600; padding: 0 12px; }
+.search { height: 30px; width: 220px; border-radius: 8px; background: var(--surface-2); border: 1px solid var(--line); color: var(--text-3); display: flex; align-items: center; gap: 6px; padding: 0 9px; font-size: 13px; }
+
+.body { display: grid; grid-template-columns: 220px 1fr; flex: 1; min-height: 0; }
+.side { background: var(--sidebar); padding: 10px 10px 12px; overflow: hidden; border-right: 1px solid var(--line); }
+.sb-label { font-size: 11px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: .04em; padding: 12px 8px 4px; }
+.sb-row { display: flex; align-items: center; gap: 9px; height: 30px; padding: 0 8px; border-radius: 7px; font-size: 13px; color: var(--text); }
+.sb-row .grow { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sb-row .n { font-size: 12px; color: var(--text-3); }
+.sb-row.sel { background: var(--app); color: var(--on-app); }
+.sb-row.sel .n { color: inherit; opacity: .85; }
+.sb-row .dot { width: 10px; height: 10px; border-radius: 50%; }
+.main { overflow: hidden; display: flex; flex-direction: column; }
+.scroll { padding: 22px 26px 30px; overflow: hidden; }
+
+/* Tonight banner */
+.tonight { position: relative; overflow: hidden; border-radius: 16px; padding: 22px 24px; color: #fff; display: grid; grid-template-columns: 1fr auto; gap: 20px; align-items: center;
+  background: linear-gradient(110deg, #5B2AA8 0%, #8A3FD1 55%, #E0589A 100%); box-shadow: var(--shadow-1); }
+.tonight .kicker { font-family: var(--round); font-weight: 700; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; opacity: .9; }
+.tonight h2 { font-family: var(--round); font-weight: 800; font-size: 32px; letter-spacing: -.02em; line-height: 1.1; margin: 4px 0 8px; }
+.tonight .facts { font-size: 14px; opacity: .95; display: flex; gap: 16px; flex-wrap: wrap; }
+.tonight .facts span { display: inline-flex; gap: 6px; align-items: center; }
+.tonight .acts { display: flex; flex-direction: column; gap: 8px; align-items: stretch; z-index: 1; }
+.tonight .acts button { height: 36px; padding: 0 16px; border-radius: 10px; font-weight: 600; font-size: 14px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.tonight .acts .w { background: #fff; color: #5B2AA8; }
+.tonight .acts .g { background: rgba(255,255,255,.18); color: #fff; box-shadow: inset 0 0 0 1px rgba(255,255,255,.35); }
+.conf { position: absolute; inset: 0; pointer-events: none; }
+.conf i { position: absolute; width: 8px; height: 8px; border-radius: 2px; opacity: .85; transform: rotate(var(--r)); }
+
+/* Poster wall */
+.sec-h { display: flex; align-items: baseline; gap: 10px; margin: 24px 0 12px; }
+.sec-h h3 { font-family: var(--round); font-weight: 700; font-size: 18px; }
+.sec-h span { font-size: 13px; color: var(--text-3); }
+.wall { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.poster { background: var(--surface); border-radius: 14px; overflow: hidden; box-shadow: var(--shadow-1); display: flex; flex-direction: column; position: relative; }
+.poster .art { height: 128px; position: relative; display: flex; align-items: flex-end; padding: 10px; }
+.poster .art svg { width: 44px; height: 44px; stroke: rgba(255,255,255,.9); fill: none; stroke-width: 1.6; position: absolute; right: 14px; top: 14px; opacity: .9; }
+.poster .date { position: absolute; left: 10px; top: 10px; width: 46px; border-radius: 10px; background: #fff; color: #1F1C18; text-align: center; padding: 4px 0 5px; box-shadow: 0 2px 6px rgba(0,0,0,.18); line-height: 1; }
+.poster .date small { display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: #A24E1D; }
+.poster .date b { display: block; font-size: 20px; font-weight: 800; font-family: var(--round); margin-top: 2px; }
+.poster .days { position: absolute; right: 10px; bottom: 10px; background: rgba(255,255,255,.92); color: #1F1C18; border-radius: 999px; padding: 3px 9px; font-size: 12px; font-weight: 600; font-family: var(--round); }
+.poster .txt { padding: 10px 12px 12px; }
+.poster .txt h4 { font-family: var(--round); font-weight: 700; font-size: 15px; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.poster .txt .sub { font-size: 12px; color: var(--text-2); margin-top: 1px; }
+.poster .txt .status { margin-top: 8px; font-size: 12px; display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: 999px; background: var(--surface-2); color: var(--text-2); }
+.poster .txt .status.ok { background: var(--success-tint); color: var(--success); }
+.poster .txt .status.todo { background: var(--warning-tint); color: var(--warning); }
+.poster .txt .status.app { background: var(--app-tint); color: var(--app); }
+.poster.past .art { filter: grayscale(1); opacity: .55; }
+.poster.past .txt h4 { color: var(--text-2); }
+.who { display: inline-flex; margin-left: auto; margin-top: 8px; }
+.who i { width: 20px; height: 20px; border-radius: 50%; display: inline-grid; place-items: center; font-size: 10px; font-weight: 700; color: #fff; font-style: normal; box-shadow: 0 0 0 2px var(--surface); }
+.who i + i { margin-left: -5px; }
+.g { background: #3B4A6B; } .e { background: #8A4FA3; }
+
+/* Detail page */
+.hero { position: relative; height: 230px; display: flex; align-items: flex-end; padding: 22px 26px; color: #fff; overflow: hidden; }
+.hero .bgart { position: absolute; inset: 0; }
+.hero .bgart::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(31,28,24,.78) 0%, rgba(31,28,24,.35) 45%, rgba(31,28,24,0) 75%), linear-gradient(0deg, rgba(31,28,24,.55) 0%, rgba(31,28,24,0) 60%); }
+.hero .in { position: relative; display: flex; align-items: flex-end; gap: 18px; width: 100%; }
+.hero .bigdate { width: 70px; border-radius: 14px; background: #fff; color: #1F1C18; text-align: center; padding: 7px 0 8px; line-height: 1; box-shadow: 0 4px 12px rgba(0,0,0,.25); flex: none; }
+.hero .bigdate small { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: #A24E1D; }
+.hero .bigdate b { display: block; font-size: 32px; font-weight: 800; font-family: var(--round); margin-top: 3px; }
+.hero .bigdate em { display: block; font-size: 11px; font-style: normal; color: #6B655D; margin-top: 3px; }
+.hero h1 { font-family: var(--round); font-weight: 800; font-size: 40px; letter-spacing: -.02em; line-height: 1.05; text-shadow: 0 2px 10px rgba(0,0,0,.25); }
+.hero .kind { font-size: 14px; opacity: .9; margin-top: 4px; }
+.hero .count { margin-left: auto; background: rgba(255,255,255,.92); color: #5B2AA8; border-radius: 999px; padding: 8px 16px; font-family: var(--round); font-weight: 800; font-size: 16px; box-shadow: 0 4px 12px rgba(0,0,0,.2); white-space: nowrap; }
+.page { padding: 20px 26px 30px; display: flex; flex-direction: column; gap: 16px; }
+.card { background: var(--surface); border-radius: 14px; box-shadow: var(--shadow-1); }
+.facts { display: grid; grid-template-columns: 1fr 240px; }
+.facts .rows { padding: 14px 18px; display: flex; flex-direction: column; gap: 10px; }
+.facts .row { display: grid; grid-template-columns: 72px 1fr; gap: 10px; align-items: start; }
+.facts .row .k { font-size: 12px; font-weight: 600; color: var(--text-3); padding-top: 2px; }
+.facts .row .v { font-size: 14px; }
+.facts .row .v small { display: block; font-size: 12px; color: var(--text-2); }
+.chip { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px 0 4px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); font-size: 13px; margin-right: 6px; }
+.chip i { width: 18px; height: 18px; border-radius: 50%; display: inline-grid; place-items: center; font-size: 9px; font-weight: 700; color: #fff; font-style: normal; }
+.chip.off { opacity: .5; }
+.map { position: relative; background: #DCE9D3; background-image: linear-gradient(#cfdcc6 1px, transparent 1px), linear-gradient(90deg, #cfdcc6 1px, transparent 1px); background-size: 28px 28px; border-radius: 0 14px 14px 0; overflow: hidden; }
+.map .road { position: absolute; left: -10%; right: -10%; top: 48%; height: 14px; background: #fff; transform: rotate(-12deg); }
+.map .road2 { position: absolute; top: -10%; bottom: -10%; left: 60%; width: 10px; background: #fff; transform: rotate(20deg); }
+.map .pin { position: absolute; left: 50%; top: 42%; width: 38px; height: 38px; border-radius: 50% 50% 50% 0; background: var(--app); transform: translate(-50%,-100%) rotate(-45deg); box-shadow: 0 3px 8px rgba(0,0,0,.25); }
+.map .pin::after { content: ""; position: absolute; inset: 7px; border-radius: 50%; background: #fff; }
+.map .eta { position: absolute; left: 10px; bottom: 10px; background: rgba(255,255,255,.95); color: #1F1C18; border-radius: 999px; padding: 3px 9px; font-size: 12px; font-weight: 600; }
+.map .route { position: absolute; right: 10px; bottom: 10px; width: 32px; height: 32px; border-radius: 50%; background: var(--app); color: #fff; display: grid; place-items: center; box-shadow: 0 2px 6px rgba(0,0,0,.2); }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.card h3 { font-family: var(--round); font-weight: 700; font-size: 15px; display: flex; align-items: center; gap: 8px; padding: 14px 18px 0; }
+.tickets { display: flex; gap: 12px; padding: 12px 18px 16px; }
+.tix { flex: 1; border-radius: 12px; background: linear-gradient(160deg, #2A1B52, #5B2AA8); color: #fff; padding: 12px; position: relative; min-height: 120px; display: flex; flex-direction: column; justify-content: space-between; }
+.tix::before, .tix::after { content: ""; position: absolute; width: 14px; height: 14px; border-radius: 50%; background: var(--surface); top: 64px; }
+.tix::before { left: -7px; } .tix::after { right: -7px; }
+.tix .qr { width: 44px; height: 44px; background: #fff; border-radius: 6px; background-image: repeating-linear-gradient(0deg, #111 0 3px, transparent 3px 6px), repeating-linear-gradient(90deg, #111 0 3px, transparent 3px 6px); background-blend-mode: screen; opacity: .95; }
+.tix .nm { font-weight: 700; font-family: var(--round); }
+.tix .sub { font-size: 11px; opacity: .8; }
+.todo { padding: 10px 18px 14px; display: flex; flex-direction: column; gap: 8px; }
+.todo .it { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+.todo .c { width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid var(--line); display: grid; place-items: center; flex: none; }
+.todo .c.todo-warn { border-color: var(--warning); }
+.todo .due { margin-left: auto; font-size: 12px; color: var(--warning); font-weight: 600; }
+.todo .add { color: var(--text-3); }
+.todo .add .c { border-style: dashed; }
+.details { font-size: 13px; color: var(--app); padding: 0 2px; }
+
+/* Icon and names */
+.extras { display: grid; grid-template-columns: auto 1fr; gap: 20px; align-items: center; }
+.icon { width: 96px; height: 96px; border-radius: 22px; background: linear-gradient(160deg, #9B5CF0 0%, #5B2AA8 100%); box-shadow: 0 8px 20px rgba(91,42,168,.35), inset 0 0 0 1px rgba(255,255,255,.2); display: grid; place-items: center; }
+.icon svg { width: 62px; height: 62px; }
+.names { font-size: 14px; color: var(--foreground, inherit); display: flex; flex-direction: column; gap: 6px; }
+.names div { display: flex; gap: 10px; align-items: baseline; }
+.names b { font-family: var(--round); font-size: 15px; min-width: 120px; }
+.names span { color: var(--muted-foreground, #888); font-size: 13px; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s7-6.5 7-11.5A7 7 0 0 0 5 9.5C5 14.5 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol>
+  <symbol id="i-ticket" viewBox="0 0 24 24"><path d="M3 9V6.5A1.5 1.5 0 0 1 4.5 5h15A1.5 1.5 0 0 1 21 6.5V9a2.5 2.5 0 0 0 0 5v2.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 16.5V14a2.5 2.5 0 0 0 0-5z"/><path d="M14 5v14" stroke-dasharray="2 2"/></symbol>
+  <symbol id="i-route" viewBox="0 0 24 24"><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="6" r="2.5"/><path d="M8.5 18H14a3 3 0 0 0 0-6h-4a3 3 0 0 1 0-6h5.5"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.3-4.3"/></symbol>
+  <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1.1 5.9L12 16.9l-5.3 2.8 1.1-5.9-4.3-4.1 5.9-.8z"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></symbol>
+  <symbol id="i-music" viewBox="0 0 24 24"><path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/></symbol>
+  <symbol id="i-mask" viewBox="0 0 24 24"><path d="M4 5c3 1.5 13 1.5 16 0v8a8 8 0 0 1-16 0z"/><path d="M8.5 10.5h2M13.5 10.5h2M9 15c1.5 1.5 4.5 1.5 6 0"/></symbol>
+  <symbol id="i-party" viewBox="0 0 24 24"><path d="M5 20l4-12 7 7z"/><path d="M14 4l1 2M19 6l-2 1M20 11h-2"/></symbol>
+  <symbol id="i-tent" viewBox="0 0 24 24"><path d="M3 20L12 5l9 15z"/><path d="M12 5v15"/><path d="M8.5 20l3.5-6 3.5 6"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+  <symbol id="i-share" viewBox="0 0 24 24"><path d="M12 3v12M8 7l4-4 4 4"/><path d="M5 12v7.5A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5V12"/></symbol>
+  <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4"/><path d="M8 13a5 5 0 1 1 8 0c-1 1-1.5 2-1.5 3h-5c0-1-.5-2-1.5-3z"/></symbol>
+</svg>
+
+<div class="doc">
+
+<div>
+  <div class="cap"><b>1 · Binnenkort.</b> De posterwand: vanavond bovenaan, dan alles wat komt, elk met één zinnetje.</div>
+  <div class="fit"><div class="mac">
+    <div class="tb">
+      <div><span class="lights"><i></i><i></i><i></i></span><span class="t">Hogsmeade</span></div>
+      <div><span class="t">Binnenkort</span><span class="st">6 uitjes · 2 dingen te doen</span><span class="grow"></span>
+        <div class="search"><svg class="i"><use href="#i-search"/></svg>Zoek een uitje</div>
+        <button class="tbtn primary"><svg class="i"><use href="#i-plus"/></svg>Nieuw</button></div>
+    </div>
+    <div class="body">
+      <div class="side">
+        <div class="sb-row sel"><svg class="i"><use href="#i-spark"/></svg><span class="grow">Binnenkort</span><span class="n">6</span></div>
+        <div class="sb-row"><svg class="i"><use href="#i-bulb"/></svg><span class="grow">Wensen</span><span class="n">3</span></div>
+        <div class="sb-row"><svg class="i"><use href="#i-cal"/></svg><span class="grow">Geweest</span></div>
+        <div class="sb-label">Wie gaat</div>
+        <div class="sb-row"><i class="dot g"></i><span class="grow">Gideon</span><span class="n">6</span></div>
+        <div class="sb-row"><i class="dot e"></i><span class="grow">Eva</span><span class="n">5</span></div>
+        <div class="sb-label">Soort</div>
+        <div class="sb-row"><svg class="i"><use href="#i-music"/></svg><span class="grow">Concert</span><span class="n">2</span></div>
+        <div class="sb-row"><svg class="i"><use href="#i-tent"/></svg><span class="grow">Festival</span><span class="n">1</span></div>
+        <div class="sb-row"><svg class="i"><use href="#i-mask"/></svg><span class="grow">Theater</span><span class="n">2</span></div>
+        <div class="sb-row"><svg class="i"><use href="#i-party"/></svg><span class="grow">Feest</span><span class="n">1</span></div>
+      </div>
+      <div class="main"><div class="scroll">
+        <div class="tonight">
+          <div class="conf">
+            <i style="left:52%;top:14%;background:#F6D45B;--r:20deg"></i><i style="left:58%;top:70%;background:#8EDCC0;--r:-30deg"></i>
+            <i style="left:66%;top:30%;background:#8CC6F0;--r:45deg"></i><i style="left:48%;top:80%;background:#F7B389;--r:10deg"></i>
+            <i style="left:72%;top:78%;background:#F59BC1;--r:60deg"></i><i style="left:62%;top:50%;background:#fff;--r:0;width:5px;height:5px;border-radius:50%"></i>
+            <i style="left:40%;top:30%;background:#F6D45B;--r:-15deg;width:6px;height:6px"></i><i style="left:76%;top:20%;background:#fff;--r:30deg;width:5px;height:5px;border-radius:50%"></i>
+          </div>
+          <div>
+            <div class="kicker">Vanavond is het zover</div>
+            <h2>Neon Nineties</h2>
+            <div class="facts"><span><svg class="i"><use href="#i-clock"/></svg>Deuren 20:00</span><span><svg class="i"><use href="#i-pin"/></svg>De Kolenloods, Amsterdam</span><span>Gideon en Eva</span></div>
+          </div>
+          <div class="acts">
+            <button class="w"><svg class="i"><use href="#i-ticket"/></svg>Kaartjes</button>
+            <button class="g"><svg class="i"><use href="#i-route"/></svg>Route · 25 min</button>
+          </div>
+        </div>
+
+        <div class="sec-h"><h3>Daarna</h3><span>5 uitjes</span></div>
+        <div class="wall">
+          <div class="poster">
+            <div class="art" style="background:linear-gradient(150deg,#1C3B6E,#4E8ACF)"><div class="date"><small>nov</small><b>12</b></div><svg><use href="#i-mask"/></svg><div class="days">nog 18 nachtjes</div></div>
+            <div class="txt"><h4>Stille Wateren</h4><div class="sub">Theater · Stadsschouwburg</div><div style="display:flex;align-items:center"><span class="status ok"><svg class="i" style="width:12px;height:12px"><use href="#i-check"/></svg>Alles geregeld</span><span class="who"><i class="g">G</i><i class="e">E</i></span></div></div>
+          </div>
+          <div class="poster">
+            <div class="art" style="background:linear-gradient(150deg,#C2410C,#F59E0B)"><div class="date"><small>nov</small><b>27</b></div><svg><use href="#i-party"/></svg><div class="days">nog 33 nachtjes</div></div>
+            <div class="txt"><h4>Foute Vrijdag XL</h4><div class="sub">Feest · De Kolenloods</div><div style="display:flex;align-items:center"><span class="status todo">Nog doen: op naam vóór 13 nov</span><span class="who"><i class="g">G</i><i class="e">E</i></span></div></div>
+          </div>
+          <div class="poster">
+            <div class="art" style="background:linear-gradient(150deg,#7A3FC9,#C9A8F2)"><div class="date"><small>dec</small><b>19</b></div><svg><use href="#i-mask"/></svg><div class="days">nog 55 nachtjes</div></div>
+            <div class="txt"><h4>Cabaret Theo Voorbeeld</h4><div class="sub">Theater · De Lindenhof</div><div style="display:flex;align-items:center"><span class="status app">Kaartjes toevoegen</span><span class="who"><i class="g">G</i></span></div></div>
+          </div>
+          <div class="poster">
+            <div class="art" style="background:linear-gradient(150deg,#0F766E,#8EDCC0)"><div class="date"><small>jan</small><b>3</b></div><svg><use href="#i-music"/></svg><div class="days">nog 70 nachtjes</div></div>
+            <div class="txt"><h4>Winterparade</h4><div class="sub">Concert · Muziekgebouw</div><div style="display:flex;align-items:center"><span class="status ok"><svg class="i" style="width:12px;height:12px"><use href="#i-check"/></svg>Alles geregeld</span><span class="who"><i class="g">G</i><i class="e">E</i></span></div></div>
+          </div>
+          <div class="poster">
+            <div class="art" style="background:linear-gradient(150deg,#BE185D,#F6D45B)"><div class="date"><small>jun</small><b>19</b></div><svg><use href="#i-tent"/></svg><div class="days">nog 237 nachtjes</div></div>
+            <div class="txt"><h4>Zomerweide Festival</h4><div class="sub">Festival · Zomerweide, Lieren</div><div style="display:flex;align-items:center"><span class="status">Later: oppas regelen</span><span class="who"><i class="g">G</i><i class="e">E</i></span></div></div>
+          </div>
+          <div class="poster past">
+            <div class="art" style="background:linear-gradient(150deg,#6B21A8,#EC4899)"><div class="date"><small>sep</small><b>26</b></div><svg><use href="#i-party"/></svg></div>
+            <div class="txt"><h4>Welcome To The 90's</h4><div class="sub">Geweest · 26 sep</div><div style="display:flex;align-items:center"><span class="status">Was het leuk?</span></div></div>
+          </div>
+        </div>
+      </div></div>
+    </div>
+  </div></div>
+</div>
+
+<div>
+  <div class="cap"><b>2 · Eén uitje.</b> De poster vult de kop, de dagenteller telt af, daaronder de drie feiten, de kaartjes en het ene ding dat nog moet.</div>
+  <div class="fit"><div class="mac">
+    <div class="tb">
+      <div><span class="lights"><i></i><i></i><i></i></span><span class="t">Hogsmeade</span></div>
+      <div><button class="tbtn"><svg class="i"><use href="#i-back"/></svg>Binnenkort</button><span class="grow"></span><button class="tbtn"><svg class="i"><use href="#i-share"/></svg></button><button class="tbtn primary"><svg class="i"><use href="#i-plus"/></svg>Nieuw</button></div>
+    </div>
+    <div class="body">
+      <div class="side">
+        <div class="sb-row sel"><svg class="i"><use href="#i-spark"/></svg><span class="grow">Binnenkort</span><span class="n">6</span></div>
+        <div class="sb-row"><svg class="i"><use href="#i-bulb"/></svg><span class="grow">Wensen</span><span class="n">3</span></div>
+        <div class="sb-row"><svg class="i"><use href="#i-cal"/></svg><span class="grow">Geweest</span></div>
+        <div class="sb-label">Wie gaat</div>
+        <div class="sb-row"><i class="dot g"></i><span class="grow">Gideon</span><span class="n">6</span></div>
+        <div class="sb-row"><i class="dot e"></i><span class="grow">Eva</span><span class="n">5</span></div>
+        <div class="sb-label">Soort</div>
+        <div class="sb-row"><svg class="i"><use href="#i-music"/></svg><span class="grow">Concert</span><span class="n">2</span></div>
+        <div class="sb-row"><svg class="i"><use href="#i-tent"/></svg><span class="grow">Festival</span><span class="n">1</span></div>
+        <div class="sb-row"><svg class="i"><use href="#i-mask"/></svg><span class="grow">Theater</span><span class="n">2</span></div>
+        <div class="sb-row"><svg class="i"><use href="#i-party"/></svg><span class="grow">Feest</span><span class="n">1</span></div>
+      </div>
+      <div class="main">
+        <div class="hero">
+          <div class="bgart" style="background:linear-gradient(110deg,#C2410C 0%,#F59E0B 60%,#F6D45B 100%)"></div>
+          <div class="in">
+            <div class="bigdate"><small>nov</small><b>27</b><em>vrijdag</em></div>
+            <div><h1>Foute Vrijdag XL</h1><div class="kind">Feest · 22:00 tot 04:00 · De Kolenloods</div></div>
+            <div class="count">Nog 33 nachtjes</div>
+          </div>
+        </div>
+        <div class="page">
+          <div class="card facts">
+            <div class="rows">
+              <div class="row"><div class="k">Wanneer</div><div class="v">Vrijdag 27 november, 22:00<small>Deuren 21:30 · tot 04:00</small></div></div>
+              <div class="row"><div class="k">Waar</div><div class="v">De Kolenloods<small>Kolenkade 12, Amsterdam</small></div></div>
+              <div class="row"><div class="k">Wie</div><div class="v"><span class="chip"><i class="g">G</i>Gideon</span><span class="chip"><i class="e">E</i>Eva</span></div></div>
+            </div>
+            <div class="map"><div class="road"></div><div class="road2"></div><div class="pin"></div><div class="eta">ca. 25 min met de auto</div><div class="route"><svg class="i"><use href="#i-route"/></svg></div></div>
+          </div>
+          <div class="two">
+            <div class="card">
+              <h3><svg class="i"><use href="#i-ticket"/></svg>Kaartjes <span style="font-weight:400;color:var(--text-3);font-size:13px">2 · bij Weeztix</span></h3>
+              <div class="tickets">
+                <div class="tix"><div class="qr"></div><div><div class="nm">Gideon</div><div class="sub">Op naam gezet</div></div></div>
+                <div class="tix" style="opacity:.75"><div class="qr"></div><div><div class="nm">Kaartje 2</div><div class="sub">Nog niet op naam</div></div></div>
+              </div>
+            </div>
+            <div class="card">
+              <h3><svg class="i"><use href="#i-check"/></svg>Nog doen</h3>
+              <div class="todo">
+                <div class="it"><span class="c todo-warn"></span>Kaartje 2 op naam zetten (Eva)<span class="due">vóór 13 nov</span></div>
+                <div class="it"><span class="c"><svg class="i" style="width:12px;height:12px;color:var(--success)"><use href="#i-check"/></svg></span><span style="color:var(--text-3);text-decoration:line-through">Oppas regelen</span></div>
+                <div class="it add"><span class="c"><svg class="i" style="width:11px;height:11px"><use href="#i-plus"/></svg></span>Iets toevoegen</div>
+              </div>
+            </div>
+          </div>
+          <div class="details">Details: mails, zoekwoorden, geschiedenis…</div>
+        </div>
+      </div>
+    </div>
+  </div></div>
+</div>
+
+<div>
+  <div class="cap"><b>3 · Icoon en naam.</b> Een wegwijzer, zoals in het dorp waar je op zaterdag heen mag.</div>
+  <div class="extras">
+    <div class="icon"><svg viewBox="0 0 64 64" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M32 58V14"/><path d="M32 10a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" fill="#F6D45B" stroke="#F6D45B"/>
+      <path d="M14 20h26l6 5-6 5H14z" fill="#F59BC1" stroke="#fff"/>
+      <path d="M50 34H24l-6 5 6 5h26z" fill="#8EDCC0" stroke="#fff"/>
+      <path d="M26 58h12"/></svg></div>
+    <div class="names">
+      <div><b>Hogsmeade</b><span>de uitjes waar je naar uitkijkt; het toestemmingsbriefje is je kaartje. Mijn voorkeur.</span></div>
+      <div><b>Yule Ball</b><span>het feest van het jaar; past bij feesten, minder bij theater.</span></div>
+      <div><b>Weird Sisters</b><span>de band op dat feest; leuk voor concerten, maar lastig uit te spreken.</span></div>
+    </div>
+  </div>
+</div>
+
+</div>
+<script>
+// Scale the 1100px windows down to the column width, both here and in a file opened full-screen.
+function fit() {
+  for (const el of document.querySelectorAll('.fit')) {
+    const win = el.firstElementChild;
+    const s = Math.min(1, el.clientWidth / 1100);
+    win.style.transform = `scale(${s})`;
+    el.style.height = `${700 * s}px`;
+  }
+}
+fit(); addEventListener('resize', fit);
+</script>
+</body>
+</html>
