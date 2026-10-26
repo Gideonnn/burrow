@@ -254,3 +254,20 @@ release types (`region=NL`, type 4), which Seerr does not offer and would need a
 credential.
 **Why:** a series that went on the list with season 1 can only get more in Seerr itself.
 **Scope:** half a day for the extra seasons; the TMDB row after deciding on a credential.
+
+## Hogsmeade: wishes without a date
+
+**What:** an outing the household is still thinking about ("Kerstcircus met de buren?")
+without a date, as a dashed card on the wall and a Wensen page, that becomes a real
+outing once a date is picked.
+**Why:** the playful design draws them; the server's `outings` require `startsAt`.
+**Scope:** a nullable `startsAt` or a `wish` flag with its own list and the Mac views;
+half a day.
+
+## Hogsmeade: stars after the night
+
+**What:** after an outing, one to five stars and a line ("was het leuk?") on its page,
+so Geweest becomes a memory and next year's choice is easier.
+**Why:** both designs draw it; nothing stores it yet.
+**Scope:** a `rating` and `note` on the outing, a route, the sticker in both faces;
+half a day.

@@ -8,6 +8,8 @@ let package = Package(
     products: [
         .executable(name: "Hedwig", targets: ["Hedwig"]),
         .executable(name: "hedwigctl", targets: ["hedwigctl"]),
+        // Hogsmeade builds on the same outing types, status sentences and ticket readers.
+        .library(name: "HedwigCore", targets: ["HedwigCore"]),
     ],
     dependencies: [.package(path: "../../packages/burrow-kit")],
     targets: [

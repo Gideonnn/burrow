@@ -8,6 +8,8 @@ contracts in `packages/contracts/src/outings.ts`, the Mac page and card in
 [`docs/design/hedwig-events.html`](../../../docs/design/hedwig-events.html) (the page, v2),
 [`docs/design/hedwig-cards.html`](../../../docs/design/hedwig-cards.html) (the card, v1) and
 the plan in [`docs/plans/2026-10-22-calendars.md`](../../../docs/plans/2026-10-22-calendars.md).
+Hogsmeade ([hogsmeade](hogsmeade.md), `apps/hogsmeade-mac`) shows the same outings as an
+app of its own, in two faces.
 
 ## From a mail
 

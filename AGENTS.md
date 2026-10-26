@@ -43,7 +43,8 @@ markdown file. The user-facing app may add a plain alias (Raycast opens Hedwig a
 - `packages/contracts/`: zod schemas shared by server and clients.
 - `packages/burrow-kit/`: the Swift package every Mac app uses (BurrowKit, BurrowUI and
   `burrowctl`).
-- `apps/hedwig-mac/`, `apps/pensieve-mac/`, `apps/lumos-mac/`: the native macOS apps (SwiftUI, Swift
+- `apps/hedwig-mac/`, `apps/pensieve-mac/`, `apps/lumos-mac/`, `apps/hogsmeade-mac/` (the
+  outings in two faces): the native macOS apps (SwiftUI, Swift
   packages bundled by `scripts/bundle.sh`; see their READMEs).
 - `bots/`: bot personas, one markdown file each (Kreacher does the chores on a cloud AI,
   Winky the sensitive ones on a local model). A personal directory on the server can add

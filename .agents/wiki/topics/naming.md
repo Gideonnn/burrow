@@ -15,7 +15,7 @@ states that Burrow is not affiliated with the rights holders.
 | Hedwig | Mail | Active |
 | Pensieve | Recorded conversations: transcripts and notes (was RecHoarder); later also the searchable archive of documents and notes | Active |
 | Lumos | Films and series to watch together: catalogue, lists, requests to the media server | Active |
-| Hogsmeade | The household's outings as an app of their own, in two faces to compare, native and playful (`docs/design/outings-app-native.html`, `hogsmeade-style.html`); the outings model and routes stay in Hedwig | Planned |
+| Hogsmeade | The household's outings as an app of their own, on Hedwig's outings, in two faces to compare: Hogsmeade (native) and Hogsmeade Feest (playful) (`apps/hogsmeade-mac`) | Active |
 | Sorting Hat | Decisions between fixed options (category, priority, sensitive, triage action): the triage skill today, later a small local decision model in the style of Jev | Draft |
 | Portkey | Routines: triggers that start tasks | Planned |
 | Remembrall | Tasks and reminders (Todoist replacement) | Idea |

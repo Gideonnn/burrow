@@ -2,6 +2,7 @@
 
 Newest first.
 
+- [2026-10-26 Hogsmeade: two faces on Hedwig's outings](2026-10-26-hogsmeade-two-faces-on-hedwigs-outings.md): HedwigCore as a library product, two bundles from one package, the playful face's places are Hedwig's; searchFocused is macOS 15, a hidden title bar still leaves its strip.
 - [2026-10-26 Hogsmeade is the outings app](2026-10-26-hogsmeade-is-the-outings-app.md): the playful face built on Lumos that evening was undone, since Hogsmeade is the outings app with a native and a playful face to compare; LumosCore, LumosUI and the image cache stayed.
 - [2026-10-26 Lumos watches through Jellyfin](2026-10-26-lumos-watches-through-jellyfin.md): a page in Jellyfin's web app and a start on the TV by device id, confirmed by the session itself; the key through the tv repository; keystrokes go to the front window, burrowctl does not.
 - [2026-10-26 Hogsmeade, the playful face of Lumos](2026-10-26-hogsmeade-the-playful-face-of-lumos.md): one model and two faces through LumosCore and LumosUI, the image cache that ended the stutter, the season menu, and turbo dropping LUMOS_* from the dev server.

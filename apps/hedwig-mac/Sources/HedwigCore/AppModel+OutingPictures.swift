@@ -3,20 +3,20 @@ import Foundation
 /// The outings' pictures, one version per outing, so the list, the page and
 /// the mail card load each picture once.
 @MainActor
-final class OutingPictureCache {
+public final class OutingPictureCache {
     private var pictures: [String: (version: Date, picture: OutingPicture?)] = [:]
     private var loads: [String: (version: Date, task: Task<OutingPicture?, Never>)] = [:]
     private var order: [String] = []
     let limit: Int
 
-    init(limit: Int = 80) { self.limit = limit }
+    public init(limit: Int = 80) { self.limit = limit }
 
-    func cached(_ outingId: String, version: Date) -> OutingPicture?? {
+    public func cached(_ outingId: String, version: Date) -> OutingPicture?? {
         guard let hit = pictures[outingId], hit.version == version else { return nil }
         return .some(hit.picture)
     }
 
-    func picture(_ outingId: String, version: Date, load: @escaping @MainActor () async -> OutingPicture?) async -> OutingPicture? {
+    public func picture(_ outingId: String, version: Date, load: @escaping @MainActor () async -> OutingPicture?) async -> OutingPicture? {
         if let hit = cached(outingId, version: version) { return hit }
         if let running = loads[outingId], running.version == version { return await running.task.value }
         let task = Task { await load() }
