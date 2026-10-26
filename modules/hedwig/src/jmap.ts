@@ -39,7 +39,9 @@ const PROPERTIES = [
   'htmlBody',
   'bodyValues',
   'header:Authentication-Results:asText',
-  'header:List-Unsubscribe:asText',
+  // Fastmail refuses asText on List-* headers (they are URL headers); asRaw
+  // is allowed on any header and keeps the string the parser expects.
+  'header:List-Unsubscribe:asRaw',
 ];
 
 type JmapAddress = { name?: string | null; email: string };
@@ -64,7 +66,7 @@ export type JmapEmail = {
   htmlBody?: BodyPart[];
   bodyValues?: Record<string, { value: string }>;
   'header:Authentication-Results:asText'?: string | null;
-  'header:List-Unsubscribe:asText'?: string | null;
+  'header:List-Unsubscribe:asRaw'?: string | null;
 };
 
 type AttachmentPart = {
@@ -528,7 +530,7 @@ export function parseJmapEmail(
       references: e.references?.map((r) => `<${r}>`).join(' ') || undefined,
       authenticationResults:
         e['header:Authentication-Results:asText'] ?? undefined,
-      listUnsubscribe: e['header:List-Unsubscribe:asText'] ?? undefined,
+      listUnsubscribe: e['header:List-Unsubscribe:asRaw'] ?? undefined,
     },
   };
 }

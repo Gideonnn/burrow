@@ -34,7 +34,7 @@ function email(
       '1': { value: 'Zin in eten?' },
       '2': { value: '<p>Zin in eten?</p>' },
     },
-    'header:List-Unsubscribe:asText': null,
+    'header:List-Unsubscribe:asRaw': null,
     ...extra,
   };
 }
@@ -77,6 +77,13 @@ function fakeJmap() {
         return { ids: ids.slice(position, position + (args.limit ?? 100)) };
       }
       case 'Email/get': {
+        // Fastmail refuses asText on the List-* URL headers.
+        if (
+          (args.properties as string[] | undefined)?.some((p) =>
+            /^header:List-[A-Za-z-]+:asText$/.test(p),
+          )
+        )
+          return { error: 'invalidArguments' };
         const ids: string[] =
           args.ids ?? results.get(args['#ids'].resultOf).ids;
         return {
