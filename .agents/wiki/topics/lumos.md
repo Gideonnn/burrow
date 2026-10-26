@@ -1,15 +1,14 @@
-# Lumos and Hogsmeade
+# Lumos
 
 Lumos helps the household choose films and series to watch together: a native Mac app
 with image rows and an inspector, and a module on the server with a catalogue provider,
 the household's list, each person's own list, and verdicts that can always be undone.
-Hogsmeade is a second Mac app on exactly the same model and server: the playful face,
-so the household can run both and pick the one it likes. The media stack (Seerr, Radarr,
+The media stack (Seerr, Radarr,
 Sonarr, Jellyfin) stays the backend: a title put on a list is requested from Seerr,
 which hands it to Radarr or Sonarr, and an available title is opened in Jellyfin's web
 app or started on the TV through Jellyfin's sessions. Plan and phases:
 `docs/plans/2026-10-25-lumos.md`. Code: `modules/lumos`, `packages/contracts/src/lumos.ts`,
-`apps/lumos-mac`, `apps/hogsmeade-mac`.
+`apps/lumos-mac`.
 
 ## The catalogue
 
@@ -70,8 +69,8 @@ without a catalogue.
   author only, once. Nothing is deleted; undoing sets `removedAt` or `undoneAt` back.
 - A personal list and personal verdicts are their person's; there is no route that names
   someone else's. The household's are everyone's, like [outings](outings.md). Changes emit
-  `lumos.changed` with the scope, to every Mac of the scope, so Lumos and Hogsmeade on
-  the same Mac, or the two people's Macs, follow each other.
+  `lumos.changed` with the scope, to every Mac of the scope, so the two people's Macs
+  follow each other.
 
 Routes (all under `/api/lumos`, `read` to look, `organize` to change): `status`, `rows`,
 `titles`, `search`, `titles/:mediaType/:tmdbId`, `similar/…`, `credits/:id`,
@@ -79,8 +78,7 @@ Routes (all under `/api/lumos`, `read` to look, `organize` to change): `status`,
 `seasons`), `verdicts`, `DELETE verdicts/:id`, `changes/:id/undo`, `requests/…/retry`,
 `watch/:mediaType/:tmdbId` and `POST watch/…/screen` (body `deviceId`).
 MCP: `search_titles` and `list_watchlist`, read only. Setting: `lumos.enabled`. The
-module lists both `lumos` and `hogsmeade` as clients, so the server offers updates for
-both apps.
+module lists `lumos` as its client, so the server offers it updates.
 
 ## Requests
 
@@ -121,17 +119,17 @@ read: no deletes, no marks, no user data.
 - Waking the TV and opening the app are not done: without a session the button says
   "Open Jellyfin op de tv".
 
-## On the Mac: one model, two faces
+## On the Mac
 
-`apps/lumos-mac` is a package with three targets, and products so Hogsmeade can build
-on it:
+`apps/lumos-mac` is a package with three targets; the first two are library products, so
+another face or tool can build on them:
 
 - `LumosCore`: `LumosModel.swift` is the state machine: the page, the cursor over rows
   and grids (`Navigation.swift`, up and down find the remembered or nearest card), the
   inspector and the card focus returns to, the "Niet nu" menu's choice, the trailer, the
-  undo stack and `lastChange` (what just happened, for a face that wants to react). The
+  undo stack and `lastChange` (what just happened, for a view that wants to react). The
   views only forward keys; the tests drive the model like the keyboard.
-- `LumosUI`: what both faces share on screen. `ImageLoader` downloads a picture once
+- `LumosUI`: what the screens share. `ImageLoader` downloads a picture once
   (URLCache on disk under `Caches/Burrow/images`), decodes it once at the size it is
   shown (`CGImageSourceCreateThumbnailAtIndex`, off the main thread) and keeps it in
   memory; `CachedImage` starts with what is cached so nothing flashes, and the rows
@@ -139,14 +137,14 @@ on it:
   rows flicker and stutter. Also here: `Artwork` with the placeholder tile, the trailer
   player, `SeasonMenu`, the menu bar commands, the settings view and the control
   commands.
-- `Lumos`: the native face. `Hogsmeade` (`apps/hogsmeade-mac`) is the playful one.
+- `Lumos`: the app itself.
 
 What the model does for speed: the page and the sidebar counts load at the same time,
 details and similar titles too, and Ontdekken's last rows are kept on disk
 (`Application Support/<App>/Cache/rows-<scope>.json`) so the window opens full before
 the server answers.
 
-Both faces:
+In the app:
 
 - Scope: Samen or your own name. "Yes" (`J`) goes to the current scope's list.
 - In Samen, "Op jouw lijst, nog niet samen" shows only your own entries.
@@ -162,23 +160,9 @@ Both faces:
   details, so a slow Jellyfin never holds them back): "Op <tv>" or a menu of screens, and
   "Hier", which opens the page in the browser. `K` (⌘K) starts on the only screen, opens
   the page when none is open, and asks when several are; ⇧⌘K is always the page.
-- `burrowctl lumos …` and `burrowctl hogsmeade …`: `state`, `show`, `search`, `open`,
+- `burrowctl lumos …`: `state`, `show`, `search`, `open`,
   `trailer`, `stop`, `close`, `watch [screen=<name>|here]`. The list buttons are marked
-  `<app>.approve.list`, because a list entry requests media.
-
-Hogsmeade's face (`docs/design/hogsmeade-style.html` for the drawing, `-proto.html` for a
-clickable version drawn on outings before the style moved to films): a night with
-blurred lights, no sidebar or toolbar; "Wat kijken we vanavond?" with tonight's
-proposals as a hand of cards (overlapping, each a little turned, lifted by hover or the
-cursor), the other rows as shelves of tilted posters, a year sticker and one stamp per
-poster ("Op de lijst", "Niet nu", "In Jellyfin"), a floating island of pages at the
-bottom, and confetti when a title lands on the household's list. A title opens as a page
-in a cream scrapbook over the wall: the still with washi tape and the first score as a
-sticker, the facts as pills, the synopsis on paper, scores on a receipt, reviews as
-clippings, "Meer/Minder zoals dit" as stamps. Its colours are its own and fixed
-(`Palette.swift`), not the Burrow tokens; the window forces the dark appearance so menus
-match. Each app has its own login and Keychain item (`app.burrow.hogsmeade`), its own
-snapshot cache and its own icon.
+  `lumos.approve.list`, because a list entry requests media.
 
 Run the bundles (`scripts/bundle.sh`), not `.build/debug/<App>`: a bare executable has
 activation policy "prohibited", never becomes the active app and gets no key presses.

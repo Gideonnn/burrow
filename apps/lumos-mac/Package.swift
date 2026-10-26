@@ -8,7 +8,7 @@ let package = Package(
     platforms: [.macOS(.v14)],
     products: [
         .executable(name: "Lumos", targets: ["Lumos"]),
-        // Hogsmeade, the playful face on the same lists and catalogue, builds on these.
+        // Library products, so another face or tool can build on the model and the shared views.
         .library(name: "LumosCore", targets: ["LumosCore"]),
         .library(name: "LumosUI", targets: ["LumosUI"]),
     ],
@@ -17,7 +17,7 @@ let package = Package(
         // Everything testable without a window: the API, the browsing state
         // with focus and undo, and the trailer player's state.
         .target(name: "LumosCore", dependencies: [.product(name: "BurrowKit", package: "burrow-kit")]),
-        // What both faces share on screen: artwork with its cache, the trailer
+        // What the screens share: artwork with its cache, the trailer
         // player, the menu commands and the control socket's commands.
         .target(name: "LumosUI", dependencies: ["LumosCore", .product(name: "BurrowUI", package: "burrow-kit")]),
         .executableTarget(

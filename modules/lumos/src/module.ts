@@ -46,7 +46,7 @@ export function lumosModule(platform: Platform, options: LumosOptions = {}) {
     name: MODULE,
     settings,
     api: lumosRoutes(lumos),
-    clients: ['lumos', 'hogsmeade'],
+    clients: ['lumos'],
     start: () => lumos.requests?.start(),
     // Read only: requesting media stays with the people.
     mcp: (server, access) => {

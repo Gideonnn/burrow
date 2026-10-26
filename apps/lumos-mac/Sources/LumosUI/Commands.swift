@@ -2,7 +2,7 @@ import BurrowUI
 import LumosCore
 import SwiftUI
 
-/// The menu bar both faces share: undo, the pages and search.
+/// The menu bar: undo, the pages, search and watching.
 public struct LumosCommands: Commands {
     let model: LumosModel
 

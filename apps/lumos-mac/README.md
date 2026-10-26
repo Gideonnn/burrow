@@ -4,7 +4,6 @@ Films and series to choose together: a fixed sidebar, image rows, and the detail
 the right with the trailer, scores per source and short reviews. Lists and verdicts live
 on the Burrow server; the media stack (Seerr, Radarr, Sonarr, Jellyfin) stays the
 backend and a title on a list is requested there. See `.agents/wiki/topics/lumos.md`.
-Hogsmeade (`apps/hogsmeade-mac`) is the playful face on the same model and lists.
 
 ```bash
 swift build && swift test            # from this folder
@@ -12,9 +11,9 @@ pnpm lumos:install                   # build, install in /Applications, start (f
 ./scripts/make-icon.sh               # after changing the icon
 ```
 
-- `LumosCore` is the model, the API and the state machine; `LumosUI` is what both faces
+- `LumosCore` is the model, the API and the state machine; `LumosUI` is what the screens
   share on screen: the artwork with its cache, the trailer player, the season menu, the
-  menu bar and the control commands. `Lumos` is the native face.
+  menu bar and the control commands. `Lumos` is the app.
 - Arrows move between cards and rows, Enter opens the details with focus inside, Space
   shows them without moving focus, Esc stops the trailer, then closes the details and
   returns focus to the card. `J` list, `N` not now (Enter for no reason), `T` trailer,

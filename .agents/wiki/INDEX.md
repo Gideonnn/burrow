@@ -6,7 +6,7 @@
 - [Adding a module](topics/modules.md): the checklist for a new application, server and Mac app.
 - [Login and the household](topics/login-and-household.md): device login through the browser, admins, settings, who may read what.
 - [Pensieve](topics/pensieve.md): calls, video, screen and dictation; upload, compression, transcription with segments, notes per kind, labels, video on the Mac, the iCloud copy.
-- [Lumos and Hogsmeade](topics/lumos.md): films and series to watch together, as the native Lumos and the playful Hogsmeade on one model; the Seerr catalogue, requests through an outbox, the fixtures and their fences, private and shared lists, verdicts, undo by change id, trailers, the image cache and the season menu.
+- [Lumos](topics/lumos.md): films and series to watch together; the Seerr catalogue, requests through an outbox, the fixtures and their fences, private and shared lists, verdicts, undo by change id, trailers, watching through Jellyfin, the image cache and the season menu.
 - [Naming](topics/naming.md): the Harry Potter names and what each application does.
 - [Testing](topics/testing.md): tiers, red before green, quiet output.
 - [Secrets](topics/secrets.md): what is secret, where it lives, SOPS in a public repo.
