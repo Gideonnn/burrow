@@ -3,8 +3,8 @@ import LumosCore
 import LumosUI
 import SwiftUI
 
-/// Two columns and an inspector: the sidebar, the image rows, and the
-/// details on the right. Only the rows and the inspector scroll.
+/// The sidebar and the rows; a title or a person opens as a page over the
+/// rows in the same column, so going in and out is one key and no wait.
 struct MainView: View {
     @Environment(LumosModel.self) private var model
     @FocusState private var focused: LumosModel.Focus?
@@ -15,14 +15,21 @@ struct MainView: View {
             Sidebar()
                 .navigationSplitViewColumnWidth(min: 190, ideal: 212, max: 260)
         } detail: {
-            ContentArea(focused: $focused)
-                .navigationTitle(model.title)
-                .navigationSubtitle(model.subtitle)
-                .toolbar { MainToolbar() }
-                .inspector(isPresented: Binding(get: { model.inspectorShown }, set: { if !$0 { model.closeInspector() } })) {
-                    InspectorView(focused: $focused)
-                        .inspectorColumnWidth(min: 340, ideal: 404, max: 480)
+            ZStack {
+                ContentArea(focused: $focused)
+                    .opacity(model.stack.isEmpty ? 1 : 0)
+                    .allowsHitTesting(model.stack.isEmpty)
+                    .accessibilityHidden(!model.stack.isEmpty)
+                if let place = model.stack.last {
+                    PageView(place: place, focused: $focused)
+                        .id(place)
+                        .transition(.opacity)
                 }
+            }
+            .animation(.easeOut(duration: 0.12), value: model.stack)
+            .navigationTitle(pageTitle)
+            .navigationSubtitle(model.stack.isEmpty ? model.subtitle : "")
+            .toolbar { MainToolbar() }
         }
         .searchable(text: $model.query, placement: .toolbar, prompt: "Titel, maker, cast of kenmerk")
         .modifier(SearchFocus(request: model.searchFocusRequest))
@@ -33,8 +40,21 @@ struct MainView: View {
         .onChange(of: model.focus) { if model.focus != .search { focused = model.focus } }
         .onChange(of: focused) { if let focused, focused != model.focus { model.focus = focused } }
         .overlay(alignment: .bottom) { ToastView() }
-        .onAppear { focused = .content }
+        .onAppear {
+            focused = .content
+            ImageLoaderHook.prefetch = { urls in
+                ImageLoader.shared.prefetch(urls.compactMap(URL.init(string:)), maxPixels: Artwork.posterPixels)
+            }
+        }
         .onChange(of: model.loaded, initial: true) { ImageLoader.shared.prefetch(rows: model.loaded) }
+    }
+
+    private var pageTitle: String {
+        switch model.stack.last {
+        case .title: model.detail?.title ?? model.inspected.flatMap { model.summary($0)?.title } ?? model.title
+        case .person: model.personPage?.name ?? "Persoon"
+        case nil: model.title
+        }
     }
 }
 
@@ -54,6 +74,24 @@ private struct SearchFocus: ViewModifier {
     }
 }
 
+/// A title's page or a person's, over the rows.
+struct PageView: View {
+    @Environment(LumosModel.self) private var model
+    let place: LumosModel.Place
+    var focused: FocusState<LumosModel.Focus?>.Binding
+
+    var body: some View {
+        Group {
+            switch place {
+            case .title(let ref): TitlePage(ref: ref, focused: focused)
+            case .person(let id): PersonPage(id: id, focused: focused)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(BurrowColor.plaster.opacity(0.35))
+    }
+}
+
 // MARK: Sidebar
 
 struct Sidebar: View {
@@ -65,6 +103,7 @@ struct Sidebar: View {
         })) {
             Section {
                 Label("Ontdekken", systemImage: "sparkles").tag(LumosModel.Page.discover)
+                Label("Zoeker", systemImage: "binoculars").tag(LumosModel.Page.explore)
                 CountedLabel(title: model.scope == .shared ? "Onze lijst" : "Jouw lijst", icon: "bookmark", count: model.listCount)
                     .tag(LumosModel.Page.list)
             } header: {
@@ -135,8 +174,12 @@ struct MainToolbar: ToolbarContent {
 
     var body: some ToolbarContent {
         @Bindable var model = model
-        if model.isFixture {
-            ToolbarItem(placement: .navigation) { FixtureBadge() }
+        ToolbarItemGroup(placement: .navigation) {
+            if model.inspectorShown {
+                Button { model.back() } label: { Label("Terug", systemImage: "chevron.left") }
+                    .help("Terug (Esc of ⌘[)")
+            }
+            if model.isFixture { FixtureBadge() }
         }
         ToolbarItem {
             Picker("Voor wie", selection: $model.scope) {
@@ -145,15 +188,6 @@ struct MainToolbar: ToolbarContent {
             }
             .pickerStyle(.segmented)
             .help("Samen kiest uit onze lijst; je eigen lijst ziet alleen jij.")
-        }
-        ToolbarItem {
-            Button {
-                model.toggleInspector()
-            } label: {
-                Label("Details", systemImage: "sidebar.trailing")
-            }
-            .help("Details tonen of verbergen (spatie)")
-            .disabled(model.cursor == nil && !model.inspectorShown)
         }
     }
 }
@@ -192,10 +226,18 @@ struct CardPage: View {
         ScrollViewReader { proxy in
             ScrollView(.vertical) {
                 LazyVStack(alignment: .leading, spacing: 22) {
-                    if model.page == .discover { MoodBar() }
-                    if model.page == .search, !model.searchCredits.isEmpty { CreditsBar() }
+                    switch model.page {
+                    case .discover: MoodBar()
+                    case .explore: ExploreBar()
+                    case .movies, .series: BrowseBar()
+                    case .search where !model.searchCredits.isEmpty: CreditsBar()
+                    default: EmptyView()
+                    }
                     ForEach(model.rows) { row in
                         if row.grid { GridSection(row: row) } else { Shelf(row: row) }
+                    }
+                    if model.loadingMore {
+                        ProgressView().controlSize(.small).frame(maxWidth: .infinity)
                     }
                 }
                 .padding(.vertical, 16)
@@ -268,6 +310,75 @@ struct MoodBar: View {
     }
 }
 
+/// The Zoeker's one button: new surprise rows.
+struct ExploreBar: View {
+    @Environment(LumosModel.self) private var model
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Button { Task { await model.shuffle() } } label: { Label("Verras me", systemImage: "dice") }
+                .help("Nieuwe verrassingen: een ander decennium en een andere greep")
+            Text("Rijen uit jullie smaak en lijst, wat nu veel bekeken wordt, het beste van dit jaar, Nederlandse films en verborgen parels.")
+                .font(.callout).foregroundStyle(.secondary).lineLimit(1)
+        }
+        .padding(.horizontal, 24)
+    }
+}
+
+/// Films and Series: how the shelf is sorted, and narrowed by genre, Dutch
+/// or a decade.
+struct BrowseBar: View {
+    @Environment(LumosModel.self) private var model
+
+    private var type: MediaType { model.page == .series ? .tv : .movie }
+    private var state: LumosModel.Browse { model.browse[type] ?? LumosModel.Browse() }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                ForEach(BrowseSort.allCases, id: \.self) { sort in
+                    Button(sort.label) { Task { await model.setBrowse { $0.sort = sort } } }
+                        .buttonStyle(ChipStyle(on: state.sort == sort))
+                }
+            }
+            HStack(spacing: 6) {
+                Menu {
+                    Button("Alle genres") { Task { await model.setBrowse { $0.genre = nil } } }
+                    Divider()
+                    ForEach(state.genres) { genre in
+                        Button(genre.name) { Task { await model.setBrowse { $0.genre = genre } } }
+                    }
+                } label: {
+                    Label(state.genre?.name ?? "Genre", systemImage: "chevron.down")
+                }
+                .menuStyle(.button)
+                .buttonStyle(ChipStyle(on: state.genre != nil))
+                .fixedSize()
+                .disabled(state.genres.isEmpty)
+                Menu {
+                    Button("Alle jaren") { Task { await model.setBrowse { $0.decade = nil } } }
+                    Divider()
+                    ForEach(Array(stride(from: 2020, through: 1950, by: -10)), id: \.self) { decade in
+                        Button("Jaren \(String(decade).suffix(2))") { Task { await model.setBrowse { $0.decade = decade } } }
+                    }
+                } label: {
+                    Label(state.decade.map { "Jaren \(String($0).suffix(2))" } ?? "Decennium", systemImage: "chevron.down")
+                }
+                .menuStyle(.button)
+                .buttonStyle(ChipStyle(on: state.decade != nil))
+                .fixedSize()
+                Button("Nederlands") { Task { await model.setBrowse { $0.dutch.toggle() } } }
+                    .buttonStyle(ChipStyle(on: state.dutch))
+                    .help("Alleen Nederlandstalige producties")
+                if state.totalPages > 1 {
+                    Text("pagina \(state.page) van \(state.totalPages)").font(.caption).foregroundStyle(.tertiary)
+                }
+            }
+        }
+        .padding(.horizontal, 24)
+    }
+}
+
 struct CreditsBar: View {
     @Environment(LumosModel.self) private var model
 
@@ -275,8 +386,9 @@ struct CreditsBar: View {
         HStack(spacing: 6) {
             Text("Makers en cast").font(.callout).foregroundStyle(.secondary)
             ForEach(model.searchCredits, id: \.id) { credit in
-                Button(credit.name) { model.query = credit.name }
+                Button(credit.name) { model.openPerson(credit.id, name: credit.name) }
                     .buttonStyle(ChipStyle(on: false))
+                    .help("Open \(credit.name)")
             }
         }
         .padding(.horizontal, 24)
@@ -334,7 +446,7 @@ struct Shelf: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            RowHeader(row: row)
+            if !row.title.isEmpty { RowHeader(row: row) }
             if row.items.isEmpty, let empty = row.empty {
                 EmptyRow(text: empty)
             } else {
@@ -352,7 +464,8 @@ struct Shelf: View {
     }
 }
 
-/// A page of posters in lines; the model learns how many fit in a line.
+/// A page of posters in lines; the model learns how many fit in a line,
+/// and the shelf's last lines ask for the next page.
 struct GridSection: View {
     @Environment(LumosModel.self) private var model
     let row: TitleRow
@@ -368,8 +481,11 @@ struct GridSection: View {
                     columns: Array(repeating: GridItem(.fixed(row.style.cardWidth), spacing: 14, alignment: .top), count: columns),
                     alignment: .leading, spacing: 18
                 ) {
-                    ForEach(row.items) { title in
+                    ForEach(Array(row.items.enumerated()), id: \.element.id) { index, title in
                         CardView(title: title, card: CardID(row: row.key, ref: title.ref), style: row.style)
+                            .onAppear {
+                                if row.key.hasPrefix("browse-"), index >= row.items.count - columns * 2 { Task { await model.loadMore() } }
+                            }
                     }
                 }
                 .padding(.horizontal, 24)

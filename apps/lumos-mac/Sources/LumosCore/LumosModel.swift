@@ -10,7 +10,7 @@ import Observation
 @Observable
 public final class LumosModel {
     public enum Page: String, CaseIterable, Sendable {
-        case discover, list, movies, series, available, taste, passed, search
+        case discover, explore, list, movies, series, available, taste, passed, search
     }
 
     public enum Focus: Sendable {
@@ -92,10 +92,64 @@ public final class LumosModel {
     public private(set) var navigator = CardNavigator()
     private var gridColumns: [String: Int] = [:]
 
-    public private(set) var inspected: TitleRef?
+    /// A page over the rows: a title, or a person, with the way back.
+    public enum Place: Hashable, Sendable {
+        case title(TitleRef)
+        case person(String)
+    }
+
+    /// The pages on top of the rows; Esc goes back one, empty is the rows.
+    public private(set) var stack: [Place] = []
     private var inspectorOrigin: CardID?
-    public private(set) var detail: TitleDetail?
-    public private(set) var similar: [TitleSummary] = []
+    /// The title whose page is on top, if a title is.
+    public var inspected: TitleRef? {
+        if case .title(let ref) = stack.last { return ref }
+        return nil
+    }
+    public var openPerson: String? {
+        if case .person(let id) = stack.last { return id }
+        return nil
+    }
+    struct DetailEntry {
+        var detail: TitleDetail
+        var similar: [TitleSummary]
+        var at: Date
+    }
+    /// Details once loaded stay, so a page opens at once a second time and
+    /// the cursor's neighbour is already there (`prefetch`).
+    private var details: [TitleRef: DetailEntry] = [:]
+    private var detailOrder: [TitleRef] = []
+    private var prefetching: Set<TitleRef> = []
+    private var prefetchTask: Task<Void, Never>?
+    public var detail: TitleDetail? { inspected.flatMap { details[$0]?.detail } }
+    public var similar: [TitleSummary] { inspected.flatMap { details[$0]?.similar } ?? [] }
+
+    public struct PersonPage: Sendable, Equatable {
+        public var id: String
+        public var name: String
+        public var person: PersonDetail?
+        public var titles: [TitleSummary]
+    }
+    private var people: [String: PersonPage] = [:]
+    public var personPage: PersonPage? { openPerson.flatMap { people[$0] } }
+    public private(set) var personLoading = false
+
+    /// Films and Series: how the shelf is sorted and narrowed, per kind.
+    public struct Browse: Equatable, Sendable {
+        public var sort: BrowseSort = .popular
+        public var genre: Genre?
+        public var dutch = false
+        public var decade: Int?
+        public var page = 1
+        public var totalPages = 1
+        public var genres: [Genre] = []
+        public init() {}
+    }
+    public var browse: [MediaType: Browse] = [.movie: Browse(), .tv: Browse()]
+    public private(set) var loadingMore = false
+    /// The Zoeker's surprise rows; a new seed reshuffles them.
+    public private(set) var exploreSeed = Int.random(in: 1...999_999)
+
     public private(set) var player: TrailerPlayback?
     /// Where the open title can be watched; nil until Jellyfin has answered.
     public private(set) var watchInfo: WatchInfo?
@@ -174,6 +228,9 @@ public final class LumosModel {
         connection = nil
         profile = nil
         loaded = []
+        details.removeAll()
+        detailOrder.removeAll()
+        people.removeAll()
         closeInspector()
     }
 
@@ -233,6 +290,7 @@ public final class LumosModel {
     public var title: String {
         switch page {
         case .discover: "Ontdekken"
+        case .explore: "Zoeker"
         case .list: scope == .shared ? "Onze lijst" : "Jouw lijst"
         case .movies: "Films"
         case .series: "Series"
@@ -246,13 +304,24 @@ public final class LumosModel {
     public var subtitle: String {
         switch page {
         case .discover: scope == .shared ? "Wat kijken jullie samen?" : "Voorstellen voor \(myName)"
+        case .explore: "Rijen om doorheen te dwalen; Verras me schudt opnieuw"
+        case .movies, .series: browseLine(page == .movies ? .movie : .tv)
         case .search: query.isEmpty ? "" : "Titel, maker, cast, genre of kenmerk"
         default: scope == .shared ? "Samen" : myName
         }
     }
 
+    /// "Populair · Komedie · Nederlands · jaren 90"
+    public func browseLine(_ type: MediaType) -> String {
+        let b = browse[type] ?? Browse()
+        return [b.sort.label, b.genre?.name, b.dutch ? "Nederlands" : nil, b.decade.map { "jaren \(String($0).suffix(2))" }]
+            .compactMap { $0 }.joined(separator: " · ")
+    }
+
     public func show(_ page: Page) async {
         if page != .search, self.page == .search { searchTask?.cancel(); query = "" }
+        // The sidebar always lands on the rows, whatever page was open over them.
+        if !stack.isEmpty { closeInspector(restoreFocus: false) }
         guard page != self.page || loaded.isEmpty else { return }
         self.page = page
         cursor = nil
@@ -274,6 +343,9 @@ public final class LumosModel {
         guard let api else { return }
         isLoading = true
         defer { isLoading = false }
+        // Lists and verdicts change what every detail says, so they load again.
+        details.removeAll()
+        detailOrder.removeAll()
         do {
             // The counts for the sidebar come in alongside the page itself.
             async let passedCount = countPassed(api)
@@ -297,11 +369,23 @@ public final class LumosModel {
                     }
                 }
                 loaded = rows
-            case .movies, .series, .available:
-                let items = try await api.titles(
-                    scope: scope, type: page == .movies ? .movie : page == .series ? .tv : nil,
-                    available: page == .available).items
+            case .available:
+                let items = try await api.titles(scope: scope, type: nil, available: true).items
                 loaded = [TitleRow(key: "library-\(page.rawValue)", title: title, subtitle: "\(items.count) titels", items: items, grid: true)]
+            case .movies, .series:
+                let type: MediaType = page == .movies ? .movie : .tv
+                var state = browse[type] ?? Browse()
+                state.page = 1
+                let found = try await api.browse(type: type, state)
+                state.totalPages = found.totalPages
+                state.genres = found.genres
+                browse[type] = state
+                loaded = [TitleRow(
+                    key: "browse-\(type.rawValue)", title: browseLine(type),
+                    subtitle: found.totalPages > 1 ? "Blader verder voor meer" : nil, items: found.items,
+                    empty: "Niets gevonden met deze keuzes.", grid: true)]
+            case .explore:
+                loaded = try await api.explore(scope: scope, seed: exploreSeed).rows
             case .passed, .taste:
                 let all = try await api.verdicts(scope).items
                 verdictItems = all.filter { $0.kind.isPass == (page == .passed) }
@@ -381,9 +465,11 @@ public final class LumosModel {
     }
 
     public func summary(_ ref: TitleRef) -> TitleSummary? {
-        if let detail, detail.ref == ref { return detail.summary }
+        if let known = details[ref] { return known.detail.summary }
         for row in loaded { if let found = row.items.first(where: { $0.ref == ref }) { return found } }
-        return verdictItems.first(where: { $0.title.ref == ref })?.title ?? similar.first(where: { $0.ref == ref })
+        return verdictItems.first(where: { $0.title.ref == ref })?.title
+            ?? similar.first(where: { $0.ref == ref })
+            ?? personPage?.titles.first(where: { $0.ref == ref })
     }
 
     /// What J, N and T act on: the open title when focus is in the inspector.
@@ -400,31 +486,66 @@ public final class LumosModel {
     public func move(_ move: Move) {
         guard let next = navigator.move(move, from: cursor) else { return }
         cursor = next
-        // The inspector follows the keyboard, like the design.
-        if inspected != nil, next.ref != inspected { open(next.ref, from: next, focusInside: false) }
+        // A title page opened from the rows follows the keyboard, like the design.
+        if inspected != nil, stack.count == 1, next.ref != inspected {
+            open(next.ref, from: next, focusInside: false)
+        } else {
+            prefetch(next.ref)
+        }
+        // The row's last cards: more of the shelf, before the keyboard gets there.
+        if page == .movies || page == .series, let line = navigator.position(of: next)?.line, line >= navigator.lines.count - 2 {
+            Task { await loadMore() }
+        }
     }
 
-    // MARK: The inspector
+    // MARK: The pages over the rows
 
-    public var inspectorShown: Bool { inspected != nil }
+    public var inspectorShown: Bool { !stack.isEmpty }
 
+    /// Opens a title's page. From a card (the rows) it is the page over the
+    /// rows; from inside a page (Meer zoals dit, a person's work) it goes
+    /// on top, so Esc comes back here.
     public func open(_ ref: TitleRef, from card: CardID? = nil, focusInside: Bool) {
         if inspected != ref {
             stopTrailer()
-            inspected = ref
-            detail = nil
-            similar = []
             watchInfo = nil
             screenMenu = nil
             detailTask?.cancel()
             watchTask?.cancel()
+            if card != nil || stack.isEmpty {
+                stack = [.title(ref)]
+            } else {
+                stack.append(.title(ref))
+            }
             detailTask = Task { await loadDetail(ref) }
         }
         if let card { inspectorOrigin = card }
         focus = focusInside ? .inspector : .content
     }
 
-    /// Space: shows or hides the details without moving focus.
+    public func openPerson(_ id: String, name: String? = nil) {
+        stopTrailer()
+        if people[id] == nil, let name { people[id] = PersonPage(id: id, name: name, person: nil, titles: []) }
+        stack.append(.person(id))
+        focus = .inspector
+        Task { await loadPerson(id) }
+    }
+
+    /// Esc, or the back button: one page back; the rows when it was the last.
+    public func back() {
+        guard !stack.isEmpty else { return }
+        stopTrailer()
+        screenMenu = nil
+        stack.removeLast()
+        if stack.isEmpty {
+            closeInspector()
+        } else if let ref = inspected {
+            watchInfo = nil
+            detailTask = Task { await loadDetail(ref) }
+        }
+    }
+
+    /// Space: shows or hides the title's page without moving focus.
     public func toggleInspector() {
         guard let cursor else { return }
         if inspected == cursor.ref { closeInspector(restoreFocus: false) } else { open(cursor.ref, from: cursor, focusInside: false) }
@@ -434,9 +555,7 @@ public final class LumosModel {
         stopTrailer()
         detailTask?.cancel()
         watchTask?.cancel()
-        inspected = nil
-        detail = nil
-        similar = []
+        stack = []
         watchInfo = nil
         screenMenu = nil
         if restoreFocus, let origin = inspectorOrigin {
@@ -448,21 +567,110 @@ public final class LumosModel {
 
     public var detailTaskForTests: Task<Void, Never>? { detailTask }
 
+    /// How long a loaded detail stays good; lists and verdicts clear it anyway.
+    static let detailLife: TimeInterval = 300
+
     func loadDetail(_ ref: TitleRef) async {
         guard let api else { return }
+        if let hit = details[ref], Date().timeIntervalSince(hit.at) < Self.detailLife {
+            followProgress(of: hit.detail)
+            followWatch(of: hit.detail)
+            return
+        }
         do {
             async let detailAnswer = api.title(ref, scope: scope)
             async let similarAnswer = api.similar(to: ref, scope: scope).items
             let (loaded, similar) = try await (detailAnswer, similarAnswer)
+            remember(ref, loaded, similar)
             guard inspected == ref else { return }
-            detail = loaded
-            self.similar = Array(similar.prefix(4))
             followProgress(of: loaded)
             followWatch(of: loaded)
         } catch is CancellationError {
         } catch {
             if inspected == ref { report(error) }
         }
+    }
+
+    private func remember(_ ref: TitleRef, _ detail: TitleDetail, _ similar: [TitleSummary]) {
+        details[ref] = DetailEntry(detail: detail, similar: Array(similar.prefix(18)), at: .now)
+        detailOrder.removeAll { $0 == ref }
+        detailOrder.append(ref)
+        while detailOrder.count > 80 { details[detailOrder.removeFirst()] = nil }
+    }
+
+    /// Loads a title's page before it is asked for: the card under the
+    /// cursor or the mouse, so Enter or a click shows it at once.
+    public func prefetch(_ ref: TitleRef) {
+        guard details[ref] == nil, !prefetching.contains(ref), let api else { return }
+        prefetchTask?.cancel()
+        prefetchTask = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(150))
+            guard !Task.isCancelled, let self, details[ref] == nil else { return }
+            prefetching.insert(ref)
+            defer { prefetching.remove(ref) }
+            async let detailAnswer = api.title(ref, scope: scope)
+            async let similarAnswer = api.similar(to: ref, scope: scope).items
+            guard let loaded = try? await detailAnswer else { return }
+            let similar = (try? await similarAnswer) ?? []
+            remember(ref, loaded, similar)
+            ImageLoaderHook.prefetch?([loaded.backdrop, loaded.poster].compactMap { $0 } + similar.compactMap(\.poster))
+        }
+    }
+
+    public var isPrefetched: (TitleRef) -> Bool { { [self] in details[$0] != nil } }
+
+    func loadPerson(_ id: String) async {
+        guard let api else { return }
+        if let known = people[id], known.person != nil { return }
+        personLoading = true
+        defer { personLoading = false }
+        do {
+            let found = try await api.credit(id, scope: scope)
+            people[id] = PersonPage(id: id, name: found.credit.name, person: found.person, titles: found.titles)
+        } catch {
+            if openPerson == id { report(error) }
+        }
+    }
+
+    // MARK: Browsing
+
+    private var browseType: MediaType? { page == .movies ? .movie : page == .series ? .tv : nil }
+
+    /// Sort, genre, Dutch or a decade for Films or Series; the shelf reloads.
+    public func setBrowse(_ change: (inout Browse) -> Void) async {
+        guard let type = browseType else { return }
+        var state = browse[type] ?? Browse()
+        change(&state)
+        browse[type] = state
+        cursor = nil
+        await reload()
+    }
+
+    /// The next page of the shelf, appended; the last page stops it.
+    public func loadMore() async {
+        guard let api, let type = browseType, var state = browse[type], !loadingMore, state.page < state.totalPages,
+              let index = loaded.firstIndex(where: { $0.key == "browse-\(type.rawValue)" }) else { return }
+        loadingMore = true
+        defer { loadingMore = false }
+        state.page += 1
+        do {
+            let found = try await api.browse(type: type, state)
+            guard browseType == type, loaded.indices.contains(index) else { return }
+            let known = Set(loaded[index].items.map(\.ref))
+            loaded[index].items += found.items.filter { !known.contains($0.ref) }
+            state.totalPages = found.totalPages
+            browse[type] = state
+            layout()
+        } catch {
+            report(error, quiet: true)
+        }
+    }
+
+    /// Verras me: new surprise rows in the Zoeker.
+    public func shuffle() async {
+        exploreSeed = Int.random(in: 1...999_999)
+        cursor = nil
+        await reload()
     }
 
     /// After the details: where an available title can be watched. Asked
@@ -508,14 +716,14 @@ public final class LumosModel {
         }
     }
 
-    /// Esc: the menu, then the trailer, then the inspector, then the search.
+    /// Esc: the menu, then the trailer, then one page back, then the search.
     public func escape() {
         if reasonMenu != nil {
             reasonMenu = nil
         } else if player != nil {
             stopTrailer()
-        } else if inspected != nil {
-            closeInspector()
+        } else if !stack.isEmpty {
+            back()
         } else if page == .search {
             query = ""
         }
@@ -781,4 +989,23 @@ extension TitleRow.Style {
     /// A card's width plus the gap, in points.
     public var cardWidth: Double { self == .wide ? 250 : 124 }
     public var cardStep: Double { cardWidth + 14 }
+}
+
+/// LumosUI's image loader warms its cache for a prefetched title; the model
+/// itself knows no AppKit image loading.
+public enum ImageLoaderHook {
+    @MainActor public static var prefetch: (([String]) -> Void)?
+}
+
+extension BrowseSort {
+    public var label: String {
+        switch self {
+        case .popular: "Populair"
+        case .new: "Nieuw"
+        case .upcoming: "Binnenkort"
+        case .top: "Best beoordeeld"
+        case .trending: "Trending"
+        case .gems: "Verborgen parels"
+        }
+    }
 }

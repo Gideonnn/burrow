@@ -2,7 +2,7 @@ import BurrowUI
 import LumosCore
 import SwiftUI
 
-/// The menu bar: undo, the pages, search and watching.
+/// The menu bar: undo, the pages, search, back and watching.
 public struct LumosCommands: Commands {
     let model: LumosModel
 
@@ -24,9 +24,14 @@ public struct LumosCommands: Commands {
         }
         CommandMenu("Kijken") {
             Button("Ontdekken") { Task { await model.show(.discover) } }.keyboardShortcut("1")
-            Button("Lijst") { Task { await model.show(.list) } }.keyboardShortcut("2")
-            Button("Smaak") { Task { await model.show(.taste) } }.keyboardShortcut("3")
+            Button("Zoeker") { Task { await model.show(.explore) } }.keyboardShortcut("2")
+            Button("Lijst") { Task { await model.show(.list) } }.keyboardShortcut("3")
+            Button("Films") { Task { await model.show(.movies) } }.keyboardShortcut("4")
+            Button("Series") { Task { await model.show(.series) } }.keyboardShortcut("5")
             Divider()
+            Button("Terug") { model.back() }
+                .keyboardShortcut("[")
+                .disabled(!model.inspectorShown)
             Button("Zoek") { model.requestSearchFocus() }.keyboardShortcut("f")
             Button("Vernieuw") { Task { await model.reload() } }.keyboardShortcut("r")
             Divider()

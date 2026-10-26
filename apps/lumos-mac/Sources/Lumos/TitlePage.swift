@@ -3,25 +3,41 @@ import LumosCore
 import LumosUI
 import SwiftUI
 
-/// The details on the right: the trailer or the stills, the facts, scores
-/// per source, short reviews, taste and the makers. Scores and the reason a
-/// title is proposed are kept apart.
-struct InspectorView: View {
+/// A title as a page over the rows: the trailer or the still beside the
+/// facts and the actions, then the story, the scores, what it cost and
+/// made, the reviews, the cast and makers with their own pages, the
+/// seasons, and more like it.
+struct TitlePage: View {
     @Environment(LumosModel.self) private var model
+    let ref: TitleRef
     var focused: FocusState<LumosModel.Focus?>.Binding
 
     var body: some View {
-        // One stable container holds focus while the details load and change.
         ZStack {
-            if let detail = model.detail, detail.ref == model.inspected {
+            if let detail = model.detail, detail.ref == ref {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
-                        Stage(detail: detail)
-                        Facts(detail: detail)
+                        Backdrop(detail: detail)
+                        VStack(alignment: .leading, spacing: 0) {
+                            HStack(alignment: .top, spacing: 24) {
+                                Stage(detail: detail).frame(width: 520)
+                                Facts(detail: detail)
+                            }
+                            Sections(detail: detail)
+                        }
+                        .padding(EdgeInsets(top: 18, leading: 24, bottom: 36, trailing: 24))
                     }
-                    .padding(16)
                 }
-                .id(detail.ref)
+            } else if let summary = model.summary(ref) {
+                // The card's own facts while the page loads, so nothing is blank.
+                VStack(alignment: .leading, spacing: 12) {
+                    Artwork(title: summary, style: .wide).frame(width: 520, height: 292.5).clipShape(RoundedRectangle(cornerRadius: 8))
+                    Text(summary.title).font(.system(size: 26, weight: .bold))
+                    Text(summary.line).foregroundStyle(.secondary)
+                    ProgressView().controlSize(.small)
+                }
+                .padding(24)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             } else {
                 ProgressView()
             }
@@ -30,24 +46,28 @@ struct InspectorView: View {
         .focusable()
         .focused(focused, equals: .inspector)
         .focusEffectDisabled()
-        // Esc reaches a view as the cancel command, not always as a key press.
         .onExitCommand { model.escape() }
-        .onKeyPress(phases: .down) { press in
-            if press.modifiers.contains(.command) || press.modifiers.contains(.option) { return .ignored }
-            if model.reasonMenu != nil {
-                switch press.key {
-                case .downArrow: model.moveReason(by: 1)
-                case .upArrow: model.moveReason(by: -1)
-                case .return: Task { await model.chooseReason() }
-                case .escape: model.reasonMenu = nil
-                default: return .ignored
-                }
-                return .handled
+        .onKeyPress(phases: .down) { press in handle(press) }
+    }
+
+    private func handle(_ press: KeyPress) -> KeyPress.Result {
+        if press.modifiers.contains(.command) || press.modifiers.contains(.option) { return .ignored }
+        if model.reasonMenu != nil {
+            switch press.key {
+            case .downArrow: model.moveReason(by: 1)
+            case .upArrow: model.moveReason(by: -1)
+            case .return: Task { await model.chooseReason() }
+            case .escape: model.reasonMenu = nil
+            default: return .ignored
             }
-            if press.key == .escape {
-                model.escape()
-                return .handled
-            }
+            return .handled
+        }
+        switch press.key {
+        case .escape: model.escape()
+        case .leftArrow: model.move(.left)
+        case .rightArrow: model.move(.right)
+        case .space: model.toggleInspector()
+        default:
             switch press.characters.lowercased() {
             case "j": Task { await model.toggleList() }
             case "n": model.reasonMenu = model.inspected
@@ -56,8 +76,36 @@ struct InspectorView: View {
             case "z": Task { await model.undo() }
             default: return .ignored
             }
-            return .handled
         }
+        return .handled
+    }
+}
+
+/// The still across the top, faded into the page, so the page has a mood
+/// before anything is read.
+private struct Backdrop: View {
+    let detail: TitleDetail
+
+    var body: some View {
+        let url = (detail.stills.first ?? detail.backdrop).flatMap(URL.init(string:))
+        CachedImage(url: url, maxPixels: 1280) { Placeholder(title: detail.summary, style: .wide, showsTitle: false) }
+            .frame(height: 220)
+            .frame(maxWidth: .infinity)
+            .clipped()
+            .overlay {
+                LinearGradient(
+                    stops: [.init(color: .clear, location: 0), .init(color: BurrowColor.plaster.opacity(0.6), location: 0.6), .init(color: BurrowColor.plaster, location: 1)],
+                    startPoint: .top, endPoint: .bottom)
+            }
+            .overlay(alignment: .bottomLeading) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(detail.title).font(.system(size: 30, weight: .bold)).lineLimit(2)
+                    if let tagline = detail.tagline { Text(tagline).font(.system(size: 13)).italic().foregroundStyle(.secondary) }
+                }
+                .padding(.horizontal, 24)
+                .padding(.bottom, 4)
+            }
+            .accessibilityHidden(true)
     }
 }
 
@@ -71,15 +119,6 @@ struct Stage: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 7) {
-            if !detail.stills.isEmpty {
-                Picker("Media", selection: $showStills) {
-                    Label("Trailer", systemImage: "play").tag(false)
-                    Label("Beelden \(detail.stills.count)", systemImage: "photo").tag(true)
-                }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-                .onChange(of: showStills) { if showStills { model.stopTrailer() } }
-            }
             ZStack {
                 if showStills, let url = URL(string: detail.stills[min(still, detail.stills.count - 1)]) {
                     CachedImage(url: url, maxPixels: 1280) { Color.black }
@@ -87,7 +126,7 @@ struct Stage: View {
                     TrailerPlayerView(playback: player, origin: model.connection?.serverURL)
                         .id(detail.ref)
                 } else {
-                    Artwork(title: detail.summary, style: .wide)
+                    Artwork(title: detail.summary, style: .wide, maxPixels: 1280, placeholderTitle: false)
                     if detail.trailer != nil {
                         LinearGradient(colors: [.black.opacity(0.55), .clear], startPoint: .bottom, endPoint: .center)
                         Button {
@@ -105,15 +144,6 @@ struct Stage: View {
                         }
                         .buttonStyle(.plain)
                         .help("Streamt pas na deze klik; er wordt niets bewaard (T)")
-                    } else {
-                        VStack(spacing: 4) {
-                            Text("Geen trailer gekoppeld").font(.callout.weight(.semibold))
-                            Text("Lumos toont nooit de trailer van een andere titel.").font(.caption)
-                        }
-                        .foregroundStyle(.white)
-                        .padding(14)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .background(.black.opacity(0.55))
                     }
                 }
             }
@@ -121,20 +151,19 @@ struct Stage: View {
             .frame(maxWidth: .infinity)
             .background(.black)
             .clipShape(RoundedRectangle(cornerRadius: 8))
-            if showStills, detail.stills.count > 1 {
-                HStack(spacing: 6) {
-                    ForEach(detail.stills.indices, id: \.self) { index in
-                        Button { still = index } label: {
-                            CachedImage(url: URL(string: detail.stills[index]), maxPixels: 160) { Color.gray }
-                                .frame(width: 62, height: 35)
-                                .clipShape(RoundedRectangle(cornerRadius: 5))
-                                .opacity(index == still ? 1 : 0.6)
-                        }
-                        .buttonStyle(.plain)
+            HStack(spacing: 8) {
+                if !detail.stills.isEmpty {
+                    Picker("Media", selection: $showStills) {
+                        Label("Trailer", systemImage: "play").tag(false)
+                        Label("Beelden", systemImage: "photo").tag(true)
                     }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .fixedSize()
+                    .onChange(of: showStills) { if showStills { model.stopTrailer() } }
                 }
+                StageBar(detail: detail, showStills: showStills)
             }
-            StageBar(detail: detail, showStills: showStills)
         }
     }
 }
@@ -158,7 +187,7 @@ struct StageBar: View {
                         Text("Stream van \(publisher)\(license.map { " · \($0)" } ?? "") · niets lokaal")
                     }
                 } else {
-                    Text("Nog geen trailerbron gecontroleerd")
+                    Text("Geen trailer gekoppeld")
                 }
             }
             .lineLimit(2)
@@ -171,8 +200,6 @@ struct StageBar: View {
             if let url = detail.trailer?.sourceURL, !showStills {
                 Link(destination: url) { Label("Groot beeld bij bron", systemImage: "arrow.up.right.square") }
                     .help("Opent de bron voor volledig scherm of een betere kwaliteit")
-            } else if detail.trailer == nil, let tmdb = detail.tmdbUrl.flatMap(URL.init(string:)) {
-                Link("Video’s op TMDB", destination: tmdb.appendingPathComponent("videos"))
             }
         }
         .font(.system(size: 11))
@@ -180,7 +207,7 @@ struct StageBar: View {
     }
 }
 
-// MARK: Facts
+// MARK: Facts and actions
 
 struct Facts: View {
     @Environment(LumosModel.self) private var model
@@ -191,11 +218,7 @@ struct Facts: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(detail.title)
-                .font(.system(size: 21, weight: .bold))
-                .textSelection(.enabled)
-                .padding(.top, 16)
-            meta.padding(.top, 5)
+            meta
             actions.padding(.top, 14)
             progress.padding(.top, 8)
             if let pass = detail.pass {
@@ -220,43 +243,37 @@ struct Facts: View {
             }
             if let synopsis = detail.synopsis {
                 Text(synopsis)
-                    .font(.system(size: 12.5))
+                    .font(.system(size: 13))
                     .lineSpacing(3)
                     .textSelection(.enabled)
                     .padding(.top, 14)
             }
             labels.padding(.top, 12)
-            InfoSection("Scores per bron") { ScoresView(scores: detail.scores, fixture: detail.dataOrigin == .fixture) }
-            InfoSection("Reviews") { SnippetsView(snippets: detail.snippets) }
             InfoSection("Voorstellen bijstellen") { tune }
-            if !model.similar.isEmpty {
-                InfoSection("Meer zoals dit") { similar }
-            }
-            InfoSection("Makers") { makers }
-            if let tmdb = detail.tmdbUrl.flatMap(URL.init(string:)) {
-                Link("TMDB-pagina", destination: tmdb).font(.caption).padding(.top, 8)
-            }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var meta: some View {
         let summary = detail.summary
-        return HStack(spacing: 10) {
+        return FlowLayout(spacing: 10) {
             Text(summary.kind)
             if let year = detail.year { Text(String(year)) }
             if let length = summary.length { Text(length) }
+            if detail.mediaType == .tv, let episodes = detail.episodes { Text("\(episodes) afleveringen") }
             if let language = detail.language { Text(language) }
+            if let status = detail.statusLabel { Text(status) }
+            if let original = detail.originalTitle { Text("‘\(original)’").italic() }
             if detail.availability == .available {
                 Label("In Jellyfin", systemImage: "checkmark.circle.fill").foregroundStyle(BurrowColor.success)
             } else {
                 Text(detail.availability.label)
             }
         }
-        .font(.system(size: 11.5))
+        .font(.system(size: 12))
         .foregroundStyle(.secondary)
     }
 
-    /// A series with more than one season asks which; one picked here goes with "Ja".
     private var seasonTotal: Int? {
         guard detail.mediaType == .tv, !detail.onList, let total = detail.seasons, total > 1 else { return nil }
         return total
@@ -264,7 +281,34 @@ struct Facts: View {
 
     private var actions: some View {
         VStack(alignment: .leading, spacing: 8) {
-            actionRow
+            HStack(spacing: 6) {
+                Button {
+                    Task { await model.toggleList(detail.ref, seasons: seasonTotal == nil ? nil : seasons.sorted()) }
+                } label: {
+                    Label(detail.onList ? "Op \(list)" : "Op \(list) zetten", systemImage: detail.onList ? "checkmark" : "plus")
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(detail.onList ? BurrowColor.success : BurrowColor.lumos)
+                .help(detail.onList ? "Staat op \(list); nog een keer haalt hem eraf (J)" : "Ja: zet op \(list) (J)")
+                .accessibilityIdentifier("lumos.approve.list")
+                Button {
+                    model.focus = .inspector
+                    model.reasonMenu = detail.ref
+                } label: {
+                    Label("Niet nu", systemImage: "chevron.down")
+                }
+                .help("Niet nu, reden optioneel (N)")
+                .popover(isPresented: Binding(
+                    get: { model.reasonMenu == detail.ref && model.focus == .inspector },
+                    set: { if !$0 { model.reasonMenu = nil } }
+                ), arrowEdge: .bottom) {
+                    ReasonMenu(ref: detail.ref)
+                }
+                if detail.trailer != nil, model.player?.ref != detail.ref {
+                    Button("Trailer", systemImage: "play") { Task { await model.playTrailer(detail.ref) } }
+                        .help("Streamt pas na deze klik (T)")
+                }
+            }
             if watchable { watchRow }
             if let total = seasonTotal {
                 HStack(spacing: 6) {
@@ -279,38 +323,10 @@ struct Facts: View {
         }
     }
 
-    private var actionRow: some View {
-        HStack(spacing: 6) {
-            Button {
-                Task { await model.toggleList(detail.ref, seasons: seasonTotal == nil ? nil : seasons.sorted()) }
-            } label: {
-                Label(detail.onList ? "Op \(list)" : "Op \(list) zetten", systemImage: detail.onList ? "checkmark" : "plus")
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(detail.onList ? BurrowColor.success : BurrowColor.lumos)
-            .help(detail.onList ? "Staat op \(list); nog een keer haalt hem eraf (J)" : "Ja: zet op \(list) (J)")
-            .accessibilityIdentifier("lumos.approve.list")
-            Button {
-                model.focus = .inspector
-                model.reasonMenu = detail.ref
-            } label: {
-                Label("Niet nu", systemImage: "chevron.down")
-            }
-            .help("Niet nu, reden optioneel (N)")
-            .popover(isPresented: Binding(
-                get: { model.reasonMenu == detail.ref && model.focus == .inspector },
-                set: { if !$0 { model.reasonMenu = nil } }
-            ), arrowEdge: .bottom) {
-                ReasonMenu(ref: detail.ref)
-            }
-        }
-    }
-
     private var watchable: Bool {
         model.canWatch && (detail.availability == .available || detail.availability == .partiallyAvailable)
     }
 
-    /// Where to watch: the TV when Jellyfin is open there, and the page here.
     @ViewBuilder private var watchRow: some View {
         HStack(spacing: 6) {
             Text("Kijken").font(.system(size: 11.5)).foregroundStyle(.secondary)
@@ -365,7 +381,6 @@ struct Facts: View {
         }
     }
 
-    /// The request and the download, as far as Seerr and the download client know.
     @ViewBuilder private var progress: some View {
         let request = detail.request
         if detail.download != nil || request?.label != nil {
@@ -415,55 +430,162 @@ struct Facts: View {
                 .foregroundStyle(.tertiary)
         }
     }
+}
 
-    private var similar: some View {
-        HStack(alignment: .top, spacing: 8) {
-            ForEach(model.similar) { title in
-                Button {
-                    model.open(title.ref, focusInside: true)
-                } label: {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Artwork(title: title, style: .poster)
-                            .aspectRatio(2 / 3, contentMode: .fit)
-                            .clipShape(RoundedRectangle(cornerRadius: 5))
-                        Text(title.title).font(.system(size: 11, weight: .medium)).lineLimit(1)
+// MARK: Below the fold
+
+/// Scores, money, reviews, cast, makers, seasons and more like it.
+private struct Sections: View {
+    @Environment(LumosModel.self) private var model
+    let detail: TitleDetail
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .top, spacing: 24) {
+                InfoSection("Scores per bron") { ScoresView(scores: detail.scores, fixture: detail.dataOrigin == .fixture) }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                if detail.budget != nil || detail.revenue != nil || !(detail.studios ?? []).isEmpty || detail.collection != nil {
+                    InfoSection("Productie") { MoneyView(detail: detail) }
+                        .frame(width: 300, alignment: .leading)
+                }
+            }
+            if let cast = detail.cast, !cast.isEmpty {
+                InfoSection("Cast") { PeopleRow(people: cast) }
+            }
+            if let crew = detail.crew, !crew.isEmpty {
+                InfoSection(detail.mediaType == .tv ? "Makers" : "Regie en scenario") { PeopleRow(people: crew) }
+            }
+            if let seasons = detail.seasonList, !seasons.isEmpty {
+                InfoSection("Seizoenen") { SeasonsView(seasons: seasons) }
+            }
+            if !model.similar.isEmpty {
+                InfoSection("Meer zoals dit") {
+                    Shelf(row: TitleRow(key: "similar", title: "", subtitle: nil, style: .poster, items: model.similar, empty: nil))
+                        .padding(.horizontal, -24)
+                }
+            }
+            InfoSection("Reviews") { SnippetsView(snippets: detail.snippets) }
+            if let tmdb = detail.tmdbUrl.flatMap(URL.init(string:)) {
+                Link("TMDB-pagina", destination: tmdb).font(.caption).padding(.top, 14)
+            }
+        }
+    }
+}
+
+/// What a film cost and made, as the source reports it, and who made it.
+private struct MoneyView: View {
+    let detail: TitleDetail
+
+    var body: some View {
+        Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 6) {
+            if let budget = detail.budget {
+                GridRow { key("Budget"); Text(Money.short(budget)).monospacedDigit() }
+            }
+            if let revenue = detail.revenue {
+                GridRow {
+                    key("Opbrengst")
+                    HStack(spacing: 6) {
+                        Text(Money.short(revenue)).monospacedDigit()
+                        if let budget = detail.budget, budget > 0 {
+                            let ratio = revenue / budget
+                            Text(String(format: "%.1f×", ratio))
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(ratio >= 2 ? BurrowColor.success : ratio >= 1 ? Color.secondary : BurrowColor.danger)
+                                .help("Opbrengst gedeeld door budget, wereldwijd aan de kassa")
+                        }
                     }
                 }
-                .buttonStyle(.plain)
-                .frame(maxWidth: .infinity)
+            }
+            if let studios = detail.studios, !studios.isEmpty {
+                GridRow(alignment: .firstTextBaseline) { key(detail.mediaType == .tv ? "Zender" : "Studio"); Text(studios.joined(separator: ", ")) }
+            }
+            if let collection = detail.collection {
+                GridRow { key("Reeks"); Text(collection.name) }
+            }
+            if let date = detail.releaseDate {
+                GridRow { key(detail.mediaType == .tv ? "Eerste" : "Uitgebracht"); Text(date) }
+            }
+            if let last = detail.lastAired {
+                GridRow { key("Laatste"); Text(last) }
             }
         }
+        .font(.system(size: 12.5))
+        .textSelection(.enabled)
     }
 
-    private var makers: some View {
-        let leads = detail.credits.filter { $0.role != "cast" }
-        let cast = detail.credits.filter { $0.role == "cast" }
-        return Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 4) {
-            if !leads.isEmpty {
-                GridRow {
-                    Text(detail.mediaType == .tv ? "Maker" : "Regie").foregroundStyle(.secondary)
-                    names(leads)
-                }
-            }
-            if !cast.isEmpty {
-                GridRow {
-                    Text("Met").foregroundStyle(.secondary)
-                    names(cast)
-                }
-            }
-        }
-        .font(.system(size: 12))
+    private func key(_ text: String) -> some View {
+        Text(text).foregroundStyle(.secondary).gridColumnAlignment(.leading)
     }
+}
 
-    private func names(_ credits: [Credit]) -> some View {
-        FlowLayout(spacing: 4) {
-            ForEach(credits, id: \.id) { credit in
-                Button(credit.name) { model.query = credit.name }
-                    .buttonStyle(.link)
-                    .foregroundStyle(.primary)
-                    .help("Zoek alles met \(credit.name)")
+/// Faces in a row; a click opens the person's page.
+private struct PeopleRow: View {
+    @Environment(LumosModel.self) private var model
+    let people: [CastMember]
+
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            LazyHStack(alignment: .top, spacing: 14) {
+                ForEach(people) { person in
+                    Button { model.openPerson(person.id, name: person.name) } label: {
+                        VStack(spacing: 6) {
+                            Face(person: person, size: 72)
+                            Text(person.name).font(.system(size: 11.5, weight: .semibold)).lineLimit(2).multilineTextAlignment(.center)
+                            if let part = person.part {
+                                Text(part).font(.system(size: 10.5)).foregroundStyle(.secondary).lineLimit(2).multilineTextAlignment(.center)
+                            }
+                        }
+                        .frame(width: 92)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .help("Alles van \(person.name)")
+                }
+            }
+            .padding(.vertical, 4)
+        }
+    }
+}
+
+/// A person's photo, or their initials.
+struct Face: View {
+    let person: CastMember
+    var size: CGFloat
+
+    var body: some View {
+        CachedImage(url: person.photo.flatMap(URL.init(string:)), maxPixels: 185) {
+            ZStack {
+                TileColours(person.name).start
+                Text(person.name.split(separator: " ").prefix(2).compactMap(\.first).map(String.init).joined())
+                    .font(.system(size: size * 0.32, weight: .semibold)).foregroundStyle(.white)
             }
         }
+        .frame(width: size, height: size)
+        .clipShape(Circle())
+        .overlay(Circle().strokeBorder(.black.opacity(0.08)))
+    }
+}
+
+private struct SeasonsView: View {
+    let seasons: [SeasonSummary]
+
+    var body: some View {
+        VStack(spacing: 0) {
+            ForEach(seasons) { season in
+                HStack(spacing: 10) {
+                    CachedImage(url: season.poster.flatMap(URL.init(string:)), maxPixels: 185) { Color.secondary.opacity(0.2) }
+                        .frame(width: 30, height: 45)
+                        .clipShape(RoundedRectangle(cornerRadius: 3))
+                    Text(season.name).font(.system(size: 12.5, weight: .medium))
+                    Spacer()
+                    Text([season.episodes.map { "\($0) afl." }, season.year.map(String.init)].compactMap { $0 }.joined(separator: " · "))
+                        .font(.system(size: 11.5)).foregroundStyle(.secondary)
+                }
+                .padding(.vertical, 5)
+                if season.id != seasons.last?.id { Divider() }
+            }
+        }
+        .frame(maxWidth: 520, alignment: .leading)
     }
 }
 
@@ -484,7 +606,7 @@ struct InfoSection<Content: View>: View {
                 .foregroundStyle(.secondary)
             content
         }
-        .padding(.top, 20)
+        .padding(.top, 22)
     }
 }
 
@@ -535,6 +657,7 @@ struct ScoresView: View {
                 }
             }
             .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(BurrowColor.hairline))
+            .frame(maxWidth: 560)
             if fixture, scores.contains(where: { $0.source.hasSuffix("(test)") }) {
                 Text("(test) = verzonnen score bij een verzonnen titel.").font(.system(size: 10.5)).foregroundStyle(.tertiary)
             }
@@ -564,7 +687,7 @@ struct SnippetsView: View {
                         .foregroundStyle(.secondary)
                     }
                     .padding(10)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(maxWidth: 640, alignment: .leading)
                     .background(BurrowColor.linen.opacity(0.7), in: RoundedRectangle(cornerRadius: 8))
                 }
                 Text("Korte fragmenten in de taal van de bron. De volledige review kan spoilers bevatten.")
@@ -574,4 +697,3 @@ struct SnippetsView: View {
         }
     }
 }
-

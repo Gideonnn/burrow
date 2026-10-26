@@ -380,6 +380,80 @@ final class Household: @unchecked Sendable {
         #expect(model.toast?.message == "Niet gekoppeld aan Jellyfin, dus kijken kan nog niet.")
         #expect(model.inspected == nil)
     }
+
+    @Test func aPageOpensAtOnceTheSecondTimeAndAfterTheCursorPrefetchedIt() async {
+        let server = server()
+        let model = await started(server)
+        model.open(alpha, from: CardID(row: "tonight", ref: alpha), focusInside: true)
+        await model.detailTaskForTests?.value
+        #expect(model.detail?.title == "Alpha")
+        #expect(server.requests("GET", "/api/lumos/titles/movie/1").count == 1)
+        model.back()
+        #expect(model.stack.isEmpty)
+        #expect(model.focus == .content)
+        model.open(alpha, from: CardID(row: "tonight", ref: alpha), focusInside: true)
+        #expect(model.detail?.title == "Alpha")
+        await model.detailTaskForTests?.value
+        #expect(server.requests("GET", "/api/lumos/titles/movie/1").count == 1)
+        // The cursor's next card is fetched before Enter.
+        model.closeInspector()
+        model.move(.right)
+        try? await Task.sleep(for: .milliseconds(400))
+        #expect(server.requests("GET", "/api/lumos/titles/movie/2").count == 1)
+        model.open(bravo, from: CardID(row: "tonight", ref: bravo), focusInside: true)
+        #expect(model.detail?.title == "Bravo")
+    }
+
+    @Test func aPersonGoesOnTopAndEscComesBackToTheTitle() async {
+        let server = server()
+        server.on("GET", "/api/lumos/credits/p7", json: #"{"dataOrigin":"fixture","credit":{"id":"p7","name":"Lotte Example"},"person":{"id":"p7","name":"Lotte Example","photo":null,"biography":"Plays harbour folk.","birthday":null,"deathday":null,"placeOfBirth":null,"known":"Acting"},"titles":[\#(Fixture.title(2, "Bravo"))]}"#)
+        let model = await started(server)
+        model.open(alpha, from: CardID(row: "tonight", ref: alpha), focusInside: true)
+        await model.detailTaskForTests?.value
+        model.openPerson("p7", name: "Lotte Example")
+        for _ in 0..<50 where model.personPage?.person == nil { try? await Task.sleep(for: .milliseconds(20)) }
+        #expect(model.personPage?.person?.biography == "Plays harbour folk.")
+        #expect(model.personPage?.titles.map(\.title) == ["Bravo"])
+        #expect(model.inspected == nil)
+        // A title from their work goes on top; Esc, Esc, Esc walks back out.
+        model.open(bravo, focusInside: true)
+        #expect(model.stack.count == 3)
+        model.escape()
+        #expect(model.openPerson == "p7")
+        model.escape()
+        #expect(model.inspected == alpha)
+        model.escape()
+        #expect(model.stack.isEmpty)
+        // The sidebar lands on the rows whatever was open.
+        model.openPerson("p7")
+        await model.show(.list)
+        #expect(model.stack.isEmpty)
+    }
+
+    @Test func theShelfPagesAndNarrows() async {
+        let server = server()
+        let page: @Sendable (Int, [String]) -> String = { n, items in
+            #"{"dataOrigin":"fixture","page":\#(n),"totalPages":2,"items":[\#(items.joined(separator: ","))],"genres":[{"id":"35","name":"Komedie"}]}"#
+        }
+        server.on("GET", "/api/lumos/browse") { request in
+            let query = request.url?.query() ?? ""
+            if query.contains("page=2") { return (200, page(2, [Fixture.title(3, "Charlie")])) }
+            if query.contains("genre=35") { return (200, page(1, [Fixture.title(2, "Bravo")])) }
+            return (200, page(1, [Fixture.title(1, "Alpha"), Fixture.title(2, "Bravo")]))
+        }
+        let model = await started(server)
+        await model.show(.movies)
+        #expect(model.rows.first?.items.map(\.title) == ["Alpha", "Bravo"])
+        #expect(model.browse[.movie]?.genres.first?.name == "Komedie")
+        await model.loadMore()
+        #expect(model.rows.first?.items.map(\.title) == ["Alpha", "Bravo", "Charlie"])
+        await model.loadMore()
+        #expect(server.requests("GET", "/api/lumos/browse").count == 2)
+        await model.setBrowse { $0.genre = Genre(id: "35", name: "Komedie") }
+        #expect(model.rows.first?.items.map(\.title) == ["Bravo"])
+        #expect(model.subtitle == "Populair · Komedie")
+        #expect(server.requests("GET", "/api/lumos/browse").last?.isEmpty == true)
+    }
 }
 
 private func readBody(_ stream: InputStream) -> String {

@@ -31,10 +31,17 @@ public func controlState(_ model: LumosModel) -> [String: Any] {
             "trailer": detail.trailer?.publisher ?? NSNull(),
             "scores": detail.scores.map { "\($0.source) \($0.label ?? "") \($0.valueText)" },
             "availability": detail.availability.rawValue,
+            "cast": (detail.cast ?? []).prefix(8).map { "\($0.name) (\($0.id))\($0.part.map { " \($0)" } ?? "")" },
+            "budget": detail.budget ?? NSNull(), "revenue": detail.revenue ?? NSNull(),
+            "similar": model.similar.prefix(8).map { "\($0.title) (\($0.ref))" },
             "web": model.watchInfo?.web ?? NSNull(),
             "screens": model.watchInfo?.screens.map { "\($0.name) (\($0.deviceId))\($0.playing.map { ", speelt \($0)" } ?? "")" } ?? [],
         ] as [String: Any]
     }
+    if let person = model.personPage {
+        state["person"] = ["id": person.id, "name": person.name, "known": person.person?.known ?? NSNull(), "titles": person.titles.prefix(12).map { "\($0.title) (\($0.ref)) \($0.match ?? "")" }] as [String: Any]
+    }
+    state["stack"] = model.stack.map { "\($0)" }
     if let player = model.player { state["player"] = player.statusText }
     if let toast = model.toast { state["toast"] = toast.message }
     if let error = model.error { state["error"] = error }
@@ -46,11 +53,11 @@ public func controlState(_ model: LumosModel) -> [String: Any] {
 @MainActor
 public func registerCommands(_ service: ControlService, model: LumosModel) {
     service.register(
-        "show", help: "Show a page: discover, list, movies, series, available, taste or passed; optionally for shared or mine.",
-        arguments: [.init("page", "discover, list, movies, series, available, taste or passed"), .init("scope", "shared or mine")]
+        "show", help: "Show a page: discover, explore, list, movies, series, available, taste or passed; optionally for shared or mine.",
+        arguments: [.init("page", "discover, explore, list, movies, series, available, taste or passed"), .init("scope", "shared or mine")]
     ) { request in
         guard let page = LumosModel.Page(rawValue: request["page"] as? String ?? "discover"), page != .search else {
-            throw ControlError("page is discover, list, movies, series, available, taste or passed")
+            throw ControlError("page is discover, explore, list, movies, series, available, taste or passed")
         }
         if let text = request["scope"] as? String {
             guard let scope = ListScope(rawValue: text) else { throw ControlError("scope is shared or mine") }
@@ -80,8 +87,18 @@ public func registerCommands(_ service: ControlService, model: LumosModel) {
         model.stopTrailer()
         return controlState(model)
     }
-    service.register("close", help: "Close the details.") { _ in
+    service.register("close", help: "Close the pages over the rows.") { _ in
         model.closeInspector()
+        return controlState(model)
+    }
+    service.register("back", help: "One page back (Esc).") { _ in
+        model.back()
+        return controlState(model)
+    }
+    service.register("person", help: "Open a person's page by id, e.g. from the open title's cast.", arguments: [.init("id", "the person's id")]) { request in
+        guard let id = request["id"] as? String, !id.isEmpty else { throw ControlError("id is the person's id") }
+        model.openPerson(id)
+        for _ in 0..<40 where model.personPage?.person == nil { try? await Task.sleep(for: .milliseconds(50)) }
         return controlState(model)
     }
     service.register(

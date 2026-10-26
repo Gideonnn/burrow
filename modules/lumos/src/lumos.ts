@@ -552,8 +552,22 @@ export class Lumos {
       revenue: t.revenue ?? null,
       studios: t.studios ?? [],
       collection: t.collection ?? null,
-      cast: t.cast ?? [],
-      crew: t.crew ?? [],
+      // A provider without a cast list (the fixtures) still names its people.
+      cast:
+        t.cast ??
+        t.credits
+          .filter((c) => c.role === 'cast')
+          .map((c) => ({ id: c.id, name: c.name, part: null, photo: null })),
+      crew:
+        t.crew ??
+        t.credits
+          .filter((c) => c.role !== 'cast')
+          .map((c) => ({
+            id: c.id,
+            name: c.name,
+            part: c.role === 'director' ? 'Regie' : 'Maker',
+            photo: null,
+          })),
       seasonList: t.seasonList ?? [],
       episodes: t.episodes ?? null,
     };

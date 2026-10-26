@@ -49,7 +49,10 @@ struct CardView: View {
         .frame(width: size.width, alignment: .leading)
         .contentShape(Rectangle())
         .id(card.description)
-        .onHover { hovering = $0 }
+        .onHover { inside in
+            hovering = inside
+            if inside { model.prefetch(title.ref) }
+        }
         .animation(.easeOut(duration: 0.15), value: hovering)
         .onTapGesture {
             model.select(card)

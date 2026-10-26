@@ -273,9 +273,111 @@ public struct TitleDetail: Codable, Sendable {
     public var tmdbUrl: String?
     public var request: RequestState?
     public var download: Download?
+    public var tagline: String?
+    public var originalTitle: String?
+    public var status: String?
+    public var releaseDate: String?
+    public var lastAired: String?
+    /// In US dollars; nil when the source does not know.
+    public var budget: Double?
+    public var revenue: Double?
+    public var studios: [String]?
+    public var collection: Collection?
+    public var cast: [CastMember]?
+    public var crew: [CastMember]?
+    public var seasonList: [SeasonSummary]?
+    public var episodes: Int?
+
+    public struct Collection: Codable, Sendable, Hashable {
+        public var id: Int
+        public var name: String
+    }
 
     public var ref: TitleRef { TitleRef(mediaType: mediaType, tmdbId: tmdbId) }
 
+    /// "Released" and friends in Dutch, when the source says so.
+    public var statusLabel: String? {
+        switch status {
+        case "Released": nil
+        case "Returning Series": "Loopt nog"
+        case "Ended": "Afgelopen"
+        case "Canceled": "Gestopt"
+        case "In Production", "Post Production": "In productie"
+        case "Planned": "Gepland"
+        case "Rumored": "Gerucht"
+        case let other?: other
+        case nil: nil
+        }
+    }
+}
+
+public struct CastMember: Codable, Sendable, Hashable, Identifiable {
+    public var id: String
+    public var name: String
+    public var part: String?
+    public var photo: String?
+}
+
+public struct SeasonSummary: Codable, Sendable, Hashable, Identifiable {
+    public var number: Int
+    public var name: String
+    public var episodes: Int?
+    public var year: Int?
+    public var poster: String?
+    public var id: Int { number }
+}
+
+public enum BrowseSort: String, Codable, Sendable, CaseIterable {
+    case popular, new, upcoming, top, trending, gems
+}
+
+public struct Genre: Codable, Sendable, Hashable, Identifiable {
+    public var id: String
+    public var name: String
+}
+
+public struct BrowseResponse: Codable, Sendable {
+    public var dataOrigin: DataOrigin
+    public var page: Int
+    public var totalPages: Int
+    public var items: [TitleSummary]
+    public var genres: [Genre]
+}
+
+public struct PersonDetail: Codable, Sendable, Hashable {
+    public var id: String
+    public var name: String
+    public var photo: String?
+    public var biography: String?
+    public var birthday: String?
+    public var deathday: String?
+    public var placeOfBirth: String?
+    public var known: String?
+}
+
+public struct CreditResponse: Codable, Sendable {
+    public struct Credit: Codable, Sendable { public var id: String; public var name: String }
+    public var dataOrigin: DataOrigin
+    public var credit: Credit
+    public var person: PersonDetail?
+    public var titles: [TitleSummary]
+}
+
+/// Amounts the way the page writes them: "$ 48,5 mln".
+public enum Money {
+    public static func short(_ dollars: Double) -> String {
+        let formatter = NumberFormatter()
+        formatter.locale = Locale(identifier: "nl_NL")
+        formatter.maximumFractionDigits = 1
+        formatter.minimumFractionDigits = 0
+        if dollars >= 1_000_000_000 { return "$ \(formatter.string(from: NSNumber(value: dollars / 1_000_000_000)) ?? "") mld" }
+        if dollars >= 1_000_000 { return "$ \(formatter.string(from: NSNumber(value: dollars / 1_000_000)) ?? "") mln" }
+        formatter.maximumFractionDigits = 0
+        return "$ \(formatter.string(from: NSNumber(value: dollars)) ?? "")"
+    }
+}
+
+extension TitleDetail {
     public var summary: TitleSummary {
         TitleSummary(
             mediaType: mediaType, tmdbId: tmdbId, title: title, year: year, runtimeMinutes: runtimeMinutes,
@@ -498,5 +600,31 @@ extension APIClient {
 
     public func play(_ ref: TitleRef, on deviceId: String) async throws -> PlayResponse {
         try await call("POST", "api/lumos/watch/\(ref.mediaType.rawValue)/\(ref.tmdbId)/screen", body: PlayBody(deviceId: deviceId))
+    }
+}
+
+extension APIClient {
+    /// A page of Films or Series the way the shop sorts them.
+    public func browse(type: MediaType, _ state: LumosModel.Browse, scope: ListScope = .shared) async throws -> BrowseResponse {
+        var query = [
+            URLQueryItem(name: "type", value: type.rawValue),
+            URLQueryItem(name: "sort", value: state.sort.rawValue),
+            URLQueryItem(name: "page", value: String(state.page)),
+            URLQueryItem(name: "scope", value: scope.rawValue),
+        ]
+        if let genre = state.genre { query.append(URLQueryItem(name: "genre", value: genre.id)) }
+        if state.dutch { query.append(URLQueryItem(name: "language", value: "nl")) }
+        if let decade = state.decade { query.append(URLQueryItem(name: "decade", value: String(decade))) }
+        return try await call("GET", "api/lumos/browse", query: query)
+    }
+
+    public func explore(scope: ListScope, seed: Int) async throws -> RowsResponse {
+        try await call("GET", "api/lumos/explore", query: [
+            URLQueryItem(name: "scope", value: scope.rawValue), URLQueryItem(name: "seed", value: String(seed)),
+        ])
+    }
+
+    public func credit(_ id: String, scope: ListScope) async throws -> CreditResponse {
+        try await call("GET", "api/lumos/credits/\(id)", query: [URLQueryItem(name: "scope", value: scope.rawValue)])
     }
 }
