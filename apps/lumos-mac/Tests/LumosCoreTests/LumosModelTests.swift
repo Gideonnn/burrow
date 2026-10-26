@@ -205,6 +205,16 @@ final class Household: @unchecked Sendable {
         #expect(model.toast?.message == "Niets om ongedaan te maken.")
     }
 
+    @Test func chosenSeasonsGoWithYesAndIntoTheToast() async {
+        let server = server()
+        let model = await started(server)
+        await model.toggleList(alpha, seasons: [1, 2])
+        #expect(server.requests("PUT", "/api/lumos/lists/shared/items/movie/1").last == #"{"seasons":[1,2]}"#)
+        #expect(model.toast?.message == "Alpha staat op onze lijst (seizoen 1, 2).")
+        #expect(LumosModel.seasonsLabel([3, 1, 2], of: 3) == "alle 3 seizoenen")
+        #expect(LumosModel.seasonsLabel([2], of: 3) == "seizoen 2")
+    }
+
     @Test func theReasonMenuTakesNoReasonOnEnterAndArrowsPickOne() async {
         let server = server()
         let model = await started(server)

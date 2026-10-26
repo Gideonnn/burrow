@@ -42,6 +42,15 @@ public final class LumosModel {
         public var id = UUID()
     }
 
+    public struct ChangeNote: Equatable, Sendable {
+        public enum Kind: Sendable { case listed, unlisted, passed, seen, restored, tuned, undone }
+
+        public var kind: Kind
+        public var ref: TitleRef?
+        public var scope: ListScope
+        public var id = UUID()
+    }
+
     struct UndoEntry {
         var changeId: String
         var label: String
@@ -93,6 +102,8 @@ public final class LumosModel {
     }
     public private(set) var reasonChoice = 0
     public private(set) var toast: Toast?
+    /// What just happened, for a face that wants to celebrate or react to it.
+    public private(set) var lastChange: ChangeNote?
     private var undoStack: [UndoEntry] = []
     public var searchFocusRequest = 0
 
@@ -506,12 +517,13 @@ public final class LumosModel {
 
     // MARK: Lists and verdicts
 
-    private func perform(_ label: String, undoable: Bool = true, _ work: (APIClient) async throws -> LumosChange) async {
+    private func perform(_ label: String, _ kind: ChangeNote.Kind, _ ref: TitleRef? = nil, undoable: Bool = true, _ work: (APIClient) async throws -> LumosChange) async {
         guard let api else { return }
         let at = cursor
         do {
             let change = try await work(api)
             if undoable { undoStack.append(UndoEntry(changeId: change.changeId, label: label, cursor: at)) }
+            lastChange = ChangeNote(kind: kind, ref: ref, scope: scope)
             show(label, canUndo: undoable)
             await reload()
         } catch {
@@ -519,17 +531,26 @@ public final class LumosModel {
         }
     }
 
-    /// J: on the list of the scope you are in, or off it again.
-    public func toggleList(_ ref: TitleRef? = nil) async {
+    /// J: on the list of the scope you are in, or off it again. `seasons`
+    /// picks which seasons of a series are asked for; none means the first.
+    public func toggleList(_ ref: TitleRef? = nil, seasons: [Int]? = nil) async {
         guard let ref = ref ?? target, let title = summary(ref) else { return }
         let list = scope == .shared ? "onze lijst" : "jouw lijst"
         if title.onList {
-            await perform("\(title.title) van \(list) gehaald.") { try await $0.removeFromList(ref, scope: scope) }
+            await perform("\(title.title) van \(list) gehaald.", .unlisted, ref) { try await $0.removeFromList(ref, scope: scope) }
         } else {
             let requests = status?.requests == true && title.availability == .notRequested
-            let label = requests ? "\(title.title) staat op \(list) en wordt zo aangevraagd." : "\(title.title) staat op \(list)."
-            await perform(label) { try await $0.addToList(ref, scope: scope) }
+            let which = seasons.map { Self.seasonsLabel($0) }.map { " (\($0))" } ?? ""
+            let label = requests ? "\(title.title) staat op \(list) en wordt zo aangevraagd\(which)." : "\(title.title) staat op \(list)\(which)."
+            await perform(label, .listed, ref) { try await $0.addToList(ref, scope: scope, seasons: seasons) }
         }
+    }
+
+    /// "seizoen 1, 2" or "alle 4 seizoenen".
+    public static func seasonsLabel(_ seasons: [Int], of total: Int? = nil) -> String {
+        let sorted = seasons.sorted()
+        if let total, total > 1, sorted == Array(1...total) { return "alle \(total) seizoenen" }
+        return "seizoen " + sorted.map(String.init).joined(separator: ", ")
     }
 
     /// N with a reason or none; "Al gezien" is its own kind and no dislike.
@@ -537,7 +558,7 @@ public final class LumosModel {
         reasonMenu = nil
         guard let ref = ref ?? target, let title = summary(ref) else { return }
         let label = reason.map { "\(title.title) overgeslagen: \($0.lowercased())." } ?? "\(title.title) overgeslagen."
-        await perform(label) { try await $0.addVerdict(.notNow, ref, scope: scope, reason: reason) }
+        await perform(label, .passed, ref) { try await $0.addVerdict(.notNow, ref, scope: scope, reason: reason) }
     }
 
     /// The menu's arrows; the keyboard stays where it was, the menu follows.
@@ -558,7 +579,7 @@ public final class LumosModel {
     public func seen(_ ref: TitleRef? = nil) async {
         reasonMenu = nil
         guard let ref = ref ?? target, let title = summary(ref) else { return }
-        await perform("\(title.title): al gezien.") { try await $0.addVerdict(.seen, ref, scope: scope) }
+        await perform("\(title.title): al gezien.", .seen, ref) { try await $0.addVerdict(.seen, ref, scope: scope) }
     }
 
     public func restore(_ verdict: Verdict) async {
@@ -566,17 +587,17 @@ public final class LumosModel {
     }
 
     public func restore(verdictId: String, title: String) async {
-        await perform("\(title) kan weer voorgesteld worden.") { try await $0.undoVerdict(verdictId) }
+        await perform("\(title) kan weer voorgesteld worden.", .restored) { try await $0.undoVerdict(verdictId) }
     }
 
     /// "Meer zoals dit" or "Minder zoals dit"; choosing it again takes it back.
     public func taste(_ kind: VerdictKind, _ ref: TitleRef? = nil) async {
         guard let ref = ref ?? target, let title = summary(ref) else { return }
         if let current = title.taste, current.kind == kind {
-            await perform("Bijstelling voor \(title.title) weggehaald.") { try await $0.undoVerdict(current.id) }
+            await perform("Bijstelling voor \(title.title) weggehaald.", .tuned, ref) { try await $0.undoVerdict(current.id) }
         } else {
             let word = kind == .moreLikeThis ? "Meer" : "Minder"
-            await perform("\(word) zoals \(title.title).") { try await $0.addVerdict(kind, ref, scope: scope) }
+            await perform("\(word) zoals \(title.title).", .tuned, ref) { try await $0.addVerdict(kind, ref, scope: scope) }
         }
     }
 
@@ -591,6 +612,7 @@ public final class LumosModel {
         guard let api else { return }
         do {
             _ = try await api.undo(change: entry.changeId)
+            lastChange = ChangeNote(kind: .undone, ref: nil, scope: scope)
             show("Ongedaan gemaakt.")
             await reload()
             if let at = entry.cursor, navigator.position(of: at) != nil { cursor = at }

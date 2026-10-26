@@ -184,6 +184,7 @@ struct StageBar: View {
 struct Facts: View {
     @Environment(LumosModel.self) private var model
     let detail: TitleDetail
+    @State private var seasons: Set<Int> = [1]
 
     private var list: String { model.scope == .shared ? "onze lijst" : "jouw lijst" }
 
@@ -254,10 +255,32 @@ struct Facts: View {
         .foregroundStyle(.secondary)
     }
 
+    /// A series with more than one season asks which; one picked here goes with "Ja".
+    private var seasonTotal: Int? {
+        guard detail.mediaType == .tv, !detail.onList, let total = detail.seasons, total > 1 else { return nil }
+        return total
+    }
+
     private var actions: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            actionRow
+            if let total = seasonTotal {
+                HStack(spacing: 6) {
+                    Text("Seizoenen").font(.system(size: 11.5)).foregroundStyle(.secondary)
+                    SeasonMenu(total: total, selection: $seasons) {
+                        Text(SeasonMenu<Text>.text(seasons, total: total))
+                    }
+                    .fixedSize()
+                    .onChange(of: detail.ref) { seasons = [1] }
+                }
+            }
+        }
+    }
+
+    private var actionRow: some View {
         HStack(spacing: 6) {
             Button {
-                Task { await model.toggleList(detail.ref) }
+                Task { await model.toggleList(detail.ref, seasons: seasonTotal == nil ? nil : seasons.sorted()) }
             } label: {
                 Label(detail.onList ? "Op \(list)" : "Op \(list) zetten", systemImage: detail.onList ? "checkmark" : "plus")
             }

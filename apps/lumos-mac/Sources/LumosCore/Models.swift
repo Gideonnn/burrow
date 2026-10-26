@@ -410,8 +410,13 @@ extension APIClient {
         try await call("GET", "api/lumos/verdicts", query: scoped(scope))
     }
 
-    public func addToList(_ ref: TitleRef, scope: ListScope) async throws -> LumosChange {
-        try await call("PUT", "api/lumos/lists/\(scope.rawValue)/items/\(ref.mediaType.rawValue)/\(ref.tmdbId)", body: [String: String]())
+    struct ListItemBody: Encodable {
+        var seasons: [Int]?
+    }
+
+    /// `seasons` chooses which seasons of a series to ask for; nil asks the first.
+    public func addToList(_ ref: TitleRef, scope: ListScope, seasons: [Int]? = nil) async throws -> LumosChange {
+        try await call("PUT", "api/lumos/lists/\(scope.rawValue)/items/\(ref.mediaType.rawValue)/\(ref.tmdbId)", body: ListItemBody(seasons: seasons))
     }
 
     public func removeFromList(_ ref: TitleRef, scope: ListScope) async throws -> LumosChange {

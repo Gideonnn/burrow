@@ -9,7 +9,7 @@
     "dev": {
       "cache": false,
       "persistent": true,
-      "passThroughEnv": ["BURROW_*", "FORCE_COLOR"]
+      "passThroughEnv": ["BURROW_*", "LUMOS_*", "FORCE_COLOR"]
     },
     // No lint/format task: oxlint and oxfmt run once from the root over the
     // whole workspace, which is faster than turbo scheduling a task per package.

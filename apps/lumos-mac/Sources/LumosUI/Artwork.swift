@@ -11,17 +11,20 @@ public struct Artwork: View {
     let title: TitleSummary
     let style: TitleRow.Style
     let maxPixels: Int
+    let placeholderTitle: Bool
 
-    public init(title: TitleSummary, style: TitleRow.Style, maxPixels: Int? = nil) {
+    /// `placeholderTitle` is off when the view writes the title itself.
+    public init(title: TitleSummary, style: TitleRow.Style, maxPixels: Int? = nil, placeholderTitle: Bool = true) {
         self.title = title
         self.style = style
         self.maxPixels = maxPixels ?? (style == .wide ? Self.widePixels : Self.posterPixels)
+        self.placeholderTitle = placeholderTitle
     }
 
     public var body: some View {
         let url = (style == .wide ? title.backdrop ?? title.poster : title.poster).flatMap(URL.init(string:))
         CachedImage(url: url, maxPixels: maxPixels) {
-            Placeholder(title: title, style: style)
+            Placeholder(title: title, style: style, showsTitle: placeholderTitle)
         }
     }
 }
@@ -29,10 +32,12 @@ public struct Artwork: View {
 public struct Placeholder: View {
     let title: TitleSummary
     let style: TitleRow.Style
+    var showsTitle = true
 
-    public init(title: TitleSummary, style: TitleRow.Style) {
+    public init(title: TitleSummary, style: TitleRow.Style, showsTitle: Bool = true) {
         self.title = title
         self.style = style
+        self.showsTitle = showsTitle
     }
 
     public var body: some View {
@@ -44,12 +49,14 @@ public struct Placeholder: View {
                 .foregroundStyle(.white.opacity(0.13))
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: style == .wide ? .trailing : .center)
                 .padding(style == .wide ? 18 : 0)
-            Text(title.title)
-                .font(.system(size: style == .wide ? 17 : 14, weight: .bold))
-                .foregroundStyle(.white)
-                .shadow(color: .black.opacity(0.35), radius: 4)
-                .lineLimit(3)
-                .padding(10)
+            if showsTitle {
+                Text(title.title)
+                    .font(.system(size: style == .wide ? 17 : 14, weight: .bold))
+                    .foregroundStyle(.white)
+                    .shadow(color: .black.opacity(0.35), radius: 4)
+                    .lineLimit(3)
+                    .padding(10)
+            }
         }
     }
 }
