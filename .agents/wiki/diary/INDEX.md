@@ -2,6 +2,7 @@
 
 Newest first.
 
+- [2026-10-26 Hogsmeade, the playful face of Lumos](2026-10-26-hogsmeade-the-playful-face-of-lumos.md): one model and two faces through LumosCore and LumosUI, the image cache that ended the stutter, the season menu, and turbo dropping LUMOS_* from the dev server.
 - [2026-10-25 Lumos live from Seerr](2026-10-25-lumos-live-from-seerr.md): no TMDB key, one service key, an outbox with an undo window, season 1 by default.
 - [2026-10-25 Lumos: isolated fixtures, private personal lists, undo on the server](2026-10-25-lumos-fixtures-lists-and-undo.md): personal lists stay private, every change undoes by id, fixture rows carry their origin, and the shared list needs its own partial unique index.
 - [2026-10-25 Lumos's trailers play inline; four traps with keys and focus](2026-10-25-lumos-trailers-and-keys-on-the-mac.md): YouTube in a web view with the server as origin and Sintel in AVPlayerView both reported playing and stop on every exit; a bare executable gets no keys, popovers neither.
