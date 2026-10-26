@@ -142,8 +142,16 @@ public final class OutingsModel {
                 Task { @MainActor in up ? await reachability?.answered() : reachability?.lost() }
             }
             guard let stream = self?.api?.events(connected: connected) else { return }
-            for await event in stream where event.type == "outing.changed" {
-                await self?.refresh()
+            for await event in stream {
+                switch event.type {
+                case "outing.changed": await self?.refresh()
+                case "settings.changed", "household.changed":
+                    if let api = self?.api {
+                        self?.me = (try? await api.me()) ?? self?.me
+                        self?.people = (try? await api.people()) ?? self?.people ?? []
+                    }
+                default: break
+                }
             }
         }
     }

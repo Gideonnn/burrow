@@ -232,6 +232,9 @@ public final class AppModel {
             await loadSelection(keepSelection: true)
         }
         if event.messageId == detail?.id, event.type == "message.changed" { await openSelected() }
+        // A setting changed on another Mac: who we are again, so the language and the
+        // features follow at once.
+        if event.type == "settings.changed" { me = (try? await api?.me()) ?? me }
         if event.type == "outing.changed" {
             await refreshOutings()
             if let id = event["outingId"], id == outing?.id || id == outingSuggestion?.outingId, let messageId = detail?.id {

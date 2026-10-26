@@ -131,13 +131,17 @@ public final class PensieveModel {
                 Task { @MainActor in up ? await reachability?.answered() : reachability?.lost() }
             }
             guard let stream = self?.api?.events(connected: connected) else { return }
-            for await event in stream where event.type.hasPrefix("recording.") {
+            for await event in stream where event.type.hasPrefix("recording.") || event.type == "settings.changed" {
                 await self?.handle(event)
             }
         }
     }
 
     func handle(_ event: ServerEvent) async {
+        if event.type == "settings.changed" {
+            if let api, let fresh = try? await api.profile() { profile = fresh }
+            return
+        }
         await reload()
         if event["recordingId"] == selectedId { await loadDetail() }
         if event["status"] == RecordingStatus.done.rawValue || event["status"] == RecordingStatus.stored.rawValue {
