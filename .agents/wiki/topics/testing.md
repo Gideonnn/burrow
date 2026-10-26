@@ -16,3 +16,10 @@ runs every TypeScript suite; `pnpm test` runs them through turbo.
 - **Same Xcode as CI.** The `mac` CI job pins `DEVELOPER_DIR` to the Xcode the apps are
   built with locally, because each Swift release checks concurrency differently. When
   you move the local Xcode, bump the pin in `.github/workflows/ci.yml` in the same change.
+- **Latency has a ceiling.** `apps/server/src/perf.test.ts` calls the routes the Macs
+  lean on (rows, a title, similar, search, a shelf, the Zoeker, a person, the list, me,
+  the outings, and a list change with its undo) 25 times each against the fixtures and
+  fails when the 95th percentile passes the route's ceiling; the medians print in the
+  test log. `infra/scripts/latency.sh` measures the same routes on the live server with
+  `BURROW_SERVER` and `BURROW_KEY` from the environment, so a slow Dobby is seen before
+  someone feels it.

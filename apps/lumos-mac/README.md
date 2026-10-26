@@ -14,10 +14,15 @@ pnpm lumos:install                   # build, install in /Applications, start (f
 - `LumosCore` is the model, the API and the state machine; `LumosUI` is what the screens
   share on screen: the artwork with its cache, the trailer player, the season menu, the
   menu bar and the control commands. `Lumos` is the app.
-- Arrows move between cards and rows, Enter opens the details with focus inside, Space
-  shows them without moving focus, Esc stops the trailer, then closes the details and
-  returns focus to the card. `J` list, `N` not now (Enter for no reason), `T` trailer,
-  `Z` or ⌘Z undo, ⌘F or `/` search, ⌘1-3 Ontdekken, Lijst, Smaak.
+- Arrows move between cards and rows, Enter opens the title as a page over the rows,
+  Space shows it without moving focus, Esc stops the trailer, then goes one page back
+  (a person, "Meer zoals dit" and a person's work stack) and returns focus to the card.
+  `J` list, `N` not now (Enter for no reason), `T` trailer, `Z` or ⌘Z undo, ⌘F or `/`
+  search, ⌘1 Ontdekken, ⌘2 Zoeker, ⌘3 Lijst, ⌘4 Films, ⌘5 Series, ⌘[ back.
+- Films and Series are the shop's shelves: sort chips, a genre, a decade, Nederlands,
+  and the next page while scrolling. The Zoeker is for wandering; "Verras me" reshuffles.
+- Details are kept once loaded and fetched ahead for the card under the cursor or the
+  mouse, so a page opens at once; a face opens the person's page with everything they made.
 - A series with more than one season gets a season menu next to "Op onze lijst zetten";
   `J` takes season 1.
 - An available title gets a "Kijken" row: "Op <tv>" starts it on the screen where the
@@ -25,8 +30,8 @@ pnpm lumos:install                   # build, install in /Applications, start (f
   screen, the page when none is open, and asks when several are; ⇧⌘K is the page.
 - Trailers stream only after a click: YouTube in a small web view inside the inspector,
   direct streams in the Mac's own player. Nothing is kept on disk.
-- Agents: `burrowctl lumos state`, `show`, `search`, `open`, `trailer`, `stop`, `close`,
-  `watch [screen=<name>|here]`.
+- Agents: `burrowctl lumos state`, `show`, `search`, `open`, `person`, `back`, `trailer`,
+  `stop`, `close`, `watch [screen=<name>|here]`.
 
 For a development server with the fixture catalogue (never on Dobby):
 

@@ -51,6 +51,24 @@ Palm Springs and The Holdovers (YouTube) and Sintel (a CC BY 3.0 MP4 of the Blen
 Foundation). Their scores and quotes are dated snapshots with a source; The Holdovers has
 no score, so it shows none.
 
+**Browsing, related titles and people.** `browse` asks Seerr's discover with TMDB's
+sorts and filters (`sortBy`, `genre`, the original `language`, a date span for a decade
+or a year, vote floors for "top" and "gems"; "upcoming" is the discover from today on,
+"trending" the trending page narrowed to the kind), one page at a time, cached ten
+minutes with the genre list (fetched in Dutch). `related` is TMDB's recommendations
+followed by its similar titles, each once. `person` is `/person/:id` plus the combined
+credits: every title once, the most popular first, with the part ("als Nyles", "Regie,
+Scenario"). Details carry the tagline, status, release and last air dates, budget and
+revenue (null when the source has none, never zero), studios or networks, the collection,
+the cast with parts and photos (`w185`), the makers (directors, writers, creators, one
+line per person) and a series' seasons and episode count. The original language shows
+as a Dutch word (`Intl.DisplayNames`). The fixtures sort and filter in memory, twelve to
+a page, and name their credits as cast and crew. The Zoeker (`explore`) builds rows
+from the scope's "more like this" titles and two titles from its list (through
+`related`), trending, the year's best, best series, Dutch films, hidden gems, a decade
+and a surprise page; the seed picks the decade and the page, so "Verras me" is a new
+seed and the same seed is the same page.
+
 `turbo.json` passes `LUMOS_*` through to `pnpm dev:server` (next to `BURROW_*`); without
 that line the fixture flag never reached the server and the dev loop silently ran
 without a catalogue.
@@ -126,9 +144,9 @@ another face or tool can build on them:
 
 - `LumosCore`: `LumosModel.swift` is the state machine: the page, the cursor over rows
   and grids (`Navigation.swift`, up and down find the remembered or nearest card), the
-  inspector and the card focus returns to, the "Niet nu" menu's choice, the trailer, the
-  undo stack and `lastChange` (what just happened, for a view that wants to react). The
-  views only forward keys; the tests drive the model like the keyboard.
+  pages over the rows (`stack`: a title or a person, Esc goes back one), the card focus
+  returns to, the "Niet nu" menu's choice, the trailer, the undo stack and `lastChange`.
+  The views only forward keys; the tests drive the model like the keyboard.
 - `LumosUI`: what the screens share. `ImageLoader` downloads a picture once
   (URLCache on disk under `Caches/Burrow/images`), decodes it once at the size it is
   shown (`CGImageSourceCreateThumbnailAtIndex`, off the main thread) and keeps it in
@@ -142,13 +160,39 @@ another face or tool can build on them:
 What the model does for speed: the page and the sidebar counts load at the same time,
 details and similar titles too, and Ontdekken's last rows are kept on disk
 (`Application Support/<App>/Cache/rows-<scope>.json`) so the window opens full before
-the server answers.
+the server answers. Details are kept in memory once loaded (80 titles, five minutes, and
+cleared by any list or verdict change, since those change what a detail says); the cursor
+and the mouse fill that cache before Enter or a click (`prefetch`, 150 ms after the
+cursor settles), and a prefetched title's artwork is warmed too, so a page opens with no
+wait and the next one is already there. Going back shows the rows exactly as left.
+
+The pages, in the sidebar's order:
+
+- **Ontdekken**: the rows from `/rows`, the mood chips narrowing by genre and trait
+  (the genres come from Seerr in Dutch, so "Komedie" matches).
+- **Zoeker**: `/explore` rows to wander through, and "Verras me" for a new seed.
+- **Onze lijst** / **Jouw lijst**.
+- **Films** and **Series**: the shop's shelves from `/browse`, with chips for the sort
+  (Populair, Nieuw, Binnenkort, Best beoordeeld, Trending, Verborgen parels), a genre
+  menu, a decade menu and "Nederlands"; the next page loads while scrolling and when the
+  keyboard reaches the last lines. Taste never sorts a shelf.
+- **Klaar in Jellyfin**, **Smaak**, **Overgeslagen** as before.
+
+A title opens as a page over the rows (`TitlePage.swift`), not in a drawer: the still
+across the top, the trailer or the stills beside the facts and the actions, then scores
+per source, Productie (budget and revenue with the ratio, studio, collection, dates),
+the cast and makers as faces with their parts, a series' seasons, "Meer zoals dit"
+(TMDB's recommendations and similar titles) and the reviews. A face, a name in the
+search chips, opens the person's page (`PersonPage.swift`): photo, department, birth,
+biography, and their films and series with the part in each. Pages stack; from a title's
+"Meer zoals dit" or a person's work the next title goes on top, Esc (or ⌘[ and the back
+button) walks back, the sidebar always lands on the rows. Left and right on a title
+opened from the rows move to the neighbouring card.
 
 In the app:
 
 - Scope: Samen or your own name. "Yes" (`J`) goes to the current scope's list.
 - In Samen, "Op jouw lijst, nog niet samen" shows only your own entries.
-- The mood chips narrow Ontdekken by genre and trait; nothing filters on runtime.
 - Trailers (`TrailerPlayer.swift`) exist only after a click: YouTube through its IFrame
   API in a `WKWebView` whose base URL is the Burrow server (YouTube refuses embeds without
   an origin), direct streams in `AVPlayerView`. The status line says "Speelt af" only on
@@ -160,8 +204,12 @@ In the app:
   details, so a slow Jellyfin never holds them back): "Op <tv>" or a menu of screens, and
   "Hier", which opens the page in the browser. `K` (⌘K) starts on the only screen, opens
   the page when none is open, and asks when several are; ⇧⌘K is always the page.
-- `burrowctl lumos …`: `state`, `show`, `search`, `open`,
-  `trailer`, `stop`, `close`, `watch [screen=<name>|here]`. The list buttons are marked
+- Keys: ⌘1 Ontdekken, ⌘2 Zoeker, ⌘3 Lijst, ⌘4 Films, ⌘5 Series, ⌘F search, ⌘R refresh.
+- Live: `lumos.changed` reloads the rows; `settings.changed` re-reads who we are and the
+  status, so a setting flipped on another Mac shows at once.
+- `burrowctl lumos …`: `state` (with the stack, cast, budget and similar titles),
+  `show` (also `explore`), `search`, `open`, `person`, `back`, `trailer`, `stop`,
+  `close`, `watch [screen=<name>|here]`. The list buttons are marked
   `lumos.approve.list`, because a list entry requests media.
 
 Run the bundles (`scripts/bundle.sh`), not `.build/debug/<App>`: a bare executable has

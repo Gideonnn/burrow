@@ -25,6 +25,18 @@ import type {
 // settings can reach a client.
 
 const IMAGES = 'https://image.tmdb.org/t/p';
+
+// "en" becomes "Engels": the original language as a word, not a code.
+const languageNames = new Intl.DisplayNames(['nl'], { type: 'language' });
+const languageName = (code: string | undefined | null) => {
+  if (!code) return null;
+  try {
+    const name = languageNames.of(code) ?? code;
+    return name.charAt(0).toUpperCase() + name.slice(1);
+  } catch {
+    return code;
+  }
+};
 const LANGUAGE = 'en';
 const POOL_TTL = 10 * 60_000;
 const TITLE_TTL = 5 * 60_000;
@@ -270,8 +282,9 @@ export class SeerrCatalogue implements CatalogueProvider, MediaRequester {
     }
     const lists = { movie: [] as Named[], tv: [] as Named[] };
     for (const kind of ['movie', 'tv'] as const) {
+      // Genre names in Dutch: the mood chips and the labels speak Dutch.
       lists[kind] = await this.call<Named[]>(`/genres/${kind}`, {
-        language: LANGUAGE,
+        language: 'nl',
       }).catch(() => [] as Named[]);
     }
     const map = new Map<number, string>();
@@ -310,7 +323,7 @@ export class SeerrCatalogue implements CatalogueProvider, MediaRequester {
       seasons: null,
       genres: (r.genreIds ?? []).flatMap((id) => genres.get(id) ?? []),
       traits: [],
-      language: r.originalLanguage ?? null,
+      language: languageName(r.originalLanguage),
       poster: image(r.posterPath, 'w342'),
       backdrop: image(r.backdropPath, 'w780'),
       availability: availabilityOf(r.mediaInfo, released, this.today()),

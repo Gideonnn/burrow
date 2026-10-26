@@ -7,7 +7,7 @@
 - [Login and the household](topics/login-and-household.md): device login through the browser, admins, settings, who may read what.
 - [Pensieve](topics/pensieve.md): calls, video, screen and dictation; upload, compression, transcription with segments, notes per kind, labels, video on the Mac, the iCloud copy.
 - [Hogsmeade](topics/hogsmeade.md): the household's outings as an app of their own, on Hedwig's outings, in two faces to compare: the native Hogsmeade and the playful Hogsmeade Feest; one model, shared pictures, maps and ticket codes.
-- [Lumos](topics/lumos.md): films and series to watch together; the Seerr catalogue, requests through an outbox, the fixtures and their fences, private and shared lists, verdicts, undo by change id, trailers, watching through Jellyfin, the image cache and the season menu.
+- [Lumos](topics/lumos.md): films and series to watch together; the Seerr catalogue with the shop's shelves, TMDB's related titles and people, the Zoeker, requests through an outbox, the fixtures and their fences, private and shared lists, verdicts, undo by change id, trailers, watching through Jellyfin, pages over the rows with a prefetched cache.
 - [Naming](topics/naming.md): the Harry Potter names and what each application does.
 - [Testing](topics/testing.md): tiers, red before green, quiet output.
 - [Secrets](topics/secrets.md): what is secret, where it lives, SOPS in a public repo.

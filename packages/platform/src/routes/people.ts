@@ -33,6 +33,19 @@ const asHttp = (error: unknown): never => {
 // The person behind the key, their settings, and the household: both people
 // are admins who manage each other's settings and devices, but no route here
 // returns anyone's mail or recordings.
+// Every Mac of the person hears a setting change at once, and everyone
+// hears the household change (a person, a key), so settings screens and
+// sidebars never show yesterday's state.
+const settingsChanged = (
+  platform: PlatformEnv['Variables']['platform'],
+  personId: string,
+) => platform.events.emitTo([personId], { type: 'settings.changed', personId });
+const householdChanged = (platform: PlatformEnv['Variables']['platform']) =>
+  platform.events.emit({
+    data: { type: 'household.changed' },
+    visibleTo: () => true,
+  });
+
 export const peopleRoutes = new Hono<PlatformEnv>()
   .get('/me', (c) => {
     const { db, access, platform } = c.var;
@@ -79,12 +92,12 @@ export const peopleRoutes = new Hono<PlatformEnv>()
     zValidator('json', updateSettingsRequest),
     (c) => {
       try {
-        return c.json(
-          c.var.platform.settings.update(
-            c.var.access.personId,
-            c.req.valid('json').values,
-          ),
+        const values = c.var.platform.settings.update(
+          c.var.access.personId,
+          c.req.valid('json').values,
         );
+        settingsChanged(c.var.platform, c.var.access.personId);
+        return c.json(values);
       } catch (error) {
         return asHttp(error);
       }
@@ -123,6 +136,7 @@ export const peopleRoutes = new Hono<PlatformEnv>()
   })
   .post('/admin/people', zValidator('json', createPersonRequest), (c) => {
     const { id, name } = createPerson(c.var.db, c.req.valid('json').name);
+    householdChanged(c.var.platform);
     return c.json({ id, name }, 201);
   })
   .patch(
@@ -143,7 +157,9 @@ export const peopleRoutes = new Hono<PlatformEnv>()
         });
       }
       try {
-        return c.json(c.var.platform.settings.update(id, values));
+        const updated = c.var.platform.settings.update(id, values);
+        settingsChanged(c.var.platform, id);
+        return c.json(updated);
       } catch (error) {
         return asHttp(error);
       }
@@ -175,10 +191,13 @@ export const peopleRoutes = new Hono<PlatformEnv>()
       });
     }
     try {
-      return c.json(
-        createKey(c.var.db, request, c.var.platform.restrictionChecks),
-        201,
+      const made = createKey(
+        c.var.db,
+        request,
+        c.var.platform.restrictionChecks,
       );
+      householdChanged(c.var.platform);
+      return c.json(made, 201);
     } catch (error) {
       return asHttp(error);
     }
@@ -191,7 +210,9 @@ export const peopleRoutes = new Hono<PlatformEnv>()
       });
     }
     try {
-      return c.json(revokeKey(c.var.db, id));
+      const revoked = revokeKey(c.var.db, id);
+      householdChanged(c.var.platform);
+      return c.json(revoked);
     } catch (error) {
       if (error instanceof AccessError) {
         throw new HTTPException(404, { message: error.message });

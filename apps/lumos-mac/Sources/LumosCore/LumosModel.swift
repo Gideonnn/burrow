@@ -261,10 +261,23 @@ public final class LumosModel {
                 Task { @MainActor in up ? await reachability?.answered() : reachability?.lost() }
             }
             guard let stream = self?.api?.events(connected: connected) else { return }
-            for await event in stream where event.type == "lumos.changed" {
-                await self?.reload()
+            for await event in stream {
+                switch event.type {
+                case "lumos.changed": await self?.reload()
+                // A setting such as lumos.enabled changed somewhere: who we are and the status again.
+                case "settings.changed": await self?.refreshProfile()
+                default: break
+                }
             }
         }
+    }
+
+    func refreshProfile() async {
+        guard let api else { return }
+        async let profile = api.profile()
+        async let status = api.lumosStatus()
+        if let profile = try? await profile { self.profile = profile }
+        if let status = try? await status { self.status = status }
     }
 
     func serverAnswers() async -> Bool {

@@ -15,11 +15,24 @@ public final class HouseholdModel {
     public private(set) var isAdmin = false
     public var error: String?
     @ObservationIgnored private let api: @MainActor () -> APIClient?
+    @ObservationIgnored private var following: Task<Void, Never>?
 
     public init(api: @escaping @MainActor () -> APIClient?) { self.api = api }
 
+    deinit { following?.cancel() }
+
+    /// Loads everything, and from then on follows the server: a setting
+    /// changed on another Mac, a new person or key, shows here at once.
     public func load() async {
         guard let api = api() else { return }
+        if following == nil {
+            following = Task { [weak self] in
+                guard let stream = self?.api()?.events() else { return }
+                for await event in stream where ["settings.changed", "household.changed", "task.changed"].contains(event.type) {
+                    if event.type == "task.changed" { await self?.refreshTasks() } else { await self?.load() }
+                }
+            }
+        }
         do {
             let profile = try await api.profile()
             myPersonId = profile.person.id
