@@ -285,7 +285,7 @@ public struct TitleDetail: Codable, Sendable {
     }
 }
 
-public struct TitleRow: Codable, Sendable, Identifiable {
+public struct TitleRow: Codable, Sendable, Identifiable, Equatable {
     public enum Style: String, Codable, Sendable { case wide, poster }
 
     public var key: String

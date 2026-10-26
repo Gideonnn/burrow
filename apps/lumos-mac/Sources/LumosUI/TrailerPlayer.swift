@@ -5,12 +5,17 @@ import WebKit
 
 /// The compact player in the inspector. It is only made after a click and
 /// torn down when it leaves the screen, which stops the sound.
-struct TrailerPlayerView: View {
+public struct TrailerPlayerView: View {
     @Environment(LumosModel.self) private var model
     let playback: TrailerPlayback
     let origin: URL?
 
-    var body: some View {
+    public init(playback: TrailerPlayback, origin: URL?) {
+        self.playback = playback
+        self.origin = origin
+    }
+
+    public var body: some View {
         let report: @MainActor (TrailerPlayback.Status) -> Void = { [model, ref = playback.ref] status in
             model.playerReported(status, for: ref)
         }

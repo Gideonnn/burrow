@@ -5,7 +5,7 @@ import LumosCore
 
 /// What `burrowctl lumos state` answers.
 @MainActor
-func controlState(_ model: LumosModel) -> [String: Any] {
+public func controlState(_ model: LumosModel) -> [String: Any] {
     var state: [String: Any] = [
         "connected": model.connection?.serverURL.host() ?? NSNull(),
         "serverReachable": model.reachability.isReachable,
@@ -41,7 +41,7 @@ func controlState(_ model: LumosModel) -> [String: Any] {
 /// Lumos's own commands for agents: look around, search and open a title.
 /// Putting a title on a list is the person's (it will request media later).
 @MainActor
-func registerCommands(_ service: ControlService, model: LumosModel) {
+public func registerCommands(_ service: ControlService, model: LumosModel) {
     service.register(
         "show", help: "Show a page: discover, list, movies, series, available, taste or passed; optionally for shared or mine.",
         arguments: [.init("page", "discover, list, movies, series, available, taste or passed"), .init("scope", "shared or mine")]

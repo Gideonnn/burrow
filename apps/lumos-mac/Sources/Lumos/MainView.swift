@@ -1,5 +1,6 @@
 import BurrowUI
 import LumosCore
+import LumosUI
 import SwiftUI
 
 /// Two columns and an inspector: the sidebar, the image rows, and the
@@ -33,6 +34,7 @@ struct MainView: View {
         .onChange(of: focused) { if let focused, focused != model.focus { model.focus = focused } }
         .overlay(alignment: .bottom) { ToastView() }
         .onAppear { focused = .content }
+        .onChange(of: model.loaded, initial: true) { ImageLoader.shared.prefetch(rows: model.loaded) }
     }
 }
 

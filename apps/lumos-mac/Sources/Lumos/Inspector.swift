@@ -1,5 +1,6 @@
 import BurrowUI
 import LumosCore
+import LumosUI
 import SwiftUI
 
 /// The details on the right: the trailer or the stills, the facts, scores
@@ -80,7 +81,7 @@ struct Stage: View {
             }
             ZStack {
                 if showStills, let url = URL(string: detail.stills[min(still, detail.stills.count - 1)]) {
-                    AsyncImage(url: url) { $0.resizable().scaledToFill() } placeholder: { Color.black }
+                    CachedImage(url: url, maxPixels: 1280) { Color.black }
                 } else if let player = model.player, player.ref == detail.ref {
                     TrailerPlayerView(playback: player, origin: model.connection?.serverURL)
                         .id(detail.ref)
@@ -123,7 +124,7 @@ struct Stage: View {
                 HStack(spacing: 6) {
                     ForEach(detail.stills.indices, id: \.self) { index in
                         Button { still = index } label: {
-                            AsyncImage(url: URL(string: detail.stills[index])) { $0.resizable().scaledToFill() } placeholder: { Color.gray }
+                            CachedImage(url: URL(string: detail.stills[index]), maxPixels: 160) { Color.gray }
                                 .frame(width: 62, height: 35)
                                 .clipShape(RoundedRectangle(cornerRadius: 5))
                                 .opacity(index == still ? 1 : 0.6)
@@ -495,38 +496,3 @@ struct SnippetsView: View {
     }
 }
 
-/// Wraps its children like text.
-struct FlowLayout: Layout {
-    var spacing: CGFloat = 4
-
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        arrange(proposal.width ?? .infinity, subviews).size
-    }
-
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        for (index, point) in arrange(bounds.width, subviews).points.enumerated() {
-            subviews[index].place(at: CGPoint(x: bounds.minX + point.x, y: bounds.minY + point.y), proposal: .unspecified)
-        }
-    }
-
-    private func arrange(_ width: CGFloat, _ subviews: Subviews) -> (size: CGSize, points: [CGPoint]) {
-        var points: [CGPoint] = []
-        var x: CGFloat = 0
-        var y: CGFloat = 0
-        var line: CGFloat = 0
-        var widest: CGFloat = 0
-        for subview in subviews {
-            let size = subview.sizeThatFits(.unspecified)
-            if x > 0, x + size.width > width {
-                x = 0
-                y += line + spacing
-                line = 0
-            }
-            points.append(CGPoint(x: x, y: y))
-            x += size.width + spacing
-            widest = max(widest, x - spacing)
-            line = max(line, size.height)
-        }
-        return (CGSize(width: widest, height: y + line), points)
-    }
-}

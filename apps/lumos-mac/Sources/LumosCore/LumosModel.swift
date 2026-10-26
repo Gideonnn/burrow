@@ -98,6 +98,9 @@ public final class LumosModel {
 
     private let store: ConnectionStore
     private let makeClient: @Sendable (Connection) -> APIClient
+    /// Where the last Ontdekken rows are kept, so the window opens full
+    /// before the server has answered; nil keeps nothing (tests).
+    private let cacheDirectory: URL?
     private var eventsTask: Task<Void, Never>?
     private var searchTask: Task<Void, Never>?
     private var detailTask: Task<Void, Never>?
@@ -109,11 +112,13 @@ public final class LumosModel {
         store: ConnectionStore = ConnectionStore(app: "lumos"),
         makeClient: @escaping @Sendable (Connection) -> APIClient = { APIClient(baseURL: $0.serverURL, token: $0.token) },
         connection: Connection? = nil,
-        reachability: ServerReachability = ServerReachability()
+        reachability: ServerReachability = ServerReachability(),
+        cacheDirectory: URL? = nil
     ) {
         self.store = store
         self.makeClient = makeClient
         self.reachability = reachability
+        self.cacheDirectory = cacheDirectory
         // LUMOS_SERVER and LUMOS_KEY connect without the Keychain, for demos
         // and automated runs against a development server.
         let environment = ProcessInfo.processInfo.environment
@@ -153,9 +158,15 @@ public final class LumosModel {
 
     public func start() async {
         guard let api else { return }
+        if loaded.isEmpty, page == .discover, let rows = readSnapshot() {
+            loaded = rows
+            layout()
+        }
         do {
-            profile = try await api.profile()
-            status = try await api.lumosStatus()
+            async let profile = api.profile()
+            async let status = api.lumosStatus()
+            self.profile = try await profile
+            self.status = try await status
         } catch APIError.unauthorized {
             logout()
             error = APIError.unauthorized.errorDescription
@@ -243,9 +254,13 @@ public final class LumosModel {
         isLoading = true
         defer { isLoading = false }
         do {
+            // The counts for the sidebar come in alongside the page itself.
+            async let passedCount = countPassed(api)
+            async let listCount = countList(api)
             switch page {
             case .discover:
                 loaded = try await api.rows(scope: scope).rows
+                writeSnapshot(loaded)
             case .list:
                 let list = try await api.list(scope).items.map(\.title)
                 var rows = [TitleRow(
@@ -273,12 +288,8 @@ public final class LumosModel {
             case .search:
                 await runSearch()
             }
-            if page != .passed {
-                passedCount = try await api.verdicts(scope).items.filter(\.kind.isPass).count
-            } else {
-                passedCount = verdictItems.count
-            }
-            listCount = page == .list ? loaded.first?.items.count ?? 0 : try await api.list(scope).items.count
+            self.passedCount = try await passedCount ?? verdictItems.count
+            self.listCount = try await listCount ?? loaded.first?.items.count ?? 0
             error = nil
         } catch {
             report(error, quiet: true)
@@ -289,6 +300,36 @@ public final class LumosModel {
 
     private func scopeChanged() async {
         await reload()
+    }
+
+    /// Nil when the page itself holds the count.
+    private func countPassed(_ api: APIClient) async throws -> Int? {
+        if page == .passed { return nil }
+        return try await api.verdicts(scope).items.filter(\.kind.isPass).count
+    }
+
+    private func countList(_ api: APIClient) async throws -> Int? {
+        if page == .list { return nil }
+        return try await api.list(scope).items.count
+    }
+
+    // MARK: The snapshot on disk
+
+    private var snapshotURL: URL? {
+        cacheDirectory?.appendingPathComponent("rows-\(scope.rawValue).json")
+    }
+
+    private func readSnapshot() -> [TitleRow]? {
+        guard let url = snapshotURL, let data = try? Data(contentsOf: url) else { return nil }
+        return try? APIClient.decoder.decode([TitleRow].self, from: data)
+    }
+
+    private func writeSnapshot(_ rows: [TitleRow]) {
+        guard let url = snapshotURL, let data = try? JSONEncoder().encode(rows) else { return }
+        Task.detached(priority: .utility) {
+            try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try? data.write(to: url, options: .atomic)
+        }
     }
 
     // MARK: Layout and the cursor
@@ -383,8 +424,9 @@ public final class LumosModel {
     func loadDetail(_ ref: TitleRef) async {
         guard let api else { return }
         do {
-            let loaded = try await api.title(ref, scope: scope)
-            let similar = try await api.similar(to: ref, scope: scope).items
+            async let detailAnswer = api.title(ref, scope: scope)
+            async let similarAnswer = api.similar(to: ref, scope: scope).items
+            let (loaded, similar) = try await (detailAnswer, similarAnswer)
             guard inspected == ref else { return }
             detail = loaded
             self.similar = Array(similar.prefix(4))
