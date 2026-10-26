@@ -2,6 +2,7 @@
 
 Newest first.
 
+- [2026-10-27 The Fastmail sync had failed for days](2026-10-27-fastmail-sync-had-failed-for-days.md): Fastmail refuses `asText` on List-* headers; the fake accepted anything and the log hid the argument.
 - [2026-10-27 Lumos grows up: pages, shelves, the Zoeker, live settings](2026-10-27-lumos-pages-shelves-and-the-zoeker.md): the drawer became a page with a prefetched cache, Seerr's discover browses everything, TMDB recommends, genres in Dutch, settings live on the event stream, latency ceilings in the tests.
 - [2026-10-26 Hogsmeade: two faces on Hedwig's outings](2026-10-26-hogsmeade-two-faces-on-hedwigs-outings.md): HedwigCore as a library product, two bundles from one package, the playful face's places are Hedwig's; searchFocused is macOS 15, a hidden title bar still leaves its strip.
 - [2026-10-26 Hogsmeade is the outings app](2026-10-26-hogsmeade-is-the-outings-app.md): the playful face built on Lumos that evening was undone, since Hogsmeade is the outings app with a native and a playful face to compare; LumosCore, LumosUI and the image cache stayed.

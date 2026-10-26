@@ -105,6 +105,11 @@ Settings › Privacy & Security › Integrations › API tokens, with access to 
 `POST /api/admin/accounts/fastmail`; the server checks it against the JMAP session before
 storing it sealed.
 
+Fastmail is strict about header properties: `header:List-Unsubscribe:asText` is refused
+with `invalidArguments` (List-* headers are URL headers to it), so the client asks
+`asRaw`, which every server allows. Its errors name the offending arguments in
+`arguments`, which the client prints; `description` is usually empty.
+
 Sync queries the inbox once (last 100 messages), then follows `Email/changes` from the
 state, starting over when the server answers `cannotCalculateChanges`. Backfill pages by
 position through every mailbox but junk, trash and drafts (`inMailboxOtherThan`). Labels are JMAP

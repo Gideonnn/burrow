@@ -279,3 +279,11 @@ titles, air dates, stills, and which ones Jellyfin has.
 **Why:** the page lists the seasons with their counts; which episode to watch next still
 asks Jellyfin or the TV.
 **Scope:** one route and a season page in Lumos; half a day.
+
+## Hedwig: a mailbox that keeps failing shows up
+
+**What:** when a mailbox's sync fails every round for an hour, the Mac's connection
+badge says so and Kreacher leaves a note; a success clears it.
+**Why:** the Fastmail sync failed for days in the server log while the Mac looked fine
+(diary 2026-10-27).
+**Scope:** a `lastSyncError` on the mailbox in `/api/me`, the badge, a routine; half a day.
