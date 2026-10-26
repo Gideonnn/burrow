@@ -157,11 +157,21 @@ export class JmapClient implements MailProviderClient {
     };
     const byTag = new Map<string, Record<string, any>>();
     for (const [name, result, tag] of methodResponses) {
-      if (name === 'error')
+      if (name === 'error') {
+        // Fastmail names the offending arguments instead of describing them.
+        const detail = [
+          result.description,
+          Array.isArray(result.arguments)
+            ? `arguments: ${result.arguments.join(', ')}`
+            : undefined,
+        ]
+          .filter(Boolean)
+          .join(' ');
         throw new JmapError(
           result.type,
-          `${tag}: ${result.type} ${result.description ?? ''}`,
+          `${tag}: ${result.type} ${detail}`.trim(),
         );
+      }
       byTag.set(tag, result);
     }
     return byTag;
