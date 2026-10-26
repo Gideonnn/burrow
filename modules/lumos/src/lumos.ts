@@ -1,11 +1,17 @@
 import {
+  type BrowseQuery,
+  type BrowseResponse,
+  type BrowseSort,
   type CreateVerdictRequest,
+  type CreditResponse,
   type DataOrigin,
   type ListEntry,
   type ListScope,
   type LumosStatus,
+  type MediaType,
   passKinds,
   type PlayResponse,
+  type RowsResponse,
   type TitleDetail,
   type TitleRow,
   type TitleSummary,
@@ -537,49 +543,208 @@ export class Lumos {
         return row ? requestState(row) : null;
       })(),
       download: t.download ?? null,
+      tagline: t.tagline ?? null,
+      originalTitle: t.originalTitle ?? null,
+      status: t.status ?? null,
+      releaseDate: t.releaseDate ?? null,
+      lastAired: t.lastAired ?? null,
+      budget: t.budget ?? null,
+      revenue: t.revenue ?? null,
+      studios: t.studios ?? [],
+      collection: t.collection ?? null,
+      cast: t.cast ?? [],
+      crew: t.crew ?? [],
+      seasonList: t.seasonList ?? [],
+      episodes: t.episodes ?? null,
     };
   }
 
-  // "More like this" without what the scope passed or wants less of.
+  // "More like this": what the source puts next to the title, without what
+  // the scope passed or wants less of.
   async similar(access: Access, scope: ListScope, ref: TitleRef) {
     const catalogue = this.need();
-    const source = await catalogue.title(ref);
-    if (!source) throw new LumosError('not found');
     const ctx = this.context(access, scope);
-    const all = await catalogue.candidates();
-    const pool = new Map(all.map((t) => [refKey(t), t]));
+    const related = await catalogue.related(ref);
     return {
       dataOrigin: catalogue.origin,
-      items: all
+      items: related
         .filter((t) => {
           const key = refKey(t);
           return (
-            key !== refKey(source) &&
-            overlap(source, t) > 0 &&
-            !ctx.pass.has(key) &&
-            ctx.taste.get(key)?.kind !== 'less-like-this'
+            !ctx.pass.has(key) && ctx.taste.get(key)?.kind !== 'less-like-this'
           );
         })
-        .sort(
-          (a, b) =>
-            overlap(source, b) - overlap(source, a) ||
-            this.rank(b, ctx, pool) - this.rank(a, ctx, pool),
-        )
-        .slice(0, 8)
+        .slice(0, 18)
         .map((t) => this.summary(t, ctx)),
     };
   }
 
-  async credit(access: Access, scope: ListScope, id: string) {
+  async credit(
+    access: Access,
+    scope: ListScope,
+    id: string,
+  ): Promise<CreditResponse> {
     const catalogue = this.need();
-    const found = await catalogue.credit(id);
+    const found = await catalogue.person(id);
     if (!found) throw new LumosError('not found');
     const ctx = this.context(access, scope);
+    const { titles, ...person } = found;
     return {
       dataOrigin: catalogue.origin,
-      credit: found.credit,
-      titles: found.titles.map((t) => this.summary(t, ctx)),
+      credit: { id: person.id, name: person.name },
+      person,
+      titles: titles.map((t) => this.summary(t, ctx, t.part)),
     };
+  }
+
+  // Films or series a page at a time; taste never sorts a shop's shelf.
+  async browse(access: Access, q: BrowseQuery): Promise<BrowseResponse> {
+    const catalogue = this.need();
+    const ctx = this.context(access, q.scope);
+    const page = await catalogue.browse({
+      mediaType: q.type,
+      sort: q.sort,
+      genre: q.genre,
+      language: q.language,
+      decade: q.decade,
+      year: q.year,
+      page: q.page,
+    });
+    return {
+      dataOrigin: catalogue.origin,
+      page: page.page,
+      totalPages: page.totalPages,
+      items: page.items.map((t) => this.summary(t, ctx)),
+      genres: page.genres,
+    };
+  }
+
+  // The Zoeker: rows to wander through, from what the scope likes and
+  // keeps, and from the shop's shelves. `seed` reshuffles the surprises.
+  async explore(
+    access: Access,
+    scope: ListScope,
+    seed: number,
+  ): Promise<RowsResponse> {
+    const catalogue = this.need();
+    const ctx = this.context(access, scope);
+    const all = await catalogue.candidates();
+    const pool = new Map(all.map((t) => [refKey(t), t]));
+    const keep = (t: CatalogueTitle) => !ctx.pass.has(refKey(t));
+    const card = (t: CatalogueTitle, match: string | null = null) =>
+      this.summary(t, ctx, match);
+    const random = mulberry(seed);
+    const pick = <T>(items: T[]) =>
+      items.length ? items[Math.floor(random() * items.length)] : undefined;
+    const rows: TitleRow[] = [];
+    const row = (
+      key: string,
+      title: string,
+      subtitle: string | null,
+      items: TitleSummary[],
+      style: 'wide' | 'poster' = 'poster',
+    ) => {
+      if (items.length)
+        rows.push({ key, title, subtitle, style, items, empty: null });
+    };
+    const listed = scope === 'shared' ? ctx.shared : ctx.mine;
+    const liked = [...ctx.taste.values()]
+      .filter((v) => v.kind === 'more-like-this')
+      .map((v) => pool.get(refKey(v)))
+      .filter((t): t is CatalogueTitle => Boolean(t));
+    const kept = all.filter((t) => listed.has(refKey(t)));
+    const seeds = [
+      ...liked
+        .slice(0, 2)
+        .map((t) => ({ t, why: 'omdat jullie dit leuk vonden' })),
+      ...[pick(kept), pick(kept)]
+        .filter((t): t is CatalogueTitle => Boolean(t))
+        .map((t) => ({ t, why: 'past bij jullie lijst' })),
+    ].filter(
+      (s, i, arr) => arr.findIndex((o) => refKey(o.t) === refKey(s.t)) === i,
+    );
+    const related = await Promise.all(
+      seeds.map(async (s) => ({
+        ...s,
+        items: (await catalogue.related(s.t).catch(() => [])).filter(
+          (t) => keep(t) && !listed.has(refKey(t)),
+        ),
+      })),
+    );
+    for (const { t, why, items } of related) {
+      row(
+        `like-${refKey(t)}`,
+        `Als je ${t.title} goed vond`,
+        why,
+        items.slice(0, 14).map((x) => card(x, `Lijkt op ${t.title}`)),
+      );
+    }
+    const shelf = (
+      sort: BrowseSort,
+      mediaType: MediaType,
+      extra: Partial<BrowseQuery> = {},
+    ) =>
+      catalogue
+        .browse({ mediaType, sort, page: 1, ...extra })
+        .then((p) => p.items.filter(keep))
+        .catch(() => [] as CatalogueTitle[]);
+    const year = new Date().getFullYear();
+    const decade = pick([1970, 1980, 1990, 2000, 2010]) ?? 1990;
+    const surprisePage = 2 + Math.floor(random() * 12);
+    const [trending, topYear, dutch, gems, old, surprise, series] =
+      await Promise.all([
+        shelf('trending', 'movie'),
+        shelf('top', 'movie', { year }),
+        shelf('popular', 'movie', { language: 'nl' }),
+        shelf('gems', 'movie'),
+        shelf('popular', 'movie', { decade }),
+        shelf('popular', 'movie', { page: surprisePage }),
+        shelf('top', 'tv'),
+      ]);
+    row(
+      'trending',
+      'Nu veel bekeken',
+      'Deze week het meest bekeken',
+      trending.map((t) => card(t)),
+      'wide',
+    );
+    row(
+      'top-year',
+      `Best beoordeeld van ${year}`,
+      'Hoogste scores met genoeg stemmen',
+      topYear.map((t) => card(t)),
+    );
+    row(
+      'series-top',
+      'Series die blijven hangen',
+      'De best beoordeelde series',
+      series.map((t) => card(t)),
+    );
+    row(
+      'dutch',
+      'Nederlandse films',
+      'Gemaakt in Nederland',
+      dutch.map((t) => card(t)),
+    );
+    row(
+      'gems',
+      'Verborgen parels',
+      'Hoog gewaardeerd, door weinig mensen gezien',
+      gems.map((t) => card(t)),
+    );
+    row(
+      `decade-${decade}`,
+      `Uit de jaren ${String(decade).slice(2)}`,
+      'Een greep uit het decennium',
+      old.map((t) => card(t)),
+    );
+    row(
+      'surprise',
+      'Verras me',
+      'Een willekeurige greep; de knop schudt opnieuw',
+      surprise.map((t) => card(t)),
+    );
+    return { dataOrigin: catalogue.origin, rows };
   }
 
   private names() {
@@ -956,4 +1121,16 @@ export class Lumos {
     for (const scope of scopes) this.changed(access, scope);
     return { changeId };
   }
+}
+
+// A small seeded random, so "Verras me" is the same until the seed changes.
+function mulberry(seed: number) {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
 }

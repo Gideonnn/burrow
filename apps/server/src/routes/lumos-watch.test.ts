@@ -69,7 +69,9 @@ const catalogue: CatalogueProvider = {
       (t) => t.mediaType === ref.mediaType && t.tmdbId === ref.tmdbId,
     ),
   search: async () => ({ hits: [], credits: [] }),
-  credit: async () => undefined,
+  browse: async (q) => ({ page: q.page, totalPages: 1, items: [], genres: [] }),
+  related: async () => [],
+  person: async () => undefined,
 };
 
 // A stand-in for Jellyfin 12's API: a TV with the app open, a phone that

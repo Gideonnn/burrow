@@ -1,8 +1,11 @@
 import {
+  browseResponse,
+  creditResponse,
   listResponse,
   rowsResponse,
   titleDetail,
   titleSearchResponse,
+  titlesResponse,
 } from '@burrow/contracts';
 import { REQUEST_GRACE_MS, SeerrCatalogue } from '@burrow/lumos';
 import { describe, expect, it } from 'vitest';
@@ -20,6 +23,7 @@ function fakeSeerr() {
   const media = new Map<string, Media>();
   const calls: { method: string; path: string; key: string | null }[] = [];
   const posted: unknown[] = [];
+  const discoverCalls: Record<string, string>[] = [];
   let down = false;
   let nextRequest = 500;
   const leak = { apiKey: KEY, email: 'ops@example.com', plexToken: KEY };
@@ -93,10 +97,27 @@ function fakeSeerr() {
         { site: 'YouTube', type: 'Trailer', key: 'trail000001', url: 'x' },
       ],
       credits: {
-        cast: [{ id: 7, name: 'Lotte Example', order: 0 }],
-        crew: [{ id: 8, name: 'Joris Example', job: 'Director' }],
+        cast: [
+          {
+            id: 7,
+            name: 'Lotte Example',
+            order: 0,
+            character: 'Maaike',
+            profilePath: '/lotte.jpg',
+          },
+        ],
+        crew: [
+          { id: 8, name: 'Joris Example', job: 'Director' },
+          { id: 8, name: 'Joris Example', job: 'Writer' },
+        ],
       },
       externalIds: { imdbId: 'tt0000001' },
+      tagline: 'Every light has a keeper.',
+      status: 'Released',
+      budget: 12_000_000,
+      revenue: 48_500_000,
+      productionCompanies: [{ id: 1, name: 'Example Pictures' }],
+      collection: { id: 50, name: 'Harbour Collection' },
       mediaInfo: { ...info('movie', 101), downloadStatus: undefined },
     }),
     '/movie/101/ratingscombined': () => ({
@@ -114,7 +135,72 @@ function fakeSeerr() {
     '/tv/202': () => ({
       ...series(202, 'Polder Blues'),
       numberOfSeasons: 3,
+      numberOfEpisodes: 24,
+      status: 'Returning Series',
+      lastAirDate: '2026-09-01',
+      networks: [{ id: 2, name: 'NPO 3' }],
+      seasons: [
+        { seasonNumber: 0, name: 'Specials', episodeCount: 1 },
+        {
+          seasonNumber: 1,
+          name: 'Seizoen 1',
+          episodeCount: 8,
+          airDate: '2025-02-01',
+          posterPath: '/s1.jpg',
+        },
+        {
+          seasonNumber: 2,
+          name: 'Seizoen 2',
+          episodeCount: 8,
+          airDate: '2026-02-01',
+        },
+      ],
       createdBy: [{ id: 9, name: 'Ilse Example' }],
+    }),
+    '/discover/movies': (q) => {
+      discoverCalls.push(Object.fromEntries(q.entries()));
+      return {
+        page: Number(q.get('page') ?? 1),
+        totalPages: 7,
+        results:
+          q.get('genre') === '18'
+            ? [movie(105, 'Low Tide', '2024-05-05')]
+            : [
+                movie(103, 'Quiet Ferry', '1979-05-02'),
+                movie(101, 'Harbour Lights', '2026-03-01'),
+              ],
+      };
+    },
+    '/movie/101/recommendations': () => ({
+      results: [
+        movie(103, 'Quiet Ferry', '1979-05-02'),
+        movie(105, 'Low Tide', '2024-05-05'),
+      ],
+    }),
+    '/movie/101/similar': () => ({
+      results: [
+        movie(105, 'Low Tide', '2024-05-05'),
+        movie(104, 'Already Home', '2019-01-01'),
+      ],
+    }),
+    '/person/7': () => ({
+      id: 7,
+      name: 'Lotte Example',
+      profilePath: '/lotte.jpg',
+      biography: 'Plays harbour folk.',
+      birthday: '1980-02-02',
+      placeOfBirth: 'Harlingen',
+      knownForDepartment: 'Acting',
+      ...leak,
+    }),
+    '/person/7/combined_credits': () => ({
+      cast: [
+        { ...movie(101, 'Harbour Lights', '2026-03-01'), character: 'Maaike' },
+      ],
+      crew: [
+        { ...movie(103, 'Quiet Ferry', '1979-05-02'), job: 'Director' },
+        { ...movie(103, 'Quiet Ferry', '1979-05-02'), job: 'Writer' },
+      ],
     }),
     '/search': () => ({
       results: [
@@ -165,6 +251,7 @@ function fakeSeerr() {
     seerr,
     calls,
     posted,
+    discoverCalls,
     media,
     setDown: (value: boolean) => {
       down = value;
@@ -394,5 +481,104 @@ describe('a title on a list', () => {
     expect(retry.status).toBe(200);
     await h.lumos.requests?.run();
     expect(h.posted).toEqual([{ mediaType: 'movie', mediaId: 101 }]);
+  });
+});
+
+describe('browsing, people and the Zoeker from Seerr', () => {
+  it('browses with TMDB sorts, filters and pages, and hands the genres over', async () => {
+    const h = household();
+    const top = browseResponse.parse(
+      await h.json(
+        h.adaKey,
+        '/api/lumos/browse?type=movie&sort=top&genre=18&decade=2020&page=3',
+      ),
+    );
+    expect(top.page).toBe(3);
+    expect(top.totalPages).toBe(7);
+    expect(top.items.map((t) => t.title)).toEqual(['Low Tide']);
+    expect(top.genres).toEqual([{ id: '35', name: 'Comedy' }]);
+    expect(h.discoverCalls.at(-1)).toMatchObject({
+      sortBy: 'vote_average.desc',
+      voteCountGte: '1000',
+      genre: '18',
+      primaryReleaseDateGte: '2020-01-01',
+      primaryReleaseDateLte: '2029-12-31',
+      page: '3',
+    });
+    await h.json(h.adaKey, '/api/lumos/browse?type=movie&sort=new&language=nl');
+    expect(h.discoverCalls.at(-1)).toMatchObject({
+      sortBy: 'primary_release_date.desc',
+      language: 'nl',
+      voteCountGte: '20',
+    });
+    expect(h.discoverCalls.at(-1)?.primaryReleaseDateLte).toMatch(
+      /^\d{4}-\d{2}-\d{2}$/,
+    );
+  });
+
+  it('carries budget, revenue, tagline, cast with parts, crew and seasons in the details', async () => {
+    const h = household();
+    const film = await h.detail('movie/101');
+    expect(film).toMatchObject({
+      tagline: 'Every light has a keeper.',
+      status: 'Released',
+      budget: 12_000_000,
+      revenue: 48_500_000,
+      studios: ['Example Pictures'],
+      collection: { id: 50, name: 'Harbour Collection' },
+    });
+    expect(film.cast).toEqual([
+      {
+        id: '7',
+        name: 'Lotte Example',
+        part: 'Maaike',
+        photo: 'https://image.tmdb.org/t/p/w185/lotte.jpg',
+      },
+    ]);
+    expect(film.crew).toEqual([
+      { id: '8', name: 'Joris Example', part: 'Regie, Scenario', photo: null },
+    ]);
+    const series = await h.detail('tv/202');
+    expect(series.status).toBe('Returning Series');
+    expect(series.episodes).toBe(24);
+    expect(series.studios).toEqual(['NPO 3']);
+    expect(
+      series.seasonList.map((s) => [s.number, s.episodes, s.year]),
+    ).toEqual([
+      [1, 8, 2025],
+      [2, 8, 2026],
+    ]);
+    expect(series.crew).toEqual([
+      { id: '9', name: 'Ilse Example', part: 'Maker', photo: null },
+    ]);
+  });
+
+  it("puts TMDB's recommendations and similar titles next to a title, each once", async () => {
+    const h = household();
+    const similar = titlesResponse.parse(
+      await h.json(h.adaKey, '/api/lumos/similar/movie/101'),
+    );
+    expect(similar.items.map((t) => t.tmdbId)).toEqual([103, 105, 104]);
+  });
+
+  it('shows a person with their work and the part in each', async () => {
+    const h = household();
+    const page = creditResponse.parse(
+      await h.json(h.adaKey, '/api/lumos/credits/7'),
+    );
+    expect(page.person).toMatchObject({
+      name: 'Lotte Example',
+      photo: 'https://image.tmdb.org/t/p/w342/lotte.jpg',
+      biography: 'Plays harbour folk.',
+      placeOfBirth: 'Harlingen',
+      known: 'Acting',
+    });
+    const work = page.titles.map((t) => [t.title, t.match]);
+    expect(work).toContainEqual(['Harbour Lights', 'als Maaike']);
+    expect(work).toContainEqual(['Quiet Ferry', 'Regie, Scenario']);
+    expect(work).toHaveLength(2);
+    const text = await (await h.call(h.adaKey, '/api/lumos/credits/7')).text();
+    expect(text).not.toContain(KEY);
+    expect(text).not.toContain('ops@example.com');
   });
 });

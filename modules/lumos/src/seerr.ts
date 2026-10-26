@@ -6,11 +6,14 @@ import type {
   Trailer,
 } from '@burrow/contracts';
 import type {
+  BrowsePage,
+  BrowseQuery,
   CatalogueHit,
   CatalogueProvider,
   CatalogueTitle,
   MediaRequester,
   MediaState,
+  Person,
   TitleRef,
 } from './catalogue';
 
@@ -76,9 +79,10 @@ type Details = Result & {
   episodeRunTime?: number[];
   numberOfSeasons?: number;
   numberOfSeason?: number;
+  numberOfEpisodes?: number;
   genres?: Named[];
   keywords?: Named[];
-  createdBy?: Named[];
+  createdBy?: (Named & { profilePath?: string | null })[];
   relatedVideos?: {
     key?: string;
     site?: string;
@@ -86,10 +90,66 @@ type Details = Result & {
     url?: string;
   }[];
   credits?: {
-    cast?: (Named & { order?: number })[];
-    crew?: (Named & { job?: string })[];
+    cast?: (Named & {
+      order?: number;
+      character?: string;
+      profilePath?: string | null;
+    })[];
+    crew?: (Named & { job?: string; profilePath?: string | null })[];
   };
+  tagline?: string;
+  status?: string;
+  originalTitle?: string;
+  originalName?: string;
+  lastAirDate?: string;
+  budget?: number;
+  revenue?: number;
+  productionCompanies?: Named[];
+  networks?: Named[];
+  collection?: Named | null;
+  seasons?: {
+    seasonNumber?: number;
+    name?: string;
+    episodeCount?: number;
+    airDate?: string | null;
+    posterPath?: string | null;
+  }[];
 };
+
+type PersonRecord = {
+  id: number;
+  name?: string;
+  profilePath?: string | null;
+  biography?: string;
+  birthday?: string | null;
+  deathday?: string | null;
+  placeOfBirth?: string | null;
+  knownForDepartment?: string;
+};
+
+// The source's job titles, in Dutch; the rest of the crew stays out.
+const JOBS: Record<string, string> = {
+  Director: 'Regie',
+  Writer: 'Scenario',
+  Screenplay: 'Scenario',
+  Story: 'Verhaal',
+  Creator: 'Maker',
+  'Original Music Composer': 'Muziek',
+  'Director of Photography': 'Camera',
+};
+
+const SORTS = {
+  movie: {
+    popular: 'popularity.desc',
+    new: 'primary_release_date.desc',
+    top: 'vote_average.desc',
+  },
+  tv: {
+    popular: 'popularity.desc',
+    new: 'first_air_date.desc',
+    top: 'vote_average.desc',
+  },
+} as const;
 
 type Page = { results?: Result[] };
 
@@ -152,7 +212,12 @@ export class SeerrCatalogue implements CatalogueProvider, MediaRequester {
   private pool?: Cached<CatalogueTitle[]>;
   private pending?: Promise<CatalogueTitle[]>;
   private readonly titles = new Map<string, Cached<CatalogueTitle | null>>();
-  private genres?: Cached<Map<number, string>>;
+  private genres?: Cached<{
+    map: Map<number, string>;
+    lists: { movie: Named[]; tv: Named[] };
+  }>;
+  private readonly relatedCache = new Map<string, Cached<CatalogueTitle[]>>();
+  private readonly browseCache = new Map<string, Cached<BrowsePage>>();
 
   constructor(private readonly options: SeerrOptions) {
     this.base = `${options.url.replace(/\/+$/, '')}/api/v1`;
@@ -199,19 +264,31 @@ export class SeerrCatalogue implements CatalogueProvider, MediaRequester {
     return (await res.json()) as T;
   }
 
-  private async genreNames() {
+  private async genreData() {
     if (this.genres && this.now().getTime() - this.genres.at < GENRE_TTL) {
       return this.genres.value;
     }
-    const map = new Map<number, string>();
-    for (const kind of ['movie', 'tv']) {
-      const list = await this.call<Named[]>(`/genres/${kind}`, {
+    const lists = { movie: [] as Named[], tv: [] as Named[] };
+    for (const kind of ['movie', 'tv'] as const) {
+      lists[kind] = await this.call<Named[]>(`/genres/${kind}`, {
         language: LANGUAGE,
       }).catch(() => [] as Named[]);
-      for (const g of list) map.set(g.id, g.name);
     }
-    this.genres = { at: this.now().getTime(), value: map };
-    return map;
+    const map = new Map<number, string>();
+    for (const g of [...lists.movie, ...lists.tv]) map.set(g.id, g.name);
+    this.genres = { at: this.now().getTime(), value: { map, lists } };
+    return this.genres.value;
+  }
+
+  private async genreNames() {
+    return (await this.genreData()).map;
+  }
+
+  private async genreList(mediaType: MediaType) {
+    return (await this.genreData()).lists[mediaType].map((g) => ({
+      id: String(g.id),
+      name: g.name,
+    }));
   }
 
   private fromResult(
@@ -270,10 +347,19 @@ export class SeerrCatalogue implements CatalogueProvider, MediaRequester {
 
   // Popularity as Seerr orders it, scaled to 0..10 so Lumos's own weights
   // (the list, "more like this") still count next to it.
-  private toTitles(results: Result[], genres: Map<number, string>) {
+  private toTitles(
+    results: Result[],
+    genres: Map<number, string>,
+    fallback?: MediaType,
+  ) {
     const titles: CatalogueTitle[] = [];
     results.forEach((r, i) => {
-      const t = this.fromResult(r, genres, 10 * (1 - i / results.length));
+      const t = this.fromResult(
+        r,
+        genres,
+        10 * (1 - i / results.length),
+        fallback,
+      );
       if (t) titles.push(t);
     });
     return titles;
@@ -394,7 +480,81 @@ export class SeerrCatalogue implements CatalogueProvider, MediaRequester {
       stillsCredit: base.backdrop ? 'TMDB' : null,
       availability: availabilityOf(d.mediaInfo, released, this.today()),
       download: this.download(d.mediaInfo),
+      tagline: d.tagline?.trim() || null,
+      originalTitle: (() => {
+        const original = d.originalTitle ?? d.originalName;
+        return original && original !== base.title ? original : null;
+      })(),
+      status: d.status ?? null,
+      releaseDate: released ?? null,
+      lastAired: d.lastAirDate ?? null,
+      budget: d.budget || null,
+      revenue: d.revenue || null,
+      studios: (d.productionCompanies ?? d.networks ?? [])
+        .map((n) => n.name)
+        .filter(Boolean)
+        .slice(0, 4),
+      collection: d.collection
+        ? { id: d.collection.id, name: d.collection.name }
+        : null,
+      cast: [...(d.credits?.cast ?? [])]
+        .sort((a, b) => (a.order ?? 99) - (b.order ?? 99))
+        .slice(0, 24)
+        .map((p) => ({
+          id: String(p.id),
+          name: p.name,
+          part: p.character?.trim() || null,
+          photo: image(p.profilePath, 'w185'),
+        })),
+      crew: this.crew(d, ref.mediaType),
+      seasonList: (d.seasons ?? [])
+        .filter((s) => (s.seasonNumber ?? 0) > 0)
+        .map((s) => ({
+          number: s.seasonNumber ?? 0,
+          name: s.name?.trim() || `Seizoen ${s.seasonNumber}`,
+          episodes: s.episodeCount ?? null,
+          year: yearOf(s.airDate ?? undefined),
+          poster: image(s.posterPath, 'w185'),
+        })),
+      episodes: d.numberOfEpisodes ?? null,
     };
+  }
+
+  // The makers: directors, writers and creators, one line per person with
+  // every job they had ("Regie, Scenario").
+  private crew(d: Details, mediaType: MediaType) {
+    const people = new Map<
+      string,
+      { name: string; parts: string[]; photo: string | null }
+    >();
+    const add = (
+      id: number,
+      name: string,
+      part: string,
+      photo?: string | null,
+    ) => {
+      const entry = people.get(String(id)) ?? {
+        name,
+        parts: [],
+        photo: image(photo, 'w185'),
+      };
+      if (!entry.parts.includes(part)) entry.parts.push(part);
+      people.set(String(id), entry);
+    };
+    if (mediaType === 'tv') {
+      for (const p of d.createdBy ?? [])
+        add(p.id, p.name, 'Maker', p.profilePath);
+    }
+    for (const p of d.credits?.crew ?? []) {
+      const part = p.job && JOBS[p.job];
+      if (part) add(p.id, p.name, part, p.profilePath);
+    }
+    return [...people].slice(0, 8).map(([id, p]) => ({
+      id,
+      name: p.name,
+      part: p.parts.join(', '),
+      photo: p.photo,
+    }));
   }
 
   private credits(d: Details, mediaType: MediaType): Credit[] {
@@ -537,9 +697,11 @@ export class SeerrCatalogue implements CatalogueProvider, MediaRequester {
     };
   }
 
-  async credit(id: string) {
+  // Who someone is and what they made, the most popular first, each title
+  // once with every part they had in it.
+  async person(id: string): Promise<Person | undefined> {
     if (!/^\d+$/.test(id)) return undefined;
-    let person: { id: number; name?: string };
+    let person: PersonRecord;
     try {
       person = await this.call(`/person/${id}`, { language: LANGUAGE });
     } catch (error) {
@@ -548,24 +710,158 @@ export class SeerrCatalogue implements CatalogueProvider, MediaRequester {
     }
     const genres = await this.genreNames();
     const works = await this.call<{
-      cast?: Result[];
+      cast?: (Result & { character?: string })[];
       crew?: (Result & { job?: string })[];
     }>(`/person/${id}/combined_credits`, { language: LANGUAGE });
-    const all = [
-      ...(works.crew ?? []).filter((w) => w.job === 'Director'),
-      ...(works.cast ?? []),
-    ].sort((a, b) => (b.popularity ?? 0) - (a.popularity ?? 0));
-    const seen = new Set<string>();
-    const titles = this.toTitles(all, genres).filter((t) => {
-      const key = `${t.mediaType}:${t.tmdbId}`;
-      if (seen.has(key)) return false;
-      seen.add(key);
+    const parts = new Map<string, string[]>();
+    const results = new Map<string, Result>();
+    const note = (r: Result, part: string | null) => {
+      const key = `${r.mediaType}:${r.id}`;
+      if (!results.has(key)) results.set(key, r);
+      if (part) {
+        const list = parts.get(key) ?? [];
+        if (!list.includes(part)) list.push(part);
+        parts.set(key, list);
+      }
+    };
+    for (const w of works.crew ?? []) {
+      const part = w.job && JOBS[w.job];
+      if (part) note(w, part);
+    }
+    for (const w of works.cast ?? []) {
+      note(w, w.character?.trim() ? `als ${w.character.trim()}` : null);
+    }
+    const ordered = [...results.values()].sort(
+      (a, b) => (b.popularity ?? 0) - (a.popularity ?? 0),
+    );
+    const titles = this.toTitles(ordered, genres)
+      .slice(0, 80)
+      .map((t) => ({
+        ...t,
+        part: parts.get(`${t.mediaType}:${t.tmdbId}`)?.join(', ') ?? null,
+      }));
+    return {
+      id,
+      name: person.name ?? '?',
+      photo: image(person.profilePath, 'w342'),
+      biography: person.biography?.trim() || null,
+      birthday: person.birthday ?? null,
+      deathday: person.deathday ?? null,
+      placeOfBirth: person.placeOfBirth ?? null,
+      known: person.knownForDepartment ?? null,
+      titles,
+    };
+  }
+
+  // What TMDB puts next to a title: its recommendations first, then what it
+  // calls similar, each title once. Kept for the title's cache period.
+  async related(ref: TitleRef): Promise<CatalogueTitle[]> {
+    const key = `${ref.mediaType}:${ref.tmdbId}`;
+    const now = this.now().getTime();
+    const hit = this.relatedCache.get(key);
+    if (hit && now - hit.at < TITLE_TTL) return hit.value;
+    const genres = await this.genreNames();
+    const page = (what: string) =>
+      this.call<Page>(`/${ref.mediaType}/${ref.tmdbId}/${what}`, {
+        page: 1,
+        language: LANGUAGE,
+      }).catch(() => ({ results: [] }) as Page);
+    const [recommended, similar] = await Promise.all([
+      page('recommendations'),
+      page('similar'),
+    ]);
+    const seen = new Set<string>([key]);
+    const results = [
+      ...(recommended.results ?? []),
+      ...(similar.results ?? []),
+    ].filter((r) => {
+      const k = `${r.mediaType ?? ref.mediaType}:${r.id}`;
+      if (seen.has(k)) return false;
+      seen.add(k);
       return true;
     });
-    return {
-      credit: { id, name: person.name ?? '?' },
-      titles: titles.slice(0, 40),
+    const value = this.toTitles(results, genres, ref.mediaType).slice(0, 24);
+    this.relatedCache.set(key, { at: now, value });
+    this.trim(this.relatedCache);
+    return value;
+  }
+
+  // A page of films or series the way TMDB sorts them, with the filters
+  // Seerr passes through: genre, original language, dates and votes.
+  async browse(q: BrowseQuery): Promise<BrowsePage> {
+    const key = JSON.stringify(q);
+    const now = this.now().getTime();
+    const hit = this.browseCache.get(key);
+    if (hit && now - hit.at < POOL_TTL) return hit.value;
+    const genres = await this.genreNames();
+    const movie = q.mediaType === 'movie';
+    const today = this.today();
+    const date = movie ? 'primaryReleaseDate' : 'firstAirDate';
+    const params: Record<string, string | number | undefined> = {
+      page: q.page,
+      language: q.language ?? LANGUAGE,
+      genre: q.genre,
     };
+    let path = movie ? '/discover/movies' : '/discover/tv';
+    const span = (from: number, to: number) => {
+      params[`${date}Gte`] = `${from}-01-01`;
+      params[`${date}Lte`] = `${to}-12-31`;
+    };
+    if (q.decade) span(q.decade, q.decade + 9);
+    if (q.year) span(q.year, q.year);
+    const sorts = SORTS[q.mediaType];
+    switch (q.sort) {
+      case 'popular':
+        params.sortBy = sorts.popular;
+        break;
+      case 'new':
+        params.sortBy = sorts.new;
+        params[`${date}Lte`] = today;
+        params.voteCountGte = movie ? 20 : 5;
+        break;
+      case 'upcoming':
+        params.sortBy = sorts.popular;
+        params[`${date}Gte`] = today;
+        break;
+      case 'top':
+        params.sortBy = sorts.top;
+        params.voteCountGte = movie ? 1000 : 300;
+        break;
+      case 'gems':
+        params.sortBy = sorts.top;
+        params.voteCountGte = 200;
+        params.voteCountLte = 3000;
+        params.voteAverageGte = 7.3;
+        break;
+      case 'trending':
+        path = '/discover/trending';
+        break;
+    }
+    const page = await this.call<Page & { page?: number; totalPages?: number }>(
+      path,
+      params,
+    );
+    let results = page.results ?? [];
+    if (q.sort === 'trending') {
+      results = results.filter((r) => mediaTypeOf(r) === q.mediaType);
+    }
+    const value: BrowsePage = {
+      page: page.page ?? q.page,
+      totalPages: Math.max(1, Math.min(page.totalPages ?? 1, 500)),
+      items: this.toTitles(results, genres, q.mediaType),
+      genres: await this.genreList(q.mediaType),
+    };
+    this.browseCache.set(key, { at: now, value });
+    this.trim(this.browseCache);
+    return value;
+  }
+
+  private trim<T>(cache: Map<string, Cached<T>>, limit = 200) {
+    while (cache.size > limit) {
+      const oldest = cache.keys().next().value;
+      if (oldest === undefined) break;
+      cache.delete(oldest);
+    }
   }
 
   // --- requests ---------------------------------------------------------------

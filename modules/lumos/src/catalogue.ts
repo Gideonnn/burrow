@@ -1,9 +1,13 @@
 import type {
   Availability,
+  BrowseSort,
+  CastMember,
   Credit,
   DataOrigin,
   MediaType,
+  PersonDetail,
   Score,
+  SeasonSummary,
   Snippet,
   Trailer,
 } from '@burrow/contracts';
@@ -39,6 +43,42 @@ export type CatalogueTitle = TitleRef & {
   download?: Download | null;
   // The media server's own id for the title, once it has it.
   mediaServerId?: string | null;
+  // The rest a provider may know; the details show what is there.
+  tagline?: string | null;
+  originalTitle?: string | null;
+  status?: string | null;
+  releaseDate?: string | null;
+  lastAired?: string | null;
+  budget?: number | null;
+  revenue?: number | null;
+  studios?: string[];
+  collection?: { id: number; name: string } | null;
+  cast?: CastMember[];
+  crew?: CastMember[];
+  seasonList?: SeasonSummary[];
+  episodes?: number | null;
+};
+
+export type BrowseQuery = {
+  mediaType: MediaType;
+  sort: BrowseSort;
+  genre?: string;
+  language?: string;
+  decade?: number;
+  year?: number;
+  page: number;
+};
+
+export type BrowsePage = {
+  page: number;
+  totalPages: number;
+  items: CatalogueTitle[];
+  genres: { id: string; name: string }[];
+};
+
+export type Person = PersonDetail & {
+  // Each title with the part in `match`: "als Nyles", "Regie".
+  titles: (CatalogueTitle & { part: string | null })[];
 };
 
 export type Download = { progress: number; eta: string | null };
@@ -57,12 +97,11 @@ export interface CatalogueProvider {
   search(
     query: string,
   ): Promise<{ hits: CatalogueHit[]; credits: { id: string; name: string }[] }>;
-  credit(
-    id: string,
-  ): Promise<
-    | { credit: { id: string; name: string }; titles: CatalogueTitle[] }
-    | undefined
-  >;
+  // Films or series a page at a time, the way a shop sorts them.
+  browse(query: BrowseQuery): Promise<BrowsePage>;
+  // What goes with a title, in the source's order; empty when it has none.
+  related(ref: TitleRef): Promise<CatalogueTitle[]>;
+  person(id: string): Promise<Person | undefined>;
 }
 
 // `known`: the media server already has, fetches or awaits the title.

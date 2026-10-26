@@ -2,6 +2,8 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
+  browseResponse,
+  creditResponse,
   listResponse,
   lumosChange,
   rowsResponse,
@@ -312,7 +314,9 @@ describe('lists', () => {
       candidates: () => titles.candidates(),
       title: (ref) => titles.title(ref),
       search: (q) => titles.search(q),
-      credit: (id) => titles.credit(id),
+      browse: (q) => titles.browse(q),
+      related: (ref) => titles.related(ref),
+      person: (id) => titles.person(id),
     };
     const live = testHousehold({ dbPath, catalogue: liveStandIn });
     const key = live.key(fixtures.ada.id, ['read']);
@@ -492,5 +496,94 @@ describe('events', () => {
       { personId: h.bram.id, scope: 'shared' },
       { personId: h.ada.id, scope: 'mine' },
     ]);
+  });
+});
+describe('browsing and the Zoeker', () => {
+  it('browses films the way a shop sorts them, by genre and decade, a page at a time', async () => {
+    const h = household();
+    const popular = browseResponse.parse(
+      await h.json(h.adaKey, '/api/lumos/browse?type=movie&sort=popular'),
+    );
+    expect(popular.dataOrigin).toBe('fixture');
+    expect(popular.items.length).toBeGreaterThan(5);
+    expect(popular.items.every((t) => t.mediaType === 'movie')).toBe(true);
+    expect(popular.genres.map((g) => g.name)).toContain('Komedie');
+    const comedies = browseResponse.parse(
+      await h.json(h.adaKey, '/api/lumos/browse?type=movie&genre=Komedie'),
+    );
+    expect(comedies.items.every((t) => t.genres.includes('Komedie'))).toBe(
+      true,
+    );
+    const eighties = browseResponse.parse(
+      await h.json(h.adaKey, '/api/lumos/browse?type=tv&decade=1980'),
+    );
+    expect(
+      eighties.items.every(
+        (t) => (t.year ?? 0) >= 1980 && (t.year ?? 0) < 1990,
+      ),
+    ).toBe(true);
+    const page2 = browseResponse.parse(
+      await h.json(h.adaKey, '/api/lumos/browse?type=movie&page=2'),
+    );
+    expect(page2.page).toBe(2);
+    expect(page2.items.map((t) => t.tmdbId)).not.toEqual(
+      popular.items.map((t) => t.tmdbId),
+    );
+    expect((await h.call(h.adaKey, '/api/lumos/browse?type=book')).status).toBe(
+      400,
+    );
+  });
+
+  it('shows a person with what they made, each title saying the part', async () => {
+    const h = household();
+    const found = titleSearchResponse.parse(
+      await h.json(h.adaKey, '/api/lumos/search?q=samberg'),
+    );
+    const person = found.credits[0];
+    expect(person?.name).toBe('Andy Samberg');
+    const page = creditResponse.parse(
+      await h.json(h.adaKey, `/api/lumos/credits/${person?.id}`),
+    );
+    expect(page.person?.name).toBe('Andy Samberg');
+    expect(page.titles.map((t) => [t.title, t.match])).toContainEqual([
+      'Palm Springs',
+      'als zichzelf',
+    ]);
+    expect((await h.call(h.adaKey, '/api/lumos/credits/nobody')).status).toBe(
+      404,
+    );
+  });
+
+  it('builds the Zoeker from the list and the taste, leaves passed titles out, and reshuffles with the seed', async () => {
+    const h = household();
+    await h.add(h.adaKey, 'shared', { mediaType: 'movie', tmdbId: 9000001 });
+    await h.verdict(h.adaKey, {
+      scope: 'shared',
+      mediaType: 'movie',
+      tmdbId: 9000014,
+      kind: 'not-now',
+    });
+    const one = rowsResponse.parse(
+      await h.json(h.adaKey, '/api/lumos/explore?seed=1'),
+    );
+    const keys = one.rows.map((row) => row.key);
+    expect(keys).toContain('like-movie:9000001');
+    const likeRow = one.rows.find((row) => row.key === 'like-movie:9000001');
+    expect(likeRow?.title).toBe('Als je Palm Springs goed vond');
+    expect(
+      likeRow?.items.every((t) => t.match === 'Lijkt op Palm Springs'),
+    ).toBe(true);
+    for (const row of one.rows) {
+      expect(row.items.map((t) => t.tmdbId)).not.toContain(9000014);
+    }
+    const decadeOf = async (seed: number) =>
+      rowsResponse
+        .parse(await h.json(h.adaKey, `/api/lumos/explore?seed=${seed}`))
+        .rows.find((row) => row.key.startsWith('decade-'))?.key;
+    const decades = new Set(
+      await Promise.all([1, 2, 3, 4, 5, 6, 7, 8].map(decadeOf)),
+    );
+    expect(decades.size).toBeGreaterThan(1);
+    expect(await decadeOf(3)).toBe(await decadeOf(3));
   });
 });

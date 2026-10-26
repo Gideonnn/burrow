@@ -6,11 +6,15 @@ import type {
   Snippet,
   Trailer,
 } from '@burrow/contracts';
-import type {
-  CatalogueHit,
-  CatalogueProvider,
-  CatalogueTitle,
-  TitleRef,
+import {
+  type BrowsePage,
+  type BrowseQuery,
+  type CatalogueHit,
+  type CatalogueProvider,
+  type CatalogueTitle,
+  overlap,
+  type Person,
+  type TitleRef,
 } from './catalogue';
 
 // Test data for development and tests, never the real catalogue: every
@@ -677,15 +681,99 @@ export class FixtureCatalogue implements CatalogueProvider {
     };
   }
 
-  async credit(id: string) {
+  async person(id: string): Promise<Person | undefined> {
     const titles = this.titles.filter((t) =>
       t.credits.some((c) => c.id === id),
     );
     const name = titles[0]?.credits.find((c) => c.id === id)?.name;
     if (!name) return undefined;
+    const part = (t: CatalogueTitle) => {
+      const role = t.credits.find((c) => c.id === id)?.role;
+      return role === 'cast' ? 'als zichzelf' : role ? ROLE[role] : null;
+    };
     return {
-      credit: { id, name },
-      titles: titles.toSorted((a, b) => (b.year ?? 0) - (a.year ?? 0)),
+      id,
+      name,
+      photo: null,
+      biography: null,
+      birthday: null,
+      deathday: null,
+      placeOfBirth: null,
+      known: titles.some((t) =>
+        t.credits.some((c) => c.id === id && c.role !== 'cast'),
+      )
+        ? 'Directing'
+        : 'Acting',
+      titles: titles
+        .toSorted((a, b) => (b.year ?? 0) - (a.year ?? 0))
+        .map((t) => ({ ...t, part: part(t) })),
+    };
+  }
+
+  // What goes with a title: the most shared traits and genres first.
+  async related(ref: TitleRef) {
+    const source = await this.title(ref);
+    if (!source) return [];
+    return this.titles
+      .filter((t) => t !== source && overlap(source, t) > 0)
+      .toSorted(
+        (a, b) =>
+          overlap(source, b) - overlap(source, a) ||
+          b.popularity - a.popularity,
+      )
+      .slice(0, 12);
+  }
+
+  // The fixtures as a shop would sort them; one page of twelve.
+  async browse(q: BrowseQuery): Promise<BrowsePage> {
+    const genres = [
+      ...new Set(
+        this.titles
+          .filter((t) => t.mediaType === q.mediaType)
+          .flatMap((t) => t.genres),
+      ),
+    ]
+      .toSorted()
+      .map((name) => ({ id: name, name }));
+    const thisYear = Math.max(...this.titles.map((t) => t.year ?? 0));
+    let items = this.titles.filter(
+      (t) =>
+        t.mediaType === q.mediaType &&
+        (!q.genre || t.genres.includes(q.genre)) &&
+        (!q.language ||
+          (q.language === 'nl') === (t.language === 'Nederlands')) &&
+        (!q.decade ||
+          ((t.year ?? 0) >= q.decade && (t.year ?? 0) < q.decade + 10)) &&
+        (!q.year || t.year === q.year),
+    );
+    const score = (t: CatalogueTitle) => t.scores[0]?.value ?? 0;
+    switch (q.sort) {
+      case 'popular':
+      case 'trending':
+        items = items.toSorted((a, b) => b.popularity - a.popularity);
+        break;
+      case 'new':
+        items = items
+          .filter((t) => (t.year ?? 0) <= thisYear)
+          .toSorted((a, b) => (b.year ?? 0) - (a.year ?? 0));
+        break;
+      case 'upcoming':
+        items = items.filter((t) => t.availability === 'waiting-for-release');
+        break;
+      case 'top':
+      case 'gems':
+        items = items
+          .filter((t) => score(t) > 0)
+          .toSorted((a, b) => score(b) - score(a));
+        break;
+    }
+    const size = 12;
+    const totalPages = Math.max(1, Math.ceil(items.length / size));
+    return {
+      page: q.page,
+      totalPages,
+      items: items.slice((q.page - 1) * size, q.page * size),
+      genres,
     };
   }
 }

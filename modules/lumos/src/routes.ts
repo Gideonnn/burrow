@@ -1,4 +1,5 @@
 import {
+  browseQuery,
   createVerdictRequest,
   listScope,
   mediaType,
@@ -16,6 +17,9 @@ import { LumosError, type Lumos, NoPlayer, NotConnected } from './lumos';
 import { SeerrError } from './seerr';
 
 const scoped = z.object({ scope: listScope.default('shared') });
+const explore = scoped.extend({
+  seed: z.coerce.number().int().min(0).default(1),
+});
 const ref = z.object({
   mediaType,
   tmdbId: z.coerce.number().int(),
@@ -234,6 +238,32 @@ export function lumosRoutes(lumos: Lumos) {
         c.json(
           await attempt(() => lumos.undo(c.var.access, c.req.param('id'))),
         ),
+      )
+      .get(
+        '/lumos/browse',
+        requireRight('read'),
+        zValidator('query', browseQuery),
+        async (c) =>
+          c.json(
+            await attempt(() =>
+              lumos.browse(c.var.access, c.req.valid('query')),
+            ),
+          ),
+      )
+      .get(
+        '/lumos/explore',
+        requireRight('read'),
+        zValidator('query', explore),
+        async (c) =>
+          c.json(
+            await attempt(() =>
+              lumos.explore(
+                c.var.access,
+                c.req.valid('query').scope,
+                c.req.valid('query').seed,
+              ),
+            ),
+          ),
       )
       .get(
         '/lumos/watch/:mediaType/:tmdbId',

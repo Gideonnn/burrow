@@ -128,6 +128,25 @@ export const credit = z.object({
 });
 export type Credit = z.infer<typeof credit>;
 
+// Someone in the cast or crew with what they did: "Nyles" for an actor,
+// "Regie" or "Scenario" for the crew.
+export const castMember = z.object({
+  id: z.string(),
+  name: z.string(),
+  part: z.string().nullable(),
+  photo: z.string().nullable(),
+});
+export type CastMember = z.infer<typeof castMember>;
+
+export const seasonSummary = z.object({
+  number: z.number().int(),
+  name: z.string(),
+  episodes: z.number().int().nullable(),
+  year: z.number().int().nullable(),
+  poster: z.string().nullable(),
+});
+export type SeasonSummary = z.infer<typeof seasonSummary>;
+
 // Lumos's request to the media server for a title on a list: `pending`
 // waits out the undo window or a retry, `exists` means the server already
 // had or awaited it, `dropped` that the wish was undone before it left.
@@ -168,8 +187,78 @@ export const titleDetail = titleSummary.extend({
   tmdbUrl: z.string().nullable(),
   request: requestState.nullable(),
   download: download.nullable(),
+  // The rest of what the source knows: absent fields are null or empty,
+  // never guessed.
+  tagline: z.string().nullable(),
+  originalTitle: z.string().nullable(),
+  // "Released", "Returning Series", "Ended"; the source's own word.
+  status: z.string().nullable(),
+  releaseDate: z.string().nullable(),
+  lastAired: z.string().nullable(),
+  // In US dollars, as the source reports them; null when unknown or zero.
+  budget: z.number().nullable(),
+  revenue: z.number().nullable(),
+  studios: z.array(z.string()),
+  collection: z.object({ id: z.number().int(), name: z.string() }).nullable(),
+  cast: z.array(castMember),
+  crew: z.array(castMember),
+  seasonList: z.array(seasonSummary),
+  episodes: z.number().int().nullable(),
 });
 export type TitleDetail = z.infer<typeof titleDetail>;
+
+// Films or series the way a shop sorts them, a page at a time.
+export const browseSort = z.enum([
+  'popular',
+  'new',
+  'upcoming',
+  'top',
+  'trending',
+  'gems',
+]);
+export type BrowseSort = z.infer<typeof browseSort>;
+
+export const browseQuery = z.object({
+  type: mediaType,
+  sort: browseSort.default('popular'),
+  // A genre id of the source, from `genres` in the answer.
+  genre: z.string().optional(),
+  // ISO 639-1, e.g. "nl" for Dutch originals.
+  language: z
+    .string()
+    .regex(/^[a-z]{2}$/)
+    .optional(),
+  decade: z.coerce.number().int().min(1900).max(2100).optional(),
+  year: z.coerce.number().int().min(1900).max(2100).optional(),
+  page: z.coerce.number().int().min(1).max(500).default(1),
+  scope: listScope.default('shared'),
+});
+export type BrowseQuery = z.infer<typeof browseQuery>;
+
+export const genre = z.object({ id: z.string(), name: z.string() });
+export const browseResponse = z.object({
+  dataOrigin,
+  page: z.number().int(),
+  totalPages: z.number().int(),
+  items: z.array(titleSummary),
+  genres: z.array(genre),
+});
+export type BrowseResponse = z.infer<typeof browseResponse>;
+
+// A person: who they are and what they made, each title with the part
+// ("als Nyles", "Regie") in `match`.
+export const personDetail = z.object({
+  id: z.string(),
+  name: z.string(),
+  photo: z.string().nullable(),
+  biography: z.string().nullable(),
+  birthday: z.string().nullable(),
+  deathday: z.string().nullable(),
+  placeOfBirth: z.string().nullable(),
+  // "Acting", "Directing": the source's department.
+  known: z.string().nullable(),
+});
+export type PersonDetail = z.infer<typeof personDetail>;
 
 export const rowStyle = z.enum(['wide', 'poster']);
 export const titleRow = z.object({
@@ -211,8 +300,10 @@ export type TitlesResponse = z.infer<typeof titlesResponse>;
 export const creditResponse = z.object({
   dataOrigin,
   credit: z.object({ id: z.string(), name: z.string() }),
+  person: personDetail.nullable(),
   titles: z.array(titleSummary),
 });
+export type CreditResponse = z.infer<typeof creditResponse>;
 
 export const listEntry = z.object({
   title: titleSummary,
