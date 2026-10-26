@@ -52,6 +52,7 @@ struct InspectorView: View {
             case "j": Task { await model.toggleList() }
             case "n": model.reasonMenu = model.inspected
             case "t": Task { await model.playTrailer() }
+            case "k": Task { await model.watch() }
             case "z": Task { await model.undo() }
             default: return .ignored
             }
@@ -264,6 +265,7 @@ struct Facts: View {
     private var actions: some View {
         VStack(alignment: .leading, spacing: 8) {
             actionRow
+            if watchable { watchRow }
             if let total = seasonTotal {
                 HStack(spacing: 6) {
                     Text("Seizoenen").font(.system(size: 11.5)).foregroundStyle(.secondary)
@@ -301,11 +303,65 @@ struct Facts: View {
             ), arrowEdge: .bottom) {
                 ReasonMenu(ref: detail.ref)
             }
-            if detail.availability == .available {
-                Button("Afspelen", systemImage: "play") {}
-                    .disabled(true)
-                    .help("Afspelen in Jellyfin komt in een volgende stap")
+        }
+    }
+
+    private var watchable: Bool {
+        model.canWatch && (detail.availability == .available || detail.availability == .partiallyAvailable)
+    }
+
+    /// Where to watch: the TV when Jellyfin is open there, and the page here.
+    @ViewBuilder private var watchRow: some View {
+        HStack(spacing: 6) {
+            Text("Kijken").font(.system(size: 11.5)).foregroundStyle(.secondary)
+            if let info = model.watchInfo {
+                if info.web == nil {
+                    Text("Niet gevonden in Jellyfin").font(.system(size: 11.5)).foregroundStyle(.secondary)
+                } else {
+                    screenControl(info)
+                    Button("Hier", systemImage: "safari") { model.watchHere(detail.ref) }
+                        .help("Opent de pagina in Jellyfin in je browser (⇧⌘K)")
+                    if let episode = info.episode {
+                        Text(episode.label).font(.system(size: 11.5)).foregroundStyle(.secondary).lineLimit(1)
+                    }
+                }
+            } else {
+                ProgressView().controlSize(.small)
             }
+        }
+        .popover(isPresented: Binding(
+            get: { model.screenMenu == detail.ref },
+            set: { if !$0 { model.screenMenu = nil } }
+        ), arrowEdge: .bottom) {
+            VStack(alignment: .leading, spacing: 4) {
+                ForEach(model.watchInfo?.screens ?? []) { screen in
+                    Button(screen.name) { Task { await model.play(on: screen, detail.ref) } }
+                }
+            }
+            .padding(10)
+        }
+    }
+
+    @ViewBuilder private func screenControl(_ info: WatchInfo) -> some View {
+        switch info.screens.count {
+        case 0:
+            Button("Op de tv", systemImage: "tv") {}
+                .disabled(true)
+                .help("Open Jellyfin op de tv; dan start Lumos hem daar (K)")
+        case 1:
+            Button { Task { await model.play(on: info.screens[0], detail.ref) } } label: {
+                Label("Op \(info.screens[0].name)", systemImage: "tv")
+            }
+            .help("Start op de tv (K)")
+        default:
+            Menu {
+                ForEach(info.screens) { screen in
+                    Button(screen.name) { Task { await model.play(on: screen, detail.ref) } }
+                }
+            } label: {
+                Label("Op de tv", systemImage: "tv")
+            }
+            .fixedSize()
         }
     }
 

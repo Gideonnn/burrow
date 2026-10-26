@@ -37,6 +37,8 @@ export type CatalogueTitle = TitleRef & {
   tmdbUrl: string | null;
   // How far the media server's download is, when one runs.
   download?: Download | null;
+  // The media server's own id for the title, once it has it.
+  mediaServerId?: string | null;
 };
 
 export type Download = { progress: number; eta: string | null };

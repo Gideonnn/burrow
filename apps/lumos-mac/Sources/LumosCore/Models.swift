@@ -366,6 +366,43 @@ public struct LumosStatus: Codable, Sendable {
     public var catalogue: String?
     /// Putting a title on a list requests it from the media server.
     public var requests: Bool?
+    /// Available titles can be watched: a page here, a start on the TV.
+    public var watch: Bool?
+}
+
+/// A screen where Jellyfin's app is open and can be told to play: the TV.
+public struct Screen: Codable, Sendable, Hashable, Identifiable {
+    public var deviceId: String
+    public var name: String
+    public var client: String
+    /// What it plays right now, if anything.
+    public var playing: String?
+
+    public var id: String { deviceId }
+}
+
+public struct Episode: Codable, Sendable, Hashable {
+    public var season: Int
+    public var number: Int
+    public var title: String?
+
+    public var label: String { "S\(season)E\(number)" + (title.map { " \($0)" } ?? "") }
+}
+
+/// Where an available title can be watched.
+public struct WatchInfo: Codable, Sendable, Hashable {
+    /// The title's page in Jellyfin's web app; nil when the library lacks it.
+    public var web: String?
+    /// A series: the episode a screen would start.
+    public var episode: Episode?
+    public var screens: [Screen]
+}
+
+public struct PlayResponse: Codable, Sendable {
+    public var screen: Screen
+    public var episode: Episode?
+    /// The screen itself reported the title as playing.
+    public var confirmed: Bool
 }
 
 public struct LumosChange: Codable, Sendable {
@@ -449,5 +486,17 @@ extension APIClient {
 
     public func undo(change id: String) async throws -> LumosChange {
         try await call("POST", "api/lumos/changes/\(id)/undo")
+    }
+
+    public func watch(_ ref: TitleRef) async throws -> WatchInfo {
+        try await call("GET", "api/lumos/watch/\(ref.mediaType.rawValue)/\(ref.tmdbId)")
+    }
+
+    struct PlayBody: Encodable {
+        var deviceId: String
+    }
+
+    public func play(_ ref: TitleRef, on deviceId: String) async throws -> PlayResponse {
+        try await call("POST", "api/lumos/watch/\(ref.mediaType.rawValue)/\(ref.tmdbId)/screen", body: PlayBody(deviceId: deviceId))
     }
 }

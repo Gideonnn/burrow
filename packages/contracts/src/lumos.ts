@@ -264,8 +264,51 @@ export const lumosStatus = z.object({
   catalogue: z.string().nullable(),
   // Putting a title on a list asks the media server for it.
   requests: z.boolean(),
+  // Available titles can be watched: a link for this machine and a start
+  // on a screen where the media server's app is open.
+  watch: z.boolean(),
 });
 export type LumosStatus = z.infer<typeof lumosStatus>;
+
+// A screen where the media server's app is open and can be told to play:
+// the TV, mostly. Picked by its device id, which stays the same across
+// sessions; the first session found is never taken.
+export const screen = z.object({
+  deviceId: z.string(),
+  name: z.string(),
+  client: z.string(),
+  // What it plays right now, if anything.
+  playing: z.string().nullable(),
+});
+export type Screen = z.infer<typeof screen>;
+
+export const episode = z.object({
+  season: z.number().int(),
+  number: z.number().int(),
+  title: z.string().nullable(),
+});
+export type Episode = z.infer<typeof episode>;
+
+export const watchResponse = z.object({
+  // The title's page in the media server's web app, for this machine; null
+  // when the library does not have the title.
+  web: z.string().nullable(),
+  // A series: the episode a screen would start (the next unwatched one).
+  episode: episode.nullable(),
+  screens: z.array(screen),
+});
+export type WatchResponse = z.infer<typeof watchResponse>;
+
+export const playRequest = z.object({ deviceId: z.string().min(1) });
+
+export const playResponse = z.object({
+  screen,
+  episode: episode.nullable(),
+  // The screen itself reported the title as playing; without that Lumos
+  // only knows the command was sent.
+  confirmed: z.boolean(),
+});
+export type PlayResponse = z.infer<typeof playResponse>;
 
 // Every change answers with the id that undoes it exactly, also when it
 // touched a list and a verdict at once. Only its author can undo it.

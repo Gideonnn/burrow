@@ -1,3 +1,11 @@
+---
+id: 2026-10-26-hogsmeade-the-playful-face-of-lumos
+date: 2026-10-26
+kind: decision
+area: [lumos]
+topics: [lumos]
+---
+
 # 2026-10-26: Hogsmeade, the playful face of Lumos, and what made both apps snappy
 
 Gideon wanted to ask his partner which of two faces she prefers: Lumos as it is (a native

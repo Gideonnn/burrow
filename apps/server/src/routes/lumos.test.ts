@@ -108,6 +108,7 @@ describe('the catalogue', () => {
       dataOrigin: 'fixture',
       catalogue: 'Testgegevens',
       requests: false,
+      watch: false,
     });
     const answers = [
       rowsResponse.parse(await h.json(h.adaKey, '/api/lumos/rows')),
@@ -137,6 +138,7 @@ describe('the catalogue', () => {
       dataOrigin: null,
       catalogue: null,
       requests: false,
+      watch: false,
     });
   });
 

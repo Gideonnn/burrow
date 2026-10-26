@@ -30,6 +30,9 @@ public func controlState(_ model: LumosModel) -> [String: Any] {
             "pass": detail.pass.map { "\($0.kind.rawValue) \($0.reason ?? "")" } ?? NSNull(),
             "trailer": detail.trailer?.publisher ?? NSNull(),
             "scores": detail.scores.map { "\($0.source) \($0.label ?? "") \($0.valueText)" },
+            "availability": detail.availability.rawValue,
+            "web": model.watchInfo?.web ?? NSNull(),
+            "screens": model.watchInfo?.screens.map { "\($0.name) (\($0.deviceId))\($0.playing.map { ", speelt \($0)" } ?? "")" } ?? [],
         ] as [String: Any]
     }
     if let player = model.player { state["player"] = player.statusText }
@@ -79,6 +82,25 @@ public func registerCommands(_ service: ControlService, model: LumosModel) {
     }
     service.register("close", help: "Close the details.") { _ in
         model.closeInspector()
+        return controlState(model)
+    }
+    service.register(
+        "watch", help: "Start the open title on a screen with Jellyfin open (the TV); `here` opens its page in the browser.",
+        arguments: [.init("screen", "a screen's name or device id, or `here`")]
+    ) { request in
+        let wanted = request["screen"] as? String
+        if wanted == "here" {
+            model.watchHere()
+        } else if let wanted {
+            await model.detailTaskForTests?.value
+            await model.watchTaskForTests?.value
+            guard let screen = model.watchInfo?.screens.first(where: { $0.name == wanted || $0.deviceId == wanted }) else {
+                throw ControlError("no screen named \(wanted); see `state`")
+            }
+            await model.play(on: screen)
+        } else {
+            await model.watch()
+        }
         return controlState(model)
     }
 }

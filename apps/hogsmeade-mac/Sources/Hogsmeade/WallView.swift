@@ -240,6 +240,7 @@ struct CardWall: View {
             case "j": Task { await model.toggleList() }
             case "n": model.reasonMenu = model.cursor?.ref
             case "t": Task { await model.playTrailer() }
+            case "k": Task { await model.watch() }
             case "z": Task { await model.undo() }
             case "/": model.requestSearchFocus()
             default: return .ignored

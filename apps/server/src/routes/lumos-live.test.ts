@@ -212,6 +212,7 @@ describe('the live catalogue from Seerr', () => {
       dataOrigin: 'live',
       catalogue: 'Seerr',
       requests: true,
+      watch: false,
     });
     const rows = rowsResponse.parse(await h.json(h.adaKey, '/api/lumos/rows'));
     expect(rows.dataOrigin).toBe('live');

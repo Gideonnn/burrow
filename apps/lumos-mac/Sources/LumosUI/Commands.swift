@@ -29,6 +29,13 @@ public struct LumosCommands: Commands {
             Divider()
             Button("Zoek") { model.requestSearchFocus() }.keyboardShortcut("f")
             Button("Vernieuw") { Task { await model.reload() } }.keyboardShortcut("r")
+            Divider()
+            Button("Kijk op de tv") { Task { await model.watch() } }
+                .keyboardShortcut("k")
+                .disabled(!model.canWatch)
+            Button("Kijk hier in Jellyfin") { model.watchHere() }
+                .keyboardShortcut("k", modifiers: [.command, .shift])
+                .disabled(model.watchInfo?.web == nil)
         }
     }
 }

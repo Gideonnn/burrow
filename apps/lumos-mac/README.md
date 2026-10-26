@@ -21,9 +21,13 @@ pnpm lumos:install                   # build, install in /Applications, start (f
   `Z` or ⌘Z undo, ⌘F or `/` search, ⌘1-3 Ontdekken, Lijst, Smaak.
 - A series with more than one season gets a season menu next to "Op onze lijst zetten";
   `J` takes season 1.
+- An available title gets a "Kijken" row: "Op <tv>" starts it on the screen where the
+  Jellyfin app is open, "Hier" opens its page in the browser. `K` (⌘K) takes the only
+  screen, the page when none is open, and asks when several are; ⇧⌘K is the page.
 - Trailers stream only after a click: YouTube in a small web view inside the inspector,
   direct streams in the Mac's own player. Nothing is kept on disk.
-- Agents: `burrowctl lumos state`, `show`, `search`, `open`, `trailer`, `stop`, `close`.
+- Agents: `burrowctl lumos state`, `show`, `search`, `open`, `trailer`, `stop`, `close`,
+  `watch [screen=<name>|here]`.
 
 For a development server with the fixture catalogue (never on Dobby):
 
@@ -31,6 +35,10 @@ For a development server with the fixture catalogue (never on Dobby):
 BURROW_DATA_DIR=/tmp/lumos-dev BURROW_SECRET_KEY=… LUMOS_CATALOGUE=fixture pnpm dev:server
 LUMOS_SERVER=http://127.0.0.1:4717 LUMOS_KEY=bk_… build/Lumos.app/Contents/MacOS/Lumos
 ```
+
+Watching needs `LUMOS_JELLYFIN_URL` and `LUMOS_JELLYFIN_API_KEY` on the server; for a
+local run point them at a small fake that answers `/Items`, `/Sessions` and
+`/Sessions/:id/Playing`, so no real TV is touched.
 
 `pnpm --filter @burrow/server cli init <name>` makes the first person and key on that
 data directory. Run the bundle (`./scripts/bundle.sh`), not `.build/debug/Lumos`: a bare

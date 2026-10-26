@@ -94,6 +94,7 @@ struct Scrapbook: View {
             case "j": Task { await model.toggleList() }
             case "n": model.reasonMenu = model.inspected
             case "t": Task { await model.playTrailer() }
+            case "k": Task { await model.watch() }
             case "z": Task { await model.undo() }
             default: return .ignored
             }
@@ -351,7 +352,7 @@ struct FactsColumn: View {
     }
 
     private var facts: some View {
-        HStack(spacing: 8) {
+        FlowLayout(spacing: 8) {
             Label(detail.summary.kind, systemImage: detail.mediaType == .tv ? "tv" : "film").pill(Palette.lemon, Palette.onLemon)
             if let year = detail.year { Text(String(year)).pill(.white, Palette.ink) }
             if let length = detail.summary.length { Label(length, systemImage: "clock").pill(.white, Palette.ink) }
@@ -370,7 +371,7 @@ struct FactsColumn: View {
     }
 
     private var actions: some View {
-        HStack(spacing: 8) {
+        FlowLayout(spacing: 8) {
             Button {
                 Task { await model.toggleList(detail.ref, seasons: seasonTotal == nil ? nil : seasons.sorted()) }
             } label: {
@@ -414,6 +415,15 @@ struct FactsColumn: View {
                 .buttonStyle(.plain)
                 .help("Streamt pas na deze klik (T)")
             }
+            if model.canWatch, detail.availability == .available || detail.availability == .partiallyAvailable,
+               let info = model.watchInfo, info.web != nil {
+                screenPill(info)
+                Button { model.watchHere(detail.ref) } label: {
+                    Label("Hier", systemImage: "safari").pill(Palette.sky, Palette.ink, height: 42).font(.round(15, .heavy))
+                }
+                .buttonStyle(.plain)
+                .help("Opent de pagina in Jellyfin in je browser (⇧⌘K)")
+            }
             if let pass = detail.pass {
                 Button {
                     Task { await model.restore(verdictId: pass.id, title: detail.title) }
@@ -425,6 +435,44 @@ struct FactsColumn: View {
             }
         }
         .shadow(color: Color(hex: 0x3C280A).opacity(0.12), radius: 8, y: 4)
+    }
+
+    /// The TV when Jellyfin is open there; a choice when several screens are.
+    @ViewBuilder private func screenPill(_ info: WatchInfo) -> some View {
+        let episode = info.episode.map { " · \($0.label)" } ?? ""
+        switch info.screens.count {
+        case 0:
+            Label("Op de tv", systemImage: "tv").pill(Palette.hot.opacity(0.45), .white, height: 42).font(.round(15, .heavy))
+                .help("Open Jellyfin op de tv; dan start Hogsmeade hem daar (K)")
+        case 1:
+            Button { Task { await model.play(on: info.screens[0], detail.ref) } } label: {
+                Label("Op \(info.screens[0].name)\(episode)", systemImage: "tv").pill(Palette.hot, .white, height: 42).font(.round(15, .heavy))
+            }
+            .buttonStyle(.plain)
+            .help("Start op de tv (K)")
+        default:
+            Menu {
+                ForEach(info.screens) { screen in
+                    Button(screen.name) { Task { await model.play(on: screen, detail.ref) } }
+                }
+            } label: {
+                Label("Op de tv\(episode)", systemImage: "tv").pill(Palette.hot, .white, height: 42).font(.round(15, .heavy))
+            }
+            .menuStyle(.button)
+            .buttonStyle(.plain)
+            .fixedSize()
+            .popover(isPresented: Binding(
+                get: { model.screenMenu == detail.ref },
+                set: { if !$0 { model.screenMenu = nil } }
+            ), arrowEdge: .bottom) {
+                VStack(alignment: .leading, spacing: 4) {
+                    ForEach(info.screens) { screen in
+                        Button(screen.name) { Task { await model.play(on: screen, detail.ref) } }
+                    }
+                }
+                .padding(10)
+            }
+        }
     }
 
     /// The request and the download, as far as Seerr and the download client know.

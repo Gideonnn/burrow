@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import Observation
 
@@ -43,7 +44,7 @@ public final class LumosModel {
     }
 
     public struct ChangeNote: Equatable, Sendable {
-        public enum Kind: Sendable { case listed, unlisted, passed, seen, restored, tuned, undone }
+        public enum Kind: Sendable { case listed, unlisted, passed, seen, restored, tuned, undone, played }
 
         public var kind: Kind
         public var ref: TitleRef?
@@ -96,6 +97,12 @@ public final class LumosModel {
     public private(set) var detail: TitleDetail?
     public private(set) var similar: [TitleSummary] = []
     public private(set) var player: TrailerPlayback?
+    /// Where the open title can be watched; nil until Jellyfin has answered.
+    public private(set) var watchInfo: WatchInfo?
+    /// The title whose choice of screens is open (K with several screens).
+    public var screenMenu: TitleRef?
+    /// Opens the title's page in the browser; the tests capture it.
+    public var openURL: (URL) -> Void = { NSWorkspace.shared.open($0) }
     /// The card whose "Niet nu" menu is open, and the highlighted choice.
     public var reasonMenu: TitleRef? {
         didSet { if oldValue != reasonMenu { reasonChoice = 0 } }
@@ -115,6 +122,7 @@ public final class LumosModel {
     private var eventsTask: Task<Void, Never>?
     private var searchTask: Task<Void, Never>?
     private var detailTask: Task<Void, Never>?
+    private var watchTask: Task<Void, Never>?
     private var toastTask: Task<Void, Never>?
     /// Off in tests, so a toast stays until the next one.
     var toastSeconds: Double? = 5
@@ -147,6 +155,8 @@ public final class LumosModel {
 
     public var isFixture: Bool { status?.dataOrigin == .fixture }
     public var myName: String { profile?.person.name ?? "Ik" }
+    /// The server has Jellyfin, so available titles can be watched.
+    public var canWatch: Bool { status?.watch == true }
 
     // MARK: Connecting
 
@@ -404,7 +414,10 @@ public final class LumosModel {
             inspected = ref
             detail = nil
             similar = []
+            watchInfo = nil
+            screenMenu = nil
             detailTask?.cancel()
+            watchTask?.cancel()
             detailTask = Task { await loadDetail(ref) }
         }
         if let card { inspectorOrigin = card }
@@ -420,9 +433,12 @@ public final class LumosModel {
     public func closeInspector(restoreFocus: Bool = true) {
         stopTrailer()
         detailTask?.cancel()
+        watchTask?.cancel()
         inspected = nil
         detail = nil
         similar = []
+        watchInfo = nil
+        screenMenu = nil
         if restoreFocus, let origin = inspectorOrigin {
             cursor = navigator.position(of: origin) != nil ? origin : navigator.keep(origin, previous: navigator)
         }
@@ -442,11 +458,26 @@ public final class LumosModel {
             detail = loaded
             self.similar = Array(similar.prefix(4))
             followProgress(of: loaded)
+            followWatch(of: loaded)
         } catch is CancellationError {
         } catch {
             if inspected == ref { report(error) }
         }
     }
+
+    /// After the details: where an available title can be watched. Asked
+    /// apart, so a slow Jellyfin never holds the details back.
+    private func followWatch(of detail: TitleDetail) {
+        watchTask?.cancel()
+        guard canWatch, let api, detail.availability == .available || detail.availability == .partiallyAvailable else { return }
+        let ref = detail.ref
+        watchTask = Task { [weak self] in
+            guard let info = try? await api.watch(ref), !Task.isCancelled, self?.inspected == ref else { return }
+            self?.watchInfo = info
+        }
+    }
+
+    public var watchTaskForTests: Task<Void, Never>? { watchTask }
 
     private var progressTask: Task<Void, Never>?
     var progressSeconds: Double? = 20
@@ -513,6 +544,58 @@ public final class LumosModel {
     public func playerReported(_ status: TrailerPlayback.Status, for ref: TitleRef) {
         guard player?.ref == ref else { return }
         player?.status = status
+    }
+
+    // MARK: Watching
+
+    /// K, or the buttons: starts an available title on the TV when one screen
+    /// has Jellyfin open, opens it here when none has, and asks when several have.
+    public func watch(_ ref: TitleRef? = nil) async {
+        guard let ref = ref ?? target else { return }
+        guard canWatch else {
+            show("Niet gekoppeld aan Jellyfin, dus kijken kan nog niet.")
+            return
+        }
+        if inspected != ref { open(ref, from: cursor?.ref == ref ? cursor : nil, focusInside: true) }
+        await detailTask?.value
+        await watchTask?.value
+        guard inspected == ref, let detail else { return }
+        guard let info = watchInfo, info.web != nil else {
+            show(detail.availability == .available || detail.availability == .partiallyAvailable
+                ? "Jellyfin heeft \(detail.title) niet gevonden."
+                : "\(detail.title) staat nog niet in Jellyfin.")
+            return
+        }
+        switch info.screens.count {
+        case 0: watchHere(ref)
+        case 1: await play(on: info.screens[0], ref)
+        default: screenMenu = ref
+        }
+    }
+
+    /// Opens the title's page in Jellyfin's web app, in the browser.
+    public func watchHere(_ ref: TitleRef? = nil) {
+        guard let ref = ref ?? inspected, inspected == ref, let web = watchInfo?.web, let url = URL(string: web) else { return }
+        openURL(url)
+        show("\(detail?.title ?? "De titel") opent in je browser.")
+    }
+
+    /// Tells the screen to play the title, and says only what the screen confirmed.
+    public func play(on screen: Screen, _ ref: TitleRef? = nil) async {
+        guard let api, let ref = ref ?? inspected else { return }
+        screenMenu = nil
+        let title = summary(ref)?.title ?? detail?.title ?? "De titel"
+        show("Start \(title) op \(screen.name)…")
+        do {
+            let played = try await api.play(ref, on: screen.deviceId)
+            let what = played.episode.map { "\(title) \($0.label)" } ?? title
+            show(played.confirmed
+                ? "\(what) speelt op \(played.screen.name)."
+                : "\(what) is gestart op \(played.screen.name); de tv meldt nog niets.")
+            lastChange = ChangeNote(kind: .played, ref: ref, scope: scope)
+        } catch {
+            report(error)
+        }
     }
 
     // MARK: Lists and verdicts

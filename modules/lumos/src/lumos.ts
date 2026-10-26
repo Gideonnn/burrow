@@ -5,6 +5,7 @@ import {
   type ListScope,
   type LumosStatus,
   passKinds,
+  type PlayResponse,
   type TitleDetail,
   type TitleRow,
   type TitleSummary,
@@ -12,6 +13,7 @@ import {
   type VerdictKind,
   type VerdictRef,
   tasteKinds,
+  type WatchResponse,
 } from '@burrow/contracts';
 import { type Access, listPeople, type Platform } from '@burrow/platform';
 import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
@@ -23,6 +25,7 @@ import {
   refKey,
   type TitleRef,
 } from './catalogue';
+import type { JellyfinPlayer } from './jellyfin';
 import { LumosRequests, requestState } from './requests';
 import {
   type ChangeEffects,
@@ -39,6 +42,12 @@ export class LumosError extends Error {}
 export class NotConnected extends LumosError {
   constructor() {
     super('Lumos is niet gekoppeld aan een catalogus');
+  }
+}
+// No Jellyfin is connected; everything but watching works.
+export class NoPlayer extends LumosError {
+  constructor() {
+    super('Lumos is niet gekoppeld aan Jellyfin');
   }
 }
 
@@ -84,6 +93,7 @@ export class Lumos {
     private readonly platform: Platform,
     private readonly catalogue?: CatalogueProvider,
     requester?: MediaRequester,
+    private readonly player?: JellyfinPlayer,
   ) {
     if (requester && catalogue?.origin === 'live') {
       this.requests = new LumosRequests(platform, requester);
@@ -104,12 +114,56 @@ export class Lumos {
     return this.catalogue;
   }
 
+  private needPlayer() {
+    if (!this.player) throw new NoPlayer();
+    return this.player;
+  }
+
   status(): LumosStatus {
     return {
       dataOrigin: this.catalogue?.origin ?? null,
       catalogue: this.catalogue?.name ?? null,
       requests: Boolean(this.requests),
+      watch: Boolean(this.player),
     };
+  }
+
+  // --- watching ------------------------------------------------------------
+
+  // Where a title can be watched: its page for this machine, and the
+  // screens with Jellyfin open. The library is asked itself; the
+  // catalogue's "available" is not taken on trust.
+  async watch(ref: TitleRef): Promise<WatchResponse> {
+    const player = this.needPlayer();
+    const t = await this.need().title(ref);
+    if (!t) throw new LumosError('not found');
+    const [item, screens] = await Promise.all([
+      player.item(t),
+      player.screens(),
+    ]);
+    const episode = item
+      ? await player.episode(item, screens[0]?.userId)
+      : null;
+    return {
+      web: item ? await player.webUrl(item) : null,
+      episode: episode
+        ? {
+            season: episode.season,
+            number: episode.number,
+            title: episode.title,
+          }
+        : null,
+      screens: screens.map(({ userId: _user, ...screen }) => screen),
+    };
+  }
+
+  async play(ref: TitleRef, deviceId: string): Promise<PlayResponse> {
+    const player = this.needPlayer();
+    const t = await this.need().title(ref);
+    if (!t) throw new LumosError('not found');
+    const item = await player.item(t);
+    if (!item) throw new LumosError('Jellyfin heeft deze titel niet');
+    return player.play(deviceId, item);
   }
 
   private owner(access: Access, scope: ListScope) {

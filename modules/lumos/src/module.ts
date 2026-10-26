@@ -3,6 +3,7 @@ import { listScope } from '@burrow/contracts';
 import { mcpText, type Module, type Platform } from '@burrow/platform';
 import { z } from 'zod';
 import type { CatalogueProvider, MediaRequester } from './catalogue';
+import type { JellyfinPlayer } from './jellyfin';
 import { Lumos, MODULE } from './lumos';
 import { lumosRoutes } from './routes';
 
@@ -24,14 +25,22 @@ export type LumosOptions = {
   catalogue?: CatalogueProvider;
   // Asks the media server for listed titles; only with the live catalogue.
   requester?: MediaRequester;
+  // Watches: a link for this machine and a start on the TV through Jellyfin.
+  player?: JellyfinPlayer;
 };
 
 // Lumos, films and series to watch together: a catalogue from a provider,
 // the household's list and each person's own, and "not now" and "seen"
 // that can always be undone. The media server stays Seerr, Radarr, Sonarr
-// and Jellyfin; a title on a list is requested there, nothing more.
+// and Jellyfin; a title on a list is requested there, and an available one
+// is started on a screen where Jellyfin is open, nothing more.
 export function lumosModule(platform: Platform, options: LumosOptions = {}) {
-  const lumos = new Lumos(platform, options.catalogue, options.requester);
+  const lumos = new Lumos(
+    platform,
+    options.catalogue,
+    options.requester,
+    options.player,
+  );
 
   const module: Module = {
     name: MODULE,

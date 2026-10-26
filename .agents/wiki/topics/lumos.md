@@ -6,7 +6,8 @@ the household's list, each person's own list, and verdicts that can always be un
 Hogsmeade is a second Mac app on exactly the same model and server: the playful face,
 so the household can run both and pick the one it likes. The media stack (Seerr, Radarr,
 Sonarr, Jellyfin) stays the backend: a title put on a list is requested from Seerr,
-which hands it to Radarr or Sonarr; neither app plays anything yet. Plan and phases:
+which hands it to Radarr or Sonarr, and an available title is opened in Jellyfin's web
+app or started on the TV through Jellyfin's sessions. Plan and phases:
 `docs/plans/2026-10-25-lumos.md`. Code: `modules/lumos`, `packages/contracts/src/lumos.ts`,
 `apps/lumos-mac`, `apps/hogsmeade-mac`.
 
@@ -75,7 +76,8 @@ without a catalogue.
 Routes (all under `/api/lumos`, `read` to look, `organize` to change): `status`, `rows`,
 `titles`, `search`, `titles/:mediaType/:tmdbId`, `similar/…`, `credits/:id`,
 `lists/:scope` with `PUT`/`DELETE …/items/:mediaType/:tmdbId` (the PUT body may carry
-`seasons`), `verdicts`, `DELETE verdicts/:id`, `changes/:id/undo`, `requests/…/retry`.
+`seasons`), `verdicts`, `DELETE verdicts/:id`, `changes/:id/undo`, `requests/…/retry`,
+`watch/:mediaType/:tmdbId` and `POST watch/…/screen` (body `deviceId`).
 MCP: `search_titles` and `list_watchlist`, read only. Setting: `lumos.enabled`. The
 module lists both `lumos` and `hogsmeade` as clients, so the server offers updates for
 both apps.
@@ -92,6 +94,32 @@ which is a separate 4K server). Failures retry with backoff for eight attempts, 
 sent request is never cancelled; removing a title leaves Seerr alone. Series ask the
 seasons chosen in the season menu, season 1 when none was chosen (and always with `J`).
 The fixtures never request.
+
+## Watching
+
+`JellyfinPlayer` (`jellyfin.ts`) is on when `LUMOS_JELLYFIN_URL` and
+`LUMOS_JELLYFIN_API_KEY` are set (`LUMOS_JELLYFIN_WEB_URL` when browsers in the house
+reach Jellyfin at another address). `status.watch` tells the Macs. The key is Jellyfin's
+service key from the media stack's root-only secrets; the operator's `tv` repository
+has `media/host/connect-lumos-jellyfin.sh`, run through `root-run.sh`, which copies it
+into the server settings without showing it, like the Seerr one. The library is only
+read: no deletes, no marks, no user data.
+
+- `GET watch/:ref` answers the title's page in Jellyfin's web app (`web`, null when the
+  library does not have it: the catalogue's "available" is not taken on trust), the
+  episode a screen would start, and the **screens**: sessions with `SupportsRemoteControl`,
+  mostly the TV with the Jellyfin app open, by device id, name and what they play.
+- `POST watch/:ref/screen` starts the title on the screen with that device id
+  (`/Sessions/{id}/Playing?playCommand=PlayNow`), then asks the sessions up to six times
+  whether `NowPlayingItem` is the title: `confirmed` is the screen's own word, else the
+  Mac says "gestart; de tv meldt nog niets". A series starts at NextUp for the screen's
+  user, else its first episode. No session on that device answers 409; Jellyfin down 503.
+  The first session found is never taken: the Mac picks by device id, or asks when
+  several screens are open.
+- The item is found by the id Seerr knows (`mediaInfo.jellyfinMediaId`, kept as
+  `mediaServerId` on the catalogue title), else by name with a matching `ProviderIds.Tmdb`.
+- Waking the TV and opening the app are not done: without a session the button says
+  "Open Jellyfin op de tv".
 
 ## On the Mac: one model, two faces
 
@@ -130,9 +158,13 @@ Both faces:
   view down, which stops the sound.
 - A series with more than one season gets a season menu (all, the first, or a set)
   next to the list button; the pick goes with the list call and so to Seerr.
+- An available title shows a "Kijken" row once Jellyfin has answered (asked after the
+  details, so a slow Jellyfin never holds them back): "Op <tv>" or a menu of screens, and
+  "Hier", which opens the page in the browser. `K` (⌘K) starts on the only screen, opens
+  the page when none is open, and asks when several are; ⇧⌘K is always the page.
 - `burrowctl lumos …` and `burrowctl hogsmeade …`: `state`, `show`, `search`, `open`,
-  `trailer`, `stop`, `close`. The list buttons are marked `<app>.approve.list`, because
-  a list entry requests media.
+  `trailer`, `stop`, `close`, `watch [screen=<name>|here]`. The list buttons are marked
+  `<app>.approve.list`, because a list entry requests media.
 
 Hogsmeade's face (`docs/design/hogsmeade-style.html` for the drawing, `-proto.html` for a
 clickable version drawn on outings before the style moved to films): a night with
@@ -154,6 +186,6 @@ activation policy "prohibited", never becomes the active app and gets no key pre
 
 ## Not yet
 
-Playback in Jellyfin (phase 5), history import (6), curated snippets and taste ranking
-(7), asking more seasons of a title that is already requested, and the "Nieuw digitaal"
-row: see the plan and `TODO.md`.
+History import (phase 6), curated snippets and taste ranking (7), waking the TV, asking
+more seasons of a title that is already requested, and the "Nieuw digitaal" row: see the
+plan and `TODO.md`.

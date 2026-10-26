@@ -41,6 +41,7 @@ type MediaInfo = {
   mediaType?: string;
   tmdbId?: number;
   requests?: { id?: number }[];
+  jellyfinMediaId?: string | null;
   downloadStatus?: {
     size?: number;
     sizeLeft?: number;
@@ -247,6 +248,7 @@ export class SeerrCatalogue implements CatalogueProvider, MediaRequester {
       stillsCredit: null,
       tmdbUrl: `https://www.themoviedb.org/${mediaType}/${r.id}`,
       download: null,
+      mediaServerId: r.mediaInfo?.jellyfinMediaId || null,
     };
   }
 

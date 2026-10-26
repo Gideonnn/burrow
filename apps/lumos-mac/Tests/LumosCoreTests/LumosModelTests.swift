@@ -323,6 +323,63 @@ final class Household: @unchecked Sendable {
         let old = try APIClient.decoder.decode(TitleDetail.self, from: Data(Fixture.detail(4, "Delta").utf8))
         #expect(old.request == nil && old.download == nil)
     }
+
+    func watching(_ server: MockServer, screens: [String]) {
+        server.on("GET", "/api/lumos/status", json: #"{"dataOrigin":"fixture","catalogue":"Testgegevens","requests":false,"watch":true}"#)
+        let list = screens.map { #"{"deviceId":"\#($0.lowercased())","name":"\#($0)","client":"Jellyfin for WebOS","playing":null}"# }
+        for id in 1...3 {
+            server.on("GET", "/api/lumos/watch/movie/\(id)", json: #"{"web":"http://media.example.nl:8096/web/index.html#!/details?id=jf-\#(id)","episode":null,"screens":[\#(list.joined(separator: ","))]}"#)
+            server.on("POST", "/api/lumos/watch/movie/\(id)/screen") { request in
+                let body = request.httpBodyStream.map(readBody) ?? request.httpBody.map { String(decoding: $0, as: UTF8.self) } ?? ""
+                let name = body.contains("tv") ? "LG TV" : "Slaapkamer"
+                return (200, #"{"screen":{"deviceId":"x","name":"\#(name)","client":"Jellyfin for WebOS","playing":"Alpha"},"episode":null,"confirmed":\#(id == 1)}"#)
+            }
+        }
+    }
+
+    @Test func kStartsTheTitleOnTheOnlyScreenAndSaysWhatTheScreenConfirmed() async {
+        let server = server()
+        watching(server, screens: ["LG TV"])
+        let model = await started(server)
+        await model.watch()
+        #expect(model.inspected == alpha)
+        #expect(server.requests("POST", "/api/lumos/watch/movie/1/screen").last == #"{"deviceId":"lg tv"}"#)
+        #expect(model.toast?.message == "Alpha speelt op LG TV.")
+        #expect(model.lastChange?.kind == .played)
+
+        // A screen that does not react is not called playing.
+        model.move(.right)
+        await model.watch()
+        #expect(model.toast?.message == "Bravo is gestart op LG TV; de tv meldt nog niets.")
+    }
+
+    @Test func withoutAScreenKOpensThePageHereAndSeveralScreensAsk() async {
+        let server = server()
+        watching(server, screens: [])
+        let model = await started(server)
+        var opened: [URL] = []
+        model.openURL = { opened.append($0) }
+        await model.watch()
+        #expect(opened.map(\.absoluteString) == ["http://media.example.nl:8096/web/index.html#!/details?id=jf-1"])
+        #expect(server.requests("POST", "/api/lumos/watch/movie/1/screen").isEmpty)
+        #expect(model.toast?.message == "Alpha opent in je browser.")
+
+        watching(server, screens: ["LG TV", "Slaapkamer"])
+        model.closeInspector()
+        await model.watch()
+        #expect(model.screenMenu == alpha)
+        await model.play(on: model.watchInfo!.screens[1])
+        #expect(model.screenMenu == nil)
+        #expect(server.requests("POST", "/api/lumos/watch/movie/1/screen").last == #"{"deviceId":"slaapkamer"}"#)
+    }
+
+    @Test func withoutJellyfinKOnlySaysSo() async {
+        let model = await started(server())
+        #expect(!model.canWatch)
+        await model.watch()
+        #expect(model.toast?.message == "Niet gekoppeld aan Jellyfin, dus kijken kan nog niet.")
+        #expect(model.inspected == nil)
+    }
 }
 
 private func readBody(_ stream: InputStream) -> String {

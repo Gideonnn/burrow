@@ -50,6 +50,11 @@ const env = z.object({
   // The real catalogue (Seerr); its presence alone rules out the fixtures.
   LUMOS_SEERR_URL: z.string().optional(),
   LUMOS_SEERR_API_KEY: z.string().optional(),
+  // Watching: Jellyfin's address and service key, and the address browsers
+  // in the house use when that differs.
+  LUMOS_JELLYFIN_URL: z.string().optional(),
+  LUMOS_JELLYFIN_API_KEY: z.string().optional(),
+  LUMOS_JELLYFIN_WEB_URL: z.string().optional(),
 });
 
 export type Config = {
@@ -82,6 +87,7 @@ export type Config = {
   lumosCatalogue: 'fixture' | undefined;
   // Seerr's address and the household's one service key.
   seerr: { url: string; apiKey: string } | undefined;
+  jellyfin: { url: string; apiKey: string; webUrl?: string } | undefined;
 };
 
 export function loadConfig(source: NodeJS.ProcessEnv = process.env): Config {
@@ -141,6 +147,14 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): Config {
         ? {
             url: parsed.LUMOS_SEERR_URL,
             apiKey: parsed.LUMOS_SEERR_API_KEY.trim(),
+          }
+        : undefined,
+    jellyfin:
+      parsed.LUMOS_JELLYFIN_URL && parsed.LUMOS_JELLYFIN_API_KEY
+        ? {
+            url: parsed.LUMOS_JELLYFIN_URL,
+            apiKey: parsed.LUMOS_JELLYFIN_API_KEY.trim(),
+            webUrl: parsed.LUMOS_JELLYFIN_WEB_URL || undefined,
           }
         : undefined,
     microsoft: parsed.MICROSOFT_CLIENT_ID
