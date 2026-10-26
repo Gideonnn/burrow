@@ -80,9 +80,6 @@ function fakeSeerr() {
             ],
           }
         : { results: [] },
-    '/discover/movies': () => ({
-      results: [movie(103, 'Quiet Ferry', '1979-05-02')],
-    }),
     '/discover/tv': () => ({ results: [] }),
     '/media': () => ({
       results: [{ mediaType: 'movie', tmdbId: 104, status: 5, settings: leak }],
