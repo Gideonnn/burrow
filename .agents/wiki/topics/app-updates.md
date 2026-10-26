@@ -25,6 +25,15 @@ initiative. Every app uses the same release key, script and updater
 The signature means that whoever takes over the server or an admin key still cannot
 push code to the household's Macs; only the holder of the release key can.
 
+## A new Mac
+
+The first copy of each app goes over by hand: `pnpm apps:pack` after the apps were
+released (or installed) collects the five built apps from their `build/` folders into
+`~/Desktop/Burrow apps.zip` with a short Dutch note. AirDrop it, unzip, drag the apps to
+Programma's, open each and finish the device login ([login and
+household](login-and-household.md)). From then on they update themselves from Dobby
+within the hour of a release. Each face of Hogsmeade logs in on its own.
+
 ## Agents
 
 `burrowctl <app> update` looks for a build now; `burrowctl <app> restart` restarts and
