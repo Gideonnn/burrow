@@ -15,6 +15,7 @@
   "dependencies": {
     "@burrow/contracts": "workspace:^",
     "@burrow/hedwig": "workspace:^",
+    "@burrow/lumos": "workspace:^",
     "@burrow/pensieve": "workspace:^",
     "@burrow/platform": "workspace:^",
     "@hono/mcp": "^0.3.2",

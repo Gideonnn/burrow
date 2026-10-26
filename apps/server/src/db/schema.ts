@@ -3,3 +3,4 @@
 export * from '@burrow/platform/schema';
 export * from '@burrow/hedwig/schema';
 export * from '@burrow/pensieve/schema';
+export * from '@burrow/lumos/schema';

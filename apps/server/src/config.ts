@@ -45,6 +45,11 @@ const env = z.object({
   BURROW_TRANSCRIBE_MODEL: z.string().default('gpt-4o-transcribe'),
   BURROW_FFMPEG: z.string().default('ffmpeg'),
   BURROW_FFPROBE: z.string().default('ffprobe'),
+  // Lumos: `fixture` serves the test catalogue, for development only.
+  LUMOS_CATALOGUE: z.enum(['fixture']).optional(),
+  // The real catalogue (Seerr); its presence alone rules out the fixtures.
+  LUMOS_SEERR_URL: z.string().optional(),
+  LUMOS_SEERR_API_KEY: z.string().optional(),
 });
 
 export type Config = {
@@ -74,6 +79,9 @@ export type Config = {
   transcribeModel: string;
   ffmpeg: string;
   ffprobe: string;
+  lumosCatalogue: 'fixture' | undefined;
+  // Seerr's address and the household's one service key.
+  seerr: { url: string; apiKey: string } | undefined;
 };
 
 export function loadConfig(source: NodeJS.ProcessEnv = process.env): Config {
@@ -127,6 +135,14 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): Config {
     transcribeModel: parsed.BURROW_TRANSCRIBE_MODEL,
     ffmpeg: parsed.BURROW_FFMPEG,
     ffprobe: parsed.BURROW_FFPROBE,
+    lumosCatalogue: lumosCatalogue(parsed, Boolean(team)),
+    seerr:
+      parsed.LUMOS_SEERR_URL && parsed.LUMOS_SEERR_API_KEY
+        ? {
+            url: parsed.LUMOS_SEERR_URL,
+            apiKey: parsed.LUMOS_SEERR_API_KEY.trim(),
+          }
+        : undefined,
     microsoft: parsed.MICROSOFT_CLIENT_ID
       ? {
           clientId: parsed.MICROSOFT_CLIENT_ID,
@@ -159,4 +175,24 @@ function dirs(
       .filter(Boolean)
       .map((d) => resolve(d));
   return [resolve(repoRoot, name), resolve(dataDir, name)];
+}
+
+// Fixture titles must never pass for the real catalogue: they are refused
+// next to a configured Seerr and on a deployed server (Access or a public
+// address), so they only ever run on a developer's own machine.
+function lumosCatalogue(
+  parsed: z.infer<typeof env>,
+  behindAccess: boolean,
+): 'fixture' | undefined {
+  if (parsed.LUMOS_CATALOGUE !== 'fixture') return undefined;
+  const host = parsed.BURROW_PUBLIC_URL
+    ? new URL(parsed.BURROW_PUBLIC_URL).hostname
+    : '127.0.0.1';
+  const local = ['127.0.0.1', 'localhost', '::1', '[::1]'].includes(host);
+  if (parsed.LUMOS_SEERR_URL || behindAccess || !local) {
+    throw new Error(
+      'LUMOS_CATALOGUE=fixture is for local development only: unset it, or LUMOS_SEERR_URL, Cloudflare Access and a public BURROW_PUBLIC_URL',
+    );
+  }
+  return 'fixture';
 }

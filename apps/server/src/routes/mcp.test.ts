@@ -61,8 +61,10 @@ describe('MCP', () => {
       'list_recordings',
       'list_routines',
       'list_tasks',
+      'list_watchlist',
       'search_messages',
       'search_recordings',
+      'search_titles',
     ]);
     const full = await connect(s, ['read', 'organize', 'draft', 'send']);
     const names = (await full.listTools()).tools.map((t) => t.name);

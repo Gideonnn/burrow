@@ -14,6 +14,7 @@ states that Burrow is not affiliated with the rights holders.
 | Winky | Bot persona: the discreet house-elf for sensitive chores, only on a local model on the owner's Mac (`bots/winky.md`) | Active |
 | Hedwig | Mail | Active |
 | Pensieve | Recorded conversations: transcripts and notes (was RecHoarder); later also the searchable archive of documents and notes | Active |
+| Lumos | Films and series to watch together: catalogue, lists, requests to the media server | Active |
 | Sorting Hat | Decisions between fixed options (category, priority, sensitive, triage action): the triage skill today, later a small local decision model in the style of Jev | Draft |
 | Portkey | Routines: triggers that start tasks | Planned |
 | Remembrall | Tasks and reminders (Todoist replacement) | Idea |

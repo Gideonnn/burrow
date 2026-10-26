@@ -245,3 +245,12 @@ minutes; (2) choose a transcription model with timestamps before
 locally.
 **Why:** speaker letters restart per part; the only timestamping model is deprecated.
 **Scope:** half a day for (1); (2) depends on what OpenAI offers.
+
+## Lumos: choose seasons, and the newest digital releases
+
+**What:** a season picker when a series goes on a list (the server already takes
+`seasons`; the Mac sends none, so Lumos asks the first season), and asking more seasons
+of a title that is already requested. A "Nieuw digitaal" row from TMDB's release types
+(`region=NL`, type 4), which Seerr does not offer, would need a TMDB credential.
+**Why:** series now only ever get season 1 unless someone changes it in Seerr.
+**Scope:** a day for the picker; the TMDB row after deciding on a credential.

@@ -20,6 +20,7 @@ public enum BurrowColor {
 
     public static let hedwig = dynamic(0x4E6E9E, 0x9DB7DC)
     public static let pensieve = dynamic(0x237A6F, 0x6FCDBF)
+    public static let lumos = dynamic(0x735B84, 0xC9AEDC)
     public static let remembrall = dynamic(0xB9436B, 0xF08BAE)
     public static let gringotts = dynamic(0x85660F, 0xE3BE4F)
     public static let weasleyClock = dynamic(0x43753A, 0x8BCB7C)
@@ -44,6 +45,7 @@ public enum BurrowColor {
         switch name {
         case "hedwig", "message": hedwig
         case "pensieve", "recording": pensieve
+        case "lumos": lumos
         default: hearth
         }
     }

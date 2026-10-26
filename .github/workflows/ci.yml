@@ -64,6 +64,9 @@ jobs:
       - name: Pensieve
         working-directory: apps/pensieve-mac
         run: swift build && swift test
+      - name: Lumos
+        working-directory: apps/lumos-mac
+        run: swift build && swift test
 
   image:
     runs-on: ubuntu-latest

@@ -35,13 +35,15 @@ markdown file. The user-facing app may add a plain alias (Raycast opens Hedwig a
   settings, shares, uploads, the task queue and workers, routines, agents, MCP.
 - `modules/hedwig/`: mail: provider clients, sync, triage, drafts, its routes and tools.
 - `modules/pensieve/`: recordings: compression, transcription, notes, sharing.
+- `modules/lumos/`: films and series to watch together: the catalogue from Seerr, lists,
+  verdicts, and a Seerr request for every listed title; see `docs/plans/2026-10-25-lumos.md`.
 - `apps/server/`: the Burrow server (TypeScript, Hono) composing the platform and the
   modules, plus the device login, CLI and migrations. It runs on Dobby, the home machine;
   the code does not carry the machine's name.
 - `packages/contracts/`: zod schemas shared by server and clients.
 - `packages/burrow-kit/`: the Swift package every Mac app uses (BurrowKit, BurrowUI and
   `burrowctl`).
-- `apps/hedwig-mac/`, `apps/pensieve-mac/`: the native macOS apps (SwiftUI, Swift
+- `apps/hedwig-mac/`, `apps/pensieve-mac/`, `apps/lumos-mac/`: the native macOS apps (SwiftUI, Swift
   packages bundled by `scripts/bundle.sh`; see their READMEs).
 - `bots/`: bot personas, one markdown file each (Kreacher does the chores on a cloud AI,
   Winky the sensitive ones on a local model). A personal directory on the server can add
@@ -108,7 +110,7 @@ kebab-case.
 
 - Commit when a logical slice is complete and validated; state the message and files.
 - Conventional subject (`feat`, `fix`, `chore`, `refactor`, `docs`, `test`) with a scope
-  (`server`, `hedwig`, `pensieve`, `contracts`, `bots`, `skills`, `agents`, `infra`, `repo`),
+  (`server`, `hedwig`, `pensieve`, `lumos`, `contracts`, `bots`, `skills`, `agents`, `infra`, `repo`),
   max 100 characters. Use the body
   for *why* when it is not obvious.
 - Never add `Co-Authored-By` or any other trailer.
