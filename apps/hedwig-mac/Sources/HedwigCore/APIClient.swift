@@ -128,6 +128,13 @@ extension APIClient {
         return url
     }
 
+    /// A one-time link to log in again for a mailbox whose login the provider refused.
+    public func reconnectLink(mailboxId: String) async throws -> URL {
+        let r: [String: String] = try await call("POST", "api/mailboxes/\(mailboxId)/reconnect")
+        guard let url = r["url"].flatMap(URL.init(string:)) else { throw APIError.invalidResponse }
+        return url
+    }
+
     /// The providers this server can connect; OAuth ones only once their app is configured.
     public func connectableProviders() async throws -> [MailProvider] {
         let r: [String: [String]] = try await call("GET", "api/admin/accounts/providers")

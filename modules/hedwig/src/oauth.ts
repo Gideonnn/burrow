@@ -82,12 +82,17 @@ async function tokenRequest(
     body,
   });
   if (!res.ok) {
-    throw new Error(
-      `token request failed (${res.status}): ${await res.text()}`,
-    );
+    const text = await res.text();
+    if (res.status === 400 && /"error"\s*:\s*"invalid_grant"/.test(text))
+      throw new GrantRevokedError(`token request failed (400): ${text}`);
+    throw new Error(`token request failed (${res.status}): ${text}`);
   }
   return (await res.json()) as TokenResponse;
 }
+
+// The provider no longer accepts the refresh token (revoked, or Google's
+// seven days for an app in Testing): only logging in again helps.
+export class GrantRevokedError extends Error {}
 
 export async function exchangeCode(
   provider: OAuthProvider,
@@ -129,6 +134,7 @@ export class OAuthSession {
     private readonly client: OAuthClient,
     private readonly onRefresh: (credentials: Credentials) => void,
     private readonly fetchFn: Fetch = fetch,
+    private readonly onRevoked: () => void = () => {},
   ) {}
 
   async accessToken({ force = false } = {}): Promise<string> {
@@ -150,7 +156,10 @@ export class OAuthSession {
         refresh_token: this.credentials.refreshToken,
       },
       this.fetchFn,
-    );
+    ).catch((error: unknown) => {
+      if (error instanceof GrantRevokedError) this.onRevoked();
+      throw error;
+    });
     this.credentials = {
       kind: 'oauth',
       accessToken: token.access_token,

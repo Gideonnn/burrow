@@ -42,6 +42,9 @@ export const mailboxes = sqliteTable('mailboxes', {
   // Where bringing in older mail continues, and when it finished.
   backfillCursor: text('backfill_cursor'),
   backfilledAt: integer('backfilled_at', { mode: 'timestamp_ms' }),
+  // Set when the provider refused the stored login; sync waits until the
+  // person logs in again.
+  reconnectNeededAt: integer('reconnect_needed_at', { mode: 'timestamp_ms' }),
   createdAt: createdAt(),
 });
 

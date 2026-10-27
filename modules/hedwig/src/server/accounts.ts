@@ -1,6 +1,6 @@
 import type { MailProvider } from '@burrow/contracts';
 import type { Db, SecretBox } from '@burrow/platform';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { DemoProvider } from '../demo-provider';
 import { GmailClient } from '../gmail';
 import { GraphClient } from '../graph';
@@ -47,6 +47,8 @@ const OAUTH: Record<OAuthMailProvider, OAuthProvider> = {
 export class Accounts {
   private readonly fetchFn: Fetch;
   private readonly demos = new Map<string, DemoProvider>();
+  // Called when a mailbox starts or stops needing a new login.
+  onReconnectChanged?: (mailboxId: string) => void;
 
   constructor(private readonly options: AccountsOptions) {
     this.fetchFn = options.fetchFn ?? fetch;
@@ -103,6 +105,7 @@ export class Accounts {
       this.oauthClient(provider),
       (next) => this.saveCredentials(mailbox.id, next),
       this.fetchFn,
+      () => this.markReconnectNeeded(mailbox.id),
     );
     return make(session, this.fetchFn);
   };
@@ -139,12 +142,14 @@ export class Accounts {
       )
       .get();
     if (existing) {
-      return db
+      const row = db
         .update(mailboxes)
-        .set({ credentials: sealed })
+        .set({ credentials: sealed, reconnectNeededAt: null })
         .where(eq(mailboxes.id, existing.id))
         .returning()
         .get();
+      if (existing.reconnectNeededAt) this.onReconnectChanged?.(existing.id);
+      return row;
     }
     return db
       .insert(mailboxes)
@@ -157,6 +162,18 @@ export class Accounts {
       })
       .returning()
       .get();
+  }
+
+  private markReconnectNeeded(mailboxId: string) {
+    if (mailboxId === 'probe') return;
+    const { changes } = this.options.db
+      .update(mailboxes)
+      .set({ reconnectNeededAt: new Date() })
+      .where(
+        and(eq(mailboxes.id, mailboxId), isNull(mailboxes.reconnectNeededAt)),
+      )
+      .run();
+    if (changes) this.onReconnectChanged?.(mailboxId);
   }
 
   private saveCredentials(mailboxId: string, credentials: Credentials) {

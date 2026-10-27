@@ -135,6 +135,20 @@ import Testing
         #expect(model.messages.first?.unread == false)
     }
 
+    @Test func aRefusedLoginStillOpensTheMessageAndAsksToLogInAgain() async throws {
+        let server = server()
+        let model = model(server)
+        await model.start()
+        model.selection = .inbox(mailboxId: "mb1")
+        await model.selectionLoad?.value
+        server.on("POST", "/api/messages/m1/actions", status: 409, json: #"{"error":"de koppeling met deze mailbox is verlopen; log opnieuw in"}"#)
+        server.on("GET", "/api/me", json: Fixture.me.replacingOccurrences(of: #""name":"gideon@example.com"}"#, with: #""name":"gideon@example.com","needsReconnect":true}"#))
+        await model.openSelected()
+        #expect(model.detail?.id == "m1")
+        #expect(model.error == nil)
+        #expect(model.mailboxesToReconnect.map(\.id) == ["mb1"])
+    }
+
     @Test func anAgentPreparesAReplyAndHedwigShowsItUnderConcepten() async throws {
         let server = server()
         let draft = #"{"id":"d1","mailboxId":"mb1","createdBy":"Hedwig op Testmac","inReplyTo":"m1","to":[{"name":"Marieke","email":"marieke@example.nl"}],"cc":[],"subject":"Re: Eerste","body":"Ja, gezellig!","createdAt":"2026-10-20T08:00:00.000Z"}"#

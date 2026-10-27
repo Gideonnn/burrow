@@ -39,6 +39,16 @@ an API key ever passes through the browser:
    the code, asks the provider for the address and stores the mailbox. Connecting the
    same address again for the same person replaces the credentials.
 
+When a provider refuses the stored refresh token (`invalid_grant`: revoked, a changed
+password, or Google's seven days while the app is in *Testing*), the session raises
+`GrantRevokedError`, `mailboxes.reconnect_needed_at` is set and a `mailbox.changed` event
+goes out. Sync and backfill skip the mailbox, provider calls answer 409, and `/me` shows
+`needsReconnect`, so Hedwig puts a notice with **Opnieuw inloggen** above the list. That
+button asks `POST /api/mailboxes/:id/reconnect` (the owner with `organize`, no admin) for
+the same kind of one-time link; the callback refuses a login as another address, and
+storing the new tokens clears the mark. Fastmail tokens are not covered: a revoked one
+still shows up only as failing syncs in the log.
+
 The browser must reach `BURROW_PUBLIC_URL`. On Dobby that is the public hostname of the
 Cloudflare Tunnel, behind an Access login, so a person logs in at Cloudflare first.
 

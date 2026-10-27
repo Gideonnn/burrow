@@ -2,6 +2,7 @@
 
 Newest first.
 
+- [2026-10-27 A revoked Gmail login broke the mail view](2026-10-27-a-revoked-gmail-login-broke-the-mail-view.md): a failed mark-as-read aborted opening mail; the refusal is now a mark per mailbox, a notice in Hedwig and a login link for the owner.
 - [2026-10-27 Jellyfin 12 wants a user on /Items/{id}](2026-10-27-jellyfin-12-wants-a-user-on-items-by-id.md): the watch route answered 503 until the known id went through `/Items?ids=`; probe recipe for Dobby.
 - [2026-10-27 The Fastmail sync had failed for days](2026-10-27-fastmail-sync-had-failed-for-days.md): Fastmail refuses `asText` on List-* headers; the fake accepted anything and the log hid the argument.
 - [2026-10-27 Lumos grows up: pages, shelves, the Zoeker, live settings](2026-10-27-lumos-pages-shelves-and-the-zoeker.md): the drawer became a page with a prefetched cache, Seerr's discover browses everything, TMDB recommends, genres in Dutch, settings live on the event stream, latency ceilings in the tests.

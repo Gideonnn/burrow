@@ -17,6 +17,14 @@ struct MessageListView: View {
             }
         }
         .listStyle(.inset)
+        .safeAreaInset(edge: .top, spacing: 0) {
+            VStack(spacing: 0) {
+                ForEach(model.mailboxesToReconnect) { box in
+                    ReconnectNotice(mailbox: box)
+                    Divider()
+                }
+            }
+        }
         .overlay {
             if model.isSearching {
                 if model.messages.isEmpty && !model.aiSearching { ContentUnavailableView.search(text: model.searchText) }

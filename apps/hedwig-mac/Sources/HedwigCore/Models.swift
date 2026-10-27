@@ -25,6 +25,8 @@ public struct MailboxSummary: Codable, Hashable, Identifiable, Sendable {
     public var role: MailboxRole?
     /// Extra bot instructions for mail in this mailbox.
     public var instructions: String?
+    /// The provider refused the stored login; the owner has to log in again.
+    public var needsReconnect: Bool?
 
     public var kind: MailboxRole { role ?? .private }
 }

@@ -1,0 +1,1 @@
+ALTER TABLE `mailboxes` ADD `reconnect_needed_at` integer;

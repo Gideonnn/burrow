@@ -14,6 +14,7 @@ export function startSyncLoop(
   const round = async () => {
     for (const box of mail.allMailboxes()) {
       if (stopped) return;
+      if (box.reconnectNeededAt) continue;
       try {
         const arrived = await mail.sync(box.id);
         if (arrived.length) onArrived(arrived);
@@ -48,7 +49,7 @@ export function startBackfillLoop(
     let more = false;
     for (const box of mail.allMailboxes()) {
       if (stopped) return;
-      if (box.backfilledAt) continue;
+      if (box.backfilledAt || box.reconnectNeededAt) continue;
       if (Date.now() - (failedAt.get(box.id) ?? -Infinity) < idleMs) continue;
       try {
         if (await mail.backfill(box.id)) more = true;

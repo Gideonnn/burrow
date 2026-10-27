@@ -6,6 +6,7 @@ import { html } from 'hono/html';
 import { HTTPException } from 'hono/http-exception';
 import { z } from 'zod';
 import { authorizationUrl, pkce } from '../oauth';
+import { canSeeMailbox } from './access';
 import type { Accounts, OAuthMailProvider } from './accounts';
 import type { MailService } from './mail-service';
 
@@ -14,6 +15,8 @@ type Pending = {
   provider: OAuthMailProvider;
   verifier: string;
   expiresAt: number;
+  // Logging in again for this address; another account is refused.
+  reconnect?: string;
 };
 
 const TTL_MS = 10 * 60_000;
@@ -44,6 +47,15 @@ export function connectRoutes(
   onArrived: (messageIds: string[]) => void,
 ) {
   const pending = new Map<string, Pending>();
+  const link = (entry: Omit<Pending, 'verifier' | 'expiresAt'>) => {
+    const handle = randomBytes(24).toString('base64url');
+    pending.set(handle, {
+      ...entry,
+      verifier: '',
+      expiresAt: Date.now() + TTL_MS,
+    });
+    return `${accounts.publicUrl}/oauth/start/${handle}`;
+  };
   const take = (handle: string | undefined) => {
     for (const [h, p] of pending)
       if (p.expiresAt < Date.now()) pending.delete(h);
@@ -76,18 +88,37 @@ export function connectRoutes(
         }
         if (!person(c.var.db, personId))
           throw new HTTPException(400, { message: 'unknown person' });
-        const handle = randomBytes(24).toString('base64url');
-        pending.set(handle, {
-          personId,
-          provider,
-          verifier: '',
-          expiresAt: Date.now() + TTL_MS,
-        });
-        return c.json({
-          url: `${accounts.publicUrl}/oauth/start/${handle}`,
-        });
+        return c.json({ url: link({ personId, provider }) });
       },
     )
+    // The owner logs in again after the provider refused the stored login;
+    // no admin needed, since it only renews what was already connected.
+    .post('/mailboxes/:mailboxId/reconnect', requireRight('organize'), (c) => {
+      const box = mail.mailbox(c.req.param('mailboxId'));
+      if (
+        !box ||
+        box.ownerId !== c.var.access.personId ||
+        !canSeeMailbox(c.var.access, box.id)
+      )
+        throw new HTTPException(404, { message: 'not found' });
+      if (box.provider !== 'gmail' && box.provider !== 'microsoft') {
+        throw new HTTPException(400, {
+          message: `${box.provider} does not log in through the browser`,
+        });
+      }
+      if (!accounts.isConfigured(box.provider)) {
+        throw new HTTPException(400, {
+          message: `${box.provider} is not configured on this server`,
+        });
+      }
+      return c.json({
+        url: link({
+          personId: box.ownerId,
+          provider: box.provider,
+          reconnect: box.address,
+        }),
+      });
+    })
     // Fastmail only allows OAuth for registered partner apps, so a person
     // pastes an API token instead; the server checks it before storing.
     .post(
@@ -167,6 +198,18 @@ export function connectRoutes(
       const address = await accounts
         .probe(entry.provider, credentials)
         .address();
+      if (
+        entry.reconnect &&
+        address.toLowerCase() !== entry.reconnect.toLowerCase()
+      ) {
+        return c.html(
+          page(
+            'Niet gekoppeld',
+            `Je logde in als ${address}; log in als ${entry.reconnect}.`,
+          ),
+          400,
+        );
+      }
       const mailbox = accounts.upsertMailbox({
         ownerId: entry.personId,
         provider: entry.provider,

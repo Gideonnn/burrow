@@ -144,6 +144,14 @@ export function hedwigModule(platform: Platform, options: HedwigOptions) {
   const connect = options.accounts
     ? connectRoutes(options.accounts, mail, onArrived)
     : undefined;
+  if (options.accounts) {
+    // The apps read needsReconnect from /me again and show or hide the notice.
+    options.accounts.onReconnectChanged = (mailboxId) =>
+      platform.events.emit({
+        data: { type: 'mailbox.changed', mailboxId },
+        visibleTo: (access) => access.mailboxIds.includes(mailboxId),
+      });
+  }
 
   const api = hedwigRoutes({
     mail,

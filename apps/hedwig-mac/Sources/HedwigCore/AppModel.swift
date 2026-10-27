@@ -234,7 +234,7 @@ public final class AppModel {
         if event.messageId == detail?.id, event.type == "message.changed" { await openSelected() }
         // A setting changed on another Mac: who we are again, so the language and the
         // features follow at once.
-        if event.type == "settings.changed" { me = (try? await api?.me()) ?? me }
+        if event.type == "settings.changed" || event.type == "mailbox.changed" { me = (try? await api?.me()) ?? me }
         if event.type == "outing.changed" {
             await refreshOutings()
             if let id = event["outingId"], id == outing?.id || id == outingSuggestion?.outingId, let messageId = detail?.id {
@@ -455,11 +455,16 @@ public final class AppModel {
         }
         do {
             var message = try await api.message(id: id)
-            // Spam stays unread until the person says it is not spam.
+            // Spam stays unread until the person says it is not spam. A failed
+            // mark still opens the message: it is already on the server.
             if message.unread, message.folder != .spam, me?.can(.organize) == true {
-                message = try await api.apply([.markRead], to: id)
-                replace(message.summary)
-                await refreshCounts()
+                do {
+                    message = try await api.apply([.markRead], to: id)
+                    replace(message.summary)
+                    await refreshCounts()
+                } catch {
+                    await reportProviderError(error, mailboxId: message.mailboxId)
+                }
             }
             if selectedMessageId == id {
                 detail = message
@@ -490,7 +495,33 @@ public final class AppModel {
             }
             await refreshCounts()
         } catch {
+            await reportProviderError(error, mailboxId: messages.first { $0.id == id }?.mailboxId ?? detail?.mailboxId)
+        }
+    }
+
+    /// A mailbox whose login the provider refused gets the notice to log in
+    /// again instead of an alert; anything else is an alert as before.
+    private func reportProviderError(_ error: any Error, mailboxId: String?) async {
+        if case .server(status: 409, _) = error as? APIError, let mailboxId {
+            me = (try? await api?.me()) ?? me
+            if mailbox(mailboxId)?.needsReconnect == true { return }
+        }
+        report(error)
+    }
+
+    /// Mailboxes of this person whose login the provider refused.
+    public var mailboxesToReconnect: [MailboxSummary] {
+        (me?.mailboxes ?? []).filter { $0.needsReconnect == true && $0.ownerId == me?.person.id }
+    }
+
+    /// The provider's login for the browser; the server tells the app when it
+    /// is done, and the notice goes away.
+    public func reconnectLink(_ mailbox: MailboxSummary) async -> URL? {
+        do {
+            return try await api?.reconnectLink(mailboxId: mailbox.id)
+        } catch {
             report(error)
+            return nil
         }
     }
 

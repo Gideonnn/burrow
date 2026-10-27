@@ -20,6 +20,8 @@ export const mailboxSummary = z.object({
   role: mailboxRole,
   // Extra instructions for the bots, for mail in this mailbox only.
   instructions: z.string(),
+  // The provider refused the stored login; the owner has to log in again.
+  needsReconnect: z.boolean(),
 });
 export type MailboxSummary = z.infer<typeof mailboxSummary>;
 

@@ -25,6 +25,7 @@ import { and, count, desc, eq, gte, inArray, lt, sql } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import { z } from 'zod';
+import { GrantRevokedError } from '../oauth';
 import { canSeeMailbox } from './access';
 import { createDraft, deleteDraft, DraftError, listDrafts } from './drafts';
 import { factsFor, forKey, summaries } from './facts/store';
@@ -82,6 +83,8 @@ export const mailboxColumns = {
   name: mailboxes.name,
   role: mailboxes.role,
   instructions: mailboxes.instructions,
+  needsReconnect:
+    sql<boolean>`${mailboxes.reconnectNeededAt} is not null`.mapWith(Boolean),
 };
 
 export type HedwigRouteDeps = {
@@ -262,7 +265,7 @@ export function hedwigRoutes({
       .post('/mailboxes/:mailboxId/sync', requireRight('read'), async (c) => {
         const mailboxId = c.req.param('mailboxId');
         if (!canSeeMailbox(c.var.access, mailboxId)) throw notFound();
-        const arrived = await mail.sync(mailboxId);
+        const arrived = await providerCall(() => mail.sync(mailboxId));
         onArrived(arrived);
         return c.json({ arrived: arrived.length });
       })
@@ -458,6 +461,10 @@ async function providerCall<T>(call: () => Promise<T>): Promise<T> {
   } catch (error) {
     if (error instanceof MailError || error instanceof HTTPException)
       throw error;
+    if (error instanceof GrantRevokedError)
+      throw new HTTPException(409, {
+        message: 'de koppeling met deze mailbox is verlopen; log opnieuw in',
+      });
     throw new HTTPException(502, {
       message: `the mail provider refused: ${(error as Error).message}`,
     });

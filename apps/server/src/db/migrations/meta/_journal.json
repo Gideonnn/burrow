@@ -169,6 +169,13 @@
       "when": 1792941164232,
       "tag": "0023_lumos_requests",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "6",
+      "when": 1793137825721,
+      "tag": "0024_mailbox_reconnect",
+      "breakpoints": true
     }
   ]
 }

@@ -74,7 +74,7 @@ struct SidebarView: View {
         let showsToggle = if case .toggle = MailboxRowSlot(unread: unread, hovered: hovered == box.id, open: open) { true } else { false }
         return NavigationLink(value: SidebarItem.inbox(mailboxId: box.id)) {
             HStack(spacing: 6) {
-                Label(mailboxTitle(box), systemImage: "tray")
+                Label(mailboxTitle(box), systemImage: box.needsReconnect == true ? "exclamationmark.triangle" : "tray")
                 Spacer(minLength: 0)
                 // One trailing slot: the unread count, or the toggle in its place.
                 // Both stay laid out, so the row keeps its width when they swap.
