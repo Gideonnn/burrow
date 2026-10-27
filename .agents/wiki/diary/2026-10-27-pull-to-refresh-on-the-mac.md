@@ -9,12 +9,24 @@ topics: []
 # Pull to refresh on the Mac has no native control
 
 Hedwig's list had `.refreshable` for months; on macOS it shows nothing and no gesture
-starts it, and AppKit has no counterpart of `UIRefreshControl`. `pullToRefresh` in
-BurrowUI reads the elastic overscroll with `onScrollGeometryChange` and the fingers with
-`onScrollPhaseChange` (both macOS 15; on 14 only ⌘R refreshes): past 64 pt and let go,
-the action runs with a spinner row above the list. The decision lives in
-`PullToRefreshState`, unit tested, because the bounce back after letting go passes the
-threshold a second time without fingers.
+starts it, and AppKit has no counterpart of `UIRefreshControl`.
 
-Not verified by a synthetic gesture: posting CGEvent scroll phases takes over the
-operator's pointer and picked the wrong window; the operator tries it on the trackpad.
+The first try used SwiftUI's `onScrollGeometryChange` and `onScrollPhaseChange` and showed
+nothing in Hedwig. A probe app showed why: the geometry does report a `List`'s offset, but
+a `List` on the Mac is a `ListCoreScrollView` (an NSTableView inside), and the phase that
+says the fingers are on the trackpad apparently never comes, so the pull never armed. A
+plain SwiftUI `ScrollView` reported both.
+
+`pullToRefresh` in BurrowUI therefore works in AppKit: a view behind the list finds the
+NSScrollView covering the same part of the window, the fingers come from `NSEvent.phase`
+in a local scroll monitor (momentum events have none), and the pull is how far the clip
+view's bounds sit above `-contentInsets.top`. Past 50 pt and let go, the action runs with
+a spinner row above the list. It works on macOS 14 too. `PullToRefreshState` holds the
+decision and is unit tested, because the bounce back after letting go passes the
+threshold a second time without fingers. The log category `app.burrow.ui`
+`pull-to-refresh` notes the attach and each release with its distance, to tune the
+threshold from a real trackpad.
+
+Synthetic scroll events do not reach a `ListCoreScrollView`, neither through
+`scrollWheel(with:)` nor `NSWindow.sendEvent`, so the gesture itself cannot be tested
+headless; posting CGEvents takes over the operator's pointer.
