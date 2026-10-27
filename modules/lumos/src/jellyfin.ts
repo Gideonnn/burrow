@@ -120,16 +120,13 @@ export class JellyfinPlayer {
       type: title.mediaType,
     });
     if (title.mediaServerId) {
-      try {
-        const item = await this.call<Item>(
-          `/Items/${encodeURIComponent(title.mediaServerId)}`,
-        );
-        if (item?.Id) return found(item);
-      } catch (error) {
-        if (!(error instanceof JellyfinError && error.status === 404)) {
-          throw error;
-        }
-      }
+      // Not /Items/{id}: since Jellyfin 12 that answers 400 without a userId.
+      const known = await this.call<{ Items?: Item[] }>('/Items', {
+        ids: title.mediaServerId,
+        fields: 'ProviderIds',
+      });
+      const item = known.Items?.find((i) => i.Id === title.mediaServerId);
+      if (item) return found(item);
     }
     const page = await this.call<{ Items?: Item[] }>('/Items', {
       recursive: 'true',

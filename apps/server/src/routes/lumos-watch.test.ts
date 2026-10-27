@@ -132,15 +132,22 @@ function fakeJellyfin() {
     if (path === '/System/Info/Public') {
       return Response.json({ Id: 'server-1', ServerName: 'Dobby' });
     }
-    if (path === '/Items/jf-film-301') {
-      return Response.json({
-        Id: 'jf-film-301',
-        Name: 'Harbour Lights',
-        Type: 'Movie',
-      });
+    // Jellyfin 12 answers 400 to /Items/{id} without a userId; the id goes
+    // through /Items?ids= instead.
+    if (path.startsWith('/Items/') && !url.searchParams.has('userId')) {
+      return new Response('Error processing request.', { status: 400 });
     }
     if (path === '/Items') {
       const term = url.searchParams.get('searchTerm');
+      const ids = url.searchParams.get('ids');
+      if (ids) {
+        return Response.json({
+          Items:
+            ids === 'jf-film-301'
+              ? [{ Id: 'jf-film-301', Name: 'Harbour Lights', Type: 'Movie' }]
+              : [],
+        });
+      }
       return Response.json({
         Items:
           term === 'Polder Blues'
@@ -260,8 +267,8 @@ describe('watching through Jellyfin', () => {
       ],
     });
     // The id the catalogue knew was enough; no search by name.
-    expect(h.calls.some((c) => c.path === '/Items/jf-film-301')).toBe(true);
-    expect(h.calls.some((c) => c.path === '/Items')).toBe(false);
+    expect(h.calls.some((c) => c.query.includes('ids=jf-film-301'))).toBe(true);
+    expect(h.calls.some((c) => c.query.includes('searchTerm'))).toBe(false);
   });
 
   it('finds a series by its TMDB id among namesakes and names the episode a screen would start', async () => {
