@@ -133,7 +133,9 @@ read: no deletes, no marks, no user data.
   The first session found is never taken: the Mac picks by device id, or asks when
   several screens are open.
 - The item is found by the id Seerr knows (`mediaInfo.jellyfinMediaId`, kept as
-  `mediaServerId` on the catalogue title), else by name with a matching `ProviderIds.Tmdb`.
+  `mediaServerId` on the catalogue title) through `GET /Items?ids=`, else by name with a
+  matching `ProviderIds.Tmdb`. Not `GET /Items/{id}`: Jellyfin 12 answers 400 to that
+  (and to `/Shows/NextUp`) without a `userId`; the query forms work with a service key.
 - Waking the TV and opening the app are not done: without a session the button says
   "Open Jellyfin op de tv".
 
