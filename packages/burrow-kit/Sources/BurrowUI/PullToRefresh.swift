@@ -50,27 +50,28 @@ extension View {
 private struct PullToRefresh: ViewModifier {
     let action: @MainActor () async -> Void
     @State private var tracker = PullTracker()
+    private static let gap: CGFloat = 64
 
     func body(content: Content) -> some View {
         content
-            // While refreshing the spinner gets a row of its own, so the list
-            // stays pushed down the way it does on the iPhone.
+            // Like Mail: the system spinner in a gap of its own above the list,
+            // which stays pushed down while refreshing.
             .safeAreaInset(edge: .top, spacing: 0) {
                 if tracker.state.refreshing {
                     ProgressView()
-                        .controlSize(.small)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
+                        .frame(maxWidth: .infinity, minHeight: Self.gap)
                         .transition(.opacity)
                 }
             }
             .background(ScrollViewLink(tracker: tracker, action: action))
             .overlay(alignment: .top) {
                 if tracker.state.isPulling {
-                    ProgressView(value: tracker.state.progress)
-                        .progressViewStyle(.circular)
-                        .controlSize(.small)
-                        .padding(.top, tracker.top + max(0, tracker.state.pull - 20) / 2)
+                    ProgressView()
+                        .opacity(tracker.state.progress)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: tracker.state.pull)
+                        .clipped()
+                        .padding(.top, tracker.top)
                         .allowsHitTesting(false)
                         .accessibilityHidden(true)
                 }

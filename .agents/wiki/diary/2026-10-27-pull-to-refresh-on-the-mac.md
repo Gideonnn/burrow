@@ -30,3 +30,8 @@ threshold from a real trackpad.
 Synthetic scroll events do not reach a `ListCoreScrollView`, neither through
 `scrollWheel(with:)` nor `NSWindow.sendEvent`, so the gesture itself cannot be tested
 headless; posting CGEvents takes over the operator's pointer.
+
+Apple Mail on the Mac does have pull to refresh, but through its own private code; no
+public AppKit or SwiftUI control exists. The look follows Mail: the system spinner
+(`ProgressView()`, AppKit's spinning indicator) fading in as you pull and staying in a
+64 pt gap above the list while refreshing.
