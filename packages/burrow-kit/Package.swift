@@ -18,5 +18,6 @@ let package = Package(
         .target(name: "BurrowUI", dependencies: ["BurrowKit"]),
         .executableTarget(name: "burrowctl", dependencies: ["BurrowKit"]),
         .testTarget(name: "BurrowKitTests", dependencies: ["BurrowKit"]),
+        .testTarget(name: "BurrowUITests", dependencies: ["BurrowUI"]),
     ]
 )

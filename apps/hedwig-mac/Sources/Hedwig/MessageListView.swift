@@ -1,3 +1,4 @@
+import BurrowUI
 import HedwigCore
 import SwiftUI
 
@@ -17,6 +18,7 @@ struct MessageListView: View {
             }
         }
         .listStyle(.inset)
+        .pullToRefresh { await model.refresh() }
         .safeAreaInset(edge: .top, spacing: 0) {
             VStack(spacing: 0) {
                 ForEach(model.mailboxesToReconnect) { box in
@@ -38,7 +40,6 @@ struct MessageListView: View {
         }
         .navigationTitle(title)
         .navigationSubtitle(subtitle)
-        .refreshable { await model.refresh() }
         .toolbar {
             if !model.isSearching, !openReviews.isEmpty {
                 ToolbarItem {
