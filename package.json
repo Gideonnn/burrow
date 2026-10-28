@@ -23,6 +23,7 @@
     "hogsmeade:release:feest": "./apps/hogsmeade-mac/scripts/release.sh HogsmeadeFeest",
     "apps:pack": "./infra/scripts/pack-apps.sh",
     "server:deploy": "./infra/dobby/deploy.sh",
+    "dobby:set": "./infra/dobby/set-setting.sh",
     "sops:edit": "sops --input-type dotenv --output-type dotenv",
     "sops:verify": "./infra/scripts/sops-verify.sh",
     "with-secrets": "./infra/scripts/with-secrets.sh",

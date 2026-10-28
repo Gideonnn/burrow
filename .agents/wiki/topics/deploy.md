@@ -81,8 +81,10 @@ well. `BURROW_CONTACT_EMAIL` in the settings fills in the contact on them.
 1. **Google and Microsoft.** Put the client ids and secrets from the
    [providers topic](providers.md) in the settings file on Dobby and rerun the install.
    Their redirect URI is `<BURROW_PUBLIC_URL>/oauth/callback`.
-2. **Transcription.** Put `OPENAI_API_KEY=` in the settings file and restart the
-   service; without it Pensieve stops recordings at "Transcriberen".
+2. **Transcription.** Run `pnpm dobby:set OPENAI_API_KEY` on the Mac: it asks for the key
+   hidden, writes it to the settings file on Dobby and restarts the
+   service. Without it Pensieve stops recordings at "Transcriberen". The same command sets
+   any other single value in the settings.
 3. **Backups off the machine.** Put age public keys in `infra/dobby/backup-recipients.txt`
    on Dobby (at least one whose private key is elsewhere); without it backups are plain
    copies in the data folder. Copy them off Dobby regularly.
