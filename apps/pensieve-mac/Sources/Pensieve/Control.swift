@@ -122,6 +122,12 @@ func registerCommands(_ service: ControlService, model: PensieveModel, recorder:
         await recorder.stop()
         return controlState(model, recorder)
     }
+    service.register("import", help: "Queue the RecHoarder meetings in iCloud Drive › Meetings not imported before and start uploading them.") { _ in
+        let (queued, waiting) = model.importRecHoarder()
+        var state = controlState(model, recorder)
+        state["imported"] = ["queued": queued, "waitingForICloud": waiting]
+        return state
+    }
     service.register("upload", help: "Try to send recordings that wait for an upload now.") { _ in
         await model.sendPending()
         return controlState(model, recorder)

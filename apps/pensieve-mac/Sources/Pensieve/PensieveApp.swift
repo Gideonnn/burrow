@@ -99,7 +99,7 @@ struct PensieveCommands: Commands {
 
 @MainActor
 func importRecHoarder(_ model: PensieveModel) async {
-    let (queued, waiting) = await model.importRecHoarder()
+    let (queued, waiting) = model.importRecHoarder()
     let alert = NSAlert()
     alert.messageText = queued == 0 && waiting == 0 ? "Niets nieuws in iCloud Drive › Meetings" : "RecHoarder-opnames"
     alert.informativeText = [

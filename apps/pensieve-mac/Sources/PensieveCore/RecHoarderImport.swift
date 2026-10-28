@@ -40,6 +40,13 @@ public struct RecHoarderImport: Sendable {
                 }
                 continue
             }
+            // Since Sonoma an evicted file keeps its name and size but holds no data.
+            if let status = try? wav.resourceValues(forKeys: [.ubiquitousItemDownloadingStatusKey]).ubiquitousItemDownloadingStatus,
+               status != .current {
+                try? fm.startDownloadingUbiquitousItem(at: wav)
+                downloading.append(slug)
+                continue
+            }
             var started = day
             if let created = try? wav.resourceValues(forKeys: [.creationDateKey]).creationDate,
                Calendar.current.isDate(created, inSameDayAs: day) {

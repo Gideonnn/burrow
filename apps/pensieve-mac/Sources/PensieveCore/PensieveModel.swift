@@ -447,15 +447,16 @@ public final class PensieveModel {
         UserDefaults.standard.set(Array(importedFolders.union([slug])).sorted(), forKey: Self.importedKey)
     }
 
-    /// Queues every RecHoarder meeting not imported before and sends them.
+    /// Queues every RecHoarder meeting not imported before and starts sending
+    /// them; gigabytes of audio take a while, so this does not wait for that.
     /// Returns how many were queued and how many wait for iCloud.
     @discardableResult
-    public func importRecHoarder(from source: RecHoarderImport = RecHoarderImport()) async -> (queued: Int, waiting: Int) {
+    public func importRecHoarder(from source: RecHoarderImport = RecHoarderImport()) -> (queued: Int, waiting: Int) {
         let queuedAlready = Set(outbox.all().compactMap(\.importedFrom))
         let scan = source.scan(skipping: importedFolders.union(queuedAlready))
         for upload in scan.ready { try? outbox.add(upload) }
         pending = outbox.all()
-        await sendPending()
+        Task { await sendPending() }
         return (scan.ready.count, scan.downloading.count)
     }
 }
