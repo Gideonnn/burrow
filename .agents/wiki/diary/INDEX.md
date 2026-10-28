@@ -2,6 +2,7 @@
 
 Newest first.
 
+- [2026-10-28 Recordings over about 80 MB never uploaded](2026-10-28-long-recordings-never-uploaded.md): the chunk reply lacked the `id` that BurrowKit decodes, each chunk counted as a failure and the fifth threw; the reply now carries `id`.
 - [2026-10-27 Pull to refresh on the Mac has no native control](2026-10-27-pull-to-refresh-on-the-mac.md): `.refreshable` shows nothing on macOS and SwiftUI reports no scroll phase for a `List`; BurrowUI's `pullToRefresh` reads the fingers and the overscroll in AppKit.
 - [2026-10-27 A revoked Gmail login broke the mail view](2026-10-27-a-revoked-gmail-login-broke-the-mail-view.md): a failed mark-as-read aborted opening mail; the refusal is now a mark per mailbox, a notice in Hedwig and a login link for the owner.
 - [2026-10-27 Jellyfin 12 wants a user on /Items/{id}](2026-10-27-jellyfin-12-wants-a-user-on-items-by-id.md): the watch route answered 503 until the known id went through `/Items?ids=`; probe recipe for Dobby.

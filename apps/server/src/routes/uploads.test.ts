@@ -26,6 +26,8 @@ describe('chunked uploads', () => {
     const h = household();
     const { id } = (await (await h.create(10)).json()) as { id: string };
     expect(await (await h.put(id, 0, 'hello')).json()).toMatchObject({
+      id,
+      size: 10,
       received: 5,
       complete: false,
     });

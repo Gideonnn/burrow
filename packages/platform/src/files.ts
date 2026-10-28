@@ -102,7 +102,12 @@ export class Uploads {
     }
     const received = upload.received + written;
     this.db.update(uploads).set({ received }).where(eq(uploads.id, id)).run();
-    return { received, size: upload.size, complete: received === upload.size };
+    return {
+      id,
+      received,
+      size: upload.size,
+      complete: received === upload.size,
+    };
   }
 
   // Hands a complete upload to a module: moves the file to `target` and
