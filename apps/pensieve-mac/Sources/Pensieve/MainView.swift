@@ -403,6 +403,8 @@ struct RecordingMenu: View {
         if recording.mine {
             Divider()
             Button("Wijzig titel…", action: rename)
+            Button("Bedenk een titel") { Task { await model.redo(recording.id, step: "title") } }
+                .disabled(!recording.hasTranscript && !recording.hasNotes)
             if recording.status == .stored && !recording.hasTranscript {
                 Button("Maak transcript") { Task { await model.requestTranscript(recording.id) } }
             } else {

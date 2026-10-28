@@ -102,7 +102,7 @@ func registerCommands(_ service: ControlService, model: PensieveModel, recorder:
         await model.rename(request["id"] as? String ?? "", to: request["title"] as? String ?? "")
         return controlState(model, recorder)
     }
-    service.register("redo", help: "Write the transcript or the notes again.", arguments: [.init("id", "a recording id"), .init("step", "transcript or notes")]) { request in
+    service.register("redo", help: "Write the transcript or the notes again, or think up a title; a new title keeps the notes.", arguments: [.init("id", "a recording id"), .init("step", "transcript, notes or title")]) { request in
         await model.redo(request["id"] as? String ?? "", step: request["step"] as? String ?? "notes")
         return controlState(model, recorder)
     }

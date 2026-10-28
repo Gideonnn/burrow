@@ -129,6 +129,39 @@ describe('a recording', () => {
     expect(h.agentRequests).toHaveLength(0);
   });
 
+  it('gets a title of its own on request, keeping the notes it has', async () => {
+    const h = household();
+    const notesMarkdown = '## Samenvatting\n\nUit RecHoarder.';
+    const { id } = recordingSummary.parse(
+      await (
+        await h.record({
+          title: 'standup',
+          source: 'imported',
+          transcript: 'A: Ron loopt de prijzen voor de poorten na.',
+          notesMarkdown,
+        })
+      ).json(),
+    );
+    h.decisions.push({ title: 'Prijzen poorten met Ron' });
+    const res = await h.send(
+      h.token,
+      'POST',
+      `/api/pensieve/recordings/${id}/redo`,
+      { step: 'title' },
+    );
+    expect(res.status).toBe(200);
+    await h.workers.drain();
+    expect(await h.detail(id)).toMatchObject({
+      title: 'Prijzen poorten met Ron',
+      notesMarkdown,
+      status: 'done',
+    });
+    const request = h.agentRequests.at(-1)!;
+    expect(request.system).toContain('You are Kreacher.');
+    expect(request.prompt).toContain('Uit RecHoarder.');
+    expect(request.prompt).toContain('Ron loopt de prijzen');
+  });
+
   it('fences the transcript, so words spoken in the meeting cannot break out', async () => {
     const h = household();
     h.transcripts.push(

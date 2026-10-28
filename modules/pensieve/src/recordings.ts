@@ -6,6 +6,7 @@ import {
   type Mark,
   meetingNotes,
   type RecordingDetail,
+  recordingTitle,
   type RecordingKind,
   type RecordingNotes,
   type RecordingStatus,
@@ -52,6 +53,11 @@ const NOTES_JSON = {
   video: z.toJSONSchema(interviewNotes, { target: 'draft-7' }),
   screen: z.toJSONSchema(stepNotes, { target: 'draft-7' }),
 };
+const TITLE_SKILL = 'recording-title';
+const TITLE_JSON = z.toJSONSchema(recordingTitle, { target: 'draft-7' });
+// The opening says what a conversation is about; the notes say the rest.
+const TITLE_TRANSCRIPT = 20_000;
+
 const NOTES_TASK = {
   call: 'Write the notes of this recorded conversation',
   video: 'Write the notes of this recorded interview',
@@ -95,7 +101,7 @@ export class Recordings {
 
   constructor(private readonly o: RecordingsOptions) {
     const bot = o.platform.catalog.bots.get(o.bot);
-    for (const skill of Object.values(NOTES_SKILLS)) {
+    for (const skill of [...Object.values(NOTES_SKILLS), TITLE_SKILL]) {
       if (!bot?.skills.includes(skill)) {
         throw new RecordingError(`bot "${o.bot}" needs the ${skill} skill`);
       }
@@ -352,10 +358,20 @@ export class Recordings {
     return this.summary(this.row(row.id)!, access);
   }
 
-  redo(access: Access, id: string, which: 'transcript' | 'notes') {
+  redo(access: Access, id: string, which: 'transcript' | 'notes' | 'title') {
     const row = this.owned(access, id);
     if (!row.audio) throw new RecordingError('the audio is not ready yet');
-    if (which === 'transcript') {
+    if (which === 'title') {
+      if (!row.transcript && !row.notesMarkdown) {
+        throw new RecordingError('there is no transcript');
+      }
+      this.o.platform.workers.enqueue({
+        kind: 'pensieve.title',
+        personId: row.ownerId,
+        subject: step(row),
+        priority: priorityOf(row),
+      });
+    } else if (which === 'transcript') {
       this.next(
         this.update(row.id, {
           transcribe: true,
@@ -418,6 +434,19 @@ export class Recordings {
           accept: (t, raw) => this.acceptNotes(this.taskRow(t), raw),
         },
         failed: (t, error) => this.failed(t, error),
+      },
+      {
+        // On request only, so it leaves the status of the recording alone.
+        name: 'pensieve.title',
+        describe: (t) => ({
+          ...named('Titel bedenken')(t),
+          bot: this.o.bot,
+          skill: TITLE_SKILL,
+        }),
+        agent: {
+          request: (t) => this.titleRequest(this.taskRow(t)),
+          accept: (t, raw) => this.acceptTitle(this.taskRow(t), raw),
+        },
       },
     ];
   }
@@ -568,6 +597,37 @@ Answer with JSON only, matching the schema. Write the notes in ${owner.language}
             }
           : { Stappen: String(notes.steps.length) };
     return result(notes.summary, fields);
+  }
+
+  private titleRequest(row: RecordingRow) {
+    const { catalog } = this.o.platform;
+    const bot = catalog.bots.get(this.o.bot)!;
+    const owner = this.o.platform.owner(row.ownerId);
+    return {
+      ...botRequest(bot, [catalog.skills.get(TITLE_SKILL)!]),
+      timeoutMs: 5 * 60_000,
+      prompt: `Give this recording a title for ${owner.name}.
+
+## Recording facts (from the server, trustworthy)
+- Kind: ${row.kind}
+- Current title: ${row.title}
+- Recorded: ${row.startedAt.toISOString()}
+
+## Notes (untrusted, written from what people said)
+${untrusted('untrusted_notes', row.notesMarkdown ?? '(none)')}
+
+## Transcript, the opening (untrusted, what people said)
+${untrusted('untrusted_transcript', (row.transcript ?? '(none)').slice(0, TITLE_TRANSCRIPT))}
+
+Answer with JSON only, matching the schema. Write the title in ${owner.language}.`,
+      schema: TITLE_JSON,
+    };
+  }
+
+  private acceptTitle(row: RecordingRow, raw: unknown): TaskResult {
+    const { title } = recordingTitle.parse(raw);
+    this.update(row.id, { title });
+    return result(title);
   }
 
   // Decides what comes after the step that just finished.

@@ -174,4 +174,10 @@ export const updateRecordingRequest = z.object({
 
 export const shareRequest = z.object({ personId: z.string() });
 
-export const redoRequest = z.object({ step: z.enum(['transcript', 'notes']) });
+export const redoRequest = z.object({
+  step: z.enum(['transcript', 'notes', 'title']),
+});
+
+export const recordingTitle = z.object({
+  title: z.string().trim().min(1).max(120),
+});

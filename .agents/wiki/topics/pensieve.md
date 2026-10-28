@@ -40,7 +40,13 @@ yet, see the [diary](../diary/2026-10-23-pensieve-files-live-on-dobby.md)).
    The prompt has the transcript with `[mm:ss]` per segment and the marks, both fenced as
    untrusted. Dictation has none: it is done after the transcript and a dictation called
    "Dictaat" is named after its first words. Skipped when `pensieve.notes` is off. Then
-   routines with the `recording` trigger fire.
+   routines with the `recording` trigger fire. The notes replace a generic title
+   ("standup", "Gesprek") with their own.
+
+A title on request: `POST …/redo` with `step: "title"` (the app's "Bedenk een titel",
+`burrowctl pensieve redo --step title`) runs `pensieve.title`, Kreacher with the
+`recording-title` skill on the notes and the transcript's opening. It keeps the notes and
+the status, so imported recordings, whose notes came along, get a title too.
 
 Dictations run at priority `urgent` (someone waits to paste). Notes are stored as JSON
 tagged by `type` (`meeting`, `interview`, `steps`); rows from before the tag are meeting

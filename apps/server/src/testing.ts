@@ -87,6 +87,7 @@ export function testHousehold({
             'meeting-notes',
             'interview-notes',
             'screen-steps',
+            'recording-title',
             'outing-details',
             'festival-lineup',
           ],
@@ -109,6 +110,14 @@ export function testHousehold({
       ],
     ]),
     skills: new Map([
+      [
+        'recording-title',
+        {
+          name: 'recording-title',
+          description: 'Names a recording.',
+          instructions: 'Name it.',
+        },
+      ],
       [
         'sorting-hat',
         {

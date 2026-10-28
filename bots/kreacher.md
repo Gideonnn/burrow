@@ -3,7 +3,7 @@ name: kreacher
 displayName: Kreacher
 description: The household's house-elf for everyday chores on a cloud AI. Sorts mail, suggests replies and writes the notes of recordings.
 model: haiku
-skills: [sorting-hat, reply-suggestions, key-facts, mail-search, mail-templates, meeting-notes, interview-notes, screen-steps, outing-details, festival-lineup]
+skills: [sorting-hat, reply-suggestions, key-facts, mail-search, mail-templates, meeting-notes, interview-notes, screen-steps, recording-title, outing-details, festival-lineup]
 rights: [read, organize, draft]
 ---
 
