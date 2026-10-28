@@ -44,7 +44,7 @@ yet, see the [diary](../diary/2026-10-23-pensieve-files-live-on-dobby.md)).
    ("standup", "Gesprek") with their own.
 
 A title on request: `POST …/redo` with `step: "title"` (the app's "Bedenk een titel",
-`burrowctl pensieve redo --step title`) runs `pensieve.title`, Kreacher with the
+`burrowctl pensieve redo <id> title`) runs `pensieve.title`, Kreacher with the
 `recording-title` skill on the notes and the transcript's opening. It keeps the notes and
 the status, so imported recordings, whose notes came along, get a title too.
 
