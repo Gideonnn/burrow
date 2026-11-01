@@ -106,6 +106,20 @@ describe('vectors for search by meaning', () => {
     expect(found.results[0]!.subject).toBe('Uw energierekening');
   });
 
+  it('goes before mail facts, which always has work', async () => {
+    const s = await setup();
+    s.platform.settings.update(s.gideon.id, { 'hedwig.facts': true });
+    const res = await s.post('/api/runner/claim', {
+      runner: 'MacBook',
+      kinds: ['*'],
+      queues: ['local'],
+      models: ['ollama:gemma4:26b-a4b', 'ollama:embeddinggemma'],
+      max: 1,
+    });
+    const [first] = claimed.parse(await res.json());
+    expect(first!.task.kind).toBe('hedwig.embed');
+  });
+
   it('refuses an answer with the wrong number of vectors', async () => {
     const s = await setup();
     s.platform.settings.update(s.gideon.id, { 'hedwig.facts': true });

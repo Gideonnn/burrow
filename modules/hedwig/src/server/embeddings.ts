@@ -172,7 +172,9 @@ export class EmbeddingsService {
         name: 'hedwig.embed',
         title: 'Zoeken op betekenis',
         queue: 'local',
-        priority: 'low',
+        // Above mail facts, which always has work: a piece of sixty-four mails
+        // takes a second, so the whole archive is done before Winky misses it.
+        priority: 'normal',
         model: EMBED_MODEL,
         standing: this.work,
         describe: (t) => ({
