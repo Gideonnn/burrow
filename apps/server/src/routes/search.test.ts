@@ -44,9 +44,18 @@ describe('word search', () => {
   it('finds mail in every mailbox the key sees, never someone else’s', async () => {
     const s = await setup();
     const res = await s.call(s.token, '/api/search?q=factuur');
-    expect(await subjects(res)).toEqual([
+    expect((await subjects(res)).sort()).toEqual([
       'Etentje zaterdag?',
       'Factuur 2026-031',
+    ]);
+  });
+
+  it('puts the best match first: a word in the subject beats one in the body', async () => {
+    const s = await setup();
+    const res = await s.call(s.token, '/api/search?q=factuur');
+    expect(await subjects(res)).toEqual([
+      'Factuur 2026-031',
+      'Etentje zaterdag?',
     ]);
   });
 

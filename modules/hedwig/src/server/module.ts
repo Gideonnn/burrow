@@ -7,6 +7,7 @@ import type { Module, Platform } from '@burrow/platform';
 import { inArray } from 'drizzle-orm';
 import { mailboxAccess, mailboxRestriction } from './access';
 import type { Accounts } from './accounts';
+import { SEARCH_ABOUT, SEARCH_READS, SearchService } from './ai-search';
 import { createDraft } from './drafts';
 import { FACTS_FEATURE, FactsService } from './facts/service';
 import { InsightsService, LONG_MESSAGE } from './insights';
@@ -21,8 +22,8 @@ import { mailboxColumns, hedwigRoutes } from './routes';
 import { connectRoutes } from './routes-connect';
 import { startBackfillLoop, startSyncLoop } from './scheduler';
 import { mailboxes } from './schema';
-import { SearchService } from './search';
 import { TriageService } from './triage';
+import { VectorIndex } from './vectors';
 
 const RETRY_EVERY_MS = 10 * 60_000;
 
@@ -66,6 +67,28 @@ const settings: SettingDefinition[] = [
     default: true,
     feature: true,
   },
+  {
+    key: SEARCH_ABOUT,
+    module: 'hedwig',
+    label: 'Over jou, voor zoeken',
+    description:
+      'Waar je mail over gaat, zodat zoeken met AI je vragen begrijpt. Bijvoorbeeld: "Ik heb een eigen bedrijf; werkmail gaat over klanten, offertes en facturen." of "Ik studeer; schoolmail gaat over vakken, roosters en deadlines."',
+    type: 'text',
+    default: '',
+    personal: true,
+    feature: false,
+  },
+  {
+    key: SEARCH_READS,
+    module: 'hedwig',
+    label: 'AI-zoeken leest de beste resultaten',
+    description:
+      'Kreacher leest onderwerp en samenvatting van de beste dertig resultaten, zet ze op volgorde en beantwoordt je vraag als je iets vraagt ("wanneer komt de monteur?"). Van gevoelige mail leest hij alleen afzender en datum.',
+    type: 'boolean',
+    default: true,
+    personal: true,
+    feature: false,
+  },
 ];
 
 export type HedwigOptions = {
@@ -99,7 +122,8 @@ export function hedwigModule(platform: Platform, options: HedwigOptions) {
     templatesBot: options.bot,
   });
   const insights = new InsightsService({ platform, mail, bot: options.bot });
-  const search = new SearchService({ platform, bot: options.bot });
+  const vectors = new VectorIndex(db);
+  const search = new SearchService({ platform, bot: options.bot, vectors });
   const outings = new OutingsService({
     platform,
     mail,

@@ -14,6 +14,7 @@ import type {
 } from '@burrow/contracts';
 import { createdAt, id, people } from '@burrow/platform';
 import {
+  blob,
   index,
   integer,
   sqliteTable,
@@ -358,4 +359,44 @@ export const outingMessages = sqliteTable(
     uniqueIndex('outing_messages_pair').on(t.outingId, t.messageId),
     index('outing_messages_message').on(t.messageId),
   ],
+);
+
+// Everyone a mailbox wrote to or heard from, for @name in search. Kept by
+// triggers in step with messages; mail to someone counts more than from them.
+export const mailContacts = sqliteTable(
+  'mail_contacts',
+  {
+    mailboxId: text('mailbox_id')
+      .notNull()
+      .references(() => mailboxes.id, { onDelete: 'cascade' }),
+    email: text('email').notNull(),
+    name: text('name'),
+    sent: integer('sent').notNull().default(0),
+    received: integer('received').notNull().default(0),
+    lastAt: integer('last_at', { mode: 'timestamp_ms' }).notNull(),
+  },
+  (t) => [uniqueIndex('mail_contacts_mailbox_email').on(t.mailboxId, t.email)],
+);
+
+// The integer key of a message in the full-text index `message_search`
+// (FTS5, created in migration 0025). A message's own rowid may change on
+// VACUUM; this one never does.
+export const messageSearchKeys = sqliteTable('message_search_keys', {
+  id: integer('id').primaryKey(),
+  messageId: text('message_id').notNull().unique(),
+});
+
+// A message's meaning as numbers, made by an embedding model on a Mac's
+// runner, for search by meaning. Float32, little-endian.
+export const messageVectors = sqliteTable(
+  'message_vectors',
+  {
+    messageId: text('message_id')
+      .primaryKey()
+      .references(() => messages.id, { onDelete: 'cascade' }),
+    model: text('model').notNull(),
+    vector: blob('vector', { mode: 'buffer' }).notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [index('message_vectors_model').on(t.model)],
 );

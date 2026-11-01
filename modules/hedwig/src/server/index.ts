@@ -9,3 +9,8 @@ export * from './triage';
 export * from './facts/rules';
 export * from './facts/service';
 export * from './facts/store';
+export * from './ai-search';
+export * from './people';
+export * from './search';
+export * from './search-text';
+export * from './vectors';

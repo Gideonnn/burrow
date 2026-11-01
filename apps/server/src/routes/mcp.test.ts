@@ -51,6 +51,7 @@ describe('MCP', () => {
     const s = await setup();
     const reader = await connect(s, ['read']);
     expect((await reader.listTools()).tools.map((t) => t.name).sort()).toEqual([
+      'find_people',
       'get_instructions',
       'get_message',
       'get_recording',

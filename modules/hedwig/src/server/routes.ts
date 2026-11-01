@@ -8,6 +8,11 @@ import {
   messageActionsRequest,
   type MessageFilter,
   messageListQuery,
+  peopleQuery,
+  type PeopleResponse,
+  rankRequest,
+  type RankResponse,
+  searchFilterParams,
   type SearchResponse,
   type SearchScope,
   searchScope,
@@ -27,6 +32,7 @@ import { HTTPException } from 'hono/http-exception';
 import { z } from 'zod';
 import { GrantRevokedError } from '../oauth';
 import { canSeeMailbox } from './access';
+import type { SearchService } from './ai-search';
 import { createDraft, deleteDraft, DraftError, listDrafts } from './drafts';
 import { factsFor, forKey, summaries } from './facts/store';
 import type { InsightsService } from './insights';
@@ -39,12 +45,13 @@ import {
   toDetail,
   toSummary,
 } from './mail-service';
+import { findPeople } from './people';
 import { mailboxes, messages } from './schema';
-import { inScope, type SearchService, searchMessages, words } from './search';
+import { inScope, searchMessages, typedQuery } from './search';
 import type { TriageService } from './triage';
 
-const searchQuery = searchScope.extend({
-  q: z.string().trim().min(1).max(500),
+const searchQuery = searchScope.merge(searchFilterParams).extend({
+  q: z.string().max(500).default(''),
   limit: z.coerce.number().int().min(1).max(200).default(50),
   includeLow: z.stringbool().default(false),
 });
@@ -213,29 +220,65 @@ export function hedwigRoutes({
           return c.json(summaries(c.var.db, rows, c.var.access));
         },
       )
-      // Word search as you type, in the open place or every mailbox the key sees.
+      // Word search as you type, in the open place or every mailbox the key
+      // sees, through the full-text index; tokens add people, a period and kinds.
       .get(
         '/search',
         requireRight('read'),
         zValidator('query', searchQuery),
         (c) => {
-          const { q, limit, includeLow, ...scope } = c.req.valid('query');
+          const {
+            q,
+            limit,
+            includeLow,
+            people,
+            after,
+            before,
+            kinds,
+            attachments,
+            unread,
+            ...scope
+          } = c.req.valid('query');
+          const boxes = searchedMailboxes(c.var.access, scope);
+          const found = searchMessages(
+            c.var.db,
+            boxes,
+            inScope(
+              {
+                ...typedQuery(c.var.db, boxes, q, {
+                  people,
+                  after,
+                  before,
+                  categories: kinds,
+                  hasAttachments: attachments,
+                  unreadOnly: unread,
+                }),
+                limit,
+                includeLow,
+                factsOnly: c.var.access.factsOnly,
+              },
+              scope,
+            ),
+          );
           return c.json<SearchResponse>({
             explanation: null,
-            results: searchMessages(
-              c.var.db,
-              searchedMailboxes(c.var.access, scope),
-              inScope(
-                {
-                  groups: words(q),
-                  matchAll: true,
-                  limit,
-                  includeLow,
-                  factsOnly: c.var.access.factsOnly,
-                },
-                scope,
-              ),
-            ),
+            tokens: [],
+            wantsAnswer: false,
+            answer: null,
+            ...found,
+          });
+        },
+      )
+      // The people behind @name: everyone the key's mailboxes wrote to or
+      // heard from.
+      .get(
+        '/search/people',
+        requireRight('read'),
+        zValidator('query', peopleQuery),
+        (c) => {
+          const { q, limit } = c.req.valid('query');
+          return c.json<PeopleResponse>({
+            people: findPeople(c.var.db, c.var.access.mailboxIds, q, limit),
           });
         },
       )
@@ -250,15 +293,41 @@ export function hedwigRoutes({
               message: 'zoeken met AI is niet beschikbaar op deze server',
             });
           }
-          const { question, includeLow, ...scope } = c.req.valid('json');
+          const { question, includeLow, filters, vector, ...scope } =
+            c.req.valid('json');
           return c.json<SearchResponse>(
             await search.ask(
               c.var.access.personId,
               searchedMailboxes(c.var.access, scope),
               question,
               scope,
-              { includeLow, factsOnly: c.var.access.factsOnly },
+              {
+                includeLow,
+                factsOnly: c.var.access.factsOnly,
+                filters,
+                vector,
+              },
             ),
+          );
+        },
+      )
+      // The second step: the bot reads the best results to order them and
+      // answer. Only messages the key may see are read.
+      .post(
+        '/search/ai/rank',
+        requireRight('read'),
+        zValidator('json', rankRequest),
+        async (c) => {
+          const { question, messageIds, answer } = c.req.valid('json');
+          const visible = messageIds.filter((id) => {
+            const row = mail.message(id);
+            return row && canSeeMailbox(c.var.access, row.mailboxId);
+          });
+          return c.json<RankResponse>(
+            await search.rank(c.var.access.personId, question, visible, {
+              answer,
+              factsOnly: c.var.access.factsOnly,
+            }),
           );
         },
       )

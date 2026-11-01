@@ -83,6 +83,7 @@ export function testHousehold({
             'sorting-hat',
             'reply-suggestions',
             'mail-search',
+            'mail-search-rank',
             'mail-templates',
             'meeting-notes',
             'interview-notes',
@@ -140,6 +141,14 @@ export function testHousehold({
           name: 'mail-search',
           description: 'Plans a search.',
           instructions: 'Plan the search.',
+        },
+      ],
+      [
+        'mail-search-rank',
+        {
+          name: 'mail-search-rank',
+          description: 'Ranks search results.',
+          instructions: 'Rank them.',
         },
       ],
       [
