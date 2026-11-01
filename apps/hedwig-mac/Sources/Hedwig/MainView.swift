@@ -45,9 +45,32 @@ struct MainView: View {
             }
             .toolbar { MainToolbar() }
         }
-        .searchable(text: $model.searchText, placement: .toolbar, prompt: "Zoek")
+        .searchable(text: $model.searchText, tokens: $model.searchTokens, placement: .toolbar, prompt: "Zoek, @iemand, of vraag iets") { token in
+            Label(token.label, systemImage: token.systemImage)
+        }
+        .searchSuggestions {
+            ForEach(model.searchSuggestions) { suggestion in
+                SuggestionRow(suggestion: suggestion)
+                    .searchCompletion(suggestion.token)
+            }
+        }
         .onSubmit(of: .search) { Task { await model.searchWithAI() } }
         .modifier(SearchFocus(request: model.searchFocusRequest))
+    }
+}
+
+/// A chip the field offers: what it is, and a line about it.
+private struct SuggestionRow: View {
+    let suggestion: SearchSuggestion
+
+    var body: some View {
+        HStack {
+            Label(suggestion.token.label, systemImage: suggestion.token.systemImage)
+            if let detail = suggestion.detail {
+                Spacer()
+                Text(detail).foregroundStyle(.secondary)
+            }
+        }
     }
 }
 

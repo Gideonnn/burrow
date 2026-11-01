@@ -19,24 +19,53 @@ extension APIClient {
 
     public func counts() async throws -> [FolderCount] { try await call("GET", "api/mailboxes/counts") }
 
-    /// Every word must appear. Login codes and other low-priority mail only with `includeLow`.
-    public func search(_ query: String, in scope: SearchScope = .everywhere, includeLow: Bool = false, limit: Int = 100) async throws -> SearchResponse {
-        var items = [URLQueryItem(name: "q", value: query), URLQueryItem(name: "limit", value: String(limit))] + scope.queryItems
+    /// Every word must appear; the chips add people, a period and kinds. Login codes and
+    /// other low-priority mail only with `includeLow`.
+    public func search(
+        _ query: String, in scope: SearchScope = .everywhere, filters: SearchFilters = SearchFilters(tokens: []),
+        includeLow: Bool = false, limit: Int = 100
+    ) async throws -> SearchResponse {
+        var items = [URLQueryItem(name: "q", value: query), URLQueryItem(name: "limit", value: String(limit))] + scope.queryItems + filters.queryItems
         if includeLow { items.append(URLQueryItem(name: "includeLow", value: "true")) }
         return try await call("GET", "api/search", query: items)
     }
 
-    /// The bot turns the question into a search; it never reads the mail.
-    public func aiSearch(_ question: String, in scope: SearchScope = .everywhere, includeLow: Bool = false) async throws -> SearchResponse {
+    /// The people behind @name, most mailed with first.
+    public func people(_ query: String, limit: Int = 8) async throws -> [MailPerson] {
+        let response: PeopleResponse = try await call(
+            "GET", "api/search/people", query: [URLQueryItem(name: "q", value: query), URLQueryItem(name: "limit", value: String(limit))])
+        return response.people
+    }
+
+    /// The bot turns the question into a plan; it never reads the mail. With `plan`, the
+    /// server runs that plan again without the parts in `without`, and asks no bot.
+    public func aiSearch(
+        _ question: String, in scope: SearchScope = .everywhere, filters: SearchFilters = SearchFilters(tokens: []),
+        includeLow: Bool = false, vector: (model: String, values: [Double])? = nil, plan: JSONValue? = nil, without: [String] = []
+    ) async throws -> SearchResponse {
+        struct Vector: Encodable { var model: String; var values: [Double] }
         struct Body: Encodable {
             var question: String
             var mailboxId: String?
             var folder: MailFolder?
             var includeLow: Bool
+            var filters: SearchFilters?
+            var vector: Vector?
+            var plan: JSONValue?
+            var without: [String]
         }
         return try await call(
             "POST", "api/search/ai",
-            body: Body(question: question, mailboxId: scope.mailboxId, folder: scope.folder, includeLow: includeLow))
+            body: Body(
+                question: question, mailboxId: scope.mailboxId, folder: scope.folder, includeLow: includeLow,
+                filters: filters.isEmpty ? nil : filters, vector: vector.map { Vector(model: $0.model, values: $0.values) },
+                plan: plan, without: without))
+    }
+
+    /// The bot reads the best results, orders them and, when asked, answers from them.
+    public func rank(_ question: String, ids: [String], answer: Bool) async throws -> RankResponse {
+        struct Body: Encodable { var question: String; var messageIds: [String]; var answer: Bool }
+        return try await call("POST", "api/search/ai/rank", body: Body(question: question, messageIds: ids, answer: answer))
     }
 
     /// Every mailbox this key sees, in the order the person wants them.

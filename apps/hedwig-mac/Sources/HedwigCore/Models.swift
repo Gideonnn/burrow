@@ -111,6 +111,8 @@ public struct MessageSummary: Codable, Hashable, Identifiable, Sendable {
     public var hasAttachments: Bool
     // Optional so an older server still decodes.
     public var facts: MessageFacts?
+    /// Where a search result matched; only in search results.
+    public var hit: SearchHit?
 }
 
 /// How much mail one folder of a mailbox holds; the server leaves out empty folders.
@@ -285,6 +287,12 @@ public struct SearchResponse: Codable, Hashable, Sendable {
     /// What the bot searched for; nil for word search.
     public var explanation: String?
     public var results: [MessageSummary]
+    /// Every match, beyond the results returned; optional for older servers.
+    public var total: Int?
+    /// The bot's plan as chips, and the plan itself to rerun without one.
+    public var tokens: [SearchToken]?
+    public var wantsAnswer: Bool?
+    public var plan: JSONValue?
 }
 
 public struct MessageInsights: Codable, Hashable, Sendable {

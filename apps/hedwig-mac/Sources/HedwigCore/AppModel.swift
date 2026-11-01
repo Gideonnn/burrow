@@ -1,3 +1,4 @@
+import BurrowKit
 import Foundation
 import Observation
 
@@ -50,7 +51,35 @@ public final class AppModel {
             guard oldValue != searchText else { return }
             searchLoad?.cancel()
             searchLoad = Task { await searchWords() }
+            suggest()
         }
+    }
+    /// The chips in the search field: people, a period, kinds of mail.
+    public var searchTokens: [SearchToken] = [] {
+        didSet {
+            guard oldValue != searchTokens else { return }
+            // A chip picked from the suggestions takes the place of the words it stood for.
+            if let added = searchTokens.first(where: { !oldValue.contains($0) }),
+               let suggestion = searchSuggestions.first(where: { $0.token == added }) {
+                let rest = suggestion.text(after: typedBeforeChip)
+                Task { @MainActor in if self.searchText != rest { self.searchText = rest } }
+            }
+            searchSuggestions = []
+            rerunSearch()
+        }
+    }
+    /// What the field offers as chips for the words being typed.
+    public private(set) var searchSuggestions: [SearchSuggestion] = []
+    /// The bot's plan as chips, after a search by meaning.
+    public private(set) var planTokens: [SearchToken] = []
+    /// The bot's answer to the question, with the mail it rests on.
+    public private(set) var searchAnswer: SearchAnswer?
+    /// The bot is reading the best results.
+    public private(set) var searchRanking = false
+    /// Every match on the server, beyond the list.
+    public private(set) var searchTotal = 0
+    public var searchSort: SearchSort = .best {
+        didSet { if oldValue != searchSort { sortResults() } }
     }
     /// Widens the search from the open place to every mailbox.
     public var searchEverywhere = false {
@@ -65,7 +94,7 @@ public final class AppModel {
     public private(set) var aiSearching = false
     /// Bumped by ⌘F; the window moves focus to the search field.
     public var searchFocusRequest = 0
-    public var isSearching: Bool { !searchQuery.isEmpty }
+    public var isSearching: Bool { !searchQuery.isEmpty || !searchTokens.isEmpty }
     public internal(set) var messages: [MessageSummary] = []
     public var selectedMessageId: String? {
         didSet {
@@ -136,6 +165,16 @@ public final class AppModel {
     var selectionLoad: Task<Void, Never>?
     var messageLoad: Task<Void, Never>?
     var searchLoad: Task<Void, Never>?
+    var suggestionLoad: Task<Void, Never>?
+    @ObservationIgnored var typedBeforeChip = ""
+    // The results in the server's order, for sorting back to "best".
+    @ObservationIgnored var bestResults: [MessageSummary] = []
+    @ObservationIgnored var lastPlan: JSONValue?
+    @ObservationIgnored var droppedPlanKeys: [String] = []
+    /// Embeds the question on this Mac, when Ollama has the model; nil otherwise.
+    @ObservationIgnored public var embedQuestion: @Sendable (String) async -> [Double]? = { question in
+        try? await OllamaAgent().embed(["task: search result | query: \(question)"], model: "ollama:embeddinggemma", dims: 256).first
+    }
 
     public init(
         store: ConnectionStore = ConnectionStore(app: "hedwig"),
@@ -568,35 +607,88 @@ public final class AppModel {
 
     private func rerunSearch() {
         searchLoad?.cancel()
-        searchLoad = Task { searchedByMeaning ? await askBot() : await searchWords() }
+        searchLoad = Task { searchedByMeaning ? await rerunPlan() : await searchWords() }
     }
 
     /// Word search as you type, after a short pause; an empty field brings the list back.
     func searchWords() async {
         let query = searchQuery
+        let tokens = searchTokens
         searchExplanation = nil
         aiSearching = false
         searchedByMeaning = false
-        guard !query.isEmpty else {
+        planTokens = []
+        searchAnswer = nil
+        searchRanking = false
+        lastPlan = nil
+        droppedPlanKeys = []
+        guard isSearching else {
             searchEverywhere = false
+            searchTotal = 0
             await loadSelection(keepSelection: true)
             return
         }
-        try? await Task.sleep(for: .milliseconds(200))
+        try? await Task.sleep(for: .milliseconds(120))
         guard !Task.isCancelled, let api else { return }
         do {
             let scope = searchScope
-            let response = try await api.search(query, in: scope, includeLow: searchIncludesLow)
-            guard !Task.isCancelled, query == searchQuery, scope == searchScope else { return }
+            let response = try await api.search(query, in: scope, filters: SearchFilters(tokens: tokens), includeLow: searchIncludesLow)
+            guard !Task.isCancelled, query == searchQuery, tokens == searchTokens, scope == searchScope else { return }
+            searchTotal = response.total ?? response.results.count
             showResults(response.results)
         } catch {
             if !Task.isCancelled { report(error, quiet: true) }
         }
     }
 
+    private var chosenKeys: Set<String> { Set(searchTokens.map { $0.id }) }
+
+    /// Offers chips for what is being typed: people after @, periods, kinds of mail.
+    private func suggest() {
+        suggestionLoad?.cancel()
+        typedBeforeChip = searchText
+        let chosen = chosenKeys
+        if let mention = SearchWords.mention(in: searchText) {
+            suggestionLoad = Task {
+                try? await Task.sleep(for: .milliseconds(80))
+                guard !Task.isCancelled, let api, let people = try? await api.people(mention) else { return }
+                guard !Task.isCancelled, SearchWords.mention(in: searchText) == mention else { return }
+                searchSuggestions = people.map { SearchSuggestion(token: $0.token, detail: $0.detail) }.filter { !chosen.contains($0.id) }
+            }
+        } else {
+            searchSuggestions = SearchWords.suggestions(for: searchText).filter { !chosen.contains($0.id) }
+        }
+    }
+
+    /// Lenses over the results: people, kinds, attachments and years to narrow to.
+    public var searchLenses: [SearchLens] {
+        let own = Set((me?.mailboxes ?? []).map { $0.address.lowercased() })
+        return SearchWords.lenses(for: bestResults, own: own, chosen: searchTokens)
+    }
+
+    public func addSearchToken(_ token: SearchToken) {
+        guard !chosenKeys.contains(token.id) else { return }
+        searchTokens.append(token)
+    }
+
+    public func removeSearchToken(_ token: SearchToken) {
+        searchTokens.removeAll { $0.id == token.id }
+    }
+
+    /// Drops one of the bot's chips and runs its plan again without it; no new plan.
+    public func removePlanToken(_ token: SearchToken) {
+        droppedPlanKeys.append(token.id)
+        planTokens.removeAll { $0.id == token.id }
+        searchAnswer = nil
+        searchLoad?.cancel()
+        searchLoad = Task { await rerunPlan() }
+    }
+
     /// Search by meaning (Enter in the search field): the bot plans the search on the server.
     public func searchWithAI() async {
         searchLoad?.cancel()
+        suggestionLoad?.cancel()
+        searchSuggestions = []
         await askBot()
     }
 
@@ -604,22 +696,86 @@ public final class AppModel {
         let question = searchQuery
         guard !question.isEmpty, let api else { return }
         let scope = searchScope
+        let tokens = searchTokens
         searchedByMeaning = true
         aiSearching = true
+        searchAnswer = nil
+        planTokens = []
+        lastPlan = nil
+        droppedPlanKeys = []
         defer { if question == searchQuery, scope == searchScope { aiSearching = false } }
         do {
-            let response = try await api.aiSearch(question, in: scope, includeLow: searchIncludesLow)
-            guard question == searchQuery, scope == searchScope else { return }
-            searchExplanation = response.explanation
-            showResults(response.results)
+            let vector = await questionVector(question)
+            let response = try await api.aiSearch(
+                question, in: scope, filters: SearchFilters(tokens: tokens), includeLow: searchIncludesLow,
+                vector: vector.map { ("ollama:embeddinggemma", $0) })
+            guard question == searchQuery, scope == searchScope, tokens == searchTokens else { return }
+            show(response)
+            aiSearching = false
+            await rank(question: question, wantsAnswer: response.wantsAnswer ?? false)
         } catch {
             if question == searchQuery, scope == searchScope { report(error) }
         }
     }
 
+    /// The last plan again, with the chips the person kept; the bot is not asked.
+    private func rerunPlan() async {
+        guard let plan = lastPlan, let api else { return await askBot() }
+        let question = searchQuery
+        let scope = searchScope
+        let tokens = searchTokens
+        do {
+            let response = try await api.aiSearch(
+                question, in: scope, filters: SearchFilters(tokens: tokens), includeLow: searchIncludesLow,
+                plan: plan, without: droppedPlanKeys)
+            guard !Task.isCancelled, question == searchQuery, scope == searchScope, tokens == searchTokens else { return }
+            show(response)
+        } catch {
+            if !Task.isCancelled { report(error, quiet: true) }
+        }
+    }
+
+    private func show(_ response: SearchResponse) {
+        searchExplanation = response.explanation
+        planTokens = response.tokens ?? []
+        if let plan = response.plan, plan != .null { lastPlan = plan }
+        searchTotal = response.total ?? response.results.count
+        showResults(response.results)
+    }
+
+    /// The bot reads the best thirty, orders them and answers when the question asks.
+    private func rank(question: String, wantsAnswer: Bool) async {
+        let ids = bestResults.prefix(30).map(\.id)
+        guard ids.count >= 2, let api else { return }
+        searchRanking = true
+        defer { if question == searchQuery { searchRanking = false } }
+        guard let ranked = try? await api.rank(question, ids: ids, answer: wantsAnswer), question == searchQuery else { return }
+        let rest = bestResults.filter { m in !ranked.results.contains { $0.id == m.id } }
+        searchAnswer = ranked.answer
+        showResults(ranked.results + rest)
+        if let first = ranked.answer?.messageIds.first, searchSort == .best { selectedMessageId = first }
+    }
+
+    /// The question's meaning from Ollama on this Mac, or nil within two seconds.
+    private func questionVector(_ question: String) async -> [Double]? {
+        let embed = embedQuestion
+        return await withTaskGroup(of: [Double]?.self) { group in
+            group.addTask { await embed(question) }
+            group.addTask { try? await Task.sleep(for: .seconds(2)); return nil }
+            let first = await group.next() ?? nil
+            group.cancelAll()
+            return first
+        }
+    }
+
     private func showResults(_ results: [MessageSummary]) {
-        messages = results
-        if !results.contains(where: { $0.id == selectedMessageId }) { selectedMessageId = results.first?.id }
+        bestResults = results
+        sortResults()
+    }
+
+    private func sortResults() {
+        messages = searchSort == .newest ? bestResults.sorted { $0.receivedAt > $1.receivedAt } : bestResults
+        if !messages.contains(where: { $0.id == selectedMessageId }) { selectedMessageId = messages.first?.id }
     }
 
     private func replace(_ message: MessageSummary) {

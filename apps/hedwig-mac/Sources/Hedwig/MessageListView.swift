@@ -71,7 +71,10 @@ struct MessageListView: View {
     }
 
     private var subtitle: String {
-        if model.isSearching { return model.messages.count == 1 ? "1 resultaat" : "\(model.messages.count) resultaten" }
+        if model.isSearching {
+            let total = max(model.searchTotal, model.messages.count)
+            return total == 1 ? "1 resultaat" : "\(total.formatted()) resultaten"
+        }
         if let filter = model.filterDescription { return filter }
         let (total, unread) = model.placeCount
         let count = MailFormat().count(total: total, unread: unread)
@@ -79,44 +82,151 @@ struct MessageListView: View {
     }
 }
 
-/// Above search results: where it looks, and what the bot searched for or how to ask it.
+/// Above search results: where it looks, what the bot made of the question as chips,
+/// its answer, and lenses to narrow by.
 private struct SearchHeader: View {
     @Environment(AppModel.self) private var model
     let place: String
 
     var body: some View {
         @Bindable var model = model
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
                 if model.placeScope != .everywhere {
                     Picker("Zoek in", selection: $model.searchEverywhere) {
                         Text(place).tag(false)
-                        Text("Alle mailboxen").tag(true)
+                        Text("Overal").tag(true)
                     }
                     .pickerStyle(.segmented)
                     .labelsHidden()
-                }
-                Toggle("Toon ook codes", isOn: $model.searchIncludesLow)
-                    .help("Inlogcodes, wachtwoordherstel en andere mail met lage prioriteit")
                     .fixedSize()
+                }
+                Spacer(minLength: 0)
+                Picker("Volgorde", selection: $model.searchSort) {
+                    Text("Beste").tag(SearchSort.best)
+                    Text("Nieuwste").tag(SearchSort.newest)
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .fixedSize()
+                .help("Beste treffers eerst, of de nieuwste mail eerst")
+                Menu {
+                    Toggle("Toon ook codes", isOn: $model.searchIncludesLow)
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                }
+                .menuStyle(.borderlessButton)
+                .menuIndicator(.hidden)
+                .fixedSize()
+                .help("Inlogcodes, wachtwoordherstel en andere mail met lage prioriteit")
             }
-            HStack(spacing: 6) {
-                if model.aiSearching {
-                    ProgressView().controlSize(.small)
-                    Text("Hedwig zoekt op betekenis…")
-                } else if let explanation = model.searchExplanation {
-                    Image(systemName: "sparkles")
-                    Text(explanation)
-                } else {
-                    Image(systemName: "sparkles")
-                    Text("Druk op ↩ om op betekenis te zoeken")
+            AIRow()
+            if let answer = model.searchAnswer { AnswerCard(answer: answer) }
+            let lenses = model.searchLenses
+            if !lenses.isEmpty {
+                FlowLayout(spacing: 5) {
+                    ForEach(lenses) { lens in
+                        Button { model.addSearchToken(lens.token) } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: lens.token.systemImage).imageScale(.small)
+                                Text(lens.token.label).lineLimit(1)
+                                Text("\(lens.count)").foregroundStyle(.secondary)
+                            }
+                            .font(.caption)
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 2)
+                            .overlay(Capsule().strokeBorder(.separator))
+                            .contentShape(Capsule())
+                        }
+                        .buttonStyle(.plain)
+                        .help("Verfijn tot \(lens.token.label)")
+                    }
                 }
             }
-            .font(.callout)
-            .foregroundStyle(.secondary)
         }
         .padding(.vertical, 2)
         .selectionDisabled()
+    }
+}
+
+/// What the bot is doing, or what it searched for as chips that can be dropped.
+private struct AIRow: View {
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        if model.aiSearching {
+            HStack(spacing: 6) {
+                ProgressView().controlSize(.small)
+                Text("Kreacher bedenkt waar hij moet zoeken…")
+            }
+            .font(.callout)
+            .foregroundStyle(.secondary)
+        } else if !model.planTokens.isEmpty || model.searchExplanation != nil {
+            VStack(alignment: .leading, spacing: 5) {
+                FlowLayout(spacing: 5) {
+                    Image(systemName: "sparkles").foregroundStyle(Color.accentColor)
+                    ForEach(model.planTokens) { token in
+                        Button { model.removePlanToken(token) } label: {
+                            HStack(spacing: 3) {
+                                Image(systemName: token.systemImage).imageScale(.small)
+                                Text(token.label).lineLimit(1)
+                                Image(systemName: "xmark").imageScale(.small).foregroundStyle(.secondary)
+                            }
+                            .font(.caption)
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 2)
+                            .background(Capsule().fill(Color.accentColor.opacity(0.14)))
+                            .contentShape(Capsule())
+                        }
+                        .buttonStyle(.plain)
+                        .help("Zoek zonder \(token.label)")
+                    }
+                }
+                if model.searchRanking {
+                    HStack(spacing: 6) {
+                        ProgressView().controlSize(.mini)
+                        Text("Kreacher leest de beste resultaten…")
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                }
+            }
+        } else {
+            Label("Druk op ↩ om te zoeken op betekenis, of stel een vraag", systemImage: "sparkles")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+        }
+    }
+}
+
+/// The bot's answer to the question, with the mail it comes from one click away.
+private struct AnswerCard: View {
+    @Environment(AppModel.self) private var model
+    let answer: SearchAnswer
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(answer.text)
+                .font(.body.weight(.semibold))
+                .fixedSize(horizontal: false, vertical: true)
+                .textSelection(.enabled)
+            ForEach(sources, id: \.id) { source in
+                Button { model.selectedMessageId = source.id } label: {
+                    Label("\(source.from.display) · \(shortDate(source.receivedAt))", systemImage: "arrow.turn.down.right")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 10).fill(Color.accentColor.opacity(0.12)))
+    }
+
+    private var sources: [MessageSummary] {
+        answer.messageIds.compactMap { id in model.messages.first { $0.id == id } }
     }
 }
 
@@ -150,10 +260,17 @@ struct MessageRow: View {
                     .foregroundStyle(.secondary)
                 }
                 Text(message.subject).font(.subheadline).lineLimit(1)
-                Text(message.facts?.summary ?? message.snippet.split(whereSeparator: \.isNewline).joined(separator: " "))
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
+                if let hit = message.hit, hit.field == "body" {
+                    Text(hit.marked)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                } else {
+                    Text(message.facts?.summary ?? message.snippet.split(whereSeparator: \.isNewline).joined(separator: " "))
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                }
                 if message.flagged || !message.labels.isEmpty || showMailbox {
                     HStack(spacing: 5) {
                         if message.flagged { Tag(text: "Antwoord nodig", color: .orange) }
