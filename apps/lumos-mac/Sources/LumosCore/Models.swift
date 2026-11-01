@@ -128,7 +128,8 @@ public struct Score: Codable, Sendable, Hashable {
     public var votesText: String? {
         guard let votes else { return nil }
         let unit = scale == "percent" && label == "Critics" ? "recensies" : "stemmen"
-        return "\(votes.formatted())\(votesAtLeast ? "+" : "") \(unit)"
+        // Dutch like the rest of the text, whatever the Mac's region (CI runs in English).
+        return "\(votes.formatted(.number.locale(Locale(identifier: "nl_NL"))))\(votesAtLeast ? "+" : "") \(unit)"
     }
 }
 
