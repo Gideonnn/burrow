@@ -19,6 +19,7 @@
 - [Deploy to Dobby](topics/deploy.md): systemd user service, Cloudflare Tunnel and Access, backups and the first setup.
 - [Routines and tasks](topics/routines.md): task kinds, queues, priorities, runners on server and Macs, standing work, triggers and approval.
 - [Mail facts](topics/mail-facts.md): rules for secrets and codes, templates on Haiku, Winky on the Mac, `burrowctl runner`, facts-only keys.
+- [Sharing mail](topics/sharing.md): one mail shared with the household, who may read and find it, and Winky's suggestions of household mail.
 - [Outings](topics/outings.md): the household's concerts and parties, read from order mails, with tickets, a checklist and search words.
 
 ## Diary

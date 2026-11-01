@@ -2,6 +2,7 @@
 
 Newest first.
 
+- [2026-11-02 A standing kind that is on by default joins every claim](2026-11-02-a-default-on-standing-kind-joins-every-claim.md): `hedwig.share` landed in the facts tests' `*` claims and the runner list; tests claim their kind by name, progress stays null until there is work, suggestions wait for the facts; the secrets hook refuses `this.db` in Bash.
 - [2026-10-28 Recordings over about 80 MB never uploaded](2026-10-28-long-recordings-never-uploaded.md): the chunk reply lacked the `id` that BurrowKit decodes, each chunk counted as a failure and the fifth threw; the reply now carries `id`.
 - [2026-10-27 Pull to refresh on the Mac has no native control](2026-10-27-pull-to-refresh-on-the-mac.md): `.refreshable` shows nothing on macOS and SwiftUI reports no scroll phase for a `List`; BurrowUI's `pullToRefresh` reads the fingers and the overscroll in AppKit.
 - [2026-10-27 A revoked Gmail login broke the mail view](2026-10-27-a-revoked-gmail-login-broke-the-mail-view.md): a failed mark-as-read aborted opening mail; the refusal is now a mark per mailbox, a notice in Hedwig and a login link for the owner.
