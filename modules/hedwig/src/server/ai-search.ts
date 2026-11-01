@@ -390,7 +390,9 @@ export class SearchService {
           });
         }
       }
-      return { ids: fuse(lists), total: Math.max(strict.total, loose.total) };
+      // Mail that matches every group is what the person asked for; any group
+      // alone counts only when nothing does.
+      return { ids: fuse(lists), total: strict.total || loose.total };
     };
     let found = passes(base);
     // A wrong person or a period remembered wrong should not leave nothing.
@@ -472,16 +474,17 @@ export class SearchService {
   }
 }
 
-// One candidate for the bot: no addresses, no body beyond the summary or the
-// first lines, and nothing at all of a sensitive message but who and when.
+// One candidate for the bot: no addresses, and only the summary or the first
+// lines. Of a sensitive message only the summary goes, with secrets and
+// personal numbers replaced, as everywhere a cloud bot reads mail; never its body.
 function candidateLine(r: SearchResult, n: number): string {
   const who =
     r.folder === 'sent'
       ? `aan ${r.to.map((a) => a.name || a.email).join(', ')}`
       : `van ${r.from.name || r.from.email}`;
   const date = r.receivedAt.slice(0, 10);
-  if (r.facts?.sensitive)
-    return `${n}. ${date} ${who} | ${redact(r.subject)} | (gevoelige mail, inhoud weggelaten)`;
-  const text = r.facts?.summary ?? r.snippet;
+  const text =
+    r.facts?.summary ??
+    (r.facts?.sensitive ? '(gevoelige mail, geen samenvatting)' : r.snippet);
   return `${n}. ${date} ${who} | ${redact(r.subject)} | ${redact(text).replace(/\s+/g, ' ').slice(0, 300)}`;
 }

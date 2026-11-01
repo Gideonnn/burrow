@@ -8,7 +8,6 @@ struct MessageListView: View {
     var body: some View {
         @Bindable var model = model
         List(selection: $model.selectedMessageId) {
-            if model.isSearching { SearchHeader(place: placeTitle) }
             ForEach(model.messages) { message in
                 VStack(alignment: .leading, spacing: 6) {
                     MessageRow(message: message, showMailbox: model.isSearching && model.searchScope.mailboxId == nil)
@@ -23,6 +22,14 @@ struct MessageListView: View {
             VStack(spacing: 0) {
                 ForEach(model.mailboxesToReconnect) { box in
                     ReconnectNotice(mailbox: box)
+                    Divider()
+                }
+                // Above the list rather than in it: a list row keeps its first height,
+                // and the answer arrives seconds after the results.
+                if model.isSearching {
+                    SearchHeader(place: placeTitle)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
                     Divider()
                 }
             }
@@ -102,23 +109,20 @@ private struct SearchHeader: View {
                     .fixedSize()
                 }
                 Spacer(minLength: 0)
-                Picker("Volgorde", selection: $model.searchSort) {
-                    Text("Beste").tag(SearchSort.best)
-                    Text("Nieuwste").tag(SearchSort.newest)
-                }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-                .fixedSize()
-                .help("Beste treffers eerst, of de nieuwste mail eerst")
                 Menu {
+                    Picker("Volgorde", selection: $model.searchSort) {
+                        Text("Beste treffers eerst").tag(SearchSort.best)
+                        Text("Nieuwste eerst").tag(SearchSort.newest)
+                    }
+                    .pickerStyle(.inline)
+                    Divider()
                     Toggle("Toon ook codes", isOn: $model.searchIncludesLow)
                 } label: {
-                    Image(systemName: "ellipsis.circle")
+                    Text(model.searchSort == .best ? "Beste" : "Nieuwste")
                 }
                 .menuStyle(.borderlessButton)
-                .menuIndicator(.hidden)
                 .fixedSize()
-                .help("Inlogcodes, wachtwoordherstel en andere mail met lage prioriteit")
+                .help("Volgorde, en of inlogcodes en wachtwoordherstel meedoen")
             }
             AIRow()
             if let answer = model.searchAnswer { AnswerCard(answer: answer) }
@@ -144,8 +148,6 @@ private struct SearchHeader: View {
                 }
             }
         }
-        .padding(.vertical, 2)
-        .selectionDisabled()
     }
 }
 
@@ -192,7 +194,7 @@ private struct AIRow: View {
                 }
             }
         } else {
-            Label("Druk op ↩ om te zoeken op betekenis, of stel een vraag", systemImage: "sparkles")
+            Label("↩ zoekt op betekenis of beantwoordt je vraag", systemImage: "sparkles")
                 .font(.callout)
                 .foregroundStyle(.secondary)
         }

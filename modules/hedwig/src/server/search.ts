@@ -283,10 +283,16 @@ export function load(
       toSummary(row.m, row.f ? toFacts(row.f) : null),
       query,
     );
-    const hit = query.factsOnly
-      ? hitIn('facts', row.f?.summary ?? '', terms)
-      : (hitIn('body', row.m.bodyText ?? '', terms) ??
-        hitIn('facts', row.f?.summary ?? '', terms));
+    // When the subject and sender already show every word, a piece of the body
+    // (often the signature) says less than the summary the list shows anyway.
+    const shown = tokens(`${row.m.subject} ${row.m.from.name ?? ''}`);
+    const seen = terms.every((t) => shown.some((w) => w.startsWith(t)));
+    const hit = seen
+      ? null
+      : query.factsOnly
+        ? hitIn('facts', row.f?.summary ?? '', terms)
+        : (hitIn('body', row.m.bodyText ?? '', terms) ??
+          hitIn('facts', row.f?.summary ?? '', terms));
     return [{ ...summary, hit }];
   });
 }

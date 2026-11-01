@@ -68,7 +68,7 @@ private struct SuggestionRow: View {
             Label(suggestion.token.label, systemImage: suggestion.token.systemImage)
             if let detail = suggestion.detail {
                 Spacer()
-                Text(detail).foregroundStyle(.secondary)
+                Text(detail).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
             }
         }
     }

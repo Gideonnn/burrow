@@ -116,6 +116,15 @@ describe('word search on the index', () => {
     expect(hit!.hit!.text).not.toContain('\n');
   });
 
+  it('shows no piece of the body when the subject already shows the words', async () => {
+    const s = await setup();
+    const found = (await search(s, 'q=factuur')).results;
+    const inSubject = found.find((m) => m.subject === 'Factuur 2026-031');
+    const inBody = found.find((m) => m.subject === 'Etentje zaterdag?');
+    expect(inSubject!.hit).toBeNull();
+    expect(inBody!.hit!.text).toContain('factuur van de catering');
+  });
+
   it('counts every match, not only the page it returns', async () => {
     const s = await setup();
     const found = await search(s, 'q=de&limit=1');
@@ -354,6 +363,46 @@ describe('search by meaning, step by step', () => {
       /<candidates>[\s\S]*Rooster les 4[\s\S]*<\/candidates>/,
     );
     expect(prompt).not.toContain('bio@hogeschool.example');
+  });
+
+  it('gives the bot only the summary of a sensitive mail, without secrets, never its body', async () => {
+    const s = await setup();
+    s.provider(s.home.id).deliver({
+      subject: 'Uw nota van oktober',
+      from: { name: 'Tandartspraktijk De Kies', email: 'balie@dekies.example' },
+      bodyText:
+        'Maak het bedrag over naar NL91ABNA0417164300 onder vermelding van uw kenmerk.',
+      receivedAt: new Date('2026-10-12T08:00:00Z'),
+    });
+    await s.mail.sync(s.home.id);
+    const id = s.id('Uw nota van oktober');
+    s.db
+      .update(messageFacts)
+      .set({
+        summary: 'Nota van € 64,20, over te maken naar NL91ABNA0417164300',
+      })
+      .where(eq(messageFacts.messageId, id))
+      .run();
+    s.decisions.push({
+      relevant: [1],
+      answer: 'Je betaalde € 64,20.',
+      answerFrom: [1],
+    });
+    const res = await s.call(s.token, '/api/search/ai/rank', {
+      method: 'POST',
+      body: JSON.stringify({
+        question: 'hoeveel was de tandarts?',
+        messageIds: [id, s.id('Uw nota van maart')],
+        answer: true,
+      }),
+    });
+    expect(rankResponse.parse(await res.json()).answer?.text).toBe(
+      'Je betaalde € 64,20.',
+    );
+    const prompt = s.agentRequests.at(-1)!.prompt;
+    expect(prompt).toContain('Nota van € 64,20, over te maken naar [iban]');
+    expect(prompt).not.toContain('NL91ABNA0417164300');
+    expect(prompt).not.toContain('onder vermelding');
   });
 
   it('never lets the bot read mail outside the key, and skips it when the person said no', async () => {
