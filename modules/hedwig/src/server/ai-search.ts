@@ -416,6 +416,7 @@ export class SearchService {
         factsOnly: options.factsOnly,
       }),
       plan: original,
+      loose: false,
       total: Math.max(found.total, found.ids.length),
       answer: null,
     };

@@ -51,7 +51,7 @@ import {
 } from './mail-service';
 import { findPeople } from './people';
 import { mailboxes, messages } from './schema';
-import { inScope, searchMessages, typedQuery } from './search';
+import { inScope, searchTyped, typedQuery } from './search';
 import { SharingError, type SharingService } from './sharing';
 import type { TriageService } from './triage';
 
@@ -275,7 +275,7 @@ export function hedwigRoutes({
             ...scope
           } = c.req.valid('query');
           const boxes = searchedMailboxes(c.var.access, scope);
-          const found = searchMessages(
+          const found = searchTyped(
             c.var.db,
             boxes,
             inScope(
@@ -302,6 +302,7 @@ export function hedwigRoutes({
             wantsAnswer: false,
             answer: null,
             plan: null,
+            loose: found.loose,
             total: found.total,
             results: sharing.decorate(c.var.access.personId, found.results),
           });

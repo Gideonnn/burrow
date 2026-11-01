@@ -321,6 +321,9 @@ export const searchResponse = z.object({
   wantsAnswer: z.boolean().default(false),
   // The bot's plan, to send back with `without` when a token is removed.
   plan: searchPlan.nullable().default(null),
+  // No mail had every word, so these have the most of them: a question
+  // typed before pressing Enter still shows something.
+  loose: z.boolean().default(false),
   // A short answer to the question from the best results, with the ids it
   // rests on; null when the question asks for mail, not an answer.
   answer: z

@@ -194,7 +194,7 @@ private struct AIRow: View {
                 }
             }
         } else {
-            Label("↩ zoekt op betekenis of beantwoordt je vraag", systemImage: "sparkles")
+            Label(model.searchLoose ? "Geen mail met al deze woorden; dit lijkt er het meest op. ↩ zoekt op betekenis." : "↩ zoekt op betekenis of beantwoordt je vraag", systemImage: "sparkles")
                 .font(.callout)
                 .foregroundStyle(.secondary)
         }

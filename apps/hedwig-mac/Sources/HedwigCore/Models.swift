@@ -327,6 +327,8 @@ public struct SearchResponse: Codable, Hashable, Sendable {
     public var tokens: [SearchToken]?
     public var wantsAnswer: Bool?
     public var plan: JSONValue?
+    /// No mail had every word; these have the most of them.
+    public var loose: Bool?
 }
 
 public struct MessageInsights: Codable, Hashable, Sendable {

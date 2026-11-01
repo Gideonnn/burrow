@@ -183,6 +183,23 @@ export function searchMessages(
   return { results: load(db, ids, query), total };
 }
 
+// Word search as typed: every word, or when no mail has all of three or
+// more words (a question, before Enter), the mail with the most of them.
+export function searchTyped(
+  db: Db,
+  mailboxIds: readonly string[],
+  query: SearchQuery,
+): SearchOutcome & { loose: boolean } {
+  const found = searchMessages(db, mailboxIds, query);
+  if (found.results.length || !query.matchAll || query.groups.length < 3) {
+    return { ...found, loose: false };
+  }
+  return {
+    ...searchMessages(db, mailboxIds, { ...query, matchAll: false }),
+    loose: true,
+  };
+}
+
 // The ids searchMessages would show, in its order, without loading them.
 export function matchingIds(
   db: Db,

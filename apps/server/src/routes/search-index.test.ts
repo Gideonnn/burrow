@@ -125,6 +125,17 @@ describe('word search on the index', () => {
     expect(inBody!.hit!.text).toContain('factuur van de catering');
   });
 
+  it('shows the mail with the most words when a typed question matches none whole', async () => {
+    const s = await setup();
+    const found = await search(
+      s,
+      'q=wanneer%20is%20het%20practicum%20van%20biologie',
+    );
+    expect(found.loose).toBe(true);
+    expect(found.results[0]!.subject).toBe('Rooster les 4');
+    expect((await search(s, 'q=practicum%20xyzzy')).results).toEqual([]);
+  });
+
   it('counts every match, not only the page it returns', async () => {
     const s = await setup();
     const found = await search(s, 'q=de&limit=1');

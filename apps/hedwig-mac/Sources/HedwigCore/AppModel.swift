@@ -80,6 +80,8 @@ public final class AppModel {
     public private(set) var searchRanking = false
     /// Every match on the server, beyond the list.
     public private(set) var searchTotal = 0
+    /// The word search found no mail with every word and shows the closest.
+    public private(set) var searchLoose = false
     public var searchSort: SearchSort = .best {
         didSet { if oldValue != searchSort { sortResults() } }
     }
@@ -639,6 +641,7 @@ public final class AppModel {
             let response = try await api.search(query, in: scope, filters: SearchFilters(tokens: tokens), includeLow: searchIncludesLow)
             guard !Task.isCancelled, query == searchQuery, tokens == searchTokens, scope == searchScope else { return }
             searchTotal = response.total ?? response.results.count
+            searchLoose = response.loose ?? false
             showResults(response.results)
         } catch {
             if !Task.isCancelled { report(error, quiet: true) }
@@ -740,6 +743,7 @@ public final class AppModel {
     }
 
     private func show(_ response: SearchResponse) {
+        searchLoose = false
         searchExplanation = response.explanation
         planTokens = response.tokens ?? []
         if let plan = response.plan, plan != .null { lastPlan = plan }
