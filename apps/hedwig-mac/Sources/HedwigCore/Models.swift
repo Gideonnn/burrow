@@ -111,6 +111,37 @@ public struct MessageSummary: Codable, Hashable, Identifiable, Sendable {
     public var hasAttachments: Bool
     // Optional so an older server still decodes.
     public var facts: MessageFacts?
+    public var share: MessageShare?
+    public var shareSuggestion: ShareSuggestionNote?
+}
+
+/// Who sees a message besides its owner; `by` is the owner when it is someone else's.
+public struct MessageShare: Codable, Hashable, Sendable {
+    public var by: String?
+    public var with: [String]
+
+    public init(by: String? = nil, with: [String] = []) {
+        self.by = by
+        self.with = with
+    }
+}
+
+/// Winky thinks the household should see this mail.
+public struct ShareSuggestionNote: Codable, Hashable, Sendable {
+    public var reason: String
+}
+
+public struct SharedResponse: Codable, Sendable {
+    public var withMe: [MessageSummary]
+    public var byMe: [MessageSummary]
+}
+
+public struct ShareSuggestionsResponse: Codable, Sendable {
+    public struct Suggestion: Codable, Sendable {
+        public var message: MessageSummary
+        public var reason: String
+    }
+    public var suggestions: [Suggestion]
 }
 
 /// How much mail one folder of a mailbox holds; the server leaves out empty folders.
@@ -144,6 +175,8 @@ public struct MessageDetail: Codable, Hashable, Identifiable, Sendable {
     public var bodyText: String?
     public var bodyHtml: String?
     public var facts: MessageFacts?
+    public var share: MessageShare?
+    public var shareSuggestion: ShareSuggestionNote?
 
     /// Remote images tell the sender the mail was opened; in Spam they stay off,
     /// with no offer, until the person says it is not spam.
@@ -153,7 +186,8 @@ public struct MessageDetail: Codable, Hashable, Identifiable, Sendable {
         MessageSummary(
             id: id, mailboxId: mailboxId, threadId: threadId, from: from, to: to, subject: subject,
             snippet: snippet, receivedAt: receivedAt, folder: folder, unread: unread, flagged: flagged,
-            labels: labels, hasAttachments: hasAttachments, facts: facts)
+            labels: labels, hasAttachments: hasAttachments, facts: facts, share: share,
+            shareSuggestion: shareSuggestion)
     }
 }
 

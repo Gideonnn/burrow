@@ -41,6 +41,12 @@ struct SidebarView: View {
                     CountedLabel(title: "Taken", icon: "checklist", count: model.tasksAwaitingReview)
                 }
                 .tag(SidebarItem.tasks)
+                NavigationLink(value: SidebarItem.shared) {
+                    CountedLabel(title: "Gedeeld", icon: "person.2", count: 0)
+                }
+                .tag(SidebarItem.shared)
+                // The reader's share button names the housemates.
+                .task(id: model.me?.person.id) { await model.loadPeople() }
             } header: {
                 SidebarSectionHeader("Overal")
             }
@@ -195,6 +201,7 @@ func placeName(_ place: SidebarItem) -> String {
     case .inbox: "Inbox"
     case .tasks: "Taken"
     case .outings: "Evenementen"
+    case .shared: "Gedeeld"
     }
 }
 
