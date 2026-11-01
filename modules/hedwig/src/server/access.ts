@@ -3,6 +3,7 @@ import type {
   AccessExtender,
   Db,
   RestrictionCheck,
+  Shares,
 } from '@burrow/platform';
 import { and, eq, inArray } from 'drizzle-orm';
 import { mailboxes } from './schema';
@@ -45,3 +46,20 @@ export const mailboxRestriction: RestrictionCheck = {
 
 export const canSeeMailbox = (access: Access, mailboxId: string) =>
   access.mailboxIds.includes(mailboxId);
+
+// Whether a key may be given messages shared with its person: not a
+// facts-only key, and not one narrowed to some mailboxes.
+export const readsShared = (access: Access) =>
+  !access.factsOnly && !access.restrictions.mailboxes;
+
+// The owner's keys, and the reading keys of everyone it is shared with.
+// Organizing stays with the owner: those routes check canSeeMailbox.
+export const canSeeMessage = (
+  access: Access,
+  row: { id: string; mailboxId: string },
+  shares: Shares,
+) =>
+  canSeeMailbox(access, row.mailboxId) ||
+  (readsShared(access) &&
+    access.rights.has('read') &&
+    shares.of('hedwig', row.id).includes(access.personId));

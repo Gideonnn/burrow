@@ -104,7 +104,7 @@ export function testHousehold({
           description: 'Reads sensitive mail locally.',
           model: 'ollama:gemma4:26b-a4b',
           agent: 'local',
-          skills: ['mail-facts'],
+          skills: ['mail-facts', 'household-share'],
           rights: ['read'],
           persona: 'You are Winky.',
         },
@@ -157,6 +157,14 @@ export function testHousehold({
           name: 'mail-facts',
           description: 'Indexes one message.',
           instructions: 'Index it.',
+        },
+      ],
+      [
+        'household-share',
+        {
+          name: 'household-share',
+          description: 'Finds household mail to share.',
+          instructions: 'Judge them.',
         },
       ],
       [
@@ -356,6 +364,7 @@ export function testHousehold({
     triage: hedwig.triage,
     insights: hedwig.insights,
     facts: hedwig.facts,
+    sharing: hedwig.sharing,
     outings: hedwig.outings,
     routines: platform.routines,
     workers: platform.workers,

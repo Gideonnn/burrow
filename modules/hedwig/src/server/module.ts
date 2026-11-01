@@ -22,6 +22,7 @@ import { mailboxColumns, hedwigRoutes } from './routes';
 import { connectRoutes } from './routes-connect';
 import { startBackfillLoop, startSyncLoop } from './scheduler';
 import { mailboxes } from './schema';
+import { SHARE_SETTING, SharingService } from './sharing';
 import { TriageService } from './triage';
 import { VectorIndex } from './vectors';
 
@@ -89,6 +90,22 @@ const settings: SettingDefinition[] = [
     personal: true,
     feature: false,
   },
+  {
+    key: SHARE_SETTING,
+    module: 'hedwig',
+    label: 'Huishoudmail delen',
+    description:
+      'Winky leest op je eigen Mac welke mail ook voor je huisgenoot is, zoals energie, huur, verzekeringen, het huis, vakanties en gezamenlijke afspraken. Hij stelt voor die te delen, of deelt hem zelf; delen kun je altijd terugdraaien. Werkmail, nieuwsbrieven, aanbiedingen en codes laat hij liggen.',
+    type: 'choice',
+    options: [
+      { value: 'off', label: 'Uit' },
+      { value: 'suggest', label: 'Winky stelt voor' },
+      { value: 'auto', label: 'Winky deelt zelf' },
+    ],
+    default: 'suggest',
+    personal: true,
+    feature: false,
+  },
 ];
 
 export type HedwigOptions = {
@@ -120,6 +137,11 @@ export function hedwigModule(platform: Platform, options: HedwigOptions) {
     mail,
     factsBot: options.factsBot ?? 'winky',
     templatesBot: options.bot,
+  });
+  const sharing = new SharingService({
+    platform,
+    mail,
+    bot: options.factsBot ?? 'winky',
   });
   const insights = new InsightsService({ platform, mail, bot: options.bot });
   const vectors = new VectorIndex(db);
@@ -182,6 +204,7 @@ export function hedwigModule(platform: Platform, options: HedwigOptions) {
     triage,
     insights,
     search,
+    sharing,
     onArrived,
   });
   api.route('/', outingRoutes(outings));
@@ -207,7 +230,7 @@ export function hedwigModule(platform: Platform, options: HedwigOptions) {
         : [],
     }),
     mcp: (server, access) => {
-      registerHedwigTools(server, access, { db, mail });
+      registerHedwigTools(server, access, { db, mail, sharing });
       registerOutingTools(server, access, outings);
     },
     subjects: [
@@ -265,7 +288,7 @@ export function hedwigModule(platform: Platform, options: HedwigOptions) {
         },
       },
     ],
-    taskKinds: facts.kinds(),
+    taskKinds: [...facts.kinds(), ...sharing.kinds()],
     triggers: [
       {
         kind: 'message',
@@ -303,7 +326,16 @@ export function hedwigModule(platform: Platform, options: HedwigOptions) {
     },
   };
 
-  return { module, mail, triage, insights, facts, outings, onArrived };
+  return {
+    module,
+    mail,
+    triage,
+    insights,
+    facts,
+    sharing,
+    outings,
+    onArrived,
+  };
 }
 
 function matches(

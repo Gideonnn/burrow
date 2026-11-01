@@ -16,6 +16,14 @@ export const address = z.object({
 });
 export type Address = z.infer<typeof address>;
 
+// Who sees a message besides its owner. `by` is the owner when the message
+// is someone else's, shared with the viewer.
+export const messageShare = z.object({
+  by: z.string().nullable(),
+  with: z.array(z.string()),
+});
+export type MessageShare = z.infer<typeof messageShare>;
+
 export const messageSummary = z.object({
   id: z.string(),
   mailboxId: z.string(),
@@ -32,6 +40,9 @@ export const messageSummary = z.object({
   hasAttachments: z.boolean(),
   // Null until the rules ran; a facts-only key gets an empty snippet.
   facts: messageFacts.nullable().default(null),
+  share: messageShare.default({ by: null, with: [] }),
+  // Winky thinks the household should see this; only its owner gets it.
+  shareSuggestion: z.object({ reason: z.string() }).nullable().default(null),
 });
 export type MessageSummary = z.infer<typeof messageSummary>;
 

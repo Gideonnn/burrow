@@ -20,6 +20,7 @@ import {
 import { findPeople } from './people';
 import { mailboxes } from './schema';
 import { searchMessages, typedQuery } from './search';
+import type { SharingService } from './sharing';
 
 // Operations an outside agent may perform. Trash and sending are left out on
 // purpose: an agent prepares, a person decides.
@@ -33,7 +34,7 @@ const agentOp = z.enum([
   'unflag',
 ]);
 
-type Deps = { db: Db; mail: MailService };
+type Deps = { db: Db; mail: MailService; sharing: SharingService };
 
 // Hedwig's tools on the per-key MCP server: every tool sees only the key's
 // mailboxes, and tools that need a right the key lacks are not registered at
@@ -41,7 +42,7 @@ type Deps = { db: Db; mail: MailService };
 export function registerHedwigTools(
   server: McpServer,
   access: Access,
-  { db, mail }: Deps,
+  { db, mail, sharing }: Deps,
 ) {
   const can = (right: string) => access.rights.has(right as never);
   const visible = (mailboxId: string) => access.mailboxIds.includes(mailboxId);
@@ -103,22 +104,21 @@ export function registerHedwigTools(
       }) => {
         if (mailboxId && !visible(mailboxId)) return refusal('unknown mailbox');
         const boxes = mailboxId ? [mailboxId] : access.mailboxIds;
-        return text(
-          searchMessages(db, boxes, {
-            ...typedQuery(db, boxes, query ?? '', {
-              after,
-              before,
-              categories,
-              unreadOnly,
-            }),
-            typing: false,
-            browse: true,
-            folder,
-            includeLow,
-            factsOnly: access.factsOnly,
-            limit: limit ?? 20,
-          }).results,
-        );
+        const found = searchMessages(db, boxes, {
+          ...typedQuery(db, boxes, query ?? '', {
+            after,
+            before,
+            categories,
+            unreadOnly,
+          }),
+          typing: false,
+          browse: true,
+          folder,
+          includeLow,
+          factsOnly: access.factsOnly,
+          limit: limit ?? 20,
+        });
+        return text(sharing.decorate(access.personId, found.results));
       },
     );
 

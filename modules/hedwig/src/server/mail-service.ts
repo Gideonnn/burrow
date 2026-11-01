@@ -335,6 +335,8 @@ export function toSummary(
     labels: row.labels,
     hasAttachments: row.hasAttachments,
     facts,
+    share: { by: null, with: [] },
+    shareSuggestion: null,
   };
 }
 

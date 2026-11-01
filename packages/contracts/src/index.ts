@@ -11,4 +11,5 @@ export * from './pensieve';
 export * from './routines';
 export * from './runners';
 export * from './settings';
+export * from './sharing';
 export * from './triage';
