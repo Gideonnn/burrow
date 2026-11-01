@@ -21,6 +21,7 @@ struct MessageDetailView: View {
                     VStack(alignment: .leading, spacing: 0) {
                         VStack(alignment: .leading, spacing: 12) {
                             MessageHeader(message: message)
+                            ShareBar(message: message)
                             if model.showsOutingCard { OutingCard() }
                             ReviewBar(message: message)
                             if let summary = model.insights?.summary {

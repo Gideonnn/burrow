@@ -17,6 +17,10 @@ import {
   type SearchScope,
   searchScope,
   sendRequest,
+  type SharedResponse,
+  shareDecisionRequest,
+  shareMessageRequest,
+  type ShareSuggestionsResponse,
   updateMailboxRequest,
 } from '@burrow/contracts';
 import {
@@ -31,7 +35,7 @@ import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import { z } from 'zod';
 import { GrantRevokedError } from '../oauth';
-import { canSeeMailbox } from './access';
+import { canSeeMailbox, canSeeMessage } from './access';
 import type { SearchService } from './ai-search';
 import { createDraft, deleteDraft, DraftError, listDrafts } from './drafts';
 import { factsFor, forKey, summaries } from './facts/store';
@@ -48,6 +52,7 @@ import {
 import { findPeople } from './people';
 import { mailboxes, messages } from './schema';
 import { inScope, searchMessages, typedQuery } from './search';
+import { SharingError, type SharingService } from './sharing';
 import type { TriageService } from './triage';
 
 const searchQuery = searchScope.merge(searchFilterParams).extend({
@@ -68,6 +73,29 @@ const searchedMailboxes = (access: Access, scope: SearchScope) => {
   if (!canSeeMailbox(access, scope.mailboxId)) throw notFound();
   return [scope.mailboxId];
 };
+// Mail shared with the person joins a search everywhere, never one narrowed
+// to a mailbox, a role or a folder.
+const sharedFor = (
+  sharing: SharingService,
+  access: Access,
+  scope: SearchScope,
+) =>
+  scope.mailboxId || scope.role || scope.folder
+    ? undefined
+    : sharing.sharedIds(access);
+
+const sharingCall = <T>(call: () => T): T => {
+  try {
+    return call();
+  } catch (error) {
+    if (error instanceof SharingError) {
+      if (error.message === 'not found') throw notFound();
+      throw new HTTPException(400, { message: error.message });
+    }
+    throw error;
+  }
+};
+
 const filterCondition = (criterion: MessageFilter, address: string) => {
   switch (criterion) {
     case 'unread':
@@ -99,6 +127,7 @@ export type HedwigRouteDeps = {
   triage: TriageService;
   insights: InsightsService;
   search: SearchService;
+  sharing: SharingService;
   // Called with the ids of messages that just arrived in an inbox.
   onArrived: (messageIds: string[]) => void;
 };
@@ -111,6 +140,7 @@ export function hedwigRoutes({
   triage,
   insights,
   search,
+  sharing,
   onArrived,
 }: HedwigRouteDeps) {
   return (
@@ -217,7 +247,12 @@ export function hedwigRoutes({
             .orderBy(desc(messages.receivedAt))
             .limit(limit)
             .all();
-          return c.json(summaries(c.var.db, rows, c.var.access));
+          return c.json(
+            sharing.decorate(
+              c.var.access.personId,
+              summaries(c.var.db, rows, c.var.access),
+            ),
+          );
         },
       )
       // Word search as you type, in the open place or every mailbox the key
@@ -256,6 +291,7 @@ export function hedwigRoutes({
                 limit,
                 includeLow,
                 factsOnly: c.var.access.factsOnly,
+                alsoIds: sharedFor(sharing, c.var.access, scope),
               },
               scope,
             ),
@@ -266,7 +302,8 @@ export function hedwigRoutes({
             wantsAnswer: false,
             answer: null,
             plan: null,
-            ...found,
+            total: found.total,
+            results: sharing.decorate(c.var.access.personId, found.results),
           });
         },
       )
@@ -303,22 +340,25 @@ export function hedwigRoutes({
             without,
             ...scope
           } = c.req.valid('json');
-          return c.json<SearchResponse>(
-            await search.ask(
-              c.var.access.personId,
-              searchedMailboxes(c.var.access, scope),
-              question,
-              scope,
-              {
-                includeLow,
-                factsOnly: c.var.access.factsOnly,
-                filters,
-                vector,
-                plan,
-                without,
-              },
-            ),
+          const found = await search.ask(
+            c.var.access.personId,
+            searchedMailboxes(c.var.access, scope),
+            question,
+            scope,
+            {
+              includeLow,
+              factsOnly: c.var.access.factsOnly,
+              filters,
+              vector,
+              plan,
+              without,
+              alsoIds: sharedFor(sharing, c.var.access, scope),
+            },
           );
+          return c.json<SearchResponse>({
+            ...found,
+            results: sharing.decorate(c.var.access.personId, found.results),
+          });
         },
       )
       // The second step: the bot reads the best results to order them and
@@ -331,14 +371,20 @@ export function hedwigRoutes({
           const { question, messageIds, answer } = c.req.valid('json');
           const visible = messageIds.filter((id) => {
             const row = mail.message(id);
-            return row && canSeeMailbox(c.var.access, row.mailboxId);
+            return (
+              row && canSeeMessage(c.var.access, row, c.var.platform.shares)
+            );
           });
-          return c.json<RankResponse>(
-            await search.rank(c.var.access.personId, question, visible, {
-              answer,
-              factsOnly: c.var.access.factsOnly,
-            }),
+          const ranked = await search.rank(
+            c.var.access.personId,
+            question,
+            visible,
+            { answer, factsOnly: c.var.access.factsOnly },
           );
+          return c.json<RankResponse>({
+            ...ranked,
+            results: sharing.decorate(c.var.access.personId, ranked.results),
+          });
         },
       )
       .post('/mailboxes/:mailboxId/sync', requireRight('read'), async (c) => {
@@ -350,21 +396,22 @@ export function hedwigRoutes({
       })
       .get('/messages/:id', requireRight('read'), (c) => {
         const row = mail.message(c.req.param('id'));
-        if (!row || !canSeeMailbox(c.var.access, row.mailboxId)) {
+        if (!row || !canSeeMessage(c.var.access, row, c.var.platform.shares)) {
           throw notFound();
         }
         contentAllowed(c.var.access);
-        return c.json(
+        const [detail] = sharing.decorate(c.var.access.personId, [
           toDetail(
             row,
             factsFor(c.var.db, [row.id]).get(row.id) ?? null,
             ownAddresses(c.var.db, row.mailboxId),
           ),
-        );
+        ]);
+        return c.json(detail);
       })
       .get('/messages/:id/attachments', requireRight('read'), async (c) => {
         const row = mail.message(c.req.param('id'));
-        if (!row || !canSeeMailbox(c.var.access, row.mailboxId)) {
+        if (!row || !canSeeMessage(c.var.access, row, c.var.platform.shares)) {
           throw notFound();
         }
         contentAllowed(c.var.access);
@@ -379,7 +426,10 @@ export function hedwigRoutes({
         requireRight('read'),
         async (c) => {
           const row = mail.message(c.req.param('id'));
-          if (!row || !canSeeMailbox(c.var.access, row.mailboxId)) {
+          if (
+            !row ||
+            !canSeeMessage(c.var.access, row, c.var.platform.shares)
+          ) {
             throw notFound();
           }
           contentAllowed(c.var.access);
@@ -409,11 +459,69 @@ export function hedwigRoutes({
             mail.apply(row.id, c.req.valid('json').ops),
           );
           const facts = factsFor(c.var.db, [row.id]).get(row.id) ?? null;
-          if (c.var.access.factsOnly) {
-            return c.json(forKey(toSummary(updated, facts), c.var.access));
-          }
+          const [view] = sharing.decorate(c.var.access.personId, [
+            c.var.access.factsOnly
+              ? forKey(toSummary(updated, facts), c.var.access)
+              : toDetail(updated, facts, ownAddresses(c.var.db, row.mailboxId)),
+          ]);
+          return c.json(view);
+        },
+      )
+      // The owner shares one message with someone of the household, who can
+      // then open and find it; organizing it stays with the owner.
+      .post(
+        '/messages/:id/share',
+        requireRight('organize'),
+        zValidator('json', shareMessageRequest),
+        (c) => {
+          contentAllowed(c.var.access);
           return c.json(
-            toDetail(updated, facts, ownAddresses(c.var.db, row.mailboxId)),
+            sharingCall(() =>
+              sharing.share(
+                c.var.access,
+                c.req.param('id'),
+                c.req.valid('json').personId,
+              ),
+            ),
+          );
+        },
+      )
+      .delete('/messages/:id/share/:personId', requireRight('organize'), (c) =>
+        c.json(
+          sharingCall(() =>
+            sharing.unshare(
+              c.var.access,
+              c.req.param('id'),
+              c.req.param('personId'),
+            ),
+          ),
+        ),
+      )
+      .get('/shared', requireRight('read'), (c) =>
+        c.json<SharedResponse>(sharing.shared(c.var.access)),
+      )
+      // Household mail Winky thinks the person may want to share.
+      .get('/share/suggestions', requireRight('read'), (c) =>
+        c.json<ShareSuggestionsResponse>({
+          suggestions: sharing.suggestions(c.var.access),
+        }),
+      )
+      .post(
+        '/share/suggestions/:messageId',
+        requireRight('organize'),
+        zValidator('json', shareDecisionRequest),
+        (c) => {
+          contentAllowed(c.var.access);
+          const { decision, always } = c.req.valid('json');
+          return c.json(
+            sharingCall(() =>
+              sharing.decide(
+                c.var.access,
+                c.req.param('messageId'),
+                decision,
+                always,
+              ),
+            ),
           );
         },
       )

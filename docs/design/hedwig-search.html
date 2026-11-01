@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="color-scheme" content="light dark" />
+<title>Hedwig · zoeken · vier ontwerpen</title>
+<style>
+/* Tokens from burrow-design-system.html (v2). */
+:root, [data-theme="light"] {
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --bg: #F4F1EC; --surface: #FFFFFF; --surface-2: #F8F6F2; --sidebar: #ECE8E1;
+  --line: #E2DDD5; --line-strong: #CFC9BF; --text: #1F1C18; --text-2: #6B655D; --text-3: #857E74;
+  --sel: #E4DFD6; --primary: #A24E1D; --primary-tint: rgba(162,78,29,.12);
+  --hedwig: #4E6E9E; --hedwig-tint: rgba(78,110,158,.13); --gideon: #3B4A6B; --eva: #8A4FA3; --eva-tint: rgba(138,79,163,.13);
+  --success: #2A7549; --success-tint: rgba(42,117,73,.12); --warning: #9A5B00; --warning-tint: rgba(154,91,0,.12);
+  --mark: rgba(240,178,74,.38);
+  --shadow-2: 0 6px 20px rgba(31,28,24,.14), 0 0 0 1px rgba(31,28,24,.06);
+  --shadow-3: 0 24px 70px rgba(31,28,24,.22), 0 0 0 1px rgba(31,28,24,.08);
+}
+[data-theme="dark"] {
+  --bg: #1C1A17; --surface: #242120; --surface-2: #2B2825; --sidebar: #2B2825;
+  --line: #35312D; --line-strong: #4A453F; --text: #F2EEE8; --text-2: #A39C92; --text-3: #7C756B;
+  --sel: #3A3632; --primary: #F0956A; --primary-tint: rgba(240,149,106,.16);
+  --hedwig: #8FAEDB; --hedwig-tint: rgba(143,174,219,.16); --eva: #C792DC; --eva-tint: rgba(199,146,220,.16);
+  --success: #5FCB85; --success-tint: rgba(95,203,133,.16); --warning: #F0B24A; --warning-tint: rgba(240,178,74,.16);
+  --mark: rgba(240,178,74,.32);
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { color-scheme: dark; } }
+* { box-sizing: border-box; }
+body { margin: 0; font: 14px/1.5 var(--font); background: var(--bg); color: var(--text); }
+main { max-width: 1180px; margin: 0 auto; padding: 48px 28px 120px; }
+h1 { font-size: 34px; letter-spacing: -.02em; margin: 0 0 6px; }
+h2 { font-size: 24px; letter-spacing: -.01em; margin: 72px 0 6px; }
+h3 { font-size: 17px; margin: 0 0 4px; }
+p.lead { font-size: 17px; color: var(--text-2); max-width: 760px; margin: 0; }
+.sub { color: var(--text-2); max-width: 760px; margin: 0 0 24px; }
+.theme { position: fixed; right: 18px; top: 14px; display: flex; gap: 6px; z-index: 9; }
+.theme button, .tabs button { font: inherit; border: 1px solid var(--line-strong); background: var(--surface); color: var(--text); border-radius: 999px; padding: 4px 12px; cursor: pointer; }
+.tabs { display: flex; gap: 8px; margin: 18px 0; flex-wrap: wrap; }
+.tabs button[aria-pressed="true"] { background: var(--primary); border-color: var(--primary); color: #fff; }
+
+/* Principles */
+.principles { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; margin-top: 22px; }
+.principle { background: var(--surface); border-radius: 14px; padding: 16px 18px; box-shadow: 0 0 0 1px var(--line); }
+.principle .n { font-weight: 700; color: var(--primary); font-size: 13px; }
+.principle h3 { margin-top: 2px; }
+.principle p { margin: 4px 0 0; color: var(--text-2); }
+
+/* Numbers */
+.numbers { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 14px; margin-top: 18px; }
+.num { background: var(--surface); border-radius: 14px; padding: 16px 18px; box-shadow: 0 0 0 1px var(--line); }
+.num .big { font-size: 30px; font-weight: 700; letter-spacing: -.02em; }
+.num .was { color: var(--text-3); text-decoration: line-through; margin-right: 8px; font-size: 18px; }
+.num p { margin: 2px 0 0; color: var(--text-2); }
+.bars { display: grid; gap: 6px; margin-top: 10px; }
+.bar { display: grid; grid-template-columns: 150px 1fr 48px; align-items: center; gap: 8px; font-size: 12px; color: var(--text-2); }
+.bar i { display: block; height: 10px; border-radius: 5px; background: var(--line-strong); }
+.bar i.new { background: var(--primary); }
+
+/* The window */
+.design { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 22px; align-items: start; margin-top: 18px; }
+@media (max-width: 1000px) { .design { grid-template-columns: 1fr; } }
+.window { background: var(--surface); border-radius: 12px; box-shadow: var(--shadow-3); overflow: hidden; min-width: 0; }
+.titlebar { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--sidebar); border-bottom: 1px solid var(--line); }
+.lights { display: flex; gap: 6px; } .lights i { width: 11px; height: 11px; border-radius: 50%; background: #ED6A5E; } .lights i:nth-child(2) { background: #F5BF4F; } .lights i:nth-child(3) { background: #61C554; }
+.field { flex: 1; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; min-height: 32px; padding: 4px 10px; border-radius: 8px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--line-strong); }
+.field.focus { box-shadow: inset 0 0 0 2px var(--hedwig); }
+.field .glass { color: var(--text-3); }
+.field .typed { color: var(--text); }
+.field .caret { display: inline-block; width: 1px; height: 16px; background: var(--hedwig); animation: blink 1s steps(1) infinite; vertical-align: middle; }
+@keyframes blink { 50% { opacity: 0; } }
+.chip { display: inline-flex; align-items: center; gap: 5px; padding: 1px 8px 1px 4px; border-radius: 999px; font-size: 12.5px; background: var(--hedwig-tint); color: var(--hedwig); white-space: nowrap; }
+.chip .av { width: 16px; height: 16px; border-radius: 50%; background: var(--hedwig); color: #fff; font-size: 9px; display: grid; place-items: center; font-weight: 700; }
+.chip.ai { background: var(--primary-tint); color: var(--primary); }
+.chip.eva { background: var(--eva-tint); color: var(--eva); }
+.chip.ok { background: var(--success-tint); color: var(--success); }
+.chip .x { opacity: .55; margin-left: 2px; }
+.body { display: grid; grid-template-columns: 300px 1fr; min-height: 420px; }
+.list { border-right: 1px solid var(--line); background: var(--surface); position: relative; }
+.reader { padding: 18px 22px; background: var(--surface-2); }
+.reader h4 { margin: 0 0 2px; font-size: 16px; }
+.reader .meta { color: var(--text-2); font-size: 12px; margin-bottom: 12px; }
+.reader p { margin: 0 0 10px; color: var(--text-2); }
+.row { padding: 9px 14px 10px 26px; border-bottom: 1px solid var(--line); position: relative; }
+.row.sel { background: var(--sel); }
+.row .who { font-weight: 600; display: flex; justify-content: space-between; gap: 8px; }
+.row .who span { font-weight: 400; color: var(--text-3); font-size: 12px; }
+.row .subj { font-size: 12.5px; }
+.row .hit { font-size: 12px; color: var(--text-2); }
+.row .hit mark { background: var(--mark); color: inherit; border-radius: 3px; padding: 0 1px; }
+.row .dot { position: absolute; left: 10px; top: 15px; width: 7px; height: 7px; border-radius: 50%; background: var(--hedwig); }
+.section { font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--text-3); padding: 10px 14px 4px; display: flex; justify-content: space-between; }
+.head { padding: 10px 14px; border-bottom: 1px solid var(--line); display: grid; gap: 8px; }
+.head .what { font-size: 12.5px; color: var(--text-2); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.sort { display: inline-flex; border-radius: 6px; box-shadow: inset 0 0 0 1px var(--line-strong); overflow: hidden; font-size: 11.5px; }
+.sort span { padding: 1px 8px; } .sort span.on { background: var(--sel); font-weight: 600; }
+.answer { margin: 10px 12px; padding: 12px 14px; border-radius: 12px; background: var(--primary-tint); }
+.answer .q { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--primary); }
+.answer .a { font-size: 15px; font-weight: 600; margin: 3px 0 6px; }
+.answer .src { font-size: 12px; color: var(--text-2); }
+.popover { position: absolute; left: 14px; right: 14px; top: 4px; background: var(--surface); border-radius: 10px; box-shadow: var(--shadow-2); padding: 6px; z-index: 2; }
+.popover .grp { font-size: 11px; color: var(--text-3); padding: 4px 8px 2px; font-weight: 600; }
+.sug { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px; font-size: 13px; }
+.sug.on { background: var(--hedwig); color: #fff; }
+.sug.on small { color: rgba(255,255,255,.8); }
+.sug .av { width: 22px; height: 22px; border-radius: 50%; background: var(--gideon); color: #fff; font-size: 10px; font-weight: 700; display: grid; place-items: center; flex: none; }
+.sug small { color: var(--text-3); margin-left: auto; }
+.lenses { display: flex; gap: 6px; flex-wrap: wrap; padding: 8px 14px; border-bottom: 1px solid var(--line); }
+.lens { font-size: 12px; padding: 2px 9px; border-radius: 999px; box-shadow: inset 0 0 0 1px var(--line-strong); color: var(--text-2); background: var(--surface); }
+.lens b { color: var(--text); font-weight: 600; }
+.hist { display: flex; align-items: flex-end; gap: 3px; height: 46px; padding: 6px 14px 2px; }
+.hist i { flex: 1; background: var(--hedwig-tint); border-radius: 2px 2px 0 0; }
+.hist i.on { background: var(--hedwig); }
+.histlabels { display: flex; justify-content: space-between; padding: 0 14px 8px; font-size: 10.5px; color: var(--text-3); border-bottom: 1px solid var(--line); }
+.thread { padding: 14px 16px; display: grid; gap: 10px; }
+.bubble { max-width: 88%; padding: 9px 12px; border-radius: 14px; font-size: 13px; }
+.bubble.me { justify-self: end; background: var(--hedwig); color: #fff; border-bottom-right-radius: 4px; }
+.bubble.bot { background: var(--surface-2); box-shadow: 0 0 0 1px var(--line); border-bottom-left-radius: 4px; }
+.bubble .cite { display: block; margin-top: 6px; font-size: 11.5px; color: var(--text-2); }
+.card { padding: 16px; display: grid; gap: 12px; }
+.person { display: flex; gap: 12px; align-items: center; }
+.person .big { width: 46px; height: 46px; border-radius: 50%; background: var(--gideon); color: #fff; display: grid; place-items: center; font-weight: 700; font-size: 17px; }
+.stat { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.stat div { background: var(--surface-2); border-radius: 10px; padding: 8px 10px; font-size: 12px; color: var(--text-2); }
+.stat b { display: block; color: var(--text); font-size: 16px; }
+.notes { display: grid; gap: 12px; }
+.notes .box { background: var(--surface); border-radius: 14px; padding: 14px 16px; box-shadow: 0 0 0 1px var(--line); }
+.notes .box h3 { font-size: 14px; }
+.notes ul { margin: 6px 0 0; padding-left: 18px; color: var(--text-2); }
+.notes li { margin: 3px 0; }
+.score { display: flex; gap: 4px; align-items: center; font-size: 12px; color: var(--text-2); }
+.score i { width: 9px; height: 9px; border-radius: 50%; background: var(--line-strong); } .score i.on { background: var(--primary); }
+.verdict { margin-top: 18px; padding: 18px 20px; border-radius: 14px; background: var(--primary-tint); }
+.verdict h3 { color: var(--primary); }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin-top: 18px; }
+@media (max-width: 900px) { .two { grid-template-columns: 1fr; } }
+.flow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 16px; }
+@media (max-width: 900px) { .flow { grid-template-columns: 1fr 1fr; } }
+.step { background: var(--surface); border-radius: 12px; padding: 12px 14px; box-shadow: 0 0 0 1px var(--line); font-size: 13px; }
+.step b { display: block; font-size: 12px; color: var(--primary); }
+.step .ms { color: var(--text-3); font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="theme"><button onclick="document.documentElement.dataset.theme='light'">Licht</button><button onclick="document.documentElement.dataset.theme='dark'">Donker</button></div>
+<main>
+<h1>Hedwig · zoeken</h1>
+<p class="lead">Een goede zoekfunctie is een van de redenen voor een eigen mailprogramma. Vier ontwerpen, gebouwd op dezelfde zeven principes, en welke we bouwen. Alle namen en mails hieronder zijn verzonnen.</p>
+
+<h2>Wat er nu mis is</h2>
+<p class="sub">Gemeten op Dobby tegen de echte 51.000 mails, met 160 vragen die Haiku schreef zoals iemand ze maanden later stelt. "Gevonden" is: de bedoelde mail staat in de top 10.</p>
+<div class="numbers" id="numbers">
+  <div class="num"><div><span class="was">1–2,7 s</span><span class="big">5–70 ms</span></div><p>per zoekwoord op de server; één letter kostte 23 s</p></div>
+  <div class="num"><div><span class="was" data-n="words-old">–</span><span class="big" data-n="words-new">–</span></div><p>woorden typen: bedoelde mail in de top 10</p></div>
+  <div class="num"><div><span class="was" data-n="ai-old">–</span><span class="big" data-n="ai-new">–</span></div><p>een vraag stellen: bedoelde mail in de top 10</p></div>
+  <div class="num"><div><span class="was">nooit</span><span class="big" data-n="answers">–</span></div><p>vragen waarop Hedwig direct antwoord geeft</p></div>
+</div>
+
+<h2>Zeven principes</h2>
+<p class="sub">Elk ontwerp hieronder is een andere invulling van dezelfde principes. Ze gelden ook voor wat we later bouwen.</p>
+<div class="principles">
+  <div class="principle"><div class="n">1</div><h3>Eén veld, geen scherm</h3><p>Alles begint en eindigt in het zoekveld. Structuur (wie, wanneer, wat voor mail) verschijnt als chips in dat veld, nooit als formulier.</p></div>
+  <div class="principle"><div class="n">2</div><h3>Direct, daarna slimmer</h3><p>Bij elke toets resultaten binnen een tiende seconde. De AI blokkeert nooit: ze verbetert dezelfde lijst als ze klaar is.</p></div>
+  <div class="principle"><div class="n">3</div><h3>Laat zien wat je zocht</h3><p>Wat Hedwig of Kreacher van je vraag maakte staat als chips in beeld. Klopt er één niet, klik hem weg. Zoeken met AI is het veld voor je invullen.</p></div>
+  <div class="principle"><div class="n">4</div><h3>Mensen eerst</h3><p>@naam is een eersteklas zoekterm: iedereen met wie je mailt, met al hun adressen, wie je schrijft telt zwaarder dan wie jou schrijft.</p></div>
+  <div class="principle"><div class="n">5</div><h3>Antwoord boven lijst</h3><p>Vraag je iets ("hoeveel was de tandarts?"), dan staat het antwoord bovenaan, met de mail waar het uit komt één klik verder.</p></div>
+  <div class="principle"><div class="n">6</div><h3>Mail blijft onbetrouwbaar</h3><p>De planner ziet alleen je vraag. Wat mail leest heeft geen gereedschap en mag alleen ordenen en kort antwoorden. Gevoelige mail gaat nooit naar de cloud.</p></div>
+  <div class="principle"><div class="n">7</div><h3>Van jou</h3><p>Gideon onderneemt, Angela studeert. Elk heeft eigen woorden, eigen standaarden, en mail die de ander deelde is voor beiden vindbaar.</p></div>
+</div>
+
+<h2>Vier ontwerpen</h2>
+<p class="sub">Klik door de ontwerpen. Rechts per ontwerp hoe het de principes invult en voor wie het werkt.</p>
+<div class="tabs" role="tablist">
+  <button aria-pressed="true" data-d="a">A · Tokenveld</button>
+  <button aria-pressed="false" data-d="b">B · Vraag het Hedwig</button>
+  <button aria-pressed="false" data-d="c">C · Lenzen</button>
+  <button aria-pressed="false" data-d="d">D · Dossier</button>
+</div>
+
+<!-- A -->
+<section class="design" data-design="a">
+  <div class="window">
+    <div class="titlebar"><div class="lights"><i></i><i></i><i></i></div>
+      <div class="field focus"><span class="glass">⌕</span><span class="chip"><span class="av">JV</span>Jan de Vries<span class="x">✕</span></span><span class="typed">offer</span><span class="caret"></span></div>
+    </div>
+    <div class="body">
+      <div class="list">
+        <div class="popover">
+          <div class="grp">Verfijn</div>
+          <div class="sug on">📅 Periode: <b>&nbsp;april 2026</b><small>⇥</small></div>
+          <div class="sug">🧾 Soort: <b>&nbsp;Offertes</b><small>uit je mail</small></div>
+          <div class="sug">📎 Met bijlage</div>
+        </div>
+        <div style="height:150px"></div>
+        <div class="section"><span>Beste treffers</span><span class="sort"><span class="on">Beste</span><span>Nieuwste</span></span></div>
+        <div class="row sel"><div class="who">Aan: Jan de Vries <span>2 apr</span></div><div class="subj">Nog een offerte</div><div class="hit">…en hier de tweede <mark>offerte</mark>, nu met de hosting erbij…</div></div>
+        <div class="row"><div class="who">Aan: Jan de Vries <span>1 apr</span></div><div class="subj">Offerte website</div><div class="hit">Zoals besproken de <mark>offerte</mark> voor de nieuwe website…</div></div>
+      </div>
+      <div class="reader"><h4>Nog een offerte</h4><div class="meta">Aan Jan de Vries · 2 april 2026</div><p>Hoi Jan, en hier de tweede offerte, nu met de hosting erbij…</p></div>
+    </div>
+  </div>
+  <div class="notes">
+    <div class="box"><h3>Kern</h3><ul><li>@ opent een lijst van mensen; kies er een en het wordt een chip</li><li>"april", "vorig jaar", "factuur", "bijlage" bieden een chip aan (Tab)</li><li>Treffers tonen het stukje waar het woord staat</li><li>↩ vraagt Kreacher; zijn plan verschijnt als oranje chips</li></ul></div>
+    <div class="box"><h3>Principes</h3><div class="score"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i class="on"></i><i class="on"></i> &nbsp;sterk op 1–4, zwak op antwoorden</div></div>
+    <div class="box"><h3>Gideon / Angela</h3><ul><li>Gideon: snel een offerte of factuur terug, @klant</li><li>Angela: @docent, "rooster", een vak als chip</li></ul></div>
+    <div class="box"><h3>Risico</h3><ul><li>Laag: macOS-zoekveld met tokens bestaat al</li></ul></div>
+  </div>
+</section>
+
+<!-- B -->
+<section class="design" data-design="b" hidden>
+  <div class="window">
+    <div class="titlebar"><div class="lights"><i></i><i></i><i></i></div>
+      <div class="field"><span class="glass">✦</span><span class="typed">en die van vorig jaar?</span><span class="caret"></span></div>
+    </div>
+    <div class="body">
+      <div class="list" style="background:var(--surface)">
+        <div class="thread">
+          <div class="bubble me">hoeveel was de laatste rekening van de tandarts?</div>
+          <div class="bubble bot"><b>€ 64,20</b>, betaald op 14 september.<span class="cite">↳ Tandartspraktijk De Kies · 14 sep 2026</span></div>
+          <div class="bubble me">en die van vorig jaar?</div>
+          <div class="bubble bot">Twee rekeningen in 2025: <b>€ 38,00</b> (maart) en <b>€ 112,50</b> (oktober).<span class="cite">↳ 2 mails · 4 mrt en 9 okt 2025</span></div>
+        </div>
+      </div>
+      <div class="reader"><h4>Uw nota van oktober</h4><div class="meta">Tandartspraktijk De Kies · 9 oktober 2025</div><p>Bijgaand de nota voor de controle en de foto's: € 112,50…</p></div>
+    </div>
+  </div>
+  <div class="notes">
+    <div class="box"><h3>Kern</h3><ul><li>Een gesprek: vragen bouwen op elkaar voort</li><li>Antwoord eerst, bron eronder, mail rechts</li><li>Woordzoeken blijft in het gewone veld</li></ul></div>
+    <div class="box"><h3>Principes</h3><div class="score"><i class="on"></i><i></i><i></i><i></i><i class="on"></i><i class="on"></i><i class="on"></i> &nbsp;sterk op antwoorden, traag (2 AI-rondes per vraag)</div></div>
+    <div class="box"><h3>Gideon / Angela</h3><ul><li>Gideon: "wat heb ik Jan vorig jaar gefactureerd?"</li><li>Angela: "wanneer is de deadline van het verslag?"</li></ul></div>
+    <div class="box"><h3>Risico</h3><ul><li>Elke vraag 6 tot 12 s; je gaat wachten</li><li>Een antwoord kan fout zijn; de bron moet altijd zichtbaar</li></ul></div>
+  </div>
+</section>
+
+<!-- C -->
+<section class="design" data-design="c" hidden>
+  <div class="window">
+    <div class="titlebar"><div class="lights"><i></i><i></i><i></i></div>
+      <div class="field"><span class="glass">⌕</span><span class="typed">factuur</span></div>
+    </div>
+    <div class="body">
+      <div class="list">
+        <div class="hist"><i style="height:30%"></i><i style="height:45%"></i><i style="height:38%"></i><i style="height:60%"></i><i style="height:52%"></i><i class="on" style="height:90%"></i><i class="on" style="height:80%"></i><i class="on" style="height:70%"></i><i style="height:40%"></i><i style="height:35%"></i><i style="height:55%"></i><i style="height:48%"></i></div>
+        <div class="histlabels"><span>nov 2025</span><span>Q2 2026 geselecteerd</span><span>okt 2026</span></div>
+        <div class="lenses"><span class="lens"><b>Studio Vos</b> 14</span><span class="lens"><b>Gemeente</b> 6</span><span class="lens"><b>KPN</b> 5</span><span class="lens">📎 met bijlage 21</span><span class="lens">🧾 facturen 33</span><span class="lens">verstuurd 9</span></div>
+        <div class="section"><span>33 resultaten in Q2 2026</span><span>Exporteer ↗</span></div>
+        <div class="row sel"><div class="who">Studio Vos <span>28 jun</span></div><div class="subj">Factuur 2026-061</div><div class="hit">In de bijlage de <mark>factuur</mark> voor juni.</div></div>
+        <div class="row"><div class="who">KPN <span>22 jun</span></div><div class="subj">Je nieuwe factuur staat klaar</div><div class="hit">Je <mark>factuur</mark> van juni: € 54,00</div></div>
+        <div class="row"><div class="who">Gemeente <span>3 jun</span></div><div class="subj">Aanslag gemeentelijke belastingen</div><div class="hit">…deze aanslag geldt als <mark>factuur</mark>…</div></div>
+      </div>
+      <div class="reader"><h4>Factuur 2026-061</h4><div class="meta">Studio Vos · 28 juni 2026</div><p>In de bijlage de factuur voor juni…</p></div>
+    </div>
+  </div>
+  <div class="notes">
+    <div class="box"><h3>Kern</h3><ul><li>Boven de resultaten: een tijdlijn om in te slepen, en lenzen die alleen tonen wat er ín de resultaten zit</li><li>Klik op een lens: hij wordt een chip in het veld</li><li>Geen filterscherm: niets om in te vullen, alleen aanwijzen</li></ul></div>
+    <div class="box"><h3>Principes</h3><div class="score"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i class="on"></i><i class="on"></i> &nbsp;sterk om een stapel te maken</div></div>
+    <div class="box"><h3>Gideon / Angela</h3><ul><li>Gideon: alle facturen van Q2 voor de boekhouding</li><li>Angela: alles van één vak dit blok</li></ul></div>
+    <div class="box"><h3>Risico</h3><ul><li>Middel: lenzen tellen over alle treffers, niet alleen de eerste 50</li></ul></div>
+  </div>
+</section>
+
+<!-- D -->
+<section class="design" data-design="d" hidden>
+  <div class="window">
+    <div class="titlebar"><div class="lights"><i></i><i></i><i></i></div>
+      <div class="field"><span class="glass">⌕</span><span class="chip"><span class="av">SV</span>Studio Vos<span class="x">✕</span></span><span class="caret"></span></div>
+    </div>
+    <div class="body">
+      <div class="list">
+        <div class="card">
+          <div class="person"><div class="big">SV</div><div><h3>Studio Vos</h3><div style="color:var(--text-2);font-size:12px">admin@vos.example · info@vos.example</div></div></div>
+          <div class="stat"><div><b>48</b>van hen</div><div><b>31</b>aan hen</div><div><b>3 dgn</b>geleden</div></div>
+          <div class="lenses" style="padding:0;border:0"><span class="lens">🧾 12 facturen</span><span class="lens">📎 20 bijlagen</span><span class="lens">⏳ 1 wacht op jou</span></div>
+        </div>
+        <div class="section"><span>Gesprekken</span></div>
+        <div class="row sel"><span class="dot"></span><div class="who">Studio Vos <span>29 okt</span></div><div class="subj">Planning november</div><div class="hit">Kun je voor vrijdag laten weten…</div></div>
+        <div class="row"><div class="who">Aan: Studio Vos <span>12 okt</span></div><div class="subj">Re: Factuur 2026-091</div><div class="hit">Betaald, dank!</div></div>
+      </div>
+      <div class="reader"><h4>Planning november</h4><div class="meta">Studio Vos · 29 oktober 2026</div><p>Kun je voor vrijdag laten weten of week 47 lukt?</p></div>
+    </div>
+  </div>
+  <div class="notes">
+    <div class="box"><h3>Kern</h3><ul><li>@persoon zonder woorden opent een kaart: adressen, hoeveel heen en weer, wat er openstaat</li><li>Daaronder hun gesprekken, bijlagen en facturen als lenzen</li></ul></div>
+    <div class="box"><h3>Principes</h3><div class="score"><i class="on"></i><i class="on"></i><i></i><i class="on"></i><i></i><i class="on"></i><i class="on"></i> &nbsp;sterk voor klanten en docenten</div></div>
+    <div class="box"><h3>Gideon / Angela</h3><ul><li>Gideon: een klant in één oogopslag</li><li>Angela: alles van een docent of studiegenoot</li></ul></div>
+    <div class="box"><h3>Risico</h3><ul><li>Middel: "wacht op jou" vraagt draadinformatie die we nog niet goed hebben</li></ul></div>
+  </div>
+</section>
+
+<div class="verdict">
+  <h3>Wat we bouwen: A, met de antwoordkaart van B en de lenzen van C</h3>
+  <p style="margin:6px 0 0">Het tokenveld is de basis: snel, vertrouwd, laag risico, en het is de plek waar AI-plannen zichtbaar en aanpasbaar worden. Van B nemen we het antwoord bovenaan, zonder gesprek: één vraag, één antwoord met bron, terwijl de lijst er al staat. Van C de lenzen boven de resultaten (mensen, soort, bijlage), elk één klik naar een chip. D komt later als kaart achter een @persoon.</p>
+</div>
+
+<h2>Hoe een vraag loopt</h2>
+<p class="sub">Elke stap levert iets op dat je al ziet; geen stap wacht op de volgende.</p>
+<div class="flow">
+  <div class="step"><b>1 · Typen</b>Woorden en chips naar de index. Lijst bij elke toets.<div class="ms">5–70 ms server</div></div>
+  <div class="step"><b>2 · ↩ Plan</b>Kreacher ziet alleen je vraag (en wat je over jezelf schreef) en maakt woorden, mensen, periode en soort.<div class="ms" data-n="plan-ms">±5 s</div></div>
+  <div class="step"><b>3 · Drie rondes</b>Alle groepen, één groep, en op betekenis (vectoren van Winky's Mac). Samengevoegd tot één lijst.<div class="ms">±0,1 s</div></div>
+  <div class="step"><b>4 · Lezen</b>Kreacher leest onderwerp en samenvatting van de beste 30, zet ze op volgorde en antwoordt. Gevoelige mail: alleen afzender en datum.<div class="ms" data-n="rank-ms">±5 s</div></div>
+</div>
+
+<h2>Gideon en Angela</h2>
+<p class="sub">Dezelfde zoekfunctie, andere woorden en standaarden. In Instellingen › Hedwig per persoon.</p>
+<div class="two">
+  <div class="window"><div class="titlebar"><div class="lights"><i></i><i></i><i></i></div><div class="field"><span class="glass">⌕</span><span class="chip"><span class="av">KL</span>Klant BV</span><span class="chip">🧾 Facturen</span><span class="chip">📅 Q3 2026</span></div></div>
+    <div class="reader" style="min-height:0"><h4>Gideon · ondernemer</h4><p><b>Over jou:</b> "Ik heb een eigen bedrijf; werkmail gaat over klanten, offertes, facturen en de boekhouding."</p><p>Kreacher leest "klanten" als zijn correspondenten, "kwartaal" als Q-periodes, en zoekt offertes ook als "voorstel" en "quote".</p></div></div>
+  <div class="window"><div class="titlebar"><div class="lights"><i></i><i></i><i></i></div><div class="field"><span class="glass">⌕</span><span class="chip eva"><span class="av" style="background:var(--eva)">DM</span>dr. Mulder</span><span class="chip">📅 dit blok</span><span class="typed">deadline</span></div></div>
+    <div class="reader" style="min-height:0"><h4>Angela · studente</h4><p><b>Over jou:</b> "Ik studeer; schoolmail gaat over vakken, roosters, deadlines en groepsopdrachten."</p><p>Kreacher leest "dit blok" als de lopende periode, "verslag" ook als "paper" en "opdracht", en schoolmail als school.</p></div></div>
+</div>
+
+<h2>Delen in het huishouden</h2>
+<p class="sub">Een mail delen maakt hem voor de ander te openen en te vinden. Winky stelt voor welke mail huishoudmail is; eerst alleen voorstellen, later vanzelf.</p>
+<div class="two">
+  <div class="window"><div class="reader" style="min-height:0">
+    <h4>Jaarafrekening energie</h4><div class="meta">Energie Noord · 30 oktober 2026</div>
+    <div class="answer" style="margin:0 0 12px;background:var(--eva-tint)"><div class="q" style="color:var(--eva)">Winky · huishoudmail</div><div class="a" style="font-size:13.5px">Energierekening. Delen met Angela?</div><div class="src"><span class="chip eva">Deel</span> <span class="chip">Niet</span> <span class="chip">Altijd van Energie Noord</span></div></div>
+    <p>Uw jaarafrekening over 2026 is klaar…</p></div></div>
+  <div class="notes">
+    <div class="box"><h3>Drie standen, per persoon</h3><ul><li><b>Uit</b>: alleen delen met de knop</li><li><b>Winky stelt voor</b> (begin): een regel boven de mail, één klik</li><li><b>Winky deelt zelf</b>: als de voorstellen kloppen; terugdraaien kan altijd</li></ul></div>
+    <div class="box"><h3>Leren per afzender</h3><ul><li>Twee keer "Niet" bij een afzender: geen voorstellen meer van hem</li><li>"Altijd van …": voortaan direct gedeeld</li></ul></div>
+  </div>
+</div>
+</main>
+<script>
+const tabs = document.querySelectorAll('.tabs button');
+tabs.forEach((b) => b.addEventListener('click', () => {
+  tabs.forEach((t) => t.setAttribute('aria-pressed', String(t === b)));
+  document.querySelectorAll('[data-design]').forEach((s) => (s.hidden = s.dataset.design !== b.dataset.d));
+}));
+// Measured on Dobby, 2 November 2026; see docs/plans/2026-11-02-hedwig-search.md.
+const measured = {};
+for (const [k, v] of Object.entries(measured)) document.querySelectorAll(`[data-n="${k}"]`).forEach((e) => (e.textContent = v));
+</script>
+</body>
+</html>

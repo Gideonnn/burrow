@@ -11,12 +11,14 @@ public enum SidebarItem: Hashable, Sendable {
     case tasks
     /// Evenementen: the household's outings.
     case outings
+    /// Gedeeld: mail shared with or by this person, and Winky's suggestions.
+    case shared
 
     /// The mailbox this place belongs to; the sidebar shows it under that mailbox.
     public var mailboxId: String? {
         switch self {
         case .inbox(let id), .folder(_, let id), .drafts(let id): id
-        case .tasks, .outings: nil
+        case .tasks, .outings, .shared: nil
         }
     }
 }
@@ -398,6 +400,8 @@ public final class AppModel {
             case .outings:
                 await refreshOutings()
                 messages = []
+            case .shared:
+                messages = try await sharedMessages()
             }
             if keepSelection, filter != nil { keepSelectedMessage(from: shown) }
             if !keepSelection || !messages.contains(where: { $0.id == selectedMessageId }) {
@@ -496,7 +500,7 @@ public final class AppModel {
             var message = try await api.message(id: id)
             // Spam stays unread until the person says it is not spam. A failed
             // mark still opens the message: it is already on the server.
-            if message.unread, message.folder != .spam, me?.can(.organize) == true {
+            if message.unread, message.folder != .spam, message.share?.by == nil, me?.can(.organize) == true {
                 do {
                     message = try await api.apply([.markRead], to: id)
                     replace(message.summary)

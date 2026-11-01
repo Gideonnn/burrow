@@ -2,7 +2,8 @@
 
 A new Mac app logs in through the browser and gets its own device key; nobody copies
 keys. Both people of the household are admins: they manage each other's settings,
-features and devices, but never read each other's mail or recordings.
+features and devices, but never read each other's mail or recordings unless the owner
+shares one ([sharing mail](sharing.md)).
 
 ## Device login (RFC 8252)
 

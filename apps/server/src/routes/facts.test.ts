@@ -33,13 +33,14 @@ async function setup() {
     h.provider(mailboxId).deliver(message);
     return (await h.mail.sync(mailboxId))[0]!;
   };
-  // A Mac with Winky's model on the local queue.
+  // A Mac with Winky's model on the local queue, for facts only: Winky's
+  // household-mail suggestions have their own tests.
   const claim = async (key: string) =>
     claimed.parse(
       await (
         await post(key, '/api/runner/claim', {
           runner: 'MacBook',
-          kinds: ['*'],
+          kinds: ['hedwig.facts'],
           queues: ['local'],
           models: ['ollama:gemma4:26b-a4b'],
           max: 5,

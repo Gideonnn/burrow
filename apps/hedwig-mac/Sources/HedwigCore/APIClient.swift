@@ -110,6 +110,29 @@ extension APIClient {
         try await call("GET", "api/messages/\(messageId)/insights")
     }
 
+    // MARK: Sharing
+
+    public func share(messageId: String, with personId: String) async throws -> MessageSummary {
+        try await call("POST", "api/messages/\(messageId)/share", body: ["personId": personId])
+    }
+
+    public func unshare(messageId: String, from personId: String) async throws -> MessageSummary {
+        try await call("DELETE", "api/messages/\(messageId)/share/\(personId)")
+    }
+
+    public func shared() async throws -> SharedResponse { try await call("GET", "api/shared") }
+
+    public func shareSuggestions() async throws -> ShareSuggestionsResponse {
+        try await call("GET", "api/share/suggestions")
+    }
+
+    /// `always` holds for the sender: from now on Winky shares, or never suggests, its mail.
+    public func decideShareSuggestion(messageId: String, share: Bool, always: Bool) async throws -> MessageSummary {
+        struct Body: Encodable { var decision: String; var always: Bool }
+        return try await call(
+            "POST", "api/share/suggestions/\(messageId)", body: Body(decision: share ? "share" : "dismiss", always: always))
+    }
+
     public func filtered() async throws -> [FilteredEntry] { try await call("GET", "api/filtered") }
 
     public func confirm(_ ids: [String]) async throws {

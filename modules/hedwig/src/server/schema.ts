@@ -23,6 +23,8 @@ import {
 } from 'drizzle-orm/sqlite-core';
 import type { ProviderMessage } from '../provider';
 
+export type ShareSuggestionState = 'open' | 'shared' | 'dismissed';
+
 export const mailboxes = sqliteTable('mailboxes', {
   id: id(),
   ownerId: text('owner_id')
@@ -385,6 +387,51 @@ export const messageSearchKeys = sqliteTable('message_search_keys', {
   id: integer('id').primaryKey(),
   messageId: text('message_id').notNull().unique(),
 });
+
+// Winky's verdict on whether a message is household mail its owner may want
+// to share; see the sharing service. A row without judgedAt holds failed
+// attempts.
+export const shareSuggestions = sqliteTable(
+  'share_suggestions',
+  {
+    messageId: text('message_id')
+      .primaryKey()
+      .references(() => messages.id, { onDelete: 'cascade' }),
+    ownerId: text('owner_id')
+      .notNull()
+      .references(() => people.id),
+    suggested: integer('suggested', { mode: 'boolean' })
+      .notNull()
+      .default(false),
+    reason: text('reason').notNull().default(''),
+    // Null when Winky saw nothing to share.
+    state: text('state').$type<ShareSuggestionState>(),
+    model: text('model'),
+    attempts: integer('attempts').notNull().default(0),
+    error: text('error'),
+    judgedAt: integer('judged_at', { mode: 'timestamp_ms' }),
+    decidedAt: integer('decided_at', { mode: 'timestamp_ms' }),
+    createdAt: createdAt(),
+  },
+  (t) => [index('share_suggestions_owner_state').on(t.ownerId, t.state)],
+);
+
+// What the owner did with suggestions from one sender: two dismissals
+// silence it, `always` shares its suggestions without asking.
+export const shareSenders = sqliteTable(
+  'share_senders',
+  {
+    ownerId: text('owner_id')
+      .notNull()
+      .references(() => people.id),
+    address: text('address').notNull(),
+    shared: integer('shared').notNull().default(0),
+    dismissed: integer('dismissed').notNull().default(0),
+    always: integer('always', { mode: 'boolean' }).notNull().default(false),
+    updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
+  },
+  (t) => [uniqueIndex('share_senders_owner_address').on(t.ownerId, t.address)],
+);
 
 // A message's meaning as numbers, made by an embedding model on a Mac's
 // runner, for search by meaning. Float32, little-endian.

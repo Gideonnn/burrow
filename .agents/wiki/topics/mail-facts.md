@@ -25,6 +25,8 @@ the model measurements are in
 3. **Winky** (`hedwig.facts`, local queue, pinned to Winky's model, the `mail-facts`
    skill) reads the rest on the owner's Mac through Ollama, newest first: no template,
    no rule category, not spam or trash. Two failed attempts and a message is skipped.
+   On the same Mac Winky also suggests household mail to share
+   ([sharing mail](sharing.md)), after the facts.
 
 Rules win: a rule category stays, and a model can add `sensitive` (kind `model`) but
 never lift it. Only people with the feature `hedwig.facts` ("Mail laten indexeren", off

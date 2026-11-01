@@ -13,5 +13,6 @@ export * from './ai-search';
 export * from './people';
 export * from './search';
 export * from './search-text';
+export * from './sharing';
 export * from './vectors';
 export * from './embeddings';

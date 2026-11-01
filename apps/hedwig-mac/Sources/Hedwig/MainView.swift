@@ -19,6 +19,7 @@ struct MainView: View {
                     case .drafts: DraftListView()
                     case .tasks: TaskListView()
                     case .outings: OutingListView()
+                    case .shared: SharedListView()
                     default: MessageListView()
                     }
                 }
@@ -190,6 +191,6 @@ struct MainToolbar: ToolbarContent {
         .disabled(!canOrganize)
     }
 
-    private var canReply: Bool { showsMail && model.detail != nil && model.me?.can(.send) == true }
-    private var canOrganize: Bool { showsMail && model.detail != nil && model.me?.can(.organize) == true }
+    private var canReply: Bool { showsMail && model.detail != nil && model.detailIsMine && model.me?.can(.send) == true }
+    private var canOrganize: Bool { showsMail && model.detail != nil && model.detailIsMine && model.me?.can(.organize) == true }
 }
