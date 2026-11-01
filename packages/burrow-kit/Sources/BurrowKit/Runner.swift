@@ -16,6 +16,8 @@ public struct RunnerConfig: Equatable, Sendable {
     public var nightStart = 0
     public var nightEnd = 7 * 60
     public var model = "ollama:gemma4:26b-a4b"
+    /// For search by meaning; offered next to `model` when Ollama has it.
+    public var embedModel = "ollama:embeddinggemma"
     public var concurrency = 2
     public var claudePath = ""
 
@@ -166,6 +168,7 @@ public final class Runner {
             } else {
                 queues.append("local")
                 models.append(config.model)
+                if OllamaAgent.has(config.embedModel, in: c.installedModels) { models.append(config.embedModel) }
             }
         }
         if config.cloud {

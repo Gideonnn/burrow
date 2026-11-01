@@ -265,6 +265,7 @@ export function hedwigRoutes({
             tokens: [],
             wantsAnswer: false,
             answer: null,
+            plan: null,
             ...found,
           });
         },
@@ -293,8 +294,15 @@ export function hedwigRoutes({
               message: 'zoeken met AI is niet beschikbaar op deze server',
             });
           }
-          const { question, includeLow, filters, vector, ...scope } =
-            c.req.valid('json');
+          const {
+            question,
+            includeLow,
+            filters,
+            vector,
+            plan,
+            without,
+            ...scope
+          } = c.req.valid('json');
           return c.json<SearchResponse>(
             await search.ask(
               c.var.access.personId,
@@ -306,6 +314,8 @@ export function hedwigRoutes({
                 factsOnly: c.var.access.factsOnly,
                 filters,
                 vector,
+                plan,
+                without,
               },
             ),
           );

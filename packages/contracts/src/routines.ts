@@ -129,6 +129,9 @@ export const claimedTask = z.object({
     // A Claude runner refuses `local`, which is only for a local model.
     agent: z.enum(['claude', 'codex', 'any', 'local']).default('any'),
     timeoutMs: z.number().int().positive().optional(),
+    // Not a chat turn: the prompt is {"texts": [...], "dims": n} for an
+    // embedding model, and the answer {"vectors": [[...]]}.
+    embed: z.boolean().optional(),
   }),
 });
 export type ClaimedTask = z.infer<typeof claimedTask>;

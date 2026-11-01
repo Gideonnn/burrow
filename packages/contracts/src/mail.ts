@@ -243,6 +243,10 @@ export const aiSearchRequest = searchScope.extend({
   vector: z
     .object({ model: z.string(), values: z.array(z.number()).max(4096) })
     .optional(),
+  // A plan from an earlier answer: run it again without asking the bot,
+  // leaving out the parts named in `without`.
+  plan: searchPlan.optional(),
+  without: z.array(z.string()).max(20).default([]),
 });
 export type AiSearchRequest = z.infer<typeof aiSearchRequest>;
 
@@ -262,28 +266,32 @@ export type SearchResult = z.infer<typeof searchResult>;
 
 // A token the bot's plan stands for, shown in the field so the person sees
 // and can change what was searched.
+// `key` names the part of the plan a token stands for ("people:0", "period",
+// "category:invoice", "group:1"); a client sends keys back in `without` to
+// search again without them, no bot needed.
+const tokenBase = { key: z.string(), label: z.string() };
 export const searchToken = z.discriminatedUnion('kind', [
   z.object({
+    ...tokenBase,
     kind: z.literal('person'),
-    label: z.string(),
     emails: z.array(z.string()),
   }),
   z.object({
+    ...tokenBase,
     kind: z.literal('period'),
-    label: z.string(),
     after: z.iso.date().nullable(),
     before: z.iso.date().nullable(),
   }),
   z.object({
+    ...tokenBase,
     kind: z.literal('category'),
-    label: z.string(),
     category: factCategory,
   }),
-  z.object({ kind: z.literal('attachments'), label: z.string() }),
-  z.object({ kind: z.literal('unread'), label: z.string() }),
+  z.object({ ...tokenBase, kind: z.literal('attachments') }),
+  z.object({ ...tokenBase, kind: z.literal('unread') }),
   z.object({
+    ...tokenBase,
     kind: z.literal('words'),
-    label: z.string(),
     words: z.array(z.string()),
   }),
 ]);
@@ -300,6 +308,8 @@ export const searchResponse = z.object({
   // The question asks for something the mail says; a client then asks
   // /search/ai/rank for the answer.
   wantsAnswer: z.boolean().default(false),
+  // The bot's plan, to send back with `without` when a token is removed.
+  plan: searchPlan.nullable().default(null),
   // A short answer to the question from the best results, with the ids it
   // rests on; null when the question asks for mail, not an answer.
   answer: z

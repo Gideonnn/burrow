@@ -9,6 +9,7 @@ import { mailboxAccess, mailboxRestriction } from './access';
 import type { Accounts } from './accounts';
 import { SEARCH_ABOUT, SEARCH_READS, SearchService } from './ai-search';
 import { createDraft } from './drafts';
+import { EmbeddingsService } from './embeddings';
 import { FACTS_FEATURE, FactsService } from './facts/service';
 import { InsightsService, LONG_MESSAGE } from './insights';
 import { type ClientFor, MailService, type MessageRow } from './mail-service';
@@ -124,6 +125,7 @@ export function hedwigModule(platform: Platform, options: HedwigOptions) {
   const insights = new InsightsService({ platform, mail, bot: options.bot });
   const vectors = new VectorIndex(db);
   const search = new SearchService({ platform, bot: options.bot, vectors });
+  const embeddings = new EmbeddingsService(platform, vectors);
   const outings = new OutingsService({
     platform,
     mail,
@@ -265,7 +267,7 @@ export function hedwigModule(platform: Platform, options: HedwigOptions) {
         },
       },
     ],
-    taskKinds: facts.kinds(),
+    taskKinds: [...facts.kinds(), ...embeddings.kinds()],
     triggers: [
       {
         kind: 'message',

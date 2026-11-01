@@ -15,7 +15,7 @@ import { z } from 'zod';
 import { redact } from './facts/rules';
 import { findPeople } from './people';
 import { mailboxes } from './schema';
-import { inScope, load, type SearchQuery, searchMessages } from './search';
+import { inScope, load, matchingIds, type SearchQuery } from './search';
 import type { VectorIndex } from './vectors';
 
 const PLAN_SKILL = 'mail-search';
@@ -126,6 +126,8 @@ export type AskOptions = {
   filters?: SearchFilters;
   vector?: { model: string; values: number[] };
   alsoIds?: readonly string[];
+  plan?: SearchPlan;
+  without?: string[];
 };
 
 export type SearchServiceOptions = {
@@ -235,70 +237,99 @@ export class SearchService {
     scope: SearchScope = {},
     options: AskOptions = {},
   ): Promise<SearchResponse> {
-    const plan = await this.plan(
-      personId,
-      mailboxIds,
-      question,
-      scope,
-      options.filters,
-    );
+    const plan =
+      options.plan ??
+      (await this.plan(personId, mailboxIds, question, scope, options.filters));
     return this.run(plan, mailboxIds, scope, options);
   }
 
-  // Runs a plan: what ask does after the bot answered.
+  // Runs a plan: what ask does after the bot answered. Parts named in
+  // `without` are left out, so a person can drop a token without a new plan.
   run(
-    plan: SearchPlan,
+    original: SearchPlan,
     mailboxIds: readonly string[],
     scope: SearchScope,
     options: AskOptions = {},
   ): SearchResponse {
     const { db } = this.o.platform;
+    const without = new Set(options.without ?? []);
+    const plan: SearchPlan = {
+      ...original,
+      groups: original.groups.filter((_, i) => !without.has(`group:${i}`)),
+      people: original.people.filter((_, i) => !without.has(`people:${i}`)),
+      after: without.has('period') ? null : original.after,
+      before: without.has('period') ? null : original.before,
+      categories:
+        original.categories?.filter((c) => !without.has(`category:${c}`)) ??
+        null,
+      hasAttachments: original.hasAttachments && !without.has('attachments'),
+      unreadOnly: original.unreadOnly && !without.has('unread'),
+    };
+    // Keys point into the original plan, so a second removal still matches.
+    const groupKey = (g: string[]) => `group:${original.groups.indexOf(g)}`;
     const tokens: SearchToken[] = [];
-    const groups = plan.groups.map((g) => [...g]);
+    const groups: { key: string; words: string[] }[] = plan.groups.map((g) => ({
+      key: groupKey(g),
+      words: [...g],
+    }));
     const people = [...(options.filters?.people ?? [])];
-    for (const name of plan.people) {
+    plan.people.forEach((name) => {
+      const key = `people:${original.people.indexOf(name)}`;
       const person = findPeople(db, mailboxIds, name, 1)[0];
       if (person) {
         people.push(...person.emails);
         tokens.push({
+          key,
           kind: 'person',
           label: person.name,
           emails: person.emails,
         });
       } else {
         // Not someone they mail with: maybe the name is in the mail itself.
-        groups.unshift([name]);
+        groups.unshift({ key, words: [name] });
       }
-    }
+    });
     const filters = options.filters;
     const after = filters?.after ?? plan.after;
     const before = filters?.before ?? plan.before;
     const categories = filters?.categories?.length
       ? filters.categories
       : plan.categories;
-    if (plan.after || plan.before) {
-      if (!filters?.after && !filters?.before)
-        tokens.push({
-          kind: 'period',
-          label: periodLabel(plan.after, plan.before),
-          after: plan.after,
-          before: plan.before,
-        });
+    if ((plan.after || plan.before) && !filters?.after && !filters?.before) {
+      tokens.push({
+        key: 'period',
+        kind: 'period',
+        label: periodLabel(plan.after, plan.before),
+        after: plan.after,
+        before: plan.before,
+      });
     }
     for (const category of filters?.categories?.length
       ? []
       : (plan.categories ?? [])) {
       tokens.push({
+        key: `category:${category}`,
         kind: 'category',
         label: CATEGORY_LABELS[category] ?? category,
         category,
       });
     }
     if (plan.hasAttachments)
-      tokens.push({ kind: 'attachments', label: 'Met bijlage' });
-    if (plan.unreadOnly) tokens.push({ kind: 'unread', label: 'Ongelezen' });
-    for (const group of groups)
-      tokens.push({ kind: 'words', label: group[0]!, words: group });
+      tokens.push({
+        key: 'attachments',
+        kind: 'attachments',
+        label: 'Met bijlage',
+      });
+    if (plan.unreadOnly)
+      tokens.push({ key: 'unread', kind: 'unread', label: 'Ongelezen' });
+    for (const g of groups)
+      tokens.push({
+        key: g.key,
+        kind: 'words',
+        label: g.words[0]!,
+        words: g.words,
+      });
+    const wordGroups = groups.map((g) => g.words);
 
     const base: Omit<SearchQuery, 'groups' | 'matchAll' | 'limit'> = inScope(
       {
@@ -318,37 +349,37 @@ export class SearchService {
       scope,
     );
     const passes = (q: typeof base) => {
-      const strict = searchMessages(db, mailboxIds, {
+      const strict = matchingIds(db, mailboxIds, {
         ...q,
-        groups,
+        groups: wordGroups,
         matchAll: true,
         limit: 50,
       });
       const loose =
-        groups.length > 1
-          ? searchMessages(db, mailboxIds, {
+        wordGroups.length > 1
+          ? matchingIds(db, mailboxIds, {
               ...q,
-              groups,
+              groups: wordGroups,
               matchAll: false,
               limit: 100,
             })
           : strict;
       const lists = [
-        { ids: strict.results.map((r) => r.id), weight: 1.5 },
-        { ids: loose.results.map((r) => r.id), weight: 1 },
+        { ids: strict.ids, weight: 1.5 },
+        { ids: loose.ids, weight: 1 },
       ];
       const vector = options.vector;
       if (vector) {
         const near = this.o.vectors.nearest(vector.model, vector.values, 400);
         if (near.length) {
           const allowed = new Set(
-            searchMessages(db, mailboxIds, {
+            matchingIds(db, mailboxIds, {
               ...q,
               groups: [],
               matchAll: true,
               onlyIds: near.map((n) => n.id),
               limit: 400,
-            }).results.map((r) => r.id),
+            }).ids,
           );
           lists.push({
             ids: near
@@ -379,9 +410,10 @@ export class SearchService {
       tokens,
       wantsAnswer: plan.answer,
       results: load(db, found.ids.slice(0, 50), {
-        groups,
+        groups: wordGroups,
         factsOnly: options.factsOnly,
       }),
+      plan: original,
       total: Math.max(found.total, found.ids.length),
       answer: null,
     };

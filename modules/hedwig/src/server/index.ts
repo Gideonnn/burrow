@@ -14,3 +14,4 @@ export * from './people';
 export * from './search';
 export * from './search-text';
 export * from './vectors';
+export * from './embeddings';

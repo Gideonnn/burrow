@@ -16,6 +16,9 @@ export type AgentRequest = {
   // The agent CLI the bot prefers; the others remain the fallback.
   agent?: AgentName | 'any' | 'local';
   timeoutMs?: number;
+  // An embedding request for a local model rather than a chat turn; see
+  // claimedTask in the contracts.
+  embed?: boolean;
 };
 
 // Runs one agent turn and returns its JSON answer. The answer is unvalidated:

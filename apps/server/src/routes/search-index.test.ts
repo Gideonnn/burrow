@@ -252,17 +252,45 @@ describe('search by meaning, step by step', () => {
     ]);
     expect(found.tokens).toEqual([
       {
+        key: 'people:0',
         kind: 'person',
         label: 'Jan de Vries',
         emails: ['jan@devries.example'],
       },
       {
+        key: 'period',
         kind: 'period',
         label: 'april 2026',
         after: '2026-04-01',
         before: '2026-05-01',
       },
-      { kind: 'words', label: 'offerte', words: ['offerte', 'voorstel'] },
+      {
+        key: 'group:0',
+        kind: 'words',
+        label: 'offerte',
+        words: ['offerte', 'voorstel'],
+      },
+    ]);
+
+    // Dropping the person reruns the same plan without the bot.
+    const asked = s.agentRequests.length;
+    const wider = searchResponse.parse(
+      await (
+        await s.call(s.token, '/api/search/ai', {
+          method: 'POST',
+          body: JSON.stringify({
+            question: 'de offerte die ik Jan stuurde in april',
+            plan: found.plan,
+            without: ['people:0', 'period'],
+          }),
+        })
+      ).json(),
+    );
+    expect(s.agentRequests.length).toBe(asked);
+    expect(wider.tokens.map((t) => t.key)).toEqual(['group:0']);
+    expect(wider.results.map((m) => m.subject).sort()).toEqual([
+      'Nog een offerte',
+      'Offerte website',
     ]);
   });
 

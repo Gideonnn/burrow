@@ -226,6 +226,8 @@ public struct AgentRequest: Codable, Hashable, Sendable {
     public var schema: JSONValue
     public var agent: String?
     public var timeoutMs: Int?
+    /// An embedding request: the prompt is `{"texts": [...], "dims": n}`.
+    public var embed: Bool?
 }
 
 public struct ClaimedTask: Codable, Hashable, Sendable {

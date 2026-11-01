@@ -17,6 +17,7 @@ public struct OllamaAgent: AgentRunning {
     }
 
     public func run(_ request: AgentRequest) async throws -> Data {
+        if request.embed == true { return try await embed(request) }
         let name = Self.modelName(request.model)
         struct Message: Encodable { var role: String; var content: String }
         // A full answer is a few hundred tokens; the cap stops a model that
@@ -54,6 +55,34 @@ public struct OllamaAgent: AgentRunning {
         let answer = Data(content.utf8)
         guard (try? JSONSerialization.jsonObject(with: answer)) != nil else { throw RunnerError.invalidAnswer }
         return answer
+    }
+
+    /// Vectors for search by meaning, cut to the first `dims` numbers.
+    func embed(_ request: AgentRequest) async throws -> Data {
+        struct Input: Decodable { var texts: [String]; var dims: Int? }
+        guard let input = try? JSONDecoder().decode(Input.self, from: Data(request.prompt.utf8)) else { throw RunnerError.invalidAnswer }
+        let vectors = try await embed(input.texts, model: request.model, dims: input.dims)
+        return try JSONSerialization.data(withJSONObject: ["vectors": vectors])
+    }
+
+    public func embed(_ texts: [String], model: String, dims: Int? = nil) async throws -> [[Double]] {
+        struct Body: Encodable { var model: String; var input: [String]; var truncate = true }
+        struct Reply: Decodable { var embeddings: [[Double]]?; var error: String? }
+        var http = URLRequest(url: baseURL.appendingPathComponent("api/embed"))
+        http.httpMethod = "POST"
+        http.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        http.timeoutInterval = 300
+        http.httpBody = try JSONEncoder().encode(Body(model: Self.modelName(model), input: texts))
+        let (data, response) = try await send(http)
+        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+        let reply = try? JSONDecoder().decode(Reply.self, from: data)
+        if status == 404 || reply?.error?.contains("not found") == true {
+            throw RunnerError.ollama("Het model \(Self.modelName(model)) staat niet op deze Mac: ollama pull \(Self.modelName(model))")
+        }
+        guard status == 200, let vectors = reply?.embeddings, vectors.count == texts.count else {
+            throw RunnerError.ollama("Ollama faalde: \(reply?.error ?? "status \(status)")")
+        }
+        return vectors.map { v in dims.map { Array(v.prefix($0)) } ?? v }
     }
 
     /// The models Ollama has, as ollama:<name>; empty when Ollama is not running.

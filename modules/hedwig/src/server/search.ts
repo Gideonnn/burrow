@@ -179,12 +179,23 @@ export function searchMessages(
   query: SearchQuery,
   now = Date.now(),
 ): SearchOutcome {
+  const { ids, total } = matchingIds(db, mailboxIds, query, now);
+  return { results: load(db, ids, query), total };
+}
+
+// The ids searchMessages would show, in its order, without loading them.
+export function matchingIds(
+  db: Db,
+  mailboxIds: readonly string[],
+  query: SearchQuery,
+  now = Date.now(),
+): { ids: string[]; total: number } {
   const scope = scopeOf(db, mailboxIds, query.roles);
-  if (!scope.length && !query.alsoIds?.length) return { results: [], total: 0 };
+  if (!scope.length && !query.alsoIds?.length) return { ids: [], total: 0 };
   const expr = ftsExpression(query);
   const hasWords = query.groups.some((g) => g.length);
   // Words typed but none long enough yet: nothing to show.
-  if (hasWords && !expr) return { results: [], total: 0 };
+  if (hasWords && !expr) return { ids: [], total: 0 };
   if (
     !expr &&
     !query.people?.length &&
@@ -197,7 +208,7 @@ export function searchMessages(
     !query.onlyIds &&
     !query.browse
   ) {
-    return { results: [], total: 0 };
+    return { ids: [], total: 0 };
   }
   const where = filters(query, scope);
   let ranked: { id: string; score: number }[];
@@ -243,8 +254,7 @@ export function searchMessages(
           )!.n;
     ranked = rows.map((r, i) => ({ id: r.id, score: -i }));
   }
-  const ids = ranked.slice(0, query.limit).map((r) => r.id);
-  return { results: load(db, ids, query), total };
+  return { ids: ranked.slice(0, query.limit).map((r) => r.id), total };
 }
 
 // The messages in the given order, each with the piece where it matched.

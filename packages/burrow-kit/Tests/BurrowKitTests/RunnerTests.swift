@@ -125,6 +125,10 @@ import Testing
         var now = RunnerConditions(now: Date(), onCharger: true, installedModels: ["ollama:gemma4:26b-a4b"], claude: true)
         #expect(Runner.offer(c, now).offer.queues == ["local", "cloud"])
         #expect(Runner.offer(c, now).offer.models == ["ollama:gemma4:26b-a4b"])
+        // With the embedding model as well, the Mac also makes vectors for search.
+        now.installedModels.append("ollama:embeddinggemma:latest")
+        #expect(Runner.offer(c, now).offer.models == ["ollama:gemma4:26b-a4b", "ollama:embeddinggemma"])
+        now.installedModels.removeLast()
 
         now.onCharger = false
         #expect(Runner.offer(c, now).offer.queues == ["cloud"])
