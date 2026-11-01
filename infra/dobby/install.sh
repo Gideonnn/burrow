@@ -150,7 +150,9 @@ systemctl --user start burrow-backup.timer
 
 say "waiting for the server"
 started=$SECONDS
-for _ in $(seq 1 150); do health >/dev/null && break; sleep 0.2; done
+# Up to two minutes: a migration that builds an index (0025, about 40 s) runs
+# before the server answers.
+for _ in $(seq 1 600); do health >/dev/null && break; sleep 0.2; done
 health >/dev/null || fail "the server did not start; see: tail -n 50 $LOG_DIR/server.log"
 # The tunnel's port answers only with a login or a key; any HTTP status means it listens.
 if grep -q '^CLOUDFLARE_ACCESS_AUD=..*' "$ENV_FILE"; then
