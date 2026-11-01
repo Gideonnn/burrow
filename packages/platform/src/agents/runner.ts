@@ -19,6 +19,9 @@ export type AgentRequest = {
   // An embedding request for a local model rather than a chat turn; see
   // claimedTask in the contracts.
   embed?: boolean;
+  // Someone is waiting for the answer (a search); it goes before background
+  // work.
+  urgent?: boolean;
 };
 
 // Runs one agent turn and returns its JSON answer. The answer is unvalidated:
@@ -177,11 +180,13 @@ export class FallbackRunner implements AgentRunner {
 }
 
 // At most `limit` agent runs at once across triage, insights and tasks, so a
-// burst of mail does not start twenty CLIs on a small machine.
+// burst of mail does not start twenty CLIs on a small machine. A run someone
+// waits for skips the queue and has one place of its own, so a search never
+// waits behind reply suggestions for a mail just opened.
 export class LimitedRunner implements AgentRunner {
   readonly name: string;
   private active = 0;
-  private readonly waiting: (() => void)[] = [];
+  private readonly waiting: { urgent: boolean; go: () => void }[] = [];
 
   constructor(
     private readonly runner: AgentRunner,
@@ -190,16 +195,37 @@ export class LimitedRunner implements AgentRunner {
     this.name = runner.name;
   }
 
+  private room(urgent: boolean) {
+    return this.active < this.limit + (urgent ? 1 : 0);
+  }
+
   async run(request: AgentRequest): Promise<unknown> {
-    if (this.active >= this.limit) {
-      await new Promise<void>((go) => this.waiting.push(go));
+    const urgent = Boolean(request.urgent);
+    if (!this.room(urgent)) {
+      await new Promise<void>((go) => {
+        const entry = { urgent, go };
+        if (urgent) {
+          const firstCalm = this.waiting.findIndex((w) => !w.urgent);
+          this.waiting.splice(
+            firstCalm < 0 ? this.waiting.length : firstCalm,
+            0,
+            entry,
+          );
+        } else {
+          this.waiting.push(entry);
+        }
+      });
     }
     this.active++;
     try {
       return await this.runner.run(request);
     } finally {
       this.active--;
-      this.waiting.shift()?.();
+      const next = this.waiting[0];
+      if (next && this.room(next.urgent)) {
+        this.waiting.shift();
+        next.go();
+      }
     }
   }
 }

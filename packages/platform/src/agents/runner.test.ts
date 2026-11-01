@@ -6,6 +6,7 @@ import {
   ClaudeCliRunner,
   CodexCliRunner,
   FallbackRunner,
+  LimitedRunner,
   parseJsonAnswer,
 } from './runner';
 
@@ -176,5 +177,53 @@ describe('FallbackRunner without runners', () => {
       .catch((e: unknown) => e);
     expect(error).toBeInstanceOf(Error);
     expect((error as Error).message).toContain('no agent CLI configured');
+  });
+});
+
+describe('LimitedRunner', () => {
+  // A runner whose runs end only when the test says so.
+  function held() {
+    const started: string[] = [];
+    const finish = new Map<string, () => void>();
+    const runner = {
+      name: 'held',
+      run: (r: { prompt: string }) =>
+        new Promise<unknown>((done) => {
+          started.push(r.prompt);
+          finish.set(r.prompt, () => done({}));
+        }),
+    };
+    return { started, finish, runner };
+  }
+  const request = (prompt: string, urgent = false) => ({
+    model: 'haiku',
+    system: '',
+    prompt,
+    schema: {},
+    urgent,
+  });
+
+  it('lets someone waiting for an answer past the background work', async () => {
+    const { started, finish, runner } = held();
+    const limited = new LimitedRunner(runner, 2);
+    void limited.run(request('triage 1'));
+    void limited.run(request('triage 2'));
+    void limited.run(request('insights'));
+    const search = limited.run(request('search', true));
+    await Promise.resolve();
+    expect(started).toEqual(['triage 1', 'triage 2', 'search']);
+    finish.get('search')!();
+    await search;
+    finish.get('triage 1')!();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(started).toEqual(['triage 1', 'triage 2', 'search', 'insights']);
+  });
+
+  it('keeps background work to its limit', async () => {
+    const { started, runner } = held();
+    const limited = new LimitedRunner(runner, 2);
+    for (const p of ['a', 'b', 'c']) void limited.run(request(p));
+    await Promise.resolve();
+    expect(started).toEqual(['a', 'b']);
   });
 });
