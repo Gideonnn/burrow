@@ -416,6 +416,40 @@ describe('search by meaning, step by step', () => {
     expect(prompt).not.toContain('onder vermelding');
   });
 
+  it('shows the bot the amounts and dates the facts hold, and keeps an answer without sources', async () => {
+    const s = await setup();
+    const id = s.id('Uw nota van maart');
+    s.db
+      .update(messageFacts)
+      .set({
+        summary: 'Een nota voor zorgkosten.',
+        amounts: [{ value: 3, currency: 'EUR' }],
+        dates: ['2026-03-12'],
+      })
+      .where(eq(messageFacts.messageId, id))
+      .run();
+    s.decisions.push({
+      relevant: [1],
+      answer: 'Je betaalde € 3,00.',
+      answerFrom: [],
+    });
+    const res = await s.call(s.token, '/api/search/ai/rank', {
+      method: 'POST',
+      body: JSON.stringify({
+        question: 'hoeveel was de tandarts?',
+        messageIds: [id, s.id('Rooster les 4')],
+        answer: true,
+      }),
+    });
+    expect(rankResponse.parse(await res.json()).answer).toEqual({
+      text: 'Je betaalde € 3,00.',
+      messageIds: [id],
+    });
+    expect(s.agentRequests.at(-1)!.prompt).toContain(
+      'Een nota voor zorgkosten. | bedragen: EUR 3.00 | datums: 2026-03-12',
+    );
+  });
+
   it('never lets the bot read mail outside the key, and skips it when the person said no', async () => {
     const s = await setup();
     const eva = s.db

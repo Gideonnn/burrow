@@ -465,9 +465,11 @@ export class SearchService {
       .map(pick)
       .filter((r): r is SearchResult => Boolean(r));
     const rest = results.filter((r) => !relevant.includes(r));
-    const from = answer.answerFrom
+    // An answer without its sources still rests on the best fitting mail.
+    const named = answer.answerFrom
       .map(pick)
       .filter((r): r is SearchResult => Boolean(r));
+    const from = named.length ? named : relevant.slice(0, 1);
     return {
       results: [...relevant, ...rest],
       relevant: relevant.length,
@@ -491,5 +493,14 @@ function candidateLine(r: SearchResult, n: number): string {
   const text =
     r.facts?.summary ??
     (r.facts?.sensitive ? '(gevoelige mail, geen samenvatting)' : r.snippet);
-  return `${n}. ${date} ${who} | ${redact(r.subject)} | ${redact(text).replace(/\s+/g, ' ').slice(0, 300)}`;
+  // Amounts and dates the facts hold, often not in the summary itself.
+  const amounts = (r.facts?.amounts ?? [])
+    .slice(0, 4)
+    .map((a) => `${a.currency} ${a.value.toFixed(2)}`);
+  const dates = (r.facts?.dates ?? []).slice(0, 4);
+  const extra = [
+    amounts.length ? `bedragen: ${amounts.join(', ')}` : '',
+    dates.length ? `datums: ${dates.join(', ')}` : '',
+  ].filter(Boolean);
+  return `${n}. ${date} ${who} | ${redact(r.subject)} | ${redact(text).replace(/\s+/g, ' ').slice(0, 300)}${extra.length ? ` | ${extra.join(' | ')}` : ''}`;
 }
