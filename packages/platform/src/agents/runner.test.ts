@@ -27,7 +27,7 @@ const fs = require('fs');
 let input = '';
 process.stdin.on('data', (d) => (input += d));
 process.stdin.on('end', () => {
-  fs.writeFileSync(${JSON.stringify(join(dir, 'call.json'))}, JSON.stringify({ args: process.argv.slice(2), input }));
+  fs.writeFileSync(${JSON.stringify(join(dir, 'call.json'))}, JSON.stringify({ args: process.argv.slice(2), input, thinking: process.env.MAX_THINKING_TOKENS ?? null }));
   process.stdout.write(${JSON.stringify(JSON.stringify(envelope))});
   process.exit(${exitCode});
 });
@@ -94,6 +94,22 @@ describe('ClaudeCliRunner', () => {
     await expect(
       new ClaudeCliRunner(await fakeClaude({}, 3)).run(request),
     ).rejects.toThrow(/exited with 3/);
+  });
+});
+
+describe('ClaudeCliRunner without thinking', () => {
+  it('turns thinking off when the request asks, and leaves it alone otherwise', async () => {
+    const runner = new ClaudeCliRunner(
+      await fakeClaude({ result: '', structured_output: { ok: true } }),
+    );
+    const call = async () =>
+      JSON.parse(await readFile(join(dir, 'call.json'), 'utf8')) as {
+        thinking: string | null;
+      };
+    await runner.run({ ...request, thinking: false });
+    expect((await call()).thinking).toBe('0');
+    await runner.run(request);
+    expect((await call()).thinking).toBeNull();
   });
 });
 

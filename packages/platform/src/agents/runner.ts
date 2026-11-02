@@ -22,6 +22,9 @@ export type AgentRequest = {
   // Someone is waiting for the answer (a search); it goes before background
   // work.
   urgent?: boolean;
+  // false turns the model's thinking off: a search plan took 14 s with it and
+  // 6 s without, for the same plan.
+  thinking?: boolean;
 };
 
 // Runs one agent turn and returns its JSON answer. The answer is unvalidated:
@@ -60,6 +63,7 @@ export class ClaudeCliRunner implements AgentRunner {
     prompt,
     schema,
     timeoutMs,
+    thinking,
   }: AgentRequest): Promise<unknown> {
     const stdout = await exec(
       this.command,
@@ -80,7 +84,10 @@ export class ClaudeCliRunner implements AgentRunner {
         JSON.stringify(schema),
       ],
       prompt,
-      { timeoutMs },
+      {
+        timeoutMs,
+        extra: thinking === false ? { MAX_THINKING_TOKENS: '0' } : {},
+      },
     );
     const envelope = JSON.parse(stdout) as {
       is_error?: boolean;
@@ -241,12 +248,16 @@ function exec(
   command: string,
   args: string[],
   input: string,
-  { cwd, timeoutMs = TIMEOUT_MS }: { cwd?: string; timeoutMs?: number } = {},
+  {
+    cwd,
+    timeoutMs = TIMEOUT_MS,
+    extra = {},
+  }: { cwd?: string; timeoutMs?: number; extra?: Record<string, string> } = {},
 ): Promise<string> {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, {
       cwd,
-      env: agentEnv(),
+      env: Object.assign(agentEnv(), extra),
       stdio: ['pipe', 'pipe', 'pipe'],
     });
     let stdout = '';

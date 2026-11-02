@@ -227,6 +227,7 @@ export class SearchService {
       ].join('\n'),
       schema: planSchema,
       urgent: true,
+      thinking: false,
     });
     return searchPlan.parse(raw);
   }
@@ -456,6 +457,7 @@ export class SearchService {
       ].join('\n'),
       schema: rankSchema,
       urgent: true,
+      thinking: false,
     });
     const answer = ranking.parse(raw);
     const pick = (n: number) => results[n - 1];
