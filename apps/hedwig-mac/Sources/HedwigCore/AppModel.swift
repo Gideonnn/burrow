@@ -171,8 +171,9 @@ public final class AppModel {
     var searchLoad: Task<Void, Never>?
     var suggestionLoad: Task<Void, Never>?
     @ObservationIgnored var typedBeforeChip = ""
-    // The results in the server's order, for sorting back to "best".
-    @ObservationIgnored var bestResults: [MessageSummary] = []
+    // The results in the server's order, for sorting back to "best"; observed,
+    // since the lenses are drawn from it.
+    var bestResults: [MessageSummary] = []
     @ObservationIgnored var lastPlan: JSONValue?
     @ObservationIgnored var droppedPlanKeys: [String] = []
     /// Embeds the question on this Mac, when Ollama has the model; nil otherwise.
