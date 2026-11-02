@@ -71,5 +71,28 @@ bm25, against 4% and 37% newest first.
 Embedding models on 160 Haiku-written questions over 12,000 messages, top ten: 
 embeddinggemma 76% (76 mails/s), qwen3-embedding 0.6b 74% (41/s), bge-m3 77% (43/s).
 
-Search by meaning, old against new on the same questions: see the section below,
-filled in when the run finished.
+Search by meaning, old against new, on 80 of those questions (where the wanted mail
+ends up; MRR is the mean of one over its place):
+
+| | top 1 | top 3 | top 10 | in 50 | MRR |
+|---|---|---|---|---|---|
+| word search, old (LIKE, newest first) | 8% | 18% | 36% | 74% | 0.16 |
+| word search, new (index, bm25) | 14% | 29% | 44% | 85% | 0.25 |
+| by meaning, old (plan over LIKE) | 11% | 28% | 44% | 59% | 0.22 |
+| new plan over the index | 15% | 36% | 48% | 64% | 0.26 |
+| plus the nearest by meaning | 19% | 41% | 54% | 68% | 0.31 |
+| plus the reading step | 21% | 40% | 55% | (30 read) | 0.33 |
+
+The bot answered 6 of the 7 questions that asked for a fact. Medians on Dobby: the old
+plan 7.7 s plus 1.8 s of LIKE; the new plan 6.1 s without thinking, the passes 1.1 s
+(0.2 s after the index fixes the same night), the reading step 6.1 s. Caveat: Haiku
+wrote the questions from the mails' summaries, which flatters the vectors (made from
+the same summaries); 80 questions is a small sample.
+
+## Not built
+
+- D, the person card, and B's follow-up questions; lenses counting over every match
+  (TODO).
+- Splitting Dutch compounds in a question ("tandartsrekening" finds no mail; the plan
+  does split it).
+- Kreacher on Haiku 5.5 and without thinking for other kinds (TODO).

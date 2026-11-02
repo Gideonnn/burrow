@@ -310,3 +310,13 @@ filled them in.
 **Why:** the planner reads that line to understand her words.
 **Scope:** five minutes with her Mac, together with "Angela's Mac" above.
 
+## Search: split Dutch compounds in typed words
+
+**What:** a typed word that no mail contains ("tandartsrekening") also searches its parts
+("tandarts", "rekening"), for example with a small Dutch word list or by trying splits
+whose parts are both in the index's vocabulary (`fts5vocab`).
+**Why:** word search matches a word as the start of longer words, so "tandarts" finds
+"tandartspraktijk", but not the other way round; a question typed before Enter often
+holds such a compound and shows unrelated mail until the bot's plan arrives.
+**Scope:** half a day with tests; the vocabulary table is cheap to read.
+
