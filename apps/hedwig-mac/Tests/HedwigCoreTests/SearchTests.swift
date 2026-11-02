@@ -137,3 +137,18 @@ import Testing
         #expect(model.messages.map(\.id) == ["old", "new"])
     }
 }
+
+@MainActor
+@Suite struct CancelTests {
+    @Test func neverShowsACancelledRequestAsAnError() {
+        let model = AppModel(
+            store: ConnectionStore(service: "app.burrow.hedwig.tests"),
+            makeClient: { _ in MockServer().client() },
+            connection: Connection(serverURL: URL(string: "http://burrow.test")!, token: "bk_test"))
+        model.report(URLError(.cancelled))
+        model.report(CancellationError())
+        #expect(model.error == nil)
+        model.report(URLError(.badServerResponse))
+        #expect(model.error != nil)
+    }
+}

@@ -292,6 +292,8 @@ public final class AppModel {
     /// call was a load (`quiet`), only the indicator in the sidebar changes:
     /// the load repeats once the server is back.
     func report(_ error: any Error, quiet: Bool = false) {
+        // A request cancelled because the person typed on or picked another mail.
+        if error is CancellationError || (error as? URLError)?.code == .cancelled { return }
         if APIError.isTransient(error) {
             reachability.lost()
             if quiet { return }
