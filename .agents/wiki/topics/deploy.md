@@ -16,8 +16,8 @@ the Mac, `pnpm server:deploy` (`infra/dobby/deploy.sh`) moves Dobby's checkout t
 | Tunnel token | `~/.config/burrow/tunnel.env`, mode 600, written by the operator |
 | Database, personal bots and skills, backups | `~/.local/share/burrow` |
 | Logs | `~/.local/state/burrow/server.log` and `tunnel.log` (the user journal is not readable there) |
-| Units | `~/.config/systemd/user/burrow.service`, `burrow-backup.{service,timer}`, `burrow-tunnel.service` when a tunnel token exists; linger is on, so they run without a login |
-| Agent CLIs | `~/.local/bin/claude` and `/usr/bin/codex`, logged in as the `dobby` user; Claude Code does not update itself (`autoUpdates: false`), so run `~/.local/bin/claude update` when a new model is out, since the `haiku` alias follows the CLI version |
+| Units | `~/.config/systemd/user/burrow.service`, `burrow-backup.{service,timer}`, `burrow-claude-update.{service,timer}`, `burrow-tunnel.service` when a tunnel token exists; linger is on, so they run without a login |
+| Agent CLIs | `~/.local/bin/claude` and `/usr/bin/codex`, logged in as the `dobby` user; the `haiku` alias follows the CLI version, so `burrow-claude-update.timer` runs `claude-update.sh` at 04:15: it updates, asks one structured answer and points the link back at the previous version when that fails (log in `claude-update.log`). The CLI's own `autoUpdates` stays off: it would update mid-task without that check |
 | ffmpeg, ffprobe | `~/.local/bin`, a static build installed by `install.sh` (checked against its SHA-256) |
 | Recordings | `~/.local/share/burrow/files/pensieve/<id>/audio.m4a` |
 

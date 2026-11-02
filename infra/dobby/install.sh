@@ -11,7 +11,8 @@
 #   2. installs dependencies and builds the server;
 #   3. writes ~/.config/burrow/burrow.env once (mode 600) with a fresh
 #      BURROW_SECRET_KEY; later runs keep it;
-#   4. installs and (re)starts the burrow.service and the nightly backup timer;
+#   4. installs and (re)starts the burrow.service, the nightly backup timer
+#      and the nightly Claude Code update (claude-update.sh);
 #   5. runs the Cloudflare Tunnel as burrow-tunnel.service once the tunnel
 #      settings hold TUNNEL_TOKEN (installs cloudflared into ~/.local/bin
 #      when missing), restarting it only when its unit, cloudflared or the
@@ -142,11 +143,23 @@ Type=oneshot
 EnvironmentFile=$ENV_FILE
 ExecStart=$REPO/infra/dobby/backup.sh
 EOF
+cat > "$UNIT_DIR/burrow-claude-update.service" <<EOF
+[Unit]
+Description=Claude Code update for the agents
+
+[Service]
+Type=oneshot
+Environment=PATH=$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=$REPO/infra/dobby/claude-update.sh
+StandardOutput=append:$LOG_DIR/claude-update.log
+StandardError=append:$LOG_DIR/claude-update.log
+EOF
 /bin/cp -f "$REPO/infra/dobby/burrow-backup.timer" "$UNIT_DIR/burrow-backup.timer"
+/bin/cp -f "$REPO/infra/dobby/burrow-claude-update.timer" "$UNIT_DIR/burrow-claude-update.timer"
 systemctl --user daemon-reload
-systemctl --user enable burrow.service burrow-backup.timer >/dev/null 2>&1
+systemctl --user enable burrow.service burrow-backup.timer burrow-claude-update.timer >/dev/null 2>&1
 systemctl --user restart burrow.service
-systemctl --user start burrow-backup.timer
+systemctl --user start burrow-backup.timer burrow-claude-update.timer
 
 say "waiting for the server"
 started=$SECONDS
