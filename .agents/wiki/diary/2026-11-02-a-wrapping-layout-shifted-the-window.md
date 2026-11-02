@@ -14,7 +14,9 @@ toolbar once an answer arrived. SwiftUI asks for the minimum size with width zer
 `FlowLayout` then puts every chip on its own line and reports that height, the column
 cannot be that short, and the window lays its content out taller than itself.
 
-Fixed by one sideways-scrolling line of chips. Before that, the header was a list row,
+Fixed by one sideways-scrolling line of chips. The answer card did the same a moment
+later: a `Text` with `.fixedSize(horizontal: false, vertical: true)` is one letter per
+line at width zero. Every text in the header now has a line limit instead. Before that, the header was a list row,
 which keeps its first height, so the answer that arrives seconds later stayed hidden.
 Also: `ForEach` over lenses with the same id (every year a period with one key) drew
 the first one three times.

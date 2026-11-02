@@ -97,9 +97,9 @@ without.
   replaces the words it stood for.
 - Above the list, not in it (a list row keeps its first height): place, order and codes,
   the plan's chips, the answer card, and lenses over the best thirty results (people,
-  kinds, attachments, years). Chips and lenses scroll on one line: a wrapping layout
-  there gave the column the height of every chip on its own line at width zero, and the
-  window's content shifted up under the toolbar.
+  kinds, attachments, years). Chips and lenses scroll on one line and every text has a
+  line limit: a wrapping layout or a fixed-size text there gave the column the height of
+  one word per line at width zero, and the window's content shifted up under the toolbar.
 
 ## Measuring
 

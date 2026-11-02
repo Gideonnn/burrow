@@ -751,7 +751,8 @@ public final class AppModel {
         searchExplanation = response.explanation
         planTokens = response.tokens ?? []
         if let plan = response.plan, plan != .null { lastPlan = plan }
-        searchTotal = response.total ?? response.results.count
+        // The list is what the passes fused; the server's total counts loose matches too.
+        searchTotal = response.results.count
         showResults(response.results)
     }
 

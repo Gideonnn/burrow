@@ -173,7 +173,7 @@ private struct AIRow: View {
         if model.aiSearching {
             HStack(spacing: 6) {
                 ProgressView().controlSize(.small)
-                Text("Kreacher bedenkt waar hij moet zoeken…")
+                Text("Kreacher bedenkt waar hij moet zoeken…").lineLimit(1)
             }
             .font(.callout)
             .foregroundStyle(.secondary)
@@ -201,7 +201,7 @@ private struct AIRow: View {
                 if model.searchRanking {
                     HStack(spacing: 6) {
                         ProgressView().controlSize(.mini)
-                        Text("Kreacher leest de beste resultaten…")
+                        Text("Kreacher leest de beste resultaten…").lineLimit(1)
                     }
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -209,6 +209,7 @@ private struct AIRow: View {
             }
         } else {
             Label(model.searchLoose ? "Niets met al deze woorden; dit lijkt erop. ↩ zoekt op betekenis." : "↩ zoekt op betekenis", systemImage: "sparkles")
+                .lineLimit(2)
                 .font(.callout)
                 .foregroundStyle(.secondary)
         }
@@ -222,9 +223,11 @@ private struct AnswerCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
+            // A line limit, not fixedSize: at the width zero SwiftUI asks for the minimum,
+            // a fixed-size text is one letter per line and pushes the window's content up.
             Text(answer.text)
                 .font(.body.weight(.semibold))
-                .fixedSize(horizontal: false, vertical: true)
+                .lineLimit(4)
                 .textSelection(.enabled)
             ForEach(sources, id: \.id) { source in
                 Button { model.selectedMessageId = source.id } label: {
