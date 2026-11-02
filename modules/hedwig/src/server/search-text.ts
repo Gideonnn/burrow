@@ -127,3 +127,12 @@ export function hitIn(
     });
   return { field, text: out, ranges };
 }
+
+// Words that say nothing about which mail is meant, Dutch and English; a
+// question typed before Enter is full of them.
+export const FILLER = new Set(
+  (
+    'de het een en van in op te voor met aan is ik je jij u uw mijn me mij we wij ons ze zij hij haar hem die dat dit deze er ook nog wat wie waar wanneer hoe hoeveel waarom welke welk was waren ben bent zijn heb heeft hebben had hadden moest moet moeten kan kon kunnen zou zal wil wilde om tot bij uit door naar over als of maar niet geen al wel even mail mails bericht berichten ' +
+    'the a an of to for and or is are was were my i me you your what when where how which who did do does from about with by on at it this that mail email message'
+  ).split(' '),
+);

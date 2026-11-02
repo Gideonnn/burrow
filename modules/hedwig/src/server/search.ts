@@ -24,7 +24,14 @@ import { type FactsRow, forKey, toFacts } from './facts/store';
 import { type MessageRow, toSummary } from './mail-service';
 import { findPeople } from './people';
 import { mailboxes, messageFacts, messages } from './schema';
-import { ftsPhrase, hitIn, parseQuery, tokens } from './search-text';
+import {
+  FILLER,
+  fold,
+  ftsPhrase,
+  hitIn,
+  parseQuery,
+  tokens,
+} from './search-text';
 
 const NOISE: FactCategory[] = ['code', 'account'];
 // Subject, people, body, facts: a word in the subject says most.
@@ -194,8 +201,16 @@ export function searchTyped(
   if (found.results.length || !query.matchAll || query.groups.length < 3) {
     return { ...found, loose: false };
   }
+  const telling = query.groups.filter((g) =>
+    g.some((w) => !FILLER.has(fold(w))),
+  );
+  if (!telling.length) return { ...found, loose: false };
   return {
-    ...searchMessages(db, mailboxIds, { ...query, matchAll: false }),
+    ...searchMessages(db, mailboxIds, {
+      ...query,
+      groups: telling,
+      matchAll: false,
+    }),
     loose: true,
   };
 }

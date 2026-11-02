@@ -134,6 +134,12 @@ describe('word search on the index', () => {
     expect(found.loose).toBe(true);
     expect(found.results[0]!.subject).toBe('Rooster les 4');
     expect((await search(s, 'q=practicum%20xyzzy')).results).toEqual([]);
+    // Filler words match nearly everything; the closest match ignores them.
+    const filler = await search(
+      s,
+      'q=wat%20stuurde%20de%20tandarts%20mij%20in%20de%20zomer',
+    );
+    expect(filler.results.map((m) => m.subject)).toEqual(['Uw nota van maart']);
   });
 
   it('counts every match, not only the page it returns', async () => {
