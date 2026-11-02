@@ -350,6 +350,11 @@ export class SearchService {
       },
       scope,
     );
+    // People the bot named are a preference, not a demand: the strict pass
+    // wants them, the loose and the meaning pass do not, so a "tandarts" read
+    // as the practice's address cannot hide the invoices its bookkeeper sends.
+    // People the person chose as chips always count.
+    const chosenPeople = filters?.people ?? [];
     const passes = (q: typeof base) => {
       const strict = matchingIds(db, mailboxIds, {
         ...q,
@@ -357,10 +362,11 @@ export class SearchService {
         matchAll: true,
         limit: 50,
       });
+      const free = { ...q, people: chosenPeople };
       const loose =
-        wordGroups.length > 1
+        wordGroups.length > 1 || q.people?.length !== chosenPeople.length
           ? matchingIds(db, mailboxIds, {
-              ...q,
+              ...free,
               groups: wordGroups,
               matchAll: false,
               limit: 100,
@@ -376,7 +382,7 @@ export class SearchService {
         if (near.length) {
           const allowed = new Set(
             matchingIds(db, mailboxIds, {
-              ...q,
+              ...free,
               groups: [],
               matchAll: true,
               onlyIds: near.map((n) => n.id),

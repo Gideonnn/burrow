@@ -323,6 +323,18 @@ describe('search by meaning, step by step', () => {
     expect(found.results.map((m) => m.subject)).toEqual(['Etentje zaterdag?']);
   });
 
+  it('prefers the people the bot named without hiding mail from others', async () => {
+    const s = await setup();
+    s.decisions.push(
+      plan({ groups: [['factuur'], ['februari']], people: ['Studio Vos'] }),
+    );
+    const found = await ask(s, 'de factuur van Studio Vos uit februari');
+    expect(found.results.map((m) => m.subject)).toEqual([
+      'Factuur 2026-031',
+      'Etentje zaterdag?',
+    ]);
+  });
+
   it('ranks matches of every group above matches of one', async () => {
     const s = await setup();
     s.decisions.push(
