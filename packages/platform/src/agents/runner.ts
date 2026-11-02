@@ -22,8 +22,8 @@ export type AgentRequest = {
   // Someone is waiting for the answer (a search); it goes before background
   // work.
   urgent?: boolean;
-  // false turns the model's thinking off: a search plan took 14 s with it and
-  // 6 s without, for the same plan.
+  // false asks the CLI not to think. Haiku 4.5 then planned a search in 6 s
+  // instead of 14; Haiku 5.5 thinks anyway and plans in about 4 s.
   thinking?: boolean;
 };
 

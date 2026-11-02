@@ -4,6 +4,7 @@ Newest first.
 
 - [2026-11-02 Mail search on an FTS5 index](2026-11-02-mail-search-on-an-fts5-index.md): the index, people, vectors on the Mac, a reading step, and what was rejected.
 - [2026-11-02 The CLI thinks for ten seconds](2026-11-02-the-cli-thinks-for-ten-seconds.md): `MAX_THINKING_TOKENS=0` halves a search, `haiku` is Haiku 4.5, searches skip the agent queue.
+- [2026-11-02 Haiku 5.5 thinks anyway](2026-11-02-haiku-5-5-thinks-anyway.md): a CLI update moves `haiku` to 5.5; no CLI switch stops it thinking, and it is faster regardless.
 - [2026-11-02 A wrapping layout shifted the window](2026-11-02-a-wrapping-layout-shifted-the-window.md): FlowLayout at width zero above a list, and the answer hidden in a list row.
 - [2026-11-02 A standing kind that is on by default joins every claim](2026-11-02-a-default-on-standing-kind-joins-every-claim.md): `hedwig.share` landed in the facts tests' `*` claims and the runner list; tests claim their kind by name, progress stays null until there is work, suggestions wait for the facts; the secrets hook refuses `this.db` in Bash.
 - [2026-10-28 Recordings over about 80 MB never uploaded](2026-10-28-long-recordings-never-uploaded.md): the chunk reply lacked the `id` that BurrowKit decodes, each chunk counted as a failure and the fifth threw; the reply now carries `id`.

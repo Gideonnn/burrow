@@ -45,7 +45,7 @@ to add one: [modules](modules.md).
   runs at once across everything.
 - **Agents.** Claude Code and Codex CLIs logged in on Dobby (Codex with the ChatGPT
   plan). A bot may prefer one (`agent:` in its front matter); the other is the fallback.
-  The bot's `model` is `haiku` by default, which Claude Code 2.1.288 on Dobby runs as Haiku 4.5, thinking unless a request says `thinking: false` ([diary](../diary/2026-11-02-the-cli-thinks-for-ten-seconds.md)); a skill that needs more says `model: opus`
+  The bot's `model` is `haiku` by default, which Claude Code 2.1.316 on Dobby runs as Haiku 5.5; it always thinks, `thinking: false` no longer stops it ([diary](../diary/2026-11-02-haiku-5-5-thinks-anyway.md)); a skill that needs more says `model: opus`
   in its front matter (reply suggestions, meeting notes). Opus runs at effort high, Haiku
   chooses its own; Codex runs Sol 6.1 (`gpt-6.1-sol`) unless `BURROW_CODEX_MODEL` says
   otherwise. A bot with `agent: local` (Winky) has an `ollama:` model and is refused by

@@ -17,7 +17,7 @@ the Mac, `pnpm server:deploy` (`infra/dobby/deploy.sh`) moves Dobby's checkout t
 | Database, personal bots and skills, backups | `~/.local/share/burrow` |
 | Logs | `~/.local/state/burrow/server.log` and `tunnel.log` (the user journal is not readable there) |
 | Units | `~/.config/systemd/user/burrow.service`, `burrow-backup.{service,timer}`, `burrow-tunnel.service` when a tunnel token exists; linger is on, so they run without a login |
-| Agent CLIs | `~/.local/bin/claude` and `/usr/bin/codex`, logged in as the `dobby` user |
+| Agent CLIs | `~/.local/bin/claude` and `/usr/bin/codex`, logged in as the `dobby` user; Claude Code does not update itself (`autoUpdates: false`), so run `~/.local/bin/claude update` when a new model is out, since the `haiku` alias follows the CLI version |
 | ffmpeg, ffprobe | `~/.local/bin`, a static build installed by `install.sh` (checked against its SHA-256) |
 | Recordings | `~/.local/share/burrow/files/pensieve/<id>/audio.m4a` |
 

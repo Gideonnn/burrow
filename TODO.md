@@ -279,17 +279,6 @@ badge says so and Kreacher leaves a note; a success clears it.
 (diary 2026-10-27).
 **Scope:** a `lastSyncError` on the mailbox in `/api/me`, the badge, a routine; half a day.
 
-## Kreacher on Haiku 5.5, and without thinking where speed matters
-
-**What:** with Claude Code 2.1.288 on Dobby, `--model haiku` runs Haiku 4.5, and the CLI
-lets it think: a search plan cost 1,300 output tokens and 13 s, 6 s with
-`MAX_THINKING_TOKENS=0`. Search now asks without thinking. Decide per kind (triage,
-templates, outing details, notes) whether thinking helps, and pin `claude-haiku-5-5` in
-the bots (or update the CLI so the alias points there), measured on a few real tasks.
-**Why:** every Kreacher task is slower than it needs to be and runs on an older model
-than the architecture topic assumed.
-**Scope:** an hour to measure, a line per bot; see the diary of 2 November.
-
 ## Search: a person card and follow-up questions
 
 **What:** the two parts of the search design not built yet (`docs/design/hedwig-search.html`,

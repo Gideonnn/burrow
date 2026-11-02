@@ -71,8 +71,8 @@ A person in a search is an FTS phrase on the people column.
 
 Both bot calls are `urgent` (they skip the queue of agent runs and have a place of their
 own, so a search never waits behind reply suggestions) and `thinking: false`
-(`MAX_THINKING_TOKENS=0` for the Claude CLI): a plan took 14 s with thinking and 6 s
-without.
+(`MAX_THINKING_TOKENS=0` for the Claude CLI): on Haiku 4.5 a plan took 14 s with
+thinking and 6 s without. Haiku 5.5 thinks regardless and plans in 3.5 to 5 s.
 
 ## Vectors
 
