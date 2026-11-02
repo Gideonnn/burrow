@@ -217,7 +217,8 @@ public struct SearchSuggestion: Hashable, Identifiable, Sendable {
 public struct SearchLens: Hashable, Identifiable, Sendable {
     public var token: SearchToken
     public var count: Int
-    public var id: String { token.key }
+    // Every year is a period with the same key, so the label tells them apart.
+    public var id: String { "\(token.id)|\(token.label)" }
 }
 
 /// Recognises the words a person types for a period, a kind of mail or a

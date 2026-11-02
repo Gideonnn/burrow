@@ -438,6 +438,11 @@ export class SearchService {
       return { results, relevant: results.length, answer: null };
     }
     const bot = catalog.bots.get(this.o.bot)!;
+    // Newest first: "the last invoice" is then the first that fits, which a
+    // small model gets right more often than when it has to compare dates.
+    const shown = [...results].sort((a, b) =>
+      b.receivedAt.localeCompare(a.receivedAt),
+    );
     const raw = await runner.run({
       ...botRequest(bot, [catalog.skills.get(RANK_SKILL)!]),
       prompt: [
@@ -452,7 +457,7 @@ export class SearchService {
         '',
         untrusted(
           'candidates',
-          results.map((r, i) => candidateLine(r, i + 1)).join('\n'),
+          shown.map((r, i) => candidateLine(r, i + 1)).join('\n'),
         ),
       ].join('\n'),
       schema: rankSchema,
@@ -460,7 +465,7 @@ export class SearchService {
       thinking: false,
     });
     const answer = ranking.parse(raw);
-    const pick = (n: number) => results[n - 1];
+    const pick = (n: number) => shown[n - 1];
     const relevant = [...new Set(answer.relevant)]
       .map(pick)
       .filter((r): r is SearchResult => Boolean(r));

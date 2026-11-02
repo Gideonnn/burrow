@@ -670,7 +670,8 @@ public final class AppModel {
     /// Lenses over the results: people, kinds, attachments and years to narrow to.
     public var searchLenses: [SearchLens] {
         let own = Set((me?.mailboxes ?? []).map { $0.address.lowercased() })
-        return SearchWords.lenses(for: bestResults, own: own, chosen: searchTokens)
+        // The best thirty: further down the list a search by meaning is loose.
+        return SearchWords.lenses(for: Array(bestResults.prefix(30)), own: own, chosen: searchTokens)
     }
 
     public func addSearchToken(_ token: SearchToken) {

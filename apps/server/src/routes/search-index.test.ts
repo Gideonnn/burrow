@@ -428,8 +428,9 @@ describe('search by meaning, step by step', () => {
       })
       .where(eq(messageFacts.messageId, id))
       .run();
+    // Candidates come newest first: the roster of May is 1, the note of March 2.
     s.decisions.push({
-      relevant: [1],
+      relevant: [2],
       answer: 'Je betaalde € 3,00.',
       answerFrom: [],
     });

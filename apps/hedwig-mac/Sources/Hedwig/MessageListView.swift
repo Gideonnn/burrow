@@ -128,7 +128,7 @@ private struct SearchHeader: View {
             if let answer = model.searchAnswer { AnswerCard(answer: answer) }
             let lenses = model.searchLenses
             if !lenses.isEmpty {
-                FlowLayout(spacing: 5) {
+                ChipRow {
                     ForEach(lenses) { lens in
                         Button { model.addSearchToken(lens.token) } label: {
                             HStack(spacing: 4) {
@@ -151,6 +151,20 @@ private struct SearchHeader: View {
     }
 }
 
+/// One line of chips that scrolls sideways. A wrapping layout here made the column's
+/// minimum height that of every chip on its own line, which pushed the window's
+/// content up under the toolbar.
+private struct ChipRow<Content: View>: View {
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 5) { content }
+        }
+        .scrollClipDisabled()
+    }
+}
+
 /// What the bot is doing, or what it searched for as chips that can be dropped.
 private struct AIRow: View {
     @Environment(AppModel.self) private var model
@@ -165,7 +179,7 @@ private struct AIRow: View {
             .foregroundStyle(.secondary)
         } else if !model.planTokens.isEmpty || model.searchExplanation != nil {
             VStack(alignment: .leading, spacing: 5) {
-                FlowLayout(spacing: 5) {
+                ChipRow {
                     Image(systemName: "sparkles").foregroundStyle(Color.accentColor)
                     ForEach(model.planTokens) { token in
                         Button { model.removePlanToken(token) } label: {
