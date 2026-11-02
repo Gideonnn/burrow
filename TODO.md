@@ -168,15 +168,6 @@ forks open) and add `LICENSE`.
 **Why:** without one, nobody may legally reuse the code, which defeats publishing it.
 **Scope:** one file; Gideon decides.
 
-## Full-text index for mail search
-
-**What:** an FTS5 table over subject, sender, recipients and body, kept in step with
-`messages`, used by word search and the bot's plans instead of `LIKE`.
-**Why:** with the whole archive on Dobby every search scans every body; about 300 ms for
-50,000 messages on a MacBook, slower on Dobby and per keystroke.
-**Scope:** a migration with triggers, the search query and ranking; half a day. Only once
-search feels slow.
-
 ## A faster server start
 
 **What:** the server takes 7 to 8 s from `systemctl restart` to answering `/health` on
@@ -287,3 +278,35 @@ badge says so and Kreacher leaves a note; a success clears it.
 **Why:** the Fastmail sync failed for days in the server log while the Mac looked fine
 (diary 2026-10-27).
 **Scope:** a `lastSyncError` on the mailbox in `/api/me`, the badge, a routine; half a day.
+
+## Kreacher on Haiku 5.5, and without thinking where speed matters
+
+**What:** with Claude Code 2.1.288 on Dobby, `--model haiku` runs Haiku 4.5, and the CLI
+lets it think: a search plan cost 1,300 output tokens and 13 s, 6 s with
+`MAX_THINKING_TOKENS=0`. Search now asks without thinking. Decide per kind (triage,
+templates, outing details, notes) whether thinking helps, and pin `claude-haiku-5-5` in
+the bots (or update the CLI so the alias points there), measured on a few real tasks.
+**Why:** every Kreacher task is slower than it needs to be and runs on an older model
+than the architecture topic assumed.
+**Scope:** an hour to measure, a line per bot; see the diary of 2 November.
+
+## Search: a person card and follow-up questions
+
+**What:** the two parts of the search design not built yet (`docs/design/hedwig-search.html`,
+D and B): `@person` without words opens a card (their addresses, mail each way, open
+threads, attachments, invoices as lenses), and a follow-up question ("en die van vorig
+jaar?") reuses the last plan with a changed period instead of a new one. Also lenses
+that count over every match on the server, not the best thirty.
+**Why:** the card answers "what is going on with this client or teacher" in one look;
+follow-ups make the answer step conversational without two bot rounds per turn.
+**Scope:** a day for the card, half a day for follow-ups, half a day for server facets.
+
+## Angela's search and sharing settings
+
+**What:** on her Mac, Angela fills in "Over jou, voor zoeken" (for example "Ik studeer;
+schoolmail gaat over vakken, roosters, deadlines en groepsopdrachten.") and picks how
+Winky suggests household mail. Personal settings are hers to change, so nobody else
+filled them in.
+**Why:** the planner reads that line to understand her words.
+**Scope:** five minutes with her Mac, together with "Angela's Mac" above.
+

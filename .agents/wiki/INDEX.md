@@ -20,6 +20,7 @@
 - [Routines and tasks](topics/routines.md): task kinds, queues, priorities, runners on server and Macs, standing work, triggers and approval.
 - [Mail facts](topics/mail-facts.md): rules for secrets and codes, templates on Haiku, Winky on the Mac, `burrowctl runner`, facts-only keys.
 - [Sharing mail](topics/sharing.md): one mail shared with the household, who may read and find it, and Winky's suggestions of household mail.
+- [Mail search](topics/search.md): the FTS5 index, @people, search by meaning in two steps (plan, fused passes, a reading step that may answer), vectors from the Mac's runner, and the measurements.
 - [Outings](topics/outings.md): the household's concerts and parties, read from order mails, with tickets, a checklist and search words.
 
 ## Diary

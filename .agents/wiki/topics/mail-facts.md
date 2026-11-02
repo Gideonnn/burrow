@@ -35,7 +35,7 @@ by default) get templates and Winky; everyone gets the rules.
 ## Using them
 
 - Every `MessageSummary` carries `facts` (null before the rules ran).
-- Word search also matches keywords, summary, people and organisations, and hides the
+- Word search (the FTS5 index, see [search](search.md)) also matches keywords, summary, people and organisations, and hides the
   categories `code` and `account` unless `includeLow` ("Toon ook codes"). Not all of
   priority `low`, as planned: Winky rates most newsletters and promotions low, and those
   should stay findable. The bot's search plan has `categories` and `includeLow`.
