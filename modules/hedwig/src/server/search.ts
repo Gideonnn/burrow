@@ -37,6 +37,7 @@ const NOISE: FactCategory[] = ['code', 'account'];
 // Subject, people, body, facts: a word in the subject says most.
 const BM25 = sql.raw('bm25(message_search, 10.0, 4.0, 1.0, 3.0)');
 const CANDIDATES = 400;
+const TOP = 2000;
 
 export type SearchQuery = {
   // Every group must match for word search; for a plan, any group does and
@@ -141,16 +142,25 @@ function scopeOf(
   return scope;
 }
 
-function filters(query: SearchQuery, scope: string[]): SQL | undefined {
+function filters(
+  query: SearchQuery,
+  scope: string[],
+  driven = Boolean(query.onlyIds),
+): SQL | undefined {
   const also = query.alsoIds?.length
     ? inArray(messages.id, [...query.alsoIds])
     : undefined;
+  // When the index or a given set of ids drives the query, the unary + keeps
+  // SQLite off the mailbox index: with it, 400 ids took 320 ms walking every
+  // message of the mailboxes; looked up by id, 16 ms.
+  const inScope = driven
+    ? sql`+${messages.mailboxId} in (${sql.join(
+        scope.map((id) => sql`${id}`),
+        sql`, `,
+      )})`
+    : inArray(messages.mailboxId, scope);
   return and(
-    scope.length && also
-      ? or(inArray(messages.mailboxId, scope), also)
-      : scope.length
-        ? inArray(messages.mailboxId, scope)
-        : also,
+    scope.length && also ? or(inScope, also) : scope.length ? inScope : also,
     query.onlyIds ? inArray(messages.id, [...query.onlyIds]) : undefined,
     query.includeLow
       ? undefined
@@ -242,10 +252,43 @@ export function matchingIds(
   ) {
     return { ids: [], total: 0 };
   }
-  const where = filters(query, scope);
+  const where = filters(query, scope, Boolean(expr || query.onlyIds));
   let ranked: { id: string; score: number }[];
   let total: number;
-  if (expr) {
+  const want = Math.max(CANDIDATES, query.limit * 3);
+  // Any group of a plan matches much of the archive ("betalen", "laatste"):
+  // the index picks its best two thousand first, and only those are joined
+  // and filtered (250 to 500 ms down to tens). When the filters leave too few
+  // and the index had more, the full query below runs after all.
+  const quick =
+    expr && hasWords && !query.matchAll
+      ? db.all<{ id: string; rank: number; at: number }>(sql`
+          with top as (
+            select rowid, ${BM25} as rank from message_search
+            where message_search match ${expr} order by rank limit ${TOP}
+          )
+          select messages.id as id, top.rank as rank, messages.received_at as at
+          from top
+          join message_search_keys k on k.id = top.rowid
+          join messages on messages.id = k.message_id
+          left join message_facts on message_facts.message_id = messages.id
+          ${where ? sql`where ${where}` : sql``}
+          order by top.rank limit ${want}`)
+      : null;
+  const enough =
+    quick &&
+    (quick.length >= want ||
+      db.get<{ n: number }>(
+        sql`select count(*) as n from (select rowid from message_search where message_search match ${expr} limit ${TOP + 1})`,
+      )!.n <= TOP);
+  if (quick && enough) {
+    total = quick.length;
+    ranked = quick.map((r) => ({
+      id: r.id,
+      score: blended(r.rank, r.at, now),
+    }));
+    ranked.sort((a, b) => b.score - a.score);
+  } else if (expr) {
     const rows = db.all<{ id: string; rank: number; at: number }>(sql`
       select messages.id as id, ${BM25} as rank, messages.received_at as at
       from message_search
@@ -275,11 +318,14 @@ export function matchingIds(
       .from(messages)
       .leftJoin(messageFacts, eq(messageFacts.messageId, messages.id))
       .where(where)
-      .orderBy(sql`${messages.receivedAt} desc`)
+      // A given set of ids is ordered by the caller; sorting by date would make
+      // SQLite walk the date index past every message instead of looking the
+      // ids up (300 ms against a few for 400 ids).
+      .orderBy(query.onlyIds ? sql`1` : sql`${messages.receivedAt} desc`)
       .limit(query.limit)
       .all();
     total =
-      rows.length < query.limit
+      rows.length < query.limit || query.onlyIds
         ? rows.length
         : db.get<{ n: number }>(
             sql`select count(*) as n from messages left join message_facts on message_facts.message_id = messages.id where ${where}`,

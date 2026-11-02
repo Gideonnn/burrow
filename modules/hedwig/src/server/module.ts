@@ -9,7 +9,7 @@ import { mailboxAccess, mailboxRestriction } from './access';
 import type { Accounts } from './accounts';
 import { SEARCH_ABOUT, SEARCH_READS, SearchService } from './ai-search';
 import { createDraft } from './drafts';
-import { EmbeddingsService } from './embeddings';
+import { EMBED_MODEL, EmbeddingsService } from './embeddings';
 import { FACTS_FEATURE, FactsService } from './facts/service';
 import { InsightsService, LONG_MESSAGE } from './insights';
 import { type ClientFor, MailService, type MessageRow } from './mail-service';
@@ -312,6 +312,8 @@ export function hedwigModule(platform: Platform, options: HedwigOptions) {
           ),
         );
       if (options.sync === false) return;
+      // After the server answers, so the start is not slower for it.
+      const warm = setTimeout(() => vectors.warm(EMBED_MODEL), 10_000);
       const stopSync = startSyncLoop(mail, onArrived);
       const stopBackfill = startBackfillLoop(mail);
       void triage.retryUntriaged();
@@ -320,7 +322,9 @@ export function hedwigModule(platform: Platform, options: HedwigOptions) {
         RETRY_EVERY_MS,
       );
       retry.unref();
+      warm.unref();
       return () => {
+        clearTimeout(warm);
         stopSync();
         stopBackfill();
         clearInterval(retry);

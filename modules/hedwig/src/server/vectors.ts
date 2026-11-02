@@ -40,6 +40,12 @@ export class VectorIndex {
     this.stale.add(model);
   }
 
+  // Loads a model's vectors ahead of the first search, which otherwise waits
+  // about two seconds for 51,000 of them.
+  warm(model: string) {
+    this.index(model);
+  }
+
   count(model: string): number {
     return this.db.get<{ n: number }>(
       sql`select count(*) as n from message_vectors where model = ${model}`,
@@ -63,10 +69,17 @@ export class VectorIndex {
       for (let d = 0; d < dims; d++) s += index.data[off + d]! * q[d]!;
       scores[i] = s;
     }
-    const order = [...scores.keys()]
-      .sort((a, b) => scores[b]! - scores[a]!)
-      .slice(0, limit);
-    return order.map((i) => ({ id: index.ids[i]!, score: scores[i]! }));
+    // The limit-th best score as a threshold from a native numeric sort, then
+    // only the few above it sorted: a comparator sort of every index took 130 ms.
+    const sorted = Float32Array.from(scores).sort();
+    const threshold = sorted[Math.max(0, sorted.length - limit)]!;
+    const best: number[] = [];
+    for (let i = 0; i < scores.length; i++)
+      if (scores[i]! >= threshold) best.push(i);
+    best.sort((a, b) => scores[b]! - scores[a]!);
+    return best
+      .slice(0, limit)
+      .map((i) => ({ id: index.ids[i]!, score: scores[i]! }));
   }
 
   private index(model: string): Loaded {
