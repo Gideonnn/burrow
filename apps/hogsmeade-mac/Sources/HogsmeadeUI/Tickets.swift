@@ -1,5 +1,6 @@
 import AppKit
 import HogsmeadeCore
+import QuickLook
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -149,6 +150,7 @@ public struct TicketCodeFace: View {
         self.side = side
     }
 
+    // The symbols are sized to the code's box.
     public var body: some View {
         switch entry.face {
         case let .pass(_, code):
@@ -258,6 +260,7 @@ public struct TicketViewer: View {
     let outing: Outing
     let entries: [TicketEntry]
     @State var index: Int
+    @State private var lookingAt: URL?
 
     public init(outing: Outing, entries: [TicketEntry], index: Int) {
         self.outing = outing
@@ -273,7 +276,9 @@ public struct TicketViewer: View {
             Divider()
             content.frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .frame(width: 560, height: 640)
+        .frame(minWidth: 460, idealWidth: 560, minHeight: 520, idealHeight: 640)
+        .modifier(FittedSheet())
+        .quickLookPreview($lookingAt)
         .onKeyPress(.leftArrow) { step(-1) }
         .onKeyPress(.rightArrow) { step(1) }
     }
@@ -292,6 +297,11 @@ public struct TicketViewer: View {
                 Button { _ = step(1) } label: { Image(systemName: "chevron.right") }.disabled(index >= entries.count - 1).accessibilityLabel("Volgende")
             }
             Spacer()
+            Button("Quick Look") {
+                guard let ticket = entry?.ticket else { return }
+                Task { lookingAt = await model.ticketURL(ticket, in: outing.id) }
+            }
+            .help("Toon het bestand zelf, de pdf of de Wallet-pas")
             Button("Open bestand") {
                 guard let ticket = entry?.ticket else { return }
                 Task { if let url = await model.ticketURL(ticket, in: outing.id) { NSWorkspace.shared.open(url) } }
@@ -315,6 +325,17 @@ public struct TicketViewer: View {
         guard entries.indices.contains(next) else { return .ignored }
         index = next
         return .handled
+    }
+}
+
+/// The sheet takes its ideal size and can be resized from macOS 15.
+private struct FittedSheet: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(macOS 15, *) {
+            content.presentationSizing(.fitted)
+        } else {
+            content
+        }
     }
 }
 

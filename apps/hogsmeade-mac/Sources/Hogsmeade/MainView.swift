@@ -4,12 +4,13 @@ import HogsmeadeUI
 import SwiftUI
 
 /// The window (docs/design/outings-app-native.html): a sidebar that narrows,
-/// the poster wall with tonight on top, and the page of one outing in the
-/// same column, with Binnenkort as the way back.
+/// the poster wall with tonight on top, and an outing's page on top of the
+/// wall in a navigation stack, so the system draws back and forward.
 struct MainView: View {
     @Environment(OutingsModel.self) private var model
     @State private var adding = false
     @FocusState private var searchFocused: Bool
+    @SceneStorage("hogsmeade.sidebar") private var storedPlace = OutingsModel.Place.upcoming.rawValue
 
     var body: some View {
         @Bindable var model = model
@@ -17,34 +18,27 @@ struct MainView: View {
             Sidebar()
                 .navigationSplitViewColumnWidth(min: 200, ideal: 220, max: 280)
         } detail: {
-            Group {
-                if let outing = model.open {
-                    OutingPage(outing: outing)
-                        .id(outing.id)
-                        .transition(.move(edge: .trailing).combined(with: .opacity))
-                } else {
-                    WallView()
-                        .transition(.opacity)
-                }
+            NavigationStack(path: Binding(
+                get: { model.openId.map { [$0] } ?? [] },
+                set: { path in if let id = path.last { model.open(id) } else { model.close() } }
+            )) {
+                WallView()
+                    .navigationTitle(model.page == .upcoming ? "Binnenkort" : "Geweest")
+                    .navigationSubtitle(model.summaryLine)
+                    .navigationDestination(for: String.self) { id in
+                        if let outing = model.outings.first(where: { $0.id == id }) {
+                            OutingPage(outing: outing)
+                                .navigationTitle(outing.title)
+                        }
+                    }
             }
-            .animation(.snappy(duration: 0.25), value: model.open?.id)
-            .navigationTitle(model.open?.title ?? (model.page == .upcoming ? "Binnenkort" : "Geweest"))
-            .navigationSubtitle(model.open == nil ? model.summaryLine : "")
         }
         .toolbar {
-            ToolbarItemGroup(placement: .navigation) {
-                if model.open != nil {
-                    Button { model.close() } label: { Label("Binnenkort", systemImage: "chevron.left") }
-                        .help("Terug naar de wand (Esc)")
-                }
-            }
             ToolbarItemGroup(placement: .primaryAction) {
-                TextField("Zoek een uitje", text: $model.query)
-                    .textFieldStyle(.roundedBorder)
-                    .frame(width: 200)
-                    .focused($searchFocused)
-                    .onExitCommand { searchFocused = false; model.query = "" }
                 if let outing = model.open {
+                    Button { model.editingId = outing.id } label: { Label("Wijzig", systemImage: "pencil") }
+                        .help("Wijzig wat, wanneer en waar (⌘E)")
+                        .disabled(!model.canOrganize)
                     ShareLink(item: shareText(outing)) { Label("Deel", systemImage: "square.and.arrow.up") }
                         .help("Deel de datum en de plek")
                 }
@@ -53,33 +47,37 @@ struct MainView: View {
                     .disabled(!model.canOrganize)
             }
         }
+        .searchable(text: $model.query, placement: .toolbar, prompt: "Zoek een uitje")
+        .modifier(SearchFocus(focused: $searchFocused))
         .sheet(isPresented: $adding) { NewOutingSheet() }
+        .sheet(item: Binding(get: { model.editingId.flatMap(outing) }, set: { model.editingId = $0?.id })) { EditOutingSheet(outing: $0) }
+        .sheet(item: Binding(get: { model.pickingPictureId.flatMap(outing) }, set: { model.pickingPictureId = $0?.id })) {
+            PicturePickerSheet(outing: $0)
+        }
         .onChange(of: model.newRequest) { adding = true }
         .onChange(of: model.searchFocusRequest) { searchFocused = true }
         .onChange(of: model.query) { if !model.query.isEmpty, model.open != nil { model.close() } }
         .onKeyPress(.escape) {
-            if searchFocused { searchFocused = false; model.query = ""; return .handled }
             guard model.open != nil || !model.query.isEmpty else { return .ignored }
             model.escape()
             return .handled
         }
+        .onAppear { if let place = OutingsModel.Place(rawValue: storedPlace) { model.place = place } }
+        .onChange(of: model.place) { storedPlace = model.place.rawValue }
         .overlay(alignment: .bottom) {
             if let toast = model.toast {
                 Text(toast.message)
                     .font(.callout.weight(.medium))
                     .padding(.horizontal, 14).padding(.vertical, 9)
-                    .background(.regularMaterial, in: Capsule())
-                    .shadow(color: .black.opacity(0.15), radius: 8, y: 3)
+                    .modifier(Glass(shape: Capsule()))
                     .padding(.bottom, 18)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
         .animation(.snappy, value: model.toast)
-        .overlay { ConfettiBurst(trigger: model.lastChange?.kind == .allDone ? model.lastChange?.id : nil) }
-        .safeAreaInset(edge: .top, spacing: 0) {
-            UpdateBanner(appName: "Hogsmeade") { (NSApp.delegate as? AppDelegate)?.restart() }
-        }
     }
+
+    private func outing(_ id: String) -> Outing? { model.outings.first { $0.id == id } }
 
     private func shareText(_ outing: Outing) -> String {
         [outing.title, OutingFormat.when(outing), OutingFormat.whereLines(outing).joined(separator: ", "), outing.url]
@@ -87,80 +85,68 @@ struct MainView: View {
     }
 }
 
+/// ⌘F focuses the toolbar's search field; `searchFocused` came with macOS 15.
+private struct SearchFocus: ViewModifier {
+    var focused: FocusState<Bool>.Binding
+
+    func body(content: Content) -> some View {
+        if #available(macOS 15, *) {
+            content.searchFocused(focused)
+        } else {
+            content
+        }
+    }
+}
+
 /// Binnenkort and Geweest, then who goes and what kind, each a filter.
 struct Sidebar: View {
     @Environment(OutingsModel.self) private var model
-    @Environment(\.colorScheme) private var scheme
 
     var body: some View {
-        @Bindable var model = model
-        List {
+        // A click beside a row never leaves the list without a place.
+        List(selection: Binding(get: { model.place }, set: { if let place = $0 { model.place = place } })) {
             Section {
-                row("Binnenkort", "sparkles", count: model.upcoming.count, selected: model.page == .upcoming && model.filter == nil) {
-                    model.page = .upcoming
-                    model.filter = nil
-                    model.close()
-                }
-                row("Geweest", "calendar", count: model.past.count, selected: model.page == .past) {
-                    model.page = .past
-                    model.filter = nil
-                    model.close()
-                }
+                CountedLabel(title: "Binnenkort", icon: "sparkles", count: model.upcoming.count)
+                    .tag(OutingsModel.Place.upcoming)
+                CountedLabel(title: "Geweest", icon: "calendar", count: model.past.count)
+                    .tag(OutingsModel.Place.past)
+            } header: {
+                SidebarSectionHeader("Uitjes")
             }
             if !model.people.isEmpty {
-                Section("Wie gaat") {
+                Section {
                     ForEach(model.people) { person in
-                        let selected = model.filter == .person(person.id) && model.page == .upcoming
-                        Button {
-                            model.page = .upcoming
-                            model.filter = selected ? nil : .person(person.id)
-                            model.close()
-                        } label: {
-                            HStack(spacing: 9) {
-                                Avatar(person.name, size: 18)
-                                Text(person.name).lineLimit(1)
-                                Spacer()
-                                SidebarCount(count: model.count(for: person))
-                            }
+                        HStack(spacing: 6) {
+                            Label { Text(person.name).lineLimit(1) } icon: { Avatar(person.name, size: 18) }
+                            Spacer(minLength: 0)
+                            SidebarCount(count: model.count(for: person))
                         }
-                        .buttonStyle(.plain)
-                        .listRowBackground(selected ? BurrowColor.hogsmeade.opacity(0.18) : nil)
+                        .tag(OutingsModel.Place.person(person.id))
                     }
+                } header: {
+                    SidebarSectionHeader("Wie gaat")
                 }
             }
             if !model.kinds.isEmpty {
-                Section("Soort") {
+                Section {
                     ForEach(model.kinds, id: \.key) { kind in
-                        let selected = model.filter == .kind(kind.key) && model.page == .upcoming
-                        row(kind.label, Outing.symbol(forKind: kind.key), count: kind.count, selected: selected) {
-                            model.page = .upcoming
-                            model.filter = selected ? nil : .kind(kind.key)
-                            model.close()
-                        }
+                        CountedLabel(title: kind.label, icon: Outing.symbol(forKind: kind.key), count: kind.count)
+                            .tag(OutingsModel.Place.kind(kind.key))
                     }
+                } header: {
+                    SidebarSectionHeader("Soort")
                 }
             }
         }
         .listStyle(.sidebar)
         .safeAreaInset(edge: .bottom) {
-            ConnectionBadge(
-                host: model.connection?.serverURL.host() ?? "", detail: "Ingelogd als \(model.myName)",
-                reachable: model.reachability.isReachable, busy: model.isLoading, appName: "Hogsmeade")
-            .padding(10)
-        }
-    }
-
-    private func row(_ title: String, _ icon: String, count: Int, selected: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 9) {
-                Image(systemName: icon).frame(width: 18)
-                Text(title).lineLimit(1)
-                Spacer()
-                if count > 0 { SidebarCount(count: count) }
+            VStack(spacing: 0) {
+                UpdateBanner(appName: "Hogsmeade") { (NSApp.delegate as? AppDelegate)?.restart() }
+                ConnectionBadge(
+                    host: model.connection?.serverURL.host() ?? "", detail: "Ingelogd als \(model.myName)",
+                    reachable: model.reachability.isReachable, busy: model.isLoading, appName: "Hogsmeade")
             }
         }
-        .buttonStyle(.plain)
-        .listRowBackground(selected ? BurrowColor.hogsmeade.opacity(0.18) : nil)
     }
 }
 

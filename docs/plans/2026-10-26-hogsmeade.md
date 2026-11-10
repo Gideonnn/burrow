@@ -1,5 +1,8 @@
 # Hogsmeade: the household's outings, in two faces
 
+> 11 November 2026: the household chose the native face; Hogsmeade Feest and its designs
+> were removed, and Hogsmeade took over the outings from Hedwig. See `.agents/wiki/topics/hogsmeade.md`.
+
 Plan of 26 October 2026. Hogsmeade is the outings (Evenementen) app: concerts, plays,
 festivals and parties the household goes to, with their tickets, the one thing still to
 do, and the route on the night. The outings themselves already exist: Hedwig reads them

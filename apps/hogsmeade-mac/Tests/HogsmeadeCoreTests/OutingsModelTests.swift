@@ -120,24 +120,90 @@ final class Household: @unchecked Sendable {
         #expect(model.shown.map(\.title) == ["Welcome To The 90's"])
     }
 
-    @Test func aPosterGetsOneStamp() async {
+    @Test func theSidebarSelectsOnePlaceAndRemembersIt() async {
         let model = await started(server())
-        #expect(model.upcoming[0].wallStamp() == WallStamp(text: "Geregeld!", tone: .ok))
-        #expect(model.upcoming[1].wallStamp() == WallStamp(text: "Nog doen", tone: .todo))
-        #expect(model.upcoming[2].wallStamp() == WallStamp(text: "Kaartjes?", tone: .tickets))
+        #expect(model.place == .upcoming)
+        model.open("o1")
+        model.place = .person("p2")
+        #expect(model.page == .upcoming && model.filter == .person("p2") && model.open == nil)
+        #expect(model.shown.map(\.title) == ["Neon Nineties", "Foute Vrijdag XL"])
+        model.place = .past
+        #expect(model.page == .past && model.filter == nil)
+        #expect(OutingsModel.Place(rawValue: OutingsModel.Place.kind("theater").rawValue) == .kind("theater"))
+        #expect(OutingsModel.Place(rawValue: "person:p2") == .person("p2"))
+        #expect(OutingsModel.Place(rawValue: "past") == .past)
+        #expect(OutingsModel.Place(rawValue: "nonsense") == nil)
+    }
+
+    @Test func aPosterSaysKindPlaceAndCity() async {
+        let model = await started(server())
         #expect(model.upcoming[0].kindAndVenue == "Feest · De Kolenloods")
         #expect(model.upcoming[0].city == "Amsterdam")
     }
 
-    @Test func tickingTheLastItemCelebrates() async {
+    @Test func tickingTheLastItemSaysAllIsDone() async {
         let server = server()
         let model = await started(server)
         let party = model.upcoming[1]
         await model.setTask(party.tasks[0], done: true, in: party)
         #expect(server.requests("PATCH", "/api/outings/o2/tasks/task-o2").last == #"{"done":true}"#)
-        #expect(model.lastChange?.kind == .allDone)
         #expect(model.toast?.message == "Alles geregeld voor Foute Vrijdag XL!")
-        #expect(model.upcoming[1].wallStamp().tone == .ok)
+        #expect(model.upcoming[1].openItems().isEmpty)
+    }
+
+    @Test func aMailMovesToAnotherOutingFirstLinkedThenLetGo() async {
+        let server = server()
+        server.on("POST", "/api/outings/o3/mails") { _ in
+            (200, Fixture.outing("o3", "Stille Wateren", date: "2026-12-12T19:30:00.000Z", kind: "theater", tickets: false, attendees: ["p1"]))
+        }
+        server.on("DELETE", "/api/outings/o2/mails/m1") { _ in
+            (200, Fixture.outing("o2", "Foute Vrijdag XL", date: "2026-11-27T21:00:00.000Z", open: true))
+        }
+        let model = await started(server)
+        await model.moveMail("m1", from: "o2", to: "o3")
+        #expect(server.requests("POST", "/api/outings/o3/mails").last == #"{"messageId":"m1"}"#)
+        #expect(server.requests("DELETE", "/api/outings/o2/mails/m1").count == 1)
+        #expect(model.toast?.message == "Mail verplaatst naar Stille Wateren.")
+        await model.moveMail("m2", from: "o2", to: "o9")
+        #expect(server.requests("DELETE", "/api/outings/o2/mails/m2").isEmpty)
+    }
+
+    @Test func searchWordsAreSavedAsAList() async {
+        let server = server()
+        server.on("PATCH", "/api/outings/o1") { _ in (200, Fixture.outing("o1", "Neon Nineties", date: "2026-10-28T20:00:00.000Z")) }
+        let model = await started(server)
+        await model.setAliases(["Neon", " ", "Neon", "Nineties"], in: "o1")
+        #expect(server.requests("PATCH", "/api/outings/o1").last == #"{"aliases":["Neon","Nineties"]}"#)
+    }
+
+    @Test func anEditSendsOnlyWhatChanged() async {
+        let model = await started(server())
+        let outing = model.upcoming[1]
+        var draft = OutingDraft(outing)
+        #expect(draft.patch(against: outing).isEmpty)
+        draft.title = " Foute Zaterdag "
+        draft.hasDoors = true
+        draft.doorsAt = outing.startsAt.addingTimeInterval(-1800)
+        draft.venue = ""
+        let patch = draft.patch(against: outing)
+        #expect(patch["title"] == .string("Foute Zaterdag"))
+        #expect(patch["doorsAt"] == .string("2026-11-27T20:30:00.000Z"))
+        #expect(patch["venue"] == .null)
+        #expect(patch.count == 3)
+        draft.title = ""
+        #expect(draft.patch(against: outing)["title"] == nil)
+    }
+
+    @Test func remindsOnlyOfOutingsIGoTo() async {
+        let server = server()
+        server.on("GET", "/api/outings") { _ in
+            (200, "[" + [
+                Fixture.outing("o2", "Foute Vrijdag XL", date: "2026-11-27T21:00:00.000Z"),
+                Fixture.outing("o3", "Stille Wateren", date: "2026-12-12T19:30:00.000Z", attendees: ["p2"]),
+            ].joined(separator: ",") + "]")
+        }
+        let model = await started(server)
+        #expect(model.reminders().map(\.outingId) == ["o2"])
     }
 
     @Test func aNewOutingHangsOnTheWallAndOpens() async {
@@ -146,7 +212,6 @@ final class Household: @unchecked Sendable {
         await model.create(title: " Schaatsen ", startsAt: Self.today, venue: "Jaap Eden")
         #expect(server.requests("POST", "/api/outings").last?.contains(#""title":"Schaatsen""#) == true)
         #expect(model.open?.title == "Schaatsen")
-        #expect(model.lastChange?.kind == .created)
         model.escape()
         #expect(model.open == nil)
     }

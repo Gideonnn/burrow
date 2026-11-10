@@ -15,7 +15,6 @@ apps=(
   "apps/pensieve-mac/build/Pensieve.app"
   "apps/lumos-mac/build/Lumos.app"
   "apps/hogsmeade-mac/build/Hogsmeade.app"
-  "apps/hogsmeade-mac/build/Hogsmeade Feest.app"
 )
 stage="$(mktemp -d)/Burrow apps"
 mkdir -p "$stage"
@@ -34,9 +33,6 @@ Burrow op een nieuwe Mac
 1. Sleep de apps naar Programma's.
 2. Open een app; kies "Inloggen op deze Mac" en maak het af op je eigen Mac of telefoon.
 3. Elke app haalt daarna zelf nieuwe versies op en toont "Update klaar · Herstart".
-
-Hogsmeade en Hogsmeade Feest zijn hetzelfde uitjesboek in twee gezichten; kies welke je
-leuker vindt, de andere mag weg.
 TXT
 out="$HOME/Desktop/Burrow apps.zip"
 rm -f "$out"

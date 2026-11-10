@@ -246,12 +246,24 @@ credential.
 **Why:** a series that went on the list with season 1 can only get more in Seerr itself.
 **Scope:** half a day for the extra seasons; the TMDB row after deciding on a credential.
 
+## Hogsmeade: merge two outings
+
+**What:** "Voeg samen met…" on an outing: its mails, tickets, tasks, attendees and search
+words join another outing, and the emptied one goes, in one server call
+(`POST /api/outings/:id/merge {into}`).
+**Why:** when mail creates a second outing for the same night, the household can only
+move the mails one by one and delete the rest; tickets cannot move at all without
+downloading and uploading them again, which a client-side merge would do half-way on a
+failure.
+**Scope:** a service method in a transaction, the route, a confirmation dialog in
+Hogsmeade; half a day.
+
 ## Hogsmeade: wishes without a date
 
 **What:** an outing the household is still thinking about ("Kerstcircus met de buren?")
 without a date, as a dashed card on the wall and a Wensen page, that becomes a real
 outing once a date is picked.
-**Why:** the playful design draws them; the server's `outings` require `startsAt`.
+**Why:** the dropped playful design drew them; the server's `outings` require `startsAt`.
 **Scope:** a nullable `startsAt` or a `wish` flag with its own list and the Mac views;
 half a day.
 

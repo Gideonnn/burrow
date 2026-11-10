@@ -20,7 +20,7 @@ public func controlState(_ model: OutingsModel) -> [String: Any] {
             "id": open.id, "title": open.title, "when": OutingFormat.when(open, now: model.now()),
             "where": OutingFormat.whereLines(open).joined(separator: ", "),
             "who": open.attendees.map(\.name), "tickets": open.tickets.count,
-            "todo": open.openItems().map(\.task.title), "stamp": open.wallStamp().text,
+            "todo": open.openItems().map(\.task.title), "status": open.status(now: model.now()).text,
         ] as [String: Any]
     }
     if let toast = model.toast { state["toast"] = toast.message }
@@ -31,14 +31,10 @@ public func controlState(_ model: OutingsModel) -> [String: Any] {
 /// Hogsmeade's commands for agents: look around, search and open an outing.
 @MainActor
 public func registerCommands(_ service: ControlService, model: OutingsModel) {
-    service.register("show", help: "Show a page: upcoming, past, wall (the posters even on the night itself) or tonight.", arguments: [.init("page", "upcoming, past, wall or tonight")]) { request in
+    service.register("show", help: "Show a page: upcoming or past.", arguments: [.init("page", "upcoming or past")]) { request in
         let name = request["page"] as? String ?? "upcoming"
-        guard let page = OutingsModel.Page(rawValue: name) ?? (name == "wall" || name == "tonight" ? .upcoming : nil) else {
-            throw ControlError("page is upcoming, past, wall or tonight")
-        }
-        model.page = page
-        model.tonightHidden = name == "wall"
-        model.close()
+        guard let page = OutingsModel.Page(rawValue: name) else { throw ControlError("page is upcoming or past") }
+        model.place = page == .past ? .past : .upcoming
         return controlState(model)
     }
     service.register("search", help: "Search outings by title, kind, place or organiser.", arguments: [.init("query", "the words")]) { request in

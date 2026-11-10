@@ -20,8 +20,8 @@ struct WallView: View {
                 }
                 if !rest.isEmpty {
                     HStack(alignment: .firstTextBaseline, spacing: 10) {
-                        Text(heading(tonight: tonight != nil)).font(.system(size: 18, weight: .bold, design: .rounded))
-                        Text(rest.count == 1 ? "1 uitje" : "\(rest.count) uitjes").foregroundStyle(.tertiary)
+                        Text(heading(tonight: tonight != nil)).font(.title2.bold()).fontDesign(.rounded)
+                        Text(rest.count == 1 ? "1 uitje" : "\(rest.count) uitjes").foregroundStyle(.secondary)
                     }
                     .padding(.bottom, 12)
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 220, maximum: 320), spacing: 16)], spacing: 16) {
@@ -35,7 +35,6 @@ struct WallView: View {
             }
             .padding(EdgeInsets(top: 22, leading: 26, bottom: 30, trailing: 26))
         }
-        .background(BurrowColor.plaster)
     }
 
     private func heading(tonight: Bool) -> String {
@@ -59,8 +58,7 @@ struct WallView: View {
     }
 }
 
-/// Tonight: the gradient with a few confetti dots, the facts and the two
-/// buttons that matter on the day.
+/// Tonight: the gradient, the facts and the two buttons that matter on the day.
 struct TonightBanner: View {
     @Environment(OutingsModel.self) private var model
     let outing: Outing
@@ -68,23 +66,29 @@ struct TonightBanner: View {
 
     var body: some View {
         HStack(spacing: 20) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("\(outing.dayWord().uppercased()) IS HET ZOVER")
-                    .font(.system(size: 13, weight: .bold, design: .rounded)).tracking(1).opacity(0.9)
-                Text(outing.title)
-                    .font(.system(size: 32, weight: .heavy, design: .rounded)).lineLimit(2)
-                HStack(spacing: 16) {
-                    if let times = OutingFormat.times(outing) ?? (outing.allDay ? nil : OutingFormat.time(outing.startsAt)) {
-                        Label(times, systemImage: "clock")
+            Button { model.open(outing.id) } label: {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("\(outing.dayWord()) is het zover")
+                        .font(.subheadline.weight(.semibold)).textCase(.uppercase).opacity(0.9)
+                    Text(outing.title)
+                        .font(.largeTitle.weight(.heavy)).fontDesign(.rounded).lineLimit(2)
+                    HStack(spacing: 16) {
+                        if let times = OutingFormat.times(outing) ?? (outing.allDay ? nil : OutingFormat.time(outing.startsAt)) {
+                            Label(times, systemImage: "clock")
+                        }
+                        if let first = OutingFormat.whereLines(outing).first {
+                            Label([first, outing.city].compactMap { $0 }.joined(separator: ", "), systemImage: "mappin.and.ellipse")
+                        }
+                        if let who = OutingsModel.sentence(outing.attendees.map(\.name)) { Text(who) }
                     }
-                    if let first = OutingFormat.whereLines(outing).first {
-                        Label([first, outing.city].compactMap { $0 }.joined(separator: ", "), systemImage: "mappin.and.ellipse")
-                    }
-                    if let who = OutingsModel.sentence(outing.attendees.map(\.name)) { Text(who) }
+                    .font(.callout).opacity(0.95).lineLimit(1)
                 }
-                .font(.system(size: 14)).opacity(0.95).lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
             }
-            Spacer(minLength: 0)
+            .buttonStyle(.borderless)
+            .foregroundStyle(.white)
+            .accessibilityLabel("\(outing.title), \(outing.dayWord().lowercased()); open de pagina")
             VStack(spacing: 8) {
                 TicketEntriesReader(outing: outing) { entries in
                     Button {
@@ -93,7 +97,7 @@ struct TonightBanner: View {
                         Label(entries.isEmpty ? "Kaartjes" : (entries.count == 1 ? "Kaartje" : "\(entries.count) kaartjes"), systemImage: "ticket")
                             .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(BannerButton(filled: true))
+                    .modifier(BannerButtonStyle(prominent: true))
                     .sheet(item: $viewing) { start in TicketViewer(outing: outing, entries: entries, index: start.index) }
                 }
                 PlaceReader(outing: outing) { place, _ in
@@ -105,61 +109,33 @@ struct TonightBanner: View {
                                 Label(travel.map { "Route · \($0.replacingOccurrences(of: "ca. ", with: "").replacingOccurrences(of: " met de auto", with: ""))" } ?? "Route", systemImage: "arrow.triangle.turn.up.right.diamond")
                                     .frame(maxWidth: .infinity)
                             }
-                            .buttonStyle(BannerButton(filled: false))
+                            .modifier(BannerButtonStyle(prominent: false))
                         }
                     }
                 }
             }
+            .controlSize(.large)
             .frame(width: 170)
         }
-        .foregroundStyle(.white)
         .padding(EdgeInsets(top: 22, leading: 24, bottom: 22, trailing: 24))
         .background {
-            ZStack {
-                LinearGradient(colors: [Color(hex: 0x5B2AA8), Color(hex: 0x8A3FD1), Color(hex: 0xE0589A)], startPoint: .leading, endPoint: .trailing)
-                ConfettiDots()
-            }
+            LinearGradient(colors: [Color(hex: 0x5B2AA8), Color(hex: 0x8A3FD1), Color(hex: 0xE0589A)], startPoint: .leading, endPoint: .trailing)
         }
         .clipShape(RoundedRectangle(cornerRadius: 16))
-        .shadow(color: .black.opacity(0.08), radius: 2, y: 1)
-        .contentShape(RoundedRectangle(cornerRadius: 16))
-        .onTapGesture { model.open(outing.id) }
+        .environment(\.colorScheme, .dark)
     }
 }
 
-/// A few still confetti pieces, as in the design.
-private struct ConfettiDots: View {
-    var body: some View {
-        GeometryReader { geo in
-            let spots: [(x: Double, y: Double, c: Color, r: Double, s: Double)] = [
-                (0.52, 0.14, Palette.lemon, 20, 8), (0.58, 0.70, Palette.mint, -30, 8), (0.66, 0.30, Palette.sky, 45, 8),
-                (0.48, 0.80, Palette.peach, 10, 8), (0.72, 0.78, Palette.candy, 60, 8), (0.62, 0.50, .white, 0, 5),
-                (0.40, 0.30, Palette.lemon, -15, 6), (0.76, 0.20, .white, 30, 5),
-            ]
-            ForEach(Array(spots.enumerated()), id: \.offset) { _, spot in
-                RoundedRectangle(cornerRadius: 2).fill(spot.c)
-                    .frame(width: spot.s, height: spot.s)
-                    .rotationEffect(.degrees(spot.r))
-                    .position(x: geo.size.width * spot.x, y: geo.size.height * spot.y)
-                    .opacity(0.85)
-            }
+/// Glass on the gradient from macOS 26, the bordered styles before.
+private struct BannerButtonStyle: ViewModifier {
+    var prominent: Bool
+
+    func body(content: Content) -> some View {
+        if #available(macOS 26, *) {
+            if prominent { content.buttonStyle(.glassProminent) } else { content.buttonStyle(.glass) }
+        } else {
+            if prominent { content.buttonStyle(.borderedProminent) } else { content.buttonStyle(.bordered) }
         }
-        .allowsHitTesting(false)
-    }
-}
-
-private struct BannerButton: ButtonStyle {
-    var filled: Bool
-
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.system(size: 14, weight: .semibold))
-            .padding(.horizontal, 14)
-            .frame(height: 36)
-            .foregroundStyle(filled ? Color(hex: 0x5B2AA8) : .white)
-            .background(filled ? Color.white : Color.white.opacity(0.18), in: RoundedRectangle(cornerRadius: 10))
-            .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(.white.opacity(filled ? 0 : 0.35)))
-            .opacity(configuration.isPressed ? 0.8 : 1)
     }
 }
 
@@ -169,39 +145,36 @@ struct PosterCard: View {
     @Environment(OutingsModel.self) private var model
     let outing: Outing
     var past = false
-    @State private var hovering = false
 
     var body: some View {
         Button { model.open(outing.id) } label: {
             VStack(alignment: .leading, spacing: 0) {
                 art
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(outing.title).font(.system(size: 15, weight: .bold, design: .rounded)).lineLimit(1)
-                    Text(subtitle).font(.system(size: 12)).foregroundStyle(.secondary).lineLimit(1)
+                    Text(outing.title).font(.headline).fontDesign(.rounded).lineLimit(1)
+                    Text(subtitle).font(.subheadline).foregroundStyle(.secondary).lineLimit(1)
                     HStack(alignment: .center) {
                         StatusChip(status: outing.status(now: model.now()), past: past)
                         Spacer(minLength: 4)
                         if !past {
                             HStack(spacing: -5) {
                                 ForEach(outing.attendees, id: \.id) { person in
-                                    Avatar(person.name, size: 20).overlay(Circle().strokeBorder(BurrowColor.paper, lineWidth: 2))
+                                    Avatar(person.name, size: 20).overlay(Circle().strokeBorder(.background, lineWidth: 2))
                                 }
                             }
                         }
                     }
                     .padding(.top, 8)
                 }
+                .foregroundStyle(.primary)
                 .padding(EdgeInsets(top: 10, leading: 12, bottom: 12, trailing: 12))
             }
-            .background(BurrowColor.paper)
-            .clipShape(RoundedRectangle(cornerRadius: 14))
-            .shadow(color: .black.opacity(hovering ? 0.14 : 0.08), radius: hovering ? 8 : 2, y: hovering ? 4 : 1)
-            .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(.black.opacity(0.05)))
-            .scaleEffect(hovering ? 1.015 : 1)
+            .background(.quaternary.opacity(0.5))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .contentShape(RoundedRectangle(cornerRadius: 12))
         }
-        .buttonStyle(.plain)
-        .onHover { hovering = $0 }
-        .animation(.snappy(duration: 0.2), value: hovering)
+        .buttonStyle(.borderless)
+        .contextMenu { OutingMenu(outing: outing) }
         .accessibilityLabel("\(outing.title), \(OutingFormat.when(outing))")
     }
 
@@ -213,19 +186,12 @@ struct PosterCard: View {
         OutingPoster(outing: outing, symbolSize: 36, past: past)
             .frame(height: 128)
             .overlay(alignment: .topLeading) { DateTile(date: outing.startsAt).padding(10) }
-            .overlay(alignment: .topTrailing) {
-                if outing.image == nil {
-                    Image(systemName: outing.kindSymbol).font(.system(size: 40, weight: .light)).foregroundStyle(.white.opacity(0.9)).padding(14)
-                        .opacity(0)
-                }
-            }
             .overlay(alignment: .bottomTrailing) {
                 if !past {
                     Text(model.nightsLabel(outing))
-                        .font(.system(size: 12, weight: .semibold, design: .rounded))
-                        .foregroundStyle(Color(hex: 0x1F1C18))
+                        .font(.caption.weight(.semibold)).fontDesign(.rounded)
                         .padding(.horizontal, 9).padding(.vertical, 3)
-                        .background(.white.opacity(0.92), in: Capsule())
+                        .background(.regularMaterial, in: Capsule())
                         .padding(10)
                 }
             }
@@ -239,22 +205,22 @@ struct StatusChip: View {
 
     var body: some View {
         HStack(spacing: 5) {
-            if status.tone == .done { Image(systemName: "checkmark").font(.system(size: 10, weight: .bold)) }
+            if status.tone == .done { Image(systemName: "checkmark").font(.caption2.bold()) }
             Text(past ? "Was het leuk?" : status.text).lineLimit(1)
         }
-        .font(.system(size: 12, weight: status.tone == .later || past ? .regular : .medium))
+        .font(.caption.weight(status.tone == .later || past ? .regular : .medium))
         .foregroundStyle(colour)
         .padding(.horizontal, 8).padding(.vertical, 3)
         .background(colour.opacity(0.12), in: Capsule())
     }
 
-    private var colour: Color {
-        if past { return BurrowColor.secondaryText }
+    private var colour: AnyShapeStyle {
+        if past { return AnyShapeStyle(.secondary) }
         switch status.tone {
-        case .done: return BurrowColor.success
-        case .todo: return BurrowColor.warning
-        case .today: return BurrowColor.hogsmeade
-        case .later, .past: return BurrowColor.secondaryText
+        case .done: return AnyShapeStyle(BurrowColor.success)
+        case .todo: return AnyShapeStyle(BurrowColor.warning)
+        case .today: return AnyShapeStyle(.tint)
+        case .later, .past: return AnyShapeStyle(.secondary)
         }
     }
 }

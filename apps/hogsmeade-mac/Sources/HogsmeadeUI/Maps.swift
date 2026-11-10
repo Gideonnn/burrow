@@ -189,6 +189,17 @@ public struct MapSnapshot: View {
     private var query: String { outing.placeQueries.first ?? outing.title }
 
     public var body: some View {
+        Button { OutingMaps.openPlace(place, query: query) } label: { map }
+            // The map is the whole label; plain keeps it free of a bezel.
+            .buttonStyle(.plain)
+            .modifier(LinkPointer())
+            .onGeometryChange(for: CGSize.self) { $0.size } action: { area = $0 }
+            .task(id: key) { await load() }
+            .help("Open in Kaarten")
+            .accessibilityLabel("Kaart van \(outing.placeLabel(place).title), open in Kaarten")
+    }
+
+    private var map: some View {
         Rectangle().fill(.quaternary.opacity(0.5))
             .overlay {
                 if let image { Image(nsImage: image).resizable().scaledToFill().transition(.opacity) }
@@ -205,12 +216,6 @@ public struct MapSnapshot: View {
             }
             .clipped()
             .contentShape(Rectangle())
-            .onTapGesture { OutingMaps.openPlace(place, query: query) }
-            .onHover { inside in if inside { NSCursor.pointingHand.push() } else { NSCursor.pop() } }
-            .onGeometryChange(for: CGSize.self) { $0.size } action: { area = $0 }
-            .task(id: key) { await load() }
-            .help("Open in Kaarten")
-            .accessibilityLabel("Kaart van \(outing.placeLabel(place).title)")
     }
 
     private func load() async {
@@ -286,5 +291,15 @@ public struct TravelTimeReader<Content: View>: View {
             .task(id: "\(outing.placeKey ?? "")|\(LocationAccess.shared.granted)") {
                 travel = await OutingMaps.travelTime(to: place, key: outing.placeKey ?? outing.title)
             }
+    }
+}
+
+private struct LinkPointer: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(macOS 15, *) {
+            content.pointerStyle(.link)
+        } else {
+            content
+        }
     }
 }

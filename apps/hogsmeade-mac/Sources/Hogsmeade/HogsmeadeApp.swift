@@ -15,12 +15,16 @@ struct HogsmeadeApp: App {
                 .frame(minWidth: 980, minHeight: 620)
         }
         .defaultSize(width: 1200, height: 780)
-        .commands { HogsmeadeCommands(model: delegate.model) }
+        .commands {
+            HogsmeadeCommands(model: delegate.model)
+            SidebarCommands()
+        }
 
         Settings {
             HogsmeadeSettingsView(logoutIdentifier: "hogsmeade.approve.logout")
                 .environment(delegate.model)
-                .frame(width: 600, height: 520)
+                .tint(BurrowColor.hogsmeade)
+                .frame(width: 560, height: 480)
         }
     }
 }
@@ -50,6 +54,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         store: ConnectionStore(app: "hogsmeade"),
         cacheDirectory: FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent("Library/Application Support/Hogsmeade/Cache", isDirectory: true))
+    @MainActor lazy var reminders = Reminders(model: model)
     @MainActor lazy var services: AppServices = {
         let model = model
         return AppServices(app: "hogsmeade", appName: "Hogsmeade", api: { model.api })
@@ -59,6 +64,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Task { @MainActor in
             if model.connection != nil { await model.start() }
         }
+        Task { @MainActor in reminders.start() }
         Task { @MainActor in startControl() }
         Task { @MainActor in services.startUpdates() }
     }
