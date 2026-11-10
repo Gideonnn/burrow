@@ -24,6 +24,7 @@ struct HogsmeadeFeestApp: App {
             HogsmeadeSettingsView(logoutIdentifier: "hogsmeade-feest.approve.logout")
                 .environment(delegate.model)
                 .tint(BurrowColor.hogsmeade)
+                .padding(20)
                 .frame(width: 600, height: 520)
         }
     }

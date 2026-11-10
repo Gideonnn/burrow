@@ -120,6 +120,21 @@ final class Household: @unchecked Sendable {
         #expect(model.shown.map(\.title) == ["Welcome To The 90's"])
     }
 
+    @Test func theSidebarSelectsOnePlaceAndRemembersIt() async {
+        let model = await started(server())
+        #expect(model.place == .upcoming)
+        model.open("o1")
+        model.place = .person("p2")
+        #expect(model.page == .upcoming && model.filter == .person("p2") && model.open == nil)
+        #expect(model.shown.map(\.title) == ["Neon Nineties", "Foute Vrijdag XL"])
+        model.place = .past
+        #expect(model.page == .past && model.filter == nil)
+        #expect(OutingsModel.Place(rawValue: OutingsModel.Place.kind("theater").rawValue) == .kind("theater"))
+        #expect(OutingsModel.Place(rawValue: "person:p2") == .person("p2"))
+        #expect(OutingsModel.Place(rawValue: "past") == .past)
+        #expect(OutingsModel.Place(rawValue: "nonsense") == nil)
+    }
+
     @Test func aPosterGetsOneStamp() async {
         let model = await started(server())
         #expect(model.upcoming[0].wallStamp() == WallStamp(text: "Geregeld!", tone: .ok))

@@ -48,7 +48,6 @@ public struct HogsmeadeSettingsView: View {
             .formStyle(.grouped)
             .tabItem { Label("Verbinding", systemImage: "network") }
         }
-        .padding(20)
         .onAppear {
             if household == nil { household = HouseholdModel(api: { [model] in model.api }) }
         }

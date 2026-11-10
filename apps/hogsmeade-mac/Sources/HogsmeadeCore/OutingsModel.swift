@@ -21,6 +21,34 @@ public final class OutingsModel {
         case kind(String)
     }
 
+    /// One sidebar row; the raw value is what a window remembers.
+    public enum Place: Hashable, Sendable, RawRepresentable {
+        case upcoming, past
+        case person(String)
+        case kind(String)
+
+        public init?(rawValue: String) {
+            if rawValue == "upcoming" { self = .upcoming; return }
+            if rawValue == "past" { self = .past; return }
+            let parts = rawValue.split(separator: ":", maxSplits: 1).map(String.init)
+            guard parts.count == 2 else { return nil }
+            switch parts[0] {
+            case "person": self = .person(parts[1])
+            case "kind": self = .kind(parts[1])
+            default: return nil
+            }
+        }
+
+        public var rawValue: String {
+            switch self {
+            case .upcoming: "upcoming"
+            case .past: "past"
+            case .person(let id): "person:\(id)"
+            case .kind(let key): "kind:\(key)"
+            }
+        }
+    }
+
     public struct Toast: Equatable, Sendable {
         public var message: String
         public var id = UUID()
@@ -290,6 +318,27 @@ public final class OutingsModel {
         let todo = attentionCount
         if todo > 0 { parts.append(todo == 1 ? "1 ding te doen" : "\(todo) dingen te doen") }
         return parts.joined(separator: " · ")
+    }
+
+    /// The sidebar's row: the page and the filter in one, choosing one closes the outing.
+    public var place: Place {
+        get {
+            if page == .past { return .past }
+            switch filter {
+            case nil: return .upcoming
+            case .person(let id): return .person(id)
+            case .kind(let key): return .kind(key)
+            }
+        }
+        set {
+            switch newValue {
+            case .upcoming: page = .upcoming; filter = nil
+            case .past: page = .past; filter = nil
+            case .person(let id): page = .upcoming; filter = .person(id)
+            case .kind(let key): page = .upcoming; filter = .kind(key)
+            }
+            close()
+        }
     }
 
     public var open: Outing? { openId.flatMap { id in outings.first { $0.id == id } } }

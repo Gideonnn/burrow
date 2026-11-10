@@ -15,12 +15,16 @@ struct HogsmeadeApp: App {
                 .frame(minWidth: 980, minHeight: 620)
         }
         .defaultSize(width: 1200, height: 780)
-        .commands { HogsmeadeCommands(model: delegate.model) }
+        .commands {
+            HogsmeadeCommands(model: delegate.model)
+            SidebarCommands()
+        }
 
         Settings {
             HogsmeadeSettingsView(logoutIdentifier: "hogsmeade.approve.logout")
                 .environment(delegate.model)
-                .frame(width: 600, height: 520)
+                .tint(BurrowColor.hogsmeade)
+                .frame(width: 560, height: 480)
         }
     }
 }
