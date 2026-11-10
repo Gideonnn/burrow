@@ -18,13 +18,14 @@ LSREGISTER="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchS
 echo "→ built build/Hedwig.app"
 
 swift build -c release --product hedwigctl >/dev/null
-swift build -c release --product burrowctl >/dev/null
 mkdir -p "$HOME/.local/bin"
-/bin/cp -f "$(swift build -c release --show-bin-path)/hedwigctl" "$HOME/.local/bin/hedwigctl"
-/bin/cp -f "$(swift build -c release --show-bin-path)/burrowctl" "$HOME/.local/bin/burrowctl"
-# Signed like the apps, so the keychain keeps trusting the runner across builds.
-../../packages/burrow-kit/scripts/sign-app.sh "$HOME/.local/bin/burrowctl" >/dev/null
-echo "→ installed ~/.local/bin/burrowctl and hedwigctl"
+# Under a new name first, like burrowctl: overwriting in place gets it killed.
+tmp="$(mktemp "$HOME/.local/bin/.hedwigctl.XXXXXX")"
+/bin/cp -f "$(swift build -c release --show-bin-path)/hedwigctl" "$tmp"
+chmod 755 "$tmp"
+mv -f "$tmp" "$HOME/.local/bin/hedwigctl"
+echo "→ installed ~/.local/bin/hedwigctl"
+../../packages/burrow-kit/scripts/install-burrowctl.sh
 
 if pgrep -xq Hedwig; then
   osascript -e 'tell application "Hedwig" to quit' >/dev/null 2>&1 || pkill -x Hedwig || true

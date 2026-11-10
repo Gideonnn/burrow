@@ -8,7 +8,10 @@ on screen.
 
 ## burrowctl
 
-Installed in `~/.local/bin` by `pnpm hedwig:install` and `pnpm pensieve:install`.
+Installed in `~/.local/bin` by every Mac app's install script through
+`packages/burrow-kit/scripts/install-burrowctl.sh`, signed like the apps. It installs under a
+temporary name and moves that over the old binary: copying onto the existing file keeps
+its inode, and macOS then kills the changed binary on launch (exit 137, no output).
 
 ```bash
 burrowctl apps                       # running apps

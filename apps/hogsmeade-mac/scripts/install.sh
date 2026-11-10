@@ -23,10 +23,7 @@ LSREGISTER="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchS
 ./scripts/bundle.sh "$PRODUCT" >/dev/null
 echo "→ built build/$NAME.app"
 
-(cd ../../packages/burrow-kit && swift build -c release --product burrowctl >/dev/null \
-  && mkdir -p "$HOME/.local/bin" \
-  && /bin/cp -f "$(swift build -c release --show-bin-path)/burrowctl" "$HOME/.local/bin/burrowctl")
-echo "→ installed ~/.local/bin/burrowctl"
+../../packages/burrow-kit/scripts/install-burrowctl.sh
 
 if pgrep -xq "$PRODUCT"; then
   osascript -e "tell application \"$NAME\" to quit" >/dev/null 2>&1 || true
