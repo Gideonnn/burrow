@@ -230,8 +230,14 @@ free):
   samen and Meer zoals from `/rows`, then the Zoeker's rows from `/explore`, both with
   the kind as `type`. A mood makes a grid of those rows' titles; every other filter is a
   grid from `/browse`, films and series taking turns when the kind is Alles (a genre is
-  matched by name per kind). The search field searches the catalogue here.
-- **Onze lijst** / **Jouw lijst**: a grid; the search filters it on the Mac.
+  matched by name per kind). The search field searches the catalogue here: the server
+  reads three pages of Seerr's `/search` (TMDB matches whole words and puts obscure exact
+  matches, series and people first), adds the trending, held and listed titles whose name
+  has a word starting with the query ('dead' finds Deadpool), ranks by how well the name
+  fits plus log vote count and popularity (a held title a little higher; a matching
+  person's work just below a matching name), and filters by the kind (`type`).
+- **Onze lijst** / **Jouw lijst**: a grid; the search filters it on the Mac, every typed
+  word in any order, ignoring case and accents (the Bibliotheek too).
 - **Bibliotheek**: the disk as a stacked bar (films, series, other, what downloads still
   need, free), Ruimte maken for an admin, segments Alles, Films, Series and Bezig, a
   watched filter, and a `Table` (Titel, Gekeken, Toegevoegd, Grootte) with Finder-style
