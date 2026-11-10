@@ -663,9 +663,11 @@ export class Lumos {
     const t = await catalogue.title(ref);
     if (!t) throw new LumosError('not found');
     const ctx = this.context(access, scope);
+    // Without Seerr nothing is known about files, so nothing is claimed.
     const held =
-      t.availability === 'available' ||
-      t.availability === 'partially-available';
+      Boolean(this.manager) &&
+      (t.availability === 'available' ||
+        t.availability === 'partially-available');
     const [candidates, facts] = await Promise.all([
       catalogue.candidates(),
       held ? this.libraryFacts() : new LibraryFacts(),

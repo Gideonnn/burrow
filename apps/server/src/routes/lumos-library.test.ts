@@ -690,3 +690,15 @@ describe('reading Jellyfin as the household account', () => {
     });
   });
 });
+
+describe('Op Dobby without a media server', () => {
+  it('claims nothing about files when Seerr is not connected', async () => {
+    const h = testHousehold();
+    const key = h.key(h.person('Ada').id, ['read']);
+    const film = titleDetail.parse(
+      await (await h.call(key, '/api/lumos/titles/movie/9000001')).json(),
+    );
+    expect(film.availability).toBe('available');
+    expect(film.library).toBeNull();
+  });
+});
