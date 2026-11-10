@@ -41,6 +41,7 @@ and optionally `HEDWIG_OPEN` with any place `burrowctl hedwig show` takes (`filt
   and the toolbar act on the whole selection (one call per message), ⌫ deletes,
   Return or a double-click opens a message in its own window, and mail dragged onto
   Inbox, Archief or Spam of its own mailbox moves there. Replying takes one message.
+  ⌘1 to ⌘9 open the mailboxes in sidebar order.
 - Archive, delete, spam, read and flag act at the provider, so phones see the same.
 - What the bot filtered waits for review in that mailbox's Spam or Archief, on top and
   with its reason: "Klopt" confirms, "Geen spam" or "Terug naar inbox" restores. A count
