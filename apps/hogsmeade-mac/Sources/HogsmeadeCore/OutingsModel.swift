@@ -3,7 +3,7 @@ import Foundation
 import HedwigCore
 import Observation
 
-/// Hogsmeade's state and every action its two faces take: the household's
+/// Hogsmeade's state and every action it takes: the household's
 /// outings from the server, which one is open, the search, and the changes
 /// (tasks, who goes, tickets, pictures). A state machine without a window,
 /// so the tests drive it like the faces do. The outings are Hedwig's: the
@@ -54,35 +54,30 @@ public final class OutingsModel {
         public var id = UUID()
     }
 
-    /// What just happened, for a face that wants to celebrate it.
-    public struct ChangeNote: Equatable, Sendable {
-        public enum Kind: Sendable { case created, taskDone, allDone, ticketsAdded }
-
-        public var kind: Kind
-        public var outingId: String
-        public var id = UUID()
-    }
-
     public private(set) var connection: Connection?
     public private(set) var me: Me?
     public private(set) var people: [Person] = []
-    public private(set) var outings: [Outing] = []
+    public private(set) var outings: [Outing] = [] {
+        didSet { if outings != oldValue { onOutingsChanged?() } }
+    }
     public private(set) var isLoading = false
     public var error: String?
     public let reachability: ServerReachability
 
     public var page: Page = .upcoming
     public var filter: Filter?
-    /// The playful face: the wall instead of the night itself, when someone asked for it.
-    public var tonightHidden = false
     public var query = ""
     public private(set) var openId: String?
     public private(set) var toast: Toast?
-    public private(set) var lastChange: ChangeNote?
     public private(set) var ticketUploads = 0
     /// Bumped by ⌘N and ⌘F; the faces open the sheet and focus the search.
     public var newRequest = 0
     public var searchFocusRequest = 0
+    /// The outing whose edit sheet or picture picker is open.
+    public var editingId: String?
+    public var pickingPictureId: String?
+    /// The Mac's reminders follow the outings.
+    @ObservationIgnored public var onOutingsChanged: (@MainActor () -> Void)?
     public private(set) var pictureBusy: Set<String> = []
 
     @ObservationIgnored public let pictureCache = OutingPictureCache()
@@ -417,7 +412,6 @@ public final class OutingsModel {
             title: title.trimmingCharacters(in: .whitespacesAndNewlines), startsAt: startsAt, venue: place.isEmpty ? nil : place)
         request.kind = kind?.trimmingCharacters(in: .whitespaces).nilIfEmpty
         guard let created = await change({ try await $0.createOuting(request) }) else { return nil }
-        lastChange = ChangeNote(kind: .created, outingId: created.id)
         show("\(created.title) hangt aan de wand.")
         openId = created.id
         return created
@@ -431,7 +425,6 @@ public final class OutingsModel {
         guard let updated = await change({ try await $0.setOutingTask(outingId: outing.id, taskId: task.id, done: done) }) else { return }
         if done {
             let allDone = updated.openItems().isEmpty && !updated.tickets.isEmpty
-            lastChange = ChangeNote(kind: allDone ? .allDone : .taskDone, outingId: outing.id)
             show(allDone ? "Alles geregeld voor \(updated.title)!" : "\(task.title) gedaan.")
         }
     }
@@ -447,6 +440,43 @@ public final class OutingsModel {
         var ids = outing.attendees.map(\.id)
         if let index = ids.firstIndex(of: person.id) { ids.remove(at: index) } else { ids.append(person.id) }
         await update(outing.id, ["attendeeIds": .array(ids.map(JSONValue.string))])
+    }
+
+    /// Zoekwoorden: extra names the outing is found by in mail search.
+    public func setAliases(_ aliases: [String], in outingId: String) async {
+        var seen: Set<String> = []
+        let words = aliases.map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty && seen.insert($0).inserted }
+        await update(outingId, ["aliases": .array(words.map(JSONValue.string))])
+    }
+
+    /// Linked to the other outing first, so a failure never leaves the mail without one.
+    public func moveMail(_ messageId: String, from source: String, to target: String) async {
+        guard let api else { return }
+        do {
+            let moved = try await api.linkMail(outingId: target, messageId: messageId)
+            apply(moved)
+            apply(try await api.unlinkMail(outingId: source, messageId: messageId))
+            show("Mail verplaatst naar \(moved.title).")
+        } catch {
+            report(error)
+        }
+    }
+
+    public func unlinkMail(_ messageId: String, from outingId: String) async {
+        await change({ try await $0.unlinkMail(outingId: outingId, messageId: messageId) }, saying: "Mail losgemaakt.")
+    }
+
+    /// A linked mail to read, when this key may see it.
+    public func mail(_ messageId: String) async -> MessageDetail? {
+        try? await api?.message(id: messageId)
+    }
+
+    /// What the Mac reminds its person of: only outings they go to. macOS
+    /// keeps at most 64 pending notifications per app, so the nearest win.
+    public func reminders() -> [OutingReminder] {
+        let now = now()
+        let mine = upcoming.filter { outing in myId.map { id in outing.attendees.contains { $0.id == id } } ?? false }
+        return Array(mine.flatMap { $0.reminders(now: now) }.sorted { $0.fireAt < $1.fireAt }.prefix(60))
     }
 
     public func delete(_ id: String) async {
@@ -483,7 +513,6 @@ public final class OutingsModel {
             }
         }
         if added > 0 {
-            lastChange = ChangeNote(kind: .ticketsAdded, outingId: outingId)
             show(added == 1 ? "Kaartje bewaard." : "\(added) kaartjes bewaard.")
         }
     }
@@ -629,20 +658,7 @@ extension String {
 
 // MARK: What a poster says
 
-public struct WallStamp: Equatable, Sendable {
-    public enum Tone: Sendable { case ok, todo, tickets }
-    public var text: String
-    public var tone: Tone
-}
-
 extension Outing {
-    /// The one stamp on a poster: tickets missing, something to do, or all set.
-    public func wallStamp() -> WallStamp {
-        if tickets.isEmpty && shopLinks.isEmpty { return WallStamp(text: "Kaartjes?", tone: .tickets) }
-        if !openItems().isEmpty { return WallStamp(text: "Nog doen", tone: .todo) }
-        return WallStamp(text: "Geregeld!", tone: .ok)
-    }
-
     /// "Feest · De Kolenloods"
     public var kindAndVenue: String {
         [kind.map { $0.prefix(1).uppercased() + $0.dropFirst() }, venue].compactMap { $0 }.joined(separator: " · ")

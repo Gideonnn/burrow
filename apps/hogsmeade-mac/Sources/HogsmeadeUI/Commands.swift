@@ -17,6 +17,9 @@ public struct HogsmeadeCommands: Commands {
         CommandMenu("Uitjes") {
             Button("Binnenkort") { model.page = .upcoming; model.close() }.keyboardShortcut("1")
             Button("Geweest") { model.page = .past; model.close() }.keyboardShortcut("2")
+            Button("Wijzig uitje…") { model.editingId = model.open?.id }
+                .keyboardShortcut("e")
+                .disabled(model.open == nil || !model.canOrganize)
             Divider()
             Button("Zoek") { model.searchFocusRequest += 1 }.keyboardShortcut("f")
             Button("Vernieuw") { Task { await model.refresh() } }.keyboardShortcut("r")

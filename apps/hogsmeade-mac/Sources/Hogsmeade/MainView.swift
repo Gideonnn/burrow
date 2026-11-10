@@ -36,6 +36,9 @@ struct MainView: View {
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
                 if let outing = model.open {
+                    Button { model.editingId = outing.id } label: { Label("Wijzig", systemImage: "pencil") }
+                        .help("Wijzig wat, wanneer en waar (⌘E)")
+                        .disabled(!model.canOrganize)
                     ShareLink(item: shareText(outing)) { Label("Deel", systemImage: "square.and.arrow.up") }
                         .help("Deel de datum en de plek")
                 }
@@ -47,6 +50,10 @@ struct MainView: View {
         .searchable(text: $model.query, placement: .toolbar, prompt: "Zoek een uitje")
         .modifier(SearchFocus(focused: $searchFocused))
         .sheet(isPresented: $adding) { NewOutingSheet() }
+        .sheet(item: Binding(get: { model.editingId.flatMap(outing) }, set: { model.editingId = $0?.id })) { EditOutingSheet(outing: $0) }
+        .sheet(item: Binding(get: { model.pickingPictureId.flatMap(outing) }, set: { model.pickingPictureId = $0?.id })) {
+            PicturePickerSheet(outing: $0)
+        }
         .onChange(of: model.newRequest) { adding = true }
         .onChange(of: model.searchFocusRequest) { searchFocused = true }
         .onChange(of: model.query) { if !model.query.isEmpty, model.open != nil { model.close() } }
@@ -68,8 +75,9 @@ struct MainView: View {
             }
         }
         .animation(.snappy, value: model.toast)
-        .overlay { ConfettiBurst(trigger: model.lastChange?.kind == .allDone ? model.lastChange?.id : nil) }
     }
+
+    private func outing(_ id: String) -> Outing? { model.outings.first { $0.id == id } }
 
     private func shareText(_ outing: Outing) -> String {
         [outing.title, OutingFormat.when(outing), OutingFormat.whereLines(outing).joined(separator: ", "), outing.url]

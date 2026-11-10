@@ -41,12 +41,10 @@ public struct OutingPictureReader<Content: View>: View {
 public struct OutingArt: View {
     let outing: Outing
     var symbolSize: CGFloat
-    var stripes: Bool
 
-    public init(outing: Outing, symbolSize: CGFloat = 40, stripes: Bool = false) {
+    public init(outing: Outing, symbolSize: CGFloat = 40) {
         self.outing = outing
         self.symbolSize = symbolSize
-        self.stripes = stripes
     }
 
     public var body: some View {
@@ -55,10 +53,8 @@ public struct OutingArt: View {
         let bottom = HSL(hue: colours.end.hue, saturation: 0.58, lightness: 0.26)
         ZStack {
             LinearGradient(colors: [top.color, colours.start.color, bottom.color], startPoint: .topLeading, endPoint: .bottomTrailing)
-            if stripes {
-                Stripes(angle: Double(TitleColours.seed(outing.title) % 180))
-            }
             RadialGradient(colors: [.white.opacity(0.22), .clear], center: .topTrailing, startRadius: 0, endRadius: symbolSize * 4)
+            // Sized to the artwork, not to the reader's text size.
             Image(systemName: outing.kindSymbol)
                 .font(.system(size: symbolSize, weight: .semibold))
                 .foregroundStyle(.white.opacity(0.92))
@@ -67,46 +63,16 @@ public struct OutingArt: View {
     }
 }
 
-/// Faint diagonal stripes, like the posters in the playful design.
-struct Stripes: View {
-    var angle: Double
-
-    var body: some View {
-        GeometryReader { geo in
-            let side = max(geo.size.width, geo.size.height) * 2
-            HStack(spacing: 11) {
-                ForEach(0..<Int(side / 18) + 1, id: \.self) { _ in
-                    Rectangle().fill(.white.opacity(0.07)).frame(width: 7)
-                }
-            }
-            .frame(width: side, height: side)
-            .rotationEffect(.degrees(angle))
-            .position(x: geo.size.width / 2, y: geo.size.height / 2)
-        }
-        .clipped()
-        .allowsHitTesting(false)
-    }
-}
-
-extension TitleColours {
-    /// The design's hash, so the stripes turn the same way every time.
-    public static func seed(_ title: String) -> Int {
-        Int(title.unicodeScalars.reduce(UInt32(7)) { $0 &* 31 &+ $1.value } % 1000)
-    }
-}
-
 /// The outing's picture filling its frame, or its art when there is none.
 /// A small or square picture sits whole on a blurred copy of itself.
 public struct OutingPoster: View {
     let outing: Outing
     var symbolSize: CGFloat
-    var stripes: Bool
     var past: Bool
 
-    public init(outing: Outing, symbolSize: CGFloat = 40, stripes: Bool = false, past: Bool = false) {
+    public init(outing: Outing, symbolSize: CGFloat = 40, past: Bool = false) {
         self.outing = outing
         self.symbolSize = symbolSize
-        self.stripes = stripes
         self.past = past
     }
 
@@ -124,7 +90,7 @@ public struct OutingPoster: View {
                             }
                         }
                     } else {
-                        OutingArt(outing: outing, symbolSize: symbolSize, stripes: stripes)
+                        OutingArt(outing: outing, symbolSize: symbolSize)
                     }
                 }
                 .clipped()
@@ -144,23 +110,24 @@ public struct DateTile: View {
         self.large = large
     }
 
+    // The sizes fit the fixed tile, like Calendar's icon, not the reader's text size.
     public var body: some View {
         VStack(spacing: 0) {
             Text(OutingFormat.month(date).uppercased())
                 .font(.system(size: large ? 11 : 10, weight: .bold))
-                .foregroundStyle(Color(hex: 0xA24E1D))
+                .foregroundStyle(.red)
             Text(OutingFormat.day(date))
                 .font(.system(size: large ? 32 : 20, weight: .heavy, design: .rounded))
                 .monospacedDigit()
+                .foregroundStyle(.primary)
             if large {
                 Text(OutingFormat.weekday(date))
                     .font(.system(size: 11))
-                    .foregroundStyle(Color(hex: 0x6B655D))
+                    .foregroundStyle(.secondary)
             }
         }
-        .foregroundStyle(Color(hex: 0x1F1C18))
         .frame(width: large ? 70 : 46, height: large ? 78 : 46)
-        .background(.white, in: RoundedRectangle(cornerRadius: large ? 14 : 10))
+        .background(.background, in: RoundedRectangle(cornerRadius: large ? 14 : 10))
         .shadow(color: .black.opacity(0.18), radius: large ? 6 : 3, y: 2)
         .accessibilityLabel(OutingFormat.date(date))
     }

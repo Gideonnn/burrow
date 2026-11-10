@@ -54,6 +54,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         store: ConnectionStore(app: "hogsmeade"),
         cacheDirectory: FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent("Library/Application Support/Hogsmeade/Cache", isDirectory: true))
+    @MainActor lazy var reminders = Reminders(model: model)
     @MainActor lazy var services: AppServices = {
         let model = model
         return AppServices(app: "hogsmeade", appName: "Hogsmeade", api: { model.api })
@@ -63,6 +64,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Task { @MainActor in
             if model.connection != nil { await model.start() }
         }
+        Task { @MainActor in reminders.start() }
         Task { @MainActor in startControl() }
         Task { @MainActor in services.startUpdates() }
     }
