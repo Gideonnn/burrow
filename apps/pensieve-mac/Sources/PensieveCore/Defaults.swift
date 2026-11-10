@@ -44,9 +44,4 @@ public struct MarkList: Sendable, Equatable {
         let trimmed = note?.trimmingCharacters(in: .whitespacesAndNewlines)
         marks[index].note = trimmed?.isEmpty == false ? trimmed : nil
     }
-
-    public mutating func remove(at index: Int) {
-        guard marks.indices.contains(index) else { return }
-        marks.remove(at: index)
-    }
 }

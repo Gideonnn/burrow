@@ -99,8 +99,6 @@ public struct MeetingNotes: Codable, Hashable, Sendable {
     }
 }
 
-public typealias RecordingNotes = MeetingNotes
-
 public struct RecordingSummary: Codable, Hashable, Identifiable, Sendable {
     public var id: String
     public var kind: RecordingKind

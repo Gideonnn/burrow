@@ -43,7 +43,7 @@ public enum ShrinkPlanner {
         settings(for: quality.profile, source: source)
     }
 
-    public static func settings(for profile: VideoProfile, source: VideoSource) -> EncodeSettings {
+    public static func settings(for profile: EncodeSettings, source: VideoSource) -> EncodeSettings {
         let height = min(profile.height, source.shortSide > 0 ? source.shortSide : profile.height)
         let pixels = pow(Double(height) / Double(profile.height), 2)
         return EncodeSettings(
@@ -57,7 +57,7 @@ public enum ShrinkPlanner {
             let bytes = settings.estimatedBytes(seconds: source.seconds)
             return ShrinkOption(
                 quality: quality, settings: settings, estimatedBytes: bytes,
-                bytesPerMinute: settings.estimatedBytes(seconds: 60),
+                bytesPerMinute: settings.bytesPerMinute,
                 fits: limit.map { Double(bytes) <= Double($0) * targetShare } ?? true)
         }
     }
@@ -81,10 +81,10 @@ public enum ShrinkPlanner {
         let total = Int(Double(bytes) / 1.01 * 8 / max(seconds, 0.1))
         let video = { min(settings.videoBitsPerSecond, max(total - out.audioBitsPerSecond, 1)) }
         out.videoBitsPerSecond = video()
-        while out.videoBitsPerSecond < VideoProfile.floor(height: out.height), let lower = lowerHeight(out.height) {
+        while out.videoBitsPerSecond < EncodeSettings.floor(height: out.height), let lower = lowerHeight(out.height) {
             out.height = lower
         }
-        if out.videoBitsPerSecond < VideoProfile.floor(height: out.height), out.audioBitsPerSecond > 64_000 {
+        if out.videoBitsPerSecond < EncodeSettings.floor(height: out.height), out.audioBitsPerSecond > 64_000 {
             out.audioBitsPerSecond = 64_000
             out.videoBitsPerSecond = video()
         }
@@ -167,7 +167,7 @@ public struct Shrinker: Sendable {
                 let next = ShrinkPlanner.fit(
                     EncodeSettings(height: settings.height, videoBitsPerSecond: scaled, audioBitsPerSecond: settings.audioBitsPerSecond),
                     seconds: source.seconds, bytes: Int64(target))
-                if next.videoBitsPerSecond < VideoProfile.floor(height: 360) / 2 { break }
+                if next.videoBitsPerSecond < EncodeSettings.floor(height: 360) / 2 { break }
                 settings = next
                 continue
             }

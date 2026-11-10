@@ -37,25 +37,17 @@ final class DictationController {
         self.paster = paster
     }
 
-    var isEnabled: Bool { hotKey != nil }
-
     /// Claims ⌥ Spatie; when another app has it, says so in Settings.
     func enable() {
         guard hotKey == nil else { return }
         do {
-            try claim()
+            hotKey = try HoldHotKey(
+                onPress: { [weak self] in MainActor.assumeIsolated { self?.begin() } },
+                onRelease: { [weak self] in Task { @MainActor in await self?.end() } })
             problem = nil
         } catch {
             problem = error.localizedDescription
         }
-    }
-
-    private func claim() throws {
-        hotKey = try HoldHotKey(
-            onPress: { [weak self] in MainActor.assumeIsolated { self?.begin() } },
-            onRelease: { [weak self] in
-                Task { @MainActor in await self?.end() }
-            })
     }
 
     func disable() {
@@ -65,7 +57,7 @@ final class DictationController {
 
     func begin() {
         guard recorder == nil, model.connection != nil else { return }
-        guard AVCaptureAuthorized.microphone else {
+        guard AVCaptureDevice.authorizationStatus(for: .audio) == .authorized else {
             requestMicrophoneAccess { _ in }
             state = .failed("Pensieve mag de microfoon niet gebruiken.")
             return
@@ -95,8 +87,4 @@ final class DictationController {
             state = .failed(error.localizedDescription)
         }
     }
-}
-
-private enum AVCaptureAuthorized {
-    static var microphone: Bool { AVCaptureDevice.authorizationStatus(for: .audio) == .authorized }
 }

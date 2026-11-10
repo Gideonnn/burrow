@@ -110,8 +110,6 @@ func devices() -> [Device] {
   }
 }
 
-func device(uid: String) -> Device? { devices().first { $0.uid == uid } }
-
 // Headphones first: a microphone next to open speakers hears the far end twice.
 private func rank(_ device: Device) -> Int {
   switch device.transport {

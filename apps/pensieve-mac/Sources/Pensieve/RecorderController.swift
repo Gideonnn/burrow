@@ -66,11 +66,6 @@ final class RecorderController {
         }
     }
 
-    /// A call, as before: title from the sheet.
-    func start(title: String) async {
-        await start(.call, title: title, labels: labels)
-    }
-
     /// One click: title and labels default from the previous recording of the kind.
     func start(_ kind: RecordingKind, title: String? = nil, labels: [String]? = nil) async {
         guard active == nil, kind != .dictation else { return }

@@ -54,10 +54,10 @@ private let MB: Int64 = 1_000_000
         let small = VideoSource(seconds: 60, width: 1280, height: 720, bytes: 200 * MB)
         let high = ShrinkPlanner.settings(for: .high, source: small)
         #expect(high.height == 720)
-        #expect(high.videoBitsPerSecond <= VideoProfile.p720.videoBitsPerSecond)
-        let portrait = EncodeSettings(VideoProfile.p720).dimensions(sourceWidth: 1080, sourceHeight: 1920)
+        #expect(high.videoBitsPerSecond <= EncodeSettings.p720.videoBitsPerSecond)
+        let portrait = EncodeSettings.p720.dimensions(sourceWidth: 1080, sourceHeight: 1920)
         #expect(portrait.width == 720 && portrait.height == 1280)
-        let tiny = EncodeSettings(VideoProfile.p1080).dimensions(sourceWidth: 640, sourceHeight: 360)
+        let tiny = EncodeSettings.p1080.dimensions(sourceWidth: 640, sourceHeight: 360)
         #expect(tiny.width == 640 && tiny.height == 360)
     }
 
@@ -232,7 +232,7 @@ private let hasFfmpeg = ["/opt/homebrew/bin/ffmpeg", "/usr/local/bin/ffmpeg"].co
     @Test func encodesAPlayableSmallerMP4AndExtractsTheSound() async throws {
         let input = try sample()
         let output = input.deletingLastPathComponent().appendingPathComponent("klein.mp4")
-        try await AssetWriterEncoder().encode(input, to: output, settings: EncodeSettings(VideoProfile.p480), progress: { _ in })
+        try await AssetWriterEncoder().encode(input, to: output, settings: EncodeSettings.p480, progress: { _ in })
         let probe = AVProbe()
         let made = try await probe.source(of: output)
         #expect(made.shortSide == 480)

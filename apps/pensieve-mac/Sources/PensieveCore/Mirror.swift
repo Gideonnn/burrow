@@ -121,10 +121,10 @@ public struct Mirror: Sendable {
                 }
             }
             Self.tag(folder, recording.labels)
-            try writeMarker(
-                Marker(id: recording.id, updatedAt: recording.updatedAt, audioBytes: recording.audioBytes, layout: Self.layout, labels: recording.labels),
-                in: folder)
-            known[recording.id] = (folder, Marker(id: recording.id, updatedAt: recording.updatedAt, audioBytes: recording.audioBytes, layout: Self.layout, labels: recording.labels))
+            let marker = Marker(
+                id: recording.id, updatedAt: recording.updatedAt, audioBytes: recording.audioBytes, layout: Self.layout, labels: recording.labels)
+            try JSONFile.write(marker, to: folder.appendingPathComponent(Self.markerName))
+            known[recording.id] = (folder, marker)
             report.written += 1
         }
         report.written += try await syncDictations(dictations, api: api)
@@ -229,9 +229,7 @@ public struct Mirror: Sendable {
         let folder = root.appendingPathComponent(Naming.dictations, isDirectory: true)
         try fm.createDirectory(at: folder, withIntermediateDirectories: true)
         let indexFile = folder.appendingPathComponent(Self.markerName)
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        var index = (try? decoder.decode([String: DictationEntry].self, from: Data(contentsOf: indexFile))) ?? [:]
+        var index = JSONFile.read([String: DictationEntry].self, from: indexFile) ?? [:]
         var written = 0
         for dictation in dictations where dictation.hasTranscript {
             let name = Naming.dictation(title: dictation.title, startedAt: dictation.startedAt)
@@ -251,10 +249,7 @@ public struct Mirror: Sendable {
             index[dictation.id] = DictationEntry(name: name, updatedAt: dictation.updatedAt, audioBytes: dictation.audioBytes)
             written += 1
         }
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
-        encoder.outputFormatting = .sortedKeys
-        try encoder.encode(index).write(to: indexFile, options: .atomic)
+        try JSONFile.write(index, to: indexFile)
         return written
     }
 
@@ -262,21 +257,11 @@ public struct Mirror: Sendable {
 
     public func folders() -> [String: URL] { markers().mapValues(\.folder) }
 
-    func writeMarker(_ marker: Marker, in folder: URL) throws {
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
-        try encoder.encode(marker).write(to: folder.appendingPathComponent(Self.markerName), options: .atomic)
-    }
-
     func markers() -> [String: (folder: URL, marker: Marker)] {
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
         let folders = (try? FileManager.default.contentsOfDirectory(at: root, includingPropertiesForKeys: nil)) ?? []
         var out: [String: (URL, Marker)] = [:]
         for folder in folders where folder.lastPathComponent != Naming.dictations {
-            guard let data = try? Data(contentsOf: folder.appendingPathComponent(Self.markerName)),
-                  let marker = try? decoder.decode(Marker.self, from: data)
-            else { continue }
+            guard let marker = JSONFile.read(Marker.self, from: folder.appendingPathComponent(Self.markerName)) else { continue }
             out[marker.id] = (folder, marker)
         }
         return out

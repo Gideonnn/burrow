@@ -59,12 +59,6 @@ public final class SystemPasteTarget: PasteTarget {
 
     public var trusted: Bool { AXIsProcessTrusted() }
 
-    /// Asks macOS to show the Accessibility prompt once.
-    public func askForPermission() {
-        // The constant's value; the global itself is not concurrency-safe.
-        _ = AXIsProcessTrustedWithOptions(["AXTrustedCheckOptionPrompt": true] as CFDictionary)
-    }
-
     public var frontmostApp: String? { NSWorkspace.shared.frontmostApplication?.localizedName }
     public var changeCount: Int { NSPasteboard.general.changeCount }
 

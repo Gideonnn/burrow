@@ -34,6 +34,8 @@ public struct Shelf: Sendable {
 
     public init(dir: URL = Shelf.defaultDir) { self.dir = dir }
 
+    private var records: RecordFolder<ShelfItem> { RecordFolder(dir: dir) }
+
     public static var defaultDir: URL {
         FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent("Library/Application Support/Pensieve/Video", isDirectory: true)
@@ -41,33 +43,18 @@ public struct Shelf: Sendable {
 
     /// A fresh file for a raw capture.
     public func newOriginal(extension ext: String = "mov") throws -> URL {
-        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        return dir.appendingPathComponent("\(UUID().uuidString).\(ext)")
+        try records.newFile(extension: ext)
     }
 
-    public func save(_ item: ShelfItem) throws {
-        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
-        try encoder.encode(item).write(to: dir.appendingPathComponent("\(item.id).json"), options: .atomic)
-    }
+    public func save(_ item: ShelfItem) throws { try records.save(item) }
 
-    public func all() -> [ShelfItem] {
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        let files = (try? FileManager.default.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil)) ?? []
-        return files.filter { $0.pathExtension == "json" }
-            .compactMap { try? decoder.decode(ShelfItem.self, from: Data(contentsOf: $0)) }
-            .sorted { $0.startedAt < $1.startedAt }
-    }
+    public func all() -> [ShelfItem] { records.all().sorted { $0.startedAt < $1.startedAt } }
 
     public func item(forRecording id: String) -> ShelfItem? {
         all().first { $0.recordingId == id }
     }
 
-    public func url(_ path: String) -> URL {
-        path.hasPrefix("/") ? URL(fileURLWithPath: path) : dir.appendingPathComponent(path)
-    }
+    public func url(_ path: String) -> URL { records.url(path) }
 
     /// Ties an item to the recording the server made of its audio.
     public func bind(_ id: String, to recordingId: String) {
@@ -105,6 +92,6 @@ public struct Shelf: Sendable {
         let fm = FileManager.default
         try? fm.removeItem(at: url(item.original))
         if let video = item.video { try? fm.removeItem(at: url(video)) }
-        try? fm.removeItem(at: dir.appendingPathComponent("\(item.id).json"))
+        records.remove(item.id)
     }
 }
