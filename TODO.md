@@ -271,6 +271,19 @@ titles, air dates, stills, and which ones Jellyfin has.
 asks Jellyfin or the TV.
 **Scope:** one route and a season page in Lumos; half a day.
 
+## Lumos: what the native redesign left out
+
+**What:** (1) "Kijken start op" in Settings › Algemeen: a default screen for K instead of
+asking when several are open. (2) "Opnieuw proberen" for a Seerr import problem in Bezig:
+today the button only retries Lumos's own request outbox; a stuck import needs Radarr or
+Sonarr, which Lumos has no key for. (3) The stills ("Beelden") next to the trailer, which
+the old title page had; the large artwork replaced them. (4) A 4K or HDR filter in the
+Bibliotheek, now that the media facts are there.
+**Why:** drawn or implied by `docs/design/lumos-redesign.html`, not needed for the first
+build.
+**Scope:** (1) an hour with `@AppStorage`; (2) a Radarr/Sonarr key and `command` call,
+half a day; (3) and (4) an hour each.
+
 ## Hedwig: a mailbox that keeps failing shows up
 
 **What:** when a mailbox's sync fails every round for an hour, the Mac's connection

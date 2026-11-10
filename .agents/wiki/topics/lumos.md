@@ -1,7 +1,7 @@
 # Lumos
 
 Lumos helps the household choose films and series to watch together: a native Mac app
-with image rows and an inspector, and a module on the server with a catalogue provider,
+with three pages (Ontdekken, the list, the Bibliotheek), and a module on the server with a catalogue provider,
 the household's list, each person's own list, and verdicts that can always be undone.
 The media stack (Seerr, Radarr,
 Sonarr, Jellyfin) stays the backend: a title put on a list is requested from Seerr,
@@ -111,16 +111,27 @@ sent request is never cancelled; removing a title from a list leaves Seerr alone
 seasons chosen in the season menu, season 1 when none was chosen (and always with `J`).
 The fixtures never request.
 
-## Beheren
+## The Bibliotheek
 
 `GET manage` reads Seerr's `/media` fresh (pending, processing, and `allavailable` by
-`mediaAdded`): `busy` with the live download progress, `library` with what Jellyfin holds.
-`DELETE library/:mediaType/:tmdbId` needs `admin` (no bot can hold it) and asks Seerr's
-`DELETE /media/{id}/file`, which has Radarr or Sonarr delete the title with its files,
-then `DELETE /media/{id}`, so Seerr forgets it and its requests. The outbox row turns
-`dropped`, so a new "Ja" asks again; lists stay. Only a title with Seerr's
-`externalServiceId` is `removable`: for a file copied in by hand Seerr would only mark it
-deleted and leave the file, so Lumos refuses with 409.
+`mediaAdded`): `busy` with the live download progress and the bytes still to come,
+`library` with what the media server holds. Each item also carries what Jellyfin knows
+(`server`: size, media facts, `watched`), Lumos's own "Al gezien" (`seen`: the
+household's and the asking person's) and `spaceCandidate`; the answer carries the `disk`.
+
+- **Ruimte maken** proposes what was seen together (Jellyfin played), is larger than
+  25 GB, Radarr or Sonarr manages, and is on nobody's list, the shared one or anyone's
+  own. Only the flag leaves the server, never whose list.
+- `DELETE library/:mediaType/:tmdbId` needs `admin` (no bot can hold it) and asks Seerr's
+  `DELETE /media/{id}/file`, which has Radarr or Sonarr delete the title with its files,
+  then `DELETE /media/{id}`, so Seerr forgets it and its requests. The outbox row turns
+  `dropped`, so a new "Ja" asks again; lists stay. A title that was seen (Jellyfin played,
+  or anyone's "Al gezien") gets the household's "Al gezien", so it is not proposed again.
+  The Mac deletes several titles one call at a time.
+- Only a title with Seerr's `externalServiceId` is `removable`: for a file copied in by
+  hand Seerr would only mark it deleted and leave the file, so Lumos refuses with 409.
+- The title detail carries the same as `library` (null without Seerr, so the fixtures
+  claim nothing about files) and `seen`.
 
 ## Watching
 
@@ -129,8 +140,36 @@ deleted and leave the file, so Lumos refuses with 409.
 reach Jellyfin at another address). `status.watch` tells the Macs. The key is Jellyfin's
 service key from the media stack's root-only secrets; the operator's `tv` repository
 has `media/host/connect-lumos-jellyfin.sh`, run through `root-run.sh`, which copies it
-into the server settings without showing it, like the Seerr one. The library is only
-read: no deletes, no marks, no user data.
+into the server settings without showing it, like the Seerr one. Nothing in Jellyfin is
+ever deleted or marked; the only write is telling a screen to play.
+
+**The household's account.** The household watches on one Jellyfin account, so its
+"played" means seen together; per person "seen" comes only from Lumos's verdicts.
+`LUMOS_JELLYFIN_USER` (a name or an id, set by the operator in the server settings)
+names it; `/Users` resolves it exactly, and without it, or when nothing matches, no user
+data is read and no account is guessed. Read for that account, never written:
+
+- the library in two `/Items` calls (`recursive`, `includeItemTypes=Movie,Series` with
+  `ProviderIds,MediaSources,RecursiveItemCount`, and `Episode` with `MediaSources`) plus
+  one `/Shows/NextUp`, cached a minute: played, play count, last played, the position,
+  played episodes of the episodes on disk, the size (sum of `MediaSources[].Size`) and
+  the facts of the first file (resolution from the video's width, HDR from
+  `VideoRangeType`, audio and subtitle languages in Dutch). Without the account the size
+  and facts still come; only `watched` is null.
+- a title is matched by the Jellyfin id Seerr knows (`mediaServerId`), else by
+  `ProviderIds.Tmdb`: on Dobby only 3 of 15 films carry a TMDB id. Series lack
+  `RecursiveItemCount` there, so the episode count is the episodes found.
+- `/UserItems/Resume` plus NextUp make the **Verder kijken** row, first on Ontdekken;
+  `watch` answers `resume`, and starting on a screen passes `startPositionTicks` (from
+  the screen's own user, else the household's), so K picks up where the household
+  stopped. A title played to the end starts from the beginning.
+- played titles leave the proposal rows (rows and the Zoeker) like "Al gezien" and weigh
+  similar titles lightly up; search, the grid and the lists still show them.
+- the disk from `/System/Info/Storage` (admin key): every library folder's device once,
+  free plus used is the total. No Radarr or Sonarr key was needed.
+
+All of this was checked against Jellyfin 12.3.0 on Dobby with the probe recipe in the
+Jellyfin 12 diary entry, and against the 12.4 OpenAPI document.
 
 - `GET watch/:ref` answers the title's page in Jellyfin's web app (`web`, null when the
   library does not have it: the catalogue's "available" is not taken on trust), the
@@ -179,23 +218,33 @@ and the mouse fill that cache before Enter or a click (`prefetch`, 150 ms after 
 cursor settles), and a prefetched title's artwork is warmed too, so a page opens with no
 wait and the next one is already there. Going back shows the rows exactly as left.
 
-The pages, in the sidebar's order:
+The Mac is drawn as macOS 26 draws standard SwiftUI (`docs/design/lumos-redesign.html`),
+with the Lumos colour only as `.tint`; it needs macOS 26 (glass buttons on the artwork).
+The pages, in the sidebar's order, with the disk meter under them (orange under 15 %
+free):
 
-- **Ontdekken**: the rows from `/rows`, the mood chips narrowing by genre and trait
-  (the genres come from Seerr in Dutch, so "Komedie" matches).
-- **Zoeker**: `/explore` rows to wander through, and "Verras me" for a new seed.
-- **Onze lijst** / **Jouw lijst**.
-- **Films** and **Series**: the shop's shelves from `/browse`, with chips for the sort
-  (Populair, Nieuw, Binnenkort, Best beoordeeld, Trending, Verborgen parels), a genre
-  menu, a decade menu and "Nederlands"; the next page loads while scrolling and when the
-  keyboard reaches the last lines. Taste never sorts a shelf.
-- **Beheren**: what is requested, waiting or downloading with its progress, and what
-  Jellyfin holds with a delete for admins (see Beheren above).
-- **Smaak**, **Overgeslagen** as before.
+- **Ontdekken**: one row of filters: Alles, Films, Series (segmented), Sorteer (Voor
+  jullie or jou, Populair, Nieuw, Binnenkort, Best beoordeeld, Verborgen parels), Genre
+  with the moods Luchtig, Spannend and Rustig first, Decennium, Nederlands and Verras me.
+  Without a filter it is rows: Verder kijken, Voor jullie samen, Op jouw lijst nog niet
+  samen and Meer zoals from `/rows`, then the Zoeker's rows from `/explore`, both with
+  the kind as `type`. A mood makes a grid of those rows' titles; every other filter is a
+  grid from `/browse`, films and series taking turns when the kind is Alles (a genre is
+  matched by name per kind). The search field searches the catalogue here.
+- **Onze lijst** / **Jouw lijst**: a grid; the search filters it on the Mac.
+- **Bibliotheek**: the disk as a stacked bar (films, series, other, what downloads still
+  need, free), Ruimte maken for an admin, segments Alles, Films, Series and Bezig, a
+  watched filter, and a `Table` (Titel, Gekeken, Toegevoegd, Grootte) with Finder-style
+  selection, sorting and column widths kept per window, a context menu, rows to drag onto
+  the list, and an inspector (⌥⌘I). ⌫ asks before deleting (Annuleer is the default);
+  a hand-copied title shows a lock and why. Z says a delete cannot be undone.
+- **Settings** (⌘,): Algemeen, Smaak and Overgeslagen for both scopes, Huishouden.
 
-A title opens as a page over the rows (`TitlePage.swift`), not in a drawer: the still
-across the top, the trailer or the stills beside the facts and the actions, then scores
-per source, Productie (budget and revenue with the ratio, studio, collection, dates),
+A title opens on a `NavigationStack` over the page (`TitlePage.swift`), with the system's
+back button: the artwork large across the top with the title and glass buttons (Kijken
+or Kijk S1E4, the list, Niet nu, Trailer), the story beside **Op Dobby** (size, added,
+seen together and by you, picture, audio, subtitles, who manages it, Verwijderen), the
+trailer under the artwork while it plays, then scores per source, Productie (budget and revenue with the ratio, studio, collection, dates),
 the cast and makers as faces with their parts, a series' seasons, "Meer zoals dit"
 (TMDB's recommendations and similar titles) and the reviews. A face, a name in the
 search chips, opens the person's page (`PersonPage.swift`): photo, department, birth,
@@ -215,15 +264,22 @@ In the app:
   view down, which stops the sound.
 - A series with more than one season gets a season menu (all, the first, or a set)
   next to the list button; the pick goes with the list call and so to Seerr.
-- An available title shows a "Kijken" row once Jellyfin has answered (asked after the
+- A title on Dobby shows where it plays once Jellyfin has answered (asked after the
   details, so a slow Jellyfin never holds them back): "Op <tv>" or a menu of screens, and
-  "Hier", which opens the page in the browser. `K` (⌘K) starts on the only screen, opens
-  the page when none is open, and asks when several are; ⇧⌘K is always the page.
-- Keys: ⌘1 Ontdekken, ⌘2 Zoeker, ⌘3 Lijst, ⌘4 Films, ⌘5 Series, ⌘F search, ⌘R refresh.
+  "Hier", which opens the page in the browser. `K` starts on the only screen where the
+  household stopped, opens the page when none is open, and asks when several are; ⇧⌘K
+  is always the page.
+- Keys: J, N, T, K, V and ⌫ are menu key equivalents (menus Titel and Weergave); a text
+  field keeps its own letters, so typing in the search field never triggers them, and a
+  view's `onKeyPress` that handled them would fire before the menu, so the views only
+  move, open and close. ⌘1 Ontdekken, ⌘2 the list, ⌘3 Bibliotheek, ⌘4 and ⌘5 Ontdekken
+  with only films or series, ⌘F or `/` search, ⌘R refresh, ⌘[ back.
+- What happened goes to a status bar under the page with Herstel, not a toast.
 - Live: `lumos.changed` reloads the rows; `settings.changed` re-reads who we are and the
   status, so a setting flipped on another Mac shows at once.
-- `burrowctl lumos …`: `state` (with the stack, cast, budget and similar titles),
-  `show` (also `explore`), `search`, `open`, `person`, `back`, `trailer`, `stop`,
+- `burrowctl lumos …`: `state` (with the filters, the Bibliotheek's rows, disk and
+  selection, the stack, cast, budget and similar titles), `show page=discover|list|library`,
+  `filter kind=… sort=…`, `search`, `open`, `person`, `back`, `trailer`, `stop`,
   `close`, `watch [screen=<name>|here]`. The list buttons are marked
   `lumos.approve.list`, because a list entry requests media.
 
