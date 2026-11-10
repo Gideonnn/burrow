@@ -93,6 +93,8 @@ struct HedwigCommands: Commands {
         }
         CommandGroup(after: .sidebar) {
             Divider()
+            GoToItems(model: window)
+            Divider()
             Button(window?.filterOn == true ? "Zet filter uit" : "Filter de lijst") { window?.filterOn.toggle() }
                 .keyboardShortcut("l")
                 .disabled(window?.placeScope == nil || window?.isSearching == true)
@@ -100,6 +102,23 @@ struct HedwigCommands: Commands {
         CommandMenu("Bericht") {
             MessageMenuItems(model: window, openWindow: openWindow)
         }
+    }
+}
+
+/// ⌘1 to ⌘9 open the mailboxes in sidebar order, like Mail's favourites.
+private struct GoToItems: View {
+    let model: AppModel?
+
+    var body: some View {
+        let boxes = (model?.mailboxGroups ?? []).flatMap(\.mailboxes)
+        ForEach(Array(boxes.prefix(9).enumerated()), id: \.element.id) { index, box in
+            Button("Ga naar \(mailboxTitle(box))") { model?.selection = .inbox(mailboxId: box.id) }
+                .keyboardShortcut(KeyEquivalent(Character("\(index + 1)")))
+        }
+        Button("Ga naar Taken") { model?.selection = .tasks }
+            .disabled(model == nil)
+        Button("Ga naar Gedeeld") { model?.selection = .shared }
+            .disabled(model == nil)
     }
 }
 

@@ -11,6 +11,9 @@ struct ComposeView: View {
     @State private var failure: String?
     @State private var askingToClose = false
     @State private var closing = false
+    @FocusState private var focus: Field?
+
+    private enum Field { case to, body }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -20,6 +23,7 @@ struct ComposeView: View {
                 }
                 .disabled(draft.inReplyTo != nil)
                 TextField("Aan", text: $draft.to)
+                    .focused($focus, equals: .to)
                 TextField("Cc", text: $draft.cc)
                 TextField("Onderwerp", text: $draft.subject)
             }
@@ -27,6 +31,7 @@ struct ComposeView: View {
             .padding(16)
             Divider()
             TextEditor(text: $draft.body)
+                .focused($focus, equals: .body)
                 .font(.body)
                 .scrollContentBackground(.hidden)
                 .padding(12)
@@ -73,6 +78,8 @@ struct ComposeView: View {
         } message: {
             Text("Een bewaard concept staat onder Concepten van de mailbox.")
         }
+        // A reply starts in the text, a new message at Aan.
+        .defaultFocus($focus, draft.to.isEmpty ? .to : .body)
         .onAppear {
             if original == nil { original = draft }
             model.composing += 1

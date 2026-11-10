@@ -97,7 +97,7 @@ struct MessageHeader: View {
                         .lineLimit(1)
                         .help(message.from.email)
                         .contextMenu {
-                            Button("Kopieer adres") { copy(message.from.email) }
+                            SenderMenu(address: message.from, mailboxId: message.mailboxId)
                         }
                     Spacer(minLength: 0)
                     Text(MailFormat().headerDate(message.receivedAt))
@@ -293,6 +293,19 @@ private struct MessageTags: View {
             }
             .padding(.top, 2)
         }
+    }
+}
+
+private struct SenderMenu: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.openWindow) private var openWindow
+    let address: Address
+    let mailboxId: String
+
+    var body: some View {
+        Button("Stuur bericht") { openWindow(value: ComposeDraft(mailboxId: mailboxId, to: Address.format([address]))) }
+            .disabled(model.me?.can(.send) != true)
+        Button("Kopieer adres") { copy(address.email) }
     }
 }
 

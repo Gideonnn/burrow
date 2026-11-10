@@ -228,6 +228,7 @@ struct AccountSettings: View {
 
 struct ConnectionSettings: View {
     @Environment(AppModel.self) private var model
+    @State private var confirming = false
 
     var body: some View {
         Form {
@@ -235,9 +236,14 @@ struct ConnectionSettings: View {
             LabeledContent("Sleutel", value: model.me?.key.name ?? "")
             LabeledContent("Persoon", value: model.me?.person.name ?? "")
             LabeledContent("Rechten", value: (model.me?.rights ?? []).map(\.rawValue).joined(separator: ", "))
-            Button("Verbinding verbreken", role: .destructive) { model.disconnect() }
+            Button("Verbinding verbreken…", role: .destructive) { confirming = true }
         }
         .formStyle(.grouped)
+        .confirmationDialog("Verbinding met de server verbreken?", isPresented: $confirming) {
+            Button("Verbreek", role: .destructive) { model.disconnect() }
+        } message: {
+            Text("De sleutel verdwijnt van deze Mac; daarna log je opnieuw in.")
+        }
     }
 }
 

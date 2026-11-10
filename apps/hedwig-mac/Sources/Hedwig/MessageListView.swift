@@ -48,7 +48,9 @@ struct MessageListView: View {
         .overlay {
             if model.isSearching {
                 if model.messages.isEmpty && !model.aiSearching { ContentUnavailableView.search(text: model.searchText) }
-            } else if model.messages.isEmpty && !model.isLoading {
+            } else if model.messages.isEmpty && model.isLoading {
+                ProgressView()
+            } else if model.messages.isEmpty {
                 if model.isFiltering {
                     ContentUnavailableView("Geen berichten", systemImage: "line.3.horizontal.decrease", description: Text("Niets past bij het filter."))
                 } else {
