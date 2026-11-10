@@ -25,10 +25,12 @@ if node -e 'const d = JSON.parse(process.argv[1]); if (!d.structured_output?.col
   exit 0
 fi
 
+# An expired login fails the check too, and no older version fixes that.
+why="$(node -e 'try { const d = JSON.parse(process.argv[1]); console.log(String(d.result ?? "").slice(0, 200)) } catch {}' "$answer" 2>/dev/null || true)"
 if [ -e "$before" ]; then
   ln -sfn "$before" "$link"
-  echo "$(date -Is) claude $(basename "$after") failed the check, back on $(basename "$before")"
+  echo "$(date -Is) claude $(basename "$after") failed the check (${why:-no answer}), back on $(basename "$before")"
 else
-  echo "$(date -Is) claude $(basename "$after") failed the check and $(basename "$before") is gone"
+  echo "$(date -Is) claude $(basename "$after") failed the check (${why:-no answer}) and $(basename "$before") is gone"
 fi
 exit 1

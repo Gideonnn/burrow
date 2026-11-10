@@ -95,6 +95,21 @@ describe('ClaudeCliRunner', () => {
       new ClaudeCliRunner(await fakeClaude({}, 3)).run(request),
     ).rejects.toThrow(/exited with 3/);
   });
+
+  // The CLI exits 1 with an empty stderr when its login expired; the reason
+  // is only in the JSON envelope on stdout.
+  it('reports the envelope of a failing process', async () => {
+    const script = await fakeClaude(
+      {
+        is_error: true,
+        result: 'Failed to authenticate: OAuth session expired',
+      },
+      1,
+    );
+    await expect(new ClaudeCliRunner(script).run(request)).rejects.toThrow(
+      /exited with 1: Failed to authenticate: OAuth session expired/,
+    );
+  });
 });
 
 describe('ClaudeCliRunner without thinking', () => {
@@ -139,7 +154,7 @@ describe('FallbackRunner', () => {
 });
 
 describe('CodexCliRunner', () => {
-  it('uses Sol 6.1 at the requested effort unless a model is configured', async () => {
+  async function fakeCodex() {
     const script = join(dir, 'codex');
     await writeFile(
       script,
@@ -147,22 +162,50 @@ describe('CodexCliRunner', () => {
 const fs = require('fs');
 const args = process.argv.slice(2);
 fs.writeFileSync(${JSON.stringify(join(dir, 'codex.json'))}, JSON.stringify(args));
+fs.copyFileSync(args[args.indexOf('--output-schema') + 1], ${JSON.stringify(join(dir, 'schema.json'))});
 fs.writeFileSync(args[args.indexOf('--output-last-message') + 1], '{"ok":3}');
 process.stdin.resume();
 process.stdin.on('end', () => process.exit(0));
 `,
     );
     await chmod(script, 0o755);
-    const args = async () =>
-      JSON.parse(await readFile(join(dir, 'codex.json'), 'utf8')).join(' ');
+    return script;
+  }
+  const args = async () =>
+    JSON.parse(await readFile(join(dir, 'codex.json'), 'utf8')).join(' ');
+
+  // A ChatGPT login refuses most model names, so only a configured model is
+  // named; otherwise the CLI's own default runs.
+  it('uses the CLI default model at the requested effort unless a model is configured', async () => {
+    const script = await fakeCodex();
     expect(
       await new CodexCliRunner(script).run({ ...request, effort: 'high' }),
     ).toEqual({ ok: 3 });
-    expect(await args()).toContain('--model gpt-6.1-sol');
+    expect(await args()).not.toContain('--model');
     expect(await args()).toContain('-c model_reasoning_effort="high"');
     await new CodexCliRunner(script, 'gpt-other').run(request);
     expect(await args()).toContain('--model gpt-other');
     expect(await args()).not.toContain('model_reasoning_effort');
+  });
+
+  it('turns oneOf into anyOf, which strict structured output requires', async () => {
+    await new CodexCliRunner(await fakeCodex()).run({
+      ...request,
+      schema: {
+        type: 'object',
+        properties: {
+          action: {
+            oneOf: [
+              { type: 'object', properties: { kind: { const: 'keep' } } },
+              { type: 'object', properties: { kind: { const: 'spam' } } },
+            ],
+          },
+        },
+      },
+    });
+    const written = await readFile(join(dir, 'schema.json'), 'utf8');
+    expect(written).not.toContain('oneOf');
+    expect(JSON.parse(written).properties.action.anyOf).toHaveLength(2);
   });
 });
 

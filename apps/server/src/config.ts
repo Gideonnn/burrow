@@ -32,7 +32,7 @@ const env = z.object({
   BURROW_AGENTS: z.string().default('claude,codex'),
   BURROW_CLAUDE_COMMAND: z.string().default('claude'),
   BURROW_CODEX_COMMAND: z.string().default('codex'),
-  // A Codex model; empty uses Sol 6.1.
+  // A Codex model; empty uses the Codex CLI's own default.
   BURROW_CODEX_MODEL: z.string().optional(),
   // Server tasks at once, and agent CLI runs at once across everything.
   BURROW_WORKERS: z.coerce.number().int().min(1).max(8).default(2),
