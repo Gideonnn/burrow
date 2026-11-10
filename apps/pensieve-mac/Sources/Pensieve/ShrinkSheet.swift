@@ -89,12 +89,13 @@ struct ShrinkSheet: View {
                     }
                 }
                 Section("Kwaliteit") {
-                    ForEach(options, id: \.quality) { option in
-                        QualityRow(option: option, chosen: quality == option.quality)
-                            .contentShape(Rectangle())
-                            .onTapGesture { if option.fits { quality = option.quality } }
-                            .opacity(option.fits ? 1 : 0.45)
+                    Picker("Kwaliteit", selection: $quality) {
+                        ForEach(options, id: \.quality) { option in
+                            QualityLabel(option: option).tag(option.quality).disabled(!option.fits)
+                        }
                     }
+                    .pickerStyle(.radioGroup)
+                    .labelsHidden()
                 }
                 Section {
                     footnote.font(.callout).foregroundStyle(.secondary)
@@ -207,36 +208,23 @@ struct ShrinkSheet: View {
     }
 }
 
-private struct QualityRow: View {
+private struct QualityLabel: View {
     let option: ShrinkOption
-    let chosen: Bool
 
     var body: some View {
-        HStack(spacing: 10) {
-            Image(systemName: chosen ? "largecircle.fill.circle" : "circle")
-                .foregroundStyle(chosen ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
-                .imageScale(.large)
+        HStack(alignment: .firstTextBaseline) {
             VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 6) {
-                    Text(name).fontWeight(.semibold) + Text(" · \(option.settings.height)p").foregroundStyle(.secondary)
-                    if option.quality == .normal {
-                        Text("Aanbevolen")
-                            .font(.caption2.weight(.medium))
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 1)
-                            .foregroundStyle(.tint)
-                            .background(.tint.opacity(0.14), in: Capsule())
-                    }
-                }
+                Text(name) + Text(" · \(option.settings.height)p\(option.quality == .normal ? " · aanbevolen" : "")").foregroundStyle(.secondary)
                 Text(option.fits ? hint : "Te groot voor de limiet").font(.caption).foregroundStyle(.secondary)
             }
             Spacer()
             VStack(alignment: .trailing, spacing: 2) {
-                Text("± \(bytes(option.estimatedBytes))").fontWeight(.semibold).monospacedDigit()
+                Text("± \(bytes(option.estimatedBytes))").monospacedDigit()
                 Text("\(bytes(option.bytesPerMinute)) per minuut").font(.caption).foregroundStyle(.secondary)
             }
         }
         .padding(.vertical, 2)
+        .frame(maxWidth: .infinity)
     }
 
     private var name: String {
