@@ -39,22 +39,10 @@ struct MessageDetailView: View {
                         .padding(.bottom, 16)
                         .id(Self.top)
                         Divider().padding(.horizontal, 28)
-                        if let html = message.bodyHtml {
-                            HTMLView(
-                                html: html,
-                                allowRemote: message.mayLoadRemoteImages && (loadRemoteImages || allowedMessageId == message.id),
-                                height: $bodyHeight
-                            )
-                            .frame(height: bodyHeight)
-                        } else {
-                            // Mail's default message font.
-                            Text(message.bodyText ?? message.snippet)
-                                .font(.custom("Helvetica", size: 12))
-                                .textSelection(.enabled)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.horizontal, 28)
-                                .padding(.vertical, 20)
-                        }
+                        MessageBody(
+                            message: message,
+                            allowRemote: message.mayLoadRemoteImages && (loadRemoteImages || allowedMessageId == message.id),
+                            height: $bodyHeight)
                     }
                 }
                 .onChange(of: message.id) { proxy.scrollTo(Self.top, anchor: .top) }
@@ -62,6 +50,28 @@ struct MessageDetailView: View {
             .safeAreaInset(edge: .bottom) { SuggestionBar() }
         } else {
             ContentUnavailableView("Geen bericht geselecteerd", systemImage: "envelope")
+        }
+    }
+}
+
+/// The mail itself, as tall as it is, inside the reader's scroll view.
+struct MessageBody: View {
+    let message: MessageDetail
+    let allowRemote: Bool
+    @Binding var height: CGFloat
+
+    var body: some View {
+        if let html = message.bodyHtml {
+            HTMLView(html: html, allowRemote: allowRemote, height: $height)
+                .frame(height: height)
+        } else {
+            // Mail's default message font, which no text style matches.
+            Text(message.bodyText ?? message.snippet)
+                .font(.custom("Helvetica", size: 12))
+                .textSelection(.enabled)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 28)
+                .padding(.vertical, 20)
         }
     }
 }

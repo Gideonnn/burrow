@@ -21,6 +21,36 @@ public enum SidebarItem: Hashable, Sendable {
         case .tasks, .outings, .shared: nil
         }
     }
+
+    /// The place as text, for @SceneStorage.
+    public var storageKey: String {
+        switch self {
+        case .inbox(let id): "inbox:\(id)"
+        case .folder(let folder, let id): "\(folder.rawValue):\(id)"
+        case .drafts(let id): "drafts:\(id)"
+        case .tasks: "tasks"
+        case .outings: "outings"
+        case .shared: "shared"
+        }
+    }
+
+    public init?(storageKey: String) {
+        switch storageKey {
+        case "tasks": self = .tasks
+        case "outings": self = .outings
+        case "shared": self = .shared
+        default:
+            let parts = storageKey.split(separator: ":", maxSplits: 1).map(String.init)
+            guard parts.count == 2, !parts[1].isEmpty else { return nil }
+            switch parts[0] {
+            case "inbox": self = .inbox(mailboxId: parts[1])
+            case "drafts": self = .drafts(mailboxId: parts[1])
+            default:
+                guard let folder = MailFolder(rawValue: parts[0]), folder != .inbox else { return nil }
+                self = .folder(folder, mailboxId: parts[1])
+            }
+        }
+    }
 }
 
 /// The app's state and every action the views can take. Views stay dumb; this
@@ -100,14 +130,28 @@ public final class AppModel {
     public var searchFocusRequest = 0
     public var isSearching: Bool { !searchQuery.isEmpty || !searchTokens.isEmpty }
     public internal(set) var messages: [MessageSummary] = []
+    /// The open message: the selection when it is one message, nil for none or several.
     public var selectedMessageId: String? {
         didSet {
             guard oldValue != selectedMessageId else { return }
-            // Read mail stays under "Ongelezen" until you move on, like Mail.
-            if let oldValue, let old = messages.first(where: { $0.id == oldValue }), !matchesFilter(old) {
-                messages.removeAll { $0.id == oldValue }
+            if let id = selectedMessageId {
+                if selectedMessageIds != [id] { selectedMessageIds = [id] }
+            } else {
+                if selectedMessageIds.count == 1 { selectedMessageIds = [] }
+                detail = nil
             }
             messageLoad = Task { await openSelected() }
+        }
+    }
+    /// The list's selection, as in Mail: several messages open none and act together.
+    public var selectedMessageIds: Set<String> = [] {
+        didSet {
+            guard oldValue != selectedMessageIds else { return }
+            // Read mail stays under "Ongelezen" until you move on, like Mail.
+            let left = oldValue.subtracting(selectedMessageIds)
+            if !left.isEmpty { messages.removeAll { left.contains($0.id) && !matchesFilter($0) } }
+            let open = selectedMessageIds.count == 1 ? selectedMessageIds.first : nil
+            if open != selectedMessageId { selectedMessageId = open }
         }
     }
     /// Mail's list filter: the criteria are remembered, the filter itself starts off.
@@ -245,6 +289,7 @@ public final class AppModel {
             report(error, quiet: true)
             return
         }
+        if let id = selection?.mailboxId, mailbox(id) == nil { selection = nil }
         if selection == nil, let first = me?.mailboxes.first { selection = .inbox(mailboxId: first.id) }
         await refreshFiltered()
         if let place = ProcessInfo.processInfo.environment["HEDWIG_OPEN"] {
@@ -412,20 +457,29 @@ public final class AppModel {
             case .shared:
                 messages = try await sharedMessages()
             }
-            if keepSelection, filter != nil { keepSelectedMessage(from: shown) }
-            if !keepSelection || !messages.contains(where: { $0.id == selectedMessageId }) {
-                selectedMessageId = messages.first?.id
-            }
+            if keepSelection, filter != nil { keepSelectedMessages(from: shown) }
+            keepSelection ? keepOnlyListedSelection() : selectFirst()
         } catch {
             report(error, quiet: true)
         }
     }
 
-    /// The open mail stays in a filtered list after it stopped matching, at its old place.
-    private func keepSelectedMessage(from shown: [MessageSummary]) {
-        guard let id = selectedMessageId, !messages.contains(where: { $0.id == id }),
-              let index = shown.firstIndex(where: { $0.id == id }), stillBelongs(shown[index]) else { return }
-        messages.insert(shown[index], at: min(index, messages.count))
+    /// Selected mail stays in a filtered list after it stopped matching, at its old place.
+    private func keepSelectedMessages(from shown: [MessageSummary]) {
+        for (index, message) in shown.enumerated()
+        where selectedMessageIds.contains(message.id) && !messages.contains(where: { $0.id == message.id }) && stillBelongs(message) {
+            messages.insert(message, at: min(index, messages.count))
+        }
+    }
+
+    private func selectFirst() {
+        selectedMessageIds = messages.first.map { [$0.id] } ?? []
+    }
+
+    /// Drops selected mail the list no longer holds; with none left, the first is selected.
+    private func keepOnlyListedSelection() {
+        let listed = selectedMessageIds.filter { id in messages.contains { $0.id == id } }
+        if listed.isEmpty { selectFirst() } else if listed != selectedMessageIds { selectedMessageIds = listed }
     }
 
     private func reloadForFilter() {
@@ -533,23 +587,63 @@ public final class AppModel {
         }
     }
 
-    /// Applies operations at the provider. A message that leaves the current
-    /// list disappears and the next one is selected, like Apple Mail.
+    /// Applies operations at the provider, to one message or else the whole
+    /// selection. A message that leaves the current list disappears and the
+    /// next one is selected, like Apple Mail.
     public func perform(_ ops: [ServerOp], on id: String? = nil) async {
-        guard let api, let id = id ?? selectedMessageId else { return }
-        do {
-            let updated = try await api.apply(ops, to: id)
-            if stillBelongs(updated.summary) {
-                replace(updated.summary)
-                if detail?.id == id { detail = updated }
-            } else {
-                removeFromList(id)
-            }
-            await refreshCounts()
-        } catch {
-            await reportProviderError(error, mailboxId: messages.first { $0.id == id }?.mailboxId ?? detail?.mailboxId)
-        }
+        await perform(ops, on: id.map { [$0] } ?? selectedIds)
     }
+
+    /// The server takes one message per call, so a selection is a call each; the
+    /// first failure stops the rest.
+    public func perform(_ ops: [ServerOp], on ids: [String]) async {
+        await perform(ids.map { ($0, ops) })
+    }
+
+    private func perform(_ work: [(id: String, ops: [ServerOp])]) async {
+        guard let api, !work.isEmpty else { return }
+        var gone: [String] = []
+        for (id, ops) in work {
+            do {
+                let updated = try await api.apply(ops, to: id)
+                if stillBelongs(updated.summary) {
+                    replace(updated.summary)
+                    if detail?.id == id { detail = updated }
+                } else {
+                    gone.append(id)
+                }
+            } catch {
+                removeFromList(gone)
+                await reportProviderError(error, mailboxId: messages.first { $0.id == id }?.mailboxId ?? detail?.mailboxId)
+                await refreshCounts()
+                return
+            }
+        }
+        removeFromList(gone)
+        await refreshCounts()
+    }
+
+    /// The selection in list order; the open message when the list lost it.
+    public var selectedIds: [String] {
+        let listed = messages.map(\.id).filter(selectedMessageIds.contains)
+        if listed.isEmpty, let id = selectedMessageId ?? detail?.id { return [id] }
+        return listed
+    }
+
+    public func summaries(_ ids: [String]) -> [MessageSummary] {
+        ids.compactMap { id in messages.first { $0.id == id } ?? (detail?.id == id ? detail?.summary : nil) }
+    }
+
+    /// Whether the menus may archive, delete, mark or move these (the selection by default).
+    public func canOrganize(_ ids: [String]? = nil) -> Bool {
+        let list = summaries(ids ?? selectedIds)
+        return me?.can(.organize) == true && !list.isEmpty && list.allSatisfy { $0.share?.by == nil }
+    }
+
+    public var canOrganizeSelection: Bool { canOrganize() }
+
+    /// Reply and forward need exactly one message of this person's own.
+    public var canReply: Bool { detail != nil && detailIsMine && me?.can(.send) == true }
 
     /// A mailbox whose login the provider refused gets the notice to log in
     /// again instead of an alert; anything else is an alert as before.
@@ -577,14 +671,70 @@ public final class AppModel {
         }
     }
 
-    public func toggleRead() async {
-        guard let message = currentSummary else { return }
-        await perform([message.unread ? .markRead : .markUnread])
+    /// Like Mail: read when any of them is unread, otherwise unread.
+    public func toggleRead(_ ids: [String]? = nil) async {
+        let list = summaries(ids ?? selectedIds)
+        guard !list.isEmpty else { return }
+        await perform([list.contains(where: \.unread) ? .markRead : .markUnread], on: list.map(\.id))
     }
 
-    public func toggleFlag() async {
-        guard let message = currentSummary else { return }
-        await perform([message.flagged ? .unflag : .flag])
+    public func toggleFlag(_ ids: [String]? = nil) async {
+        let list = summaries(ids ?? selectedIds)
+        guard !list.isEmpty else { return }
+        await perform([list.allSatisfy(\.flagged) ? .unflag : .flag], on: list.map(\.id))
+    }
+
+    /// What moves a message to a folder of its own mailbox; nil where it already is
+    /// or the provider has no such move.
+    private func moveOps(_ message: MessageSummary, to folder: MailFolder) -> [ServerOp]? {
+        guard message.folder != folder else { return nil }
+        return switch folder {
+        // Out of spam the mail is read, as with "Geen spam".
+        case .inbox: message.folder == .spam ? [.moveToInbox, .markRead] : [.moveToInbox]
+        case .archive: [.archive]
+        case .spam: [.moveToSpam]
+        case .trash: [.trash]
+        case .sent: nil
+        }
+    }
+
+    private func target(_ place: SidebarItem) -> (folder: MailFolder, mailboxId: String)? {
+        switch place {
+        case .inbox(let id): (.inbox, id)
+        case .folder(let folder, let id): (folder, id)
+        default: nil
+        }
+    }
+
+    /// A drop on a sidebar place: mail moves only between folders of its own mailbox.
+    public func canMove(_ ids: [String], to place: SidebarItem) -> Bool {
+        guard let target = target(place), canOrganize(ids) else { return false }
+        let list = summaries(ids)
+        return list.count == ids.count && list.allSatisfy { $0.mailboxId == target.mailboxId && moveOps($0, to: target.folder) != nil }
+    }
+
+    public func move(_ ids: [String], to place: SidebarItem) async {
+        guard canMove(ids, to: place), let target = target(place) else { return }
+        await move(ids, to: target.folder)
+    }
+
+    /// Moves each message to that folder of its own mailbox (Verplaats naar).
+    public func move(_ ids: [String], to folder: MailFolder) async {
+        let list = summaries(ids)
+        var work: [(id: String, ops: [ServerOp])] = []
+        for message in list {
+            // The bot's spam waits for review; restoring it also teaches a rule.
+            if folder == .inbox, message.folder == .spam, let entry = review(for: message.id) {
+                await restore(entry)
+            } else if let ops = moveOps(message, to: folder) {
+                work.append((message.id, ops))
+            }
+        }
+        await perform(work)
+    }
+
+    public func canMove(_ ids: [String], to folder: MailFolder) -> Bool {
+        canOrganize(ids) && summaries(ids).contains { moveOps($0, to: folder) != nil }
     }
 
     public var currentSummary: MessageSummary? {
@@ -792,18 +942,28 @@ public final class AppModel {
 
     private func sortResults() {
         messages = searchSort == .newest ? bestResults.sorted { $0.receivedAt > $1.receivedAt } : bestResults
-        if !messages.contains(where: { $0.id == selectedMessageId }) { selectedMessageId = messages.first?.id }
+        keepOnlyListedSelection()
     }
 
     private func replace(_ message: MessageSummary) {
         if let index = messages.firstIndex(where: { $0.id == message.id }) { messages[index] = message }
     }
 
-    private func removeFromList(_ id: String) {
-        guard let index = messages.firstIndex(where: { $0.id == id }) else { return }
-        messages.remove(at: index)
-        if selectedMessageId == id {
-            selectedMessageId = messages.indices.contains(index) ? messages[index].id : messages.last?.id
+    private func removeFromList(_ id: String) { removeFromList([id]) }
+
+    /// With the selection gone, the message after it is selected, as in Mail.
+    private func removeFromList(_ ids: [String]) {
+        let gone = Set(ids)
+        guard let first = messages.firstIndex(where: { gone.contains($0.id) }) else { return }
+        let rest = messages.filter { !gone.contains($0.id) }
+        let after = messages[first...].first { !gone.contains($0.id) && !selectedMessageIds.contains($0.id) }
+        messages = rest
+        let kept = selectedMessageIds.subtracting(gone)
+        if !kept.isEmpty {
+            selectedMessageIds = kept
+        } else if !selectedMessageIds.isDisjoint(with: gone) || selectedMessageId.map(gone.contains) == true {
+            let next = after ?? rest.last
+            selectedMessageIds = next.map { [$0.id] } ?? []
         }
     }
 
@@ -852,7 +1012,29 @@ public final class AppModel {
     // MARK: Writing
 
     public func reply(all: Bool = false) -> ComposeDraft? {
-        guard let message = detail else { return nil }
+        detail.map { reply(to: $0, all: all) }
+    }
+
+    public func forward() -> ComposeDraft? {
+        detail.map(forward)
+    }
+
+    /// A reply or forward from a context menu, also for a message that is not open.
+    public func draft(replyingTo id: String, all: Bool = false, forwarding: Bool = false) async -> ComposeDraft? {
+        let message: MessageDetail
+        if let detail, detail.id == id {
+            message = detail
+        } else {
+            guard let api else { return nil }
+            do { message = try await api.message(id: id) } catch {
+                report(error)
+                return nil
+            }
+        }
+        return forwarding ? forward(message) : reply(to: message, all: all)
+    }
+
+    private func reply(to message: MessageDetail, all: Bool) -> ComposeDraft {
         let recipients = (all ? message.replyAll : message.reply) ?? Recipients(to: [message.from], cc: [])
         return ComposeDraft(
             mailboxId: message.mailboxId,
@@ -863,9 +1045,8 @@ public final class AppModel {
             inReplyTo: message.id)
     }
 
-    public func forward() -> ComposeDraft? {
-        guard let message = detail else { return nil }
-        return ComposeDraft(
+    private func forward(_ message: MessageDetail) -> ComposeDraft {
+        ComposeDraft(
             mailboxId: message.mailboxId,
             subject: message.subject.lowercased().hasPrefix("fwd:") ? message.subject : "Fwd: \(message.subject)",
             body: "\n\n" + quote(message))

@@ -4,19 +4,30 @@ import SwiftUI
 
 struct MessageListView: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         @Bindable var model = model
-        List(selection: $model.selectedMessageId) {
+        List(selection: $model.selectedMessageIds) {
             ForEach(model.messages) { message in
                 VStack(alignment: .leading, spacing: 6) {
                     MessageRow(message: message, showMailbox: model.isSearching && model.searchScope.mailboxId == nil)
                     if !model.isSearching, let entry = model.review(for: message.id) { ReviewLine(entry: entry) }
                 }
                 .tag(message.id)
+                // A message id: the sidebar's mailbox folders take it as a move.
+                .draggable(message.id)
             }
         }
         .listStyle(.inset)
+        .contextMenu(forSelectionType: String.self) { ids in
+            MessageContextMenu(ids: model.messages.map(\.id).filter(ids.contains))
+        } primaryAction: { ids in
+            if ids.count == 1, let id = ids.first { openWindow(value: OpenMessage(id: id)) }
+        }
+        .onDeleteCommand {
+            if model.canOrganizeSelection { Task { await model.perform([.trash]) } }
+        }
         .pullToRefresh { await model.refresh() }
         .safeAreaInset(edge: .top, spacing: 0) {
             VStack(spacing: 0) {
@@ -233,10 +244,9 @@ private struct AnswerCard: View {
                 Button { model.selectedMessageId = source.id } label: {
                     Label("\(source.from.display) · \(shortDate(source.receivedAt))", systemImage: "arrow.turn.down.right")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.link)
             }
         }
         .padding(10)
@@ -260,6 +270,8 @@ struct MessageRow: View {
                 .fill(message.unread ? Color.accentColor : .clear)
                 .frame(width: 8, height: 8)
                 .padding(.top, 4)
+                .accessibilityLabel(message.unread ? "Ongelezen" : "")
+                .accessibilityHidden(!message.unread)
             // Mail's list: the sender at 13 pt semibold, the rest in its 11 pt list font.
             VStack(alignment: .leading, spacing: 3) {
                 HStack(alignment: .firstTextBaseline) {
@@ -321,3 +333,53 @@ struct Tag: View {
 }
 
 func shortDate(_ date: Date) -> String { MailFormat().listDate(date) }
+
+/// The list's context menu: the same actions as the Bericht menu, for the
+/// clicked messages. Reply and forward take one message.
+struct MessageContextMenu: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.openWindow) private var openWindow
+    let ids: [String]
+
+    var body: some View {
+        let list = model.summaries(ids)
+        let one = list.count == 1 ? list.first : nil
+        let canSend = one != nil && one?.share?.by == nil && model.me?.can(.send) == true
+        let canOrganize = model.canOrganize(ids)
+        if let one {
+            Button("Open in nieuw venster") { openWindow(value: OpenMessage(id: one.id)) }
+            Divider()
+        }
+        Button("Beantwoord") { compose(all: false, forwarding: false) }.disabled(!canSend)
+        Button("Allen beantwoorden") { compose(all: true, forwarding: false) }.disabled(!canSend)
+        Button("Stuur door") { compose(all: false, forwarding: true) }.disabled(!canSend)
+        Divider()
+        Button("Archiveer") { Task { await model.move(ids, to: .archive) } }
+            .disabled(!model.canMove(ids, to: .archive))
+        Button(list.contains(where: \.unread) ? "Markeer als gelezen" : "Markeer als ongelezen") {
+            Task { await model.toggleRead(ids) }
+        }
+        .disabled(!canOrganize)
+        Button(!list.isEmpty && list.allSatisfy(\.flagged) ? "Verwijder vlag" : "Markeer met vlag") {
+            Task { await model.toggleFlag(ids) }
+        }
+        .disabled(!canOrganize)
+        Menu("Verplaats naar") {
+            ForEach([MailFolder.inbox, .archive, .spam], id: \.self) { folder in
+                Button(folderTitle(folder)) { Task { await model.move(ids, to: folder) } }
+                    .disabled(!model.canMove(ids, to: folder))
+            }
+        }
+        .disabled(!canOrganize)
+        Divider()
+        Button("Verwijder", role: .destructive) { Task { await model.perform([.trash], on: ids) } }
+            .disabled(!canOrganize)
+    }
+
+    private func compose(all: Bool, forwarding: Bool) {
+        guard let id = ids.first else { return }
+        Task {
+            if let draft = await model.draft(replyingTo: id, all: all, forwarding: forwarding) { openWindow(value: draft) }
+        }
+    }
+}

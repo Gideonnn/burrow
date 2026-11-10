@@ -8,7 +8,8 @@ struct HedwigApp: App {
     private var model: AppModel { delegate.model }
 
     var body: some Scene {
-        WindowGroup("Hedwig", id: "main") {
+        // One mail window, like Mail's viewer: a second one only mirrored the first.
+        Window("Hedwig", id: "main") {
             RootView()
                 .environment(model)
                 .environment(delegate.services.updater)
@@ -25,10 +26,18 @@ struct HedwigApp: App {
         }
         .defaultSize(width: 640, height: 520)
 
+        WindowGroup("Bericht", for: OpenMessage.self) { $message in
+            if let message {
+                MessageWindow(id: message.id)
+                    .environment(model)
+                    .frame(minWidth: 480, minHeight: 360)
+            }
+        }
+        .defaultSize(width: 720, height: 760)
+
         Settings {
             SettingsView()
                 .environment(model)
-                .frame(width: 620, height: 520)
         }
     }
 }
@@ -51,43 +60,94 @@ struct RootView: View {
     }
 }
 
+/// The mail window's model while that window is key; nil in a compose window or Settings.
+struct MailWindowKey: FocusedValueKey {
+    typealias Value = AppModel
+}
+
+extension FocusedValues {
+    var mailWindow: AppModel? {
+        get { self[MailWindowKey.self] }
+        set { self[MailWindowKey.self] = newValue }
+    }
+}
+
 struct HedwigCommands: Commands {
     let model: AppModel
+    @FocusedValue(\.mailWindow) private var window
     @Environment(\.openWindow) private var openWindow
 
     var body: some Commands {
-        CommandGroup(after: .newItem) {
+        SidebarCommands()
+        // Replacing the group drops the system's New Window, which also wanted ⌘N.
+        CommandGroup(replacing: .newItem) {
             Button("Nieuw bericht") { if let d = model.newMessage() { openWindow(value: d) } }
                 .keyboardShortcut("n")
+                .disabled(model.me == nil)
+        }
+        CommandGroup(after: .pasteboard) {
+            Divider()
+            Button("Zoek") { window?.searchFocusRequest += 1 }
+                .keyboardShortcut("f")
+                .disabled(window == nil)
+        }
+        CommandGroup(after: .sidebar) {
+            Divider()
+            Button(window?.filterOn == true ? "Zet filter uit" : "Filter de lijst") { window?.filterOn.toggle() }
+                .keyboardShortcut("l")
+                .disabled(window?.placeScope == nil || window?.isSearching == true)
         }
         CommandMenu("Bericht") {
-            Button("Antwoord") { if let d = model.reply() { openWindow(value: d) } }
-                .keyboardShortcut("r")
-            Button("Allen antwoorden") { if let d = model.reply(all: true) { openWindow(value: d) } }
-                .keyboardShortcut("r", modifiers: [.command, .shift])
-            Button("Stuur door") { if let d = model.forward() { openWindow(value: d) } }
-                .keyboardShortcut("f", modifiers: [.command, .shift])
-            Divider()
-            Button("Archiveer") { Task { await model.perform([.archive]) } }
-                .keyboardShortcut("a", modifiers: [.command, .control])
-            Button("Verwijder") { Task { await model.perform([.trash]) } }
-                .keyboardShortcut(.delete, modifiers: .command)
-            Button("Markeer als spam") { Task { await model.perform([.moveToSpam]) } }
-                .keyboardShortcut("j", modifiers: [.command, .shift])
-            Divider()
-            Button("Gelezen of ongelezen") { Task { await model.toggleRead() } }
-                .keyboardShortcut("u", modifiers: [.command, .shift])
-            Button("Markeer met vlag") { Task { await model.toggleFlag() } }
-                .keyboardShortcut("l", modifiers: [.command, .shift])
-            Divider()
-            Button("Zoek") { model.searchFocusRequest += 1 }
-                .keyboardShortcut("f")
-            Button(model.filterOn ? "Zet filter uit" : "Filter de lijst") { model.filterOn.toggle() }
-                .keyboardShortcut("l")
-                .disabled(model.placeScope == nil)
-            Button("Vernieuw") { Task { await model.refresh() } }
-                .keyboardShortcut("n", modifiers: [.command, .shift])
+            MessageMenuItems(model: window, openWindow: openWindow)
         }
+    }
+}
+
+/// The Bericht menu; every item is grey when the mail window is not key or
+/// nothing in it can be acted on.
+private struct MessageMenuItems: View {
+    let model: AppModel?
+    let openWindow: OpenWindowAction
+
+    var body: some View {
+        let canReply = model?.showsMail == true && model?.canReply == true
+        let canOrganize = model?.showsMail == true && model?.canOrganizeSelection == true
+        let ids = model?.selectedIds ?? []
+        let list = model?.summaries(ids) ?? []
+        Button("Beantwoord") { if let d = model?.reply() { openWindow(value: d) } }
+            .keyboardShortcut("r")
+            .disabled(!canReply)
+        Button("Allen beantwoorden") { if let d = model?.reply(all: true) { openWindow(value: d) } }
+            .keyboardShortcut("r", modifiers: [.command, .shift])
+            .disabled(!canReply)
+        Button("Stuur door") { if let d = model?.forward() { openWindow(value: d) } }
+            .keyboardShortcut("f", modifiers: [.command, .shift])
+            .disabled(!canReply)
+        Divider()
+        Button("Archiveer") { Task { await model?.perform([.archive]) } }
+            .keyboardShortcut("a", modifiers: [.command, .control])
+            .disabled(!canOrganize || list.allSatisfy { $0.folder == .archive })
+        Button("Verwijder") { Task { await model?.perform([.trash]) } }
+            .keyboardShortcut(.delete, modifiers: .command)
+            .disabled(!canOrganize)
+        Button("Markeer als spam") { Task { await model?.perform([.moveToSpam]) } }
+            .keyboardShortcut("j", modifiers: [.command, .shift])
+            .disabled(!canOrganize || list.allSatisfy { $0.folder == .spam })
+        Divider()
+        Button(list.contains(where: \.unread) ? "Markeer als gelezen" : "Markeer als ongelezen") {
+            Task { await model?.toggleRead() }
+        }
+        .keyboardShortcut("u", modifiers: [.command, .shift])
+        .disabled(!canOrganize)
+        Button(!list.isEmpty && list.allSatisfy(\.flagged) ? "Verwijder vlag" : "Markeer met vlag") {
+            Task { await model?.toggleFlag() }
+        }
+        .keyboardShortcut("l", modifiers: [.command, .shift])
+        .disabled(!canOrganize)
+        Divider()
+        Button("Vernieuw") { Task { await model?.refresh() } }
+            .keyboardShortcut("n", modifiers: [.command, .shift])
+            .disabled(model == nil)
     }
 }
 

@@ -1,9 +1,20 @@
 import HedwigCore
 import SwiftUI
 
+extension AppModel {
+    /// Whether the window shows mail: a mailbox, a folder, search or Gedeeld.
+    var showsMail: Bool {
+        if isSearching { return true }
+        return switch selection {
+        case .drafts, .tasks, .outings: false
+        default: true
+        }
+    }
+}
+
 struct MainView: View {
     @Environment(AppModel.self) private var model
-    @Environment(\.openWindow) private var openWindow
+    @SceneStorage("hedwig.place") private var savedPlace = ""
 
     var body: some View {
         @Bindable var model = model
@@ -32,7 +43,9 @@ struct MainView: View {
             }
         } detail: {
             Group {
-                if model.isSearching {
+                if model.showsMail, model.selectedMessageIds.count > 1 {
+                    ContentUnavailableView("\(model.selectedMessageIds.count) berichten geselecteerd", systemImage: "envelope")
+                } else if model.isSearching {
                     MessageDetailView()
                 } else {
                     switch model.selection {
@@ -55,6 +68,18 @@ struct MainView: View {
         }
         .onSubmit(of: .search) { Task { await model.searchWithAI() } }
         .modifier(SearchFocus(request: model.searchFocusRequest))
+        .focusedSceneValue(\.mailWindow, model)
+        .onAppear(perform: restorePlace)
+        .onChange(of: model.selection) { _, place in
+            if let place { savedPlace = place.storageKey }
+        }
+    }
+
+    // The place open at the last quit; a mailbox that is gone leaves the first inbox.
+    private func restorePlace() {
+        guard let place = SidebarItem(storageKey: savedPlace), place != .outings, place != model.selection else { return }
+        if let id = place.mailboxId, model.me != nil, model.mailbox(id) == nil { return }
+        model.selection = place
     }
 }
 
@@ -118,14 +143,6 @@ struct MainToolbar: ToolbarContent {
     @Environment(AppModel.self) private var model
     @Environment(\.openWindow) private var openWindow
 
-    private var showsMail: Bool {
-        if model.isSearching { return true }
-        return switch model.selection {
-        case .drafts, .tasks, .outings: false
-        default: true
-        }
-    }
-
     // Mail's layout: compose at the reading column's leading edge, then the groups
     // centred between it and the search field, because this flexible space and the one
     // SwiftUI puts before search share the slack. Flagging is in the menu (⇧⌘L).
@@ -153,9 +170,9 @@ struct MainToolbar: ToolbarContent {
     private var replies: some View {
         ControlGroup {
             Button { if let d = model.reply() { openWindow(value: d) } } label: {
-                Label("Antwoord", systemImage: "arrowshape.turn.up.left")
+                Label("Beantwoord", systemImage: "arrowshape.turn.up.left")
             }
-            .help("Antwoord (⌘R)")
+            .help("Beantwoord (⌘R)")
             Button { if let d = model.reply(all: true) { openWindow(value: d) } } label: {
                 Label("Allen antwoorden", systemImage: "arrowshape.turn.up.left.2")
             }
@@ -189,6 +206,6 @@ struct MainToolbar: ToolbarContent {
         .disabled(!canOrganize)
     }
 
-    private var canReply: Bool { showsMail && model.detail != nil && model.detailIsMine && model.me?.can(.send) == true }
-    private var canOrganize: Bool { showsMail && model.detail != nil && model.detailIsMine && model.me?.can(.organize) == true }
+    private var canReply: Bool { model.showsMail && model.canReply }
+    private var canOrganize: Bool { model.showsMail && model.canOrganizeSelection }
 }

@@ -104,6 +104,7 @@ struct SidebarView: View {
             if inside { hovered = box.id } else if hovered == box.id { hovered = nil }
         }
         .help(box.address)
+        .modifier(MailDrop(place: .inbox(mailboxId: box.id)))
         .contextMenu {
             let index = group.mailboxes.firstIndex(of: box) ?? 0
             Button(open ? "Verberg mappen" : "Toon mappen") { toggle(box) }
@@ -134,6 +135,7 @@ struct SidebarView: View {
         NavigationLink(value: place) {
             CountedLabel(title: placeName(place), icon: icon, count: waiting).padding(.leading, 14)
         }
+        .modifier(MailDrop(place: place))
         .tag(place)
     }
 
@@ -219,5 +221,24 @@ func providerName(_ box: MailboxSummary) -> String {
     case .gmail: "Gmail"
     case .microsoft: "Outlook"
     case .fastmail: "Fastmail"
+    }
+}
+
+/// Mail dragged from the list onto Inbox, Archief or Spam of its own mailbox moves there.
+private struct MailDrop: ViewModifier {
+    @Environment(AppModel.self) private var model
+    let place: SidebarItem
+
+    func body(content: Content) -> some View {
+        switch place {
+        case .inbox, .folder(.archive, _), .folder(.spam, _):
+            content.dropDestination(for: String.self) { ids, _ in
+                guard model.canMove(ids, to: place) else { return false }
+                Task { await model.move(ids, to: place) }
+                return true
+            }
+        default:
+            content
+        }
     }
 }
