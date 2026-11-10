@@ -210,16 +210,3 @@ private struct OrbLegend: LabelStyle {
         }
     }
 }
-
-/// Liquid glass from macOS 26, a material before.
-struct Glass<S: Shape>: ViewModifier {
-    let shape: S
-
-    func body(content: Content) -> some View {
-        if #available(macOS 26, *) {
-            content.glassEffect(.regular, in: shape)
-        } else {
-            content.background(.regularMaterial, in: shape)
-        }
-    }
-}

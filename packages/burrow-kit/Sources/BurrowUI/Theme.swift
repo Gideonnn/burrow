@@ -109,7 +109,7 @@ public struct StatusPill: View {
         case "failed": BurrowColor.danger
         case "review": BurrowColor.warning
         case "running", "compressing", "transcribing", "writing-notes": BurrowColor.info
-        default: BurrowColor.secondaryText
+        default: .secondary
         }
     }
 

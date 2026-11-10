@@ -78,7 +78,7 @@ public struct UpdateBanner: View {
     }
 }
 
-/// The server card under the sidebar: the host, and who is logged in or that
+/// The server row under the sidebar: the host, and who is logged in or that
 /// the server is away for a moment.
 public struct ConnectionBadge: View {
     let host: String
@@ -108,9 +108,8 @@ public struct ConnectionBadge: View {
             Spacer()
             if busy { ProgressView().controlSize(.mini) }
         }
-        .padding(10)
+        .padding(.horizontal, 18)
+        .padding(.vertical, 10)
         .help(reachable ? "Verbonden" : "\(appName) probeert het vanzelf opnieuw.")
-        .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 9))
-        .padding(8)
     }
 }
