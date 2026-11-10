@@ -272,6 +272,12 @@ struct MessageRow: View {
                             Image(systemName: "lock.fill")
                                 .help("Bevat gevoelige gegevens; gaat nooit naar een cloud-AI")
                         }
+                        if let doubt = model.doubt(for: message.id) {
+                            Image(systemName: "questionmark.diamond")
+                                .foregroundStyle(.orange)
+                                .help("\(botName(doubt)) twijfelt of dit spam is")
+                                .accessibilityLabel("Mogelijk spam")
+                        }
                         if message.hasAttachments { Image(systemName: "paperclip") }
                         Text(shortDate(message.receivedAt))
                     }

@@ -31,8 +31,11 @@ struct MessageDetailView: View {
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                     .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 10))
                             }
-                            if let html = message.bodyHtml, message.mayLoadRemoteImages {
-                                RemoteImagesBar(html: html, messageId: message.id, allowed: $allowedMessageId, always: loadRemoteImages)
+                            if let html = message.bodyHtml {
+                                RemoteImagesBar(
+                                    html: html, messageId: message.id, allowed: $allowedMessageId,
+                                    always: loadRemoteImages && model.loadsRemoteImagesUnasked(message),
+                                    offersAlways: model.loadsRemoteImagesUnasked(message))
                             }
                         }
                         .padding(.horizontal, 28)
@@ -43,7 +46,8 @@ struct MessageDetailView: View {
                         if let html = message.bodyHtml {
                             HTMLView(
                                 html: html,
-                                allowRemote: message.mayLoadRemoteImages && (loadRemoteImages || allowedMessageId == message.id),
+                                allowRemote: allowedMessageId == message.id
+                                    || (loadRemoteImages && model.loadsRemoteImagesUnasked(message)),
                                 height: $bodyHeight
                             )
                             .frame(height: bodyHeight)
@@ -227,12 +231,14 @@ struct Avatar: View {
 let remoteImagesKey = "loadRemoteImages"
 
 /// Remote images tell the sender when and where mail was opened, so they load
-/// only when the person asks: for this message, or always (Instellingen).
+/// only when the person asks: for this message, or always (Instellingen). Spam
+/// and doubt cases offer only this message: nothing is remembered.
 struct RemoteImagesBar: View {
     let html: String
     let messageId: String
     @Binding var allowed: String?
     let always: Bool
+    var offersAlways = true
     @AppStorage(remoteImagesKey) private var loadAlways = false
 
     var body: some View {
@@ -241,8 +247,8 @@ struct RemoteImagesBar: View {
                 Image(systemName: "photo").foregroundStyle(.secondary)
                 Text("Externe afbeeldingen zijn niet geladen.").foregroundStyle(.secondary)
                 Spacer()
-                Button("Laad afbeeldingen") { allowed = messageId }
-                Button("Altijd") { loadAlways = true }
+                Button("Afbeeldingen laden") { allowed = messageId }
+                if offersAlways { Button("Altijd") { loadAlways = true } }
             }
             .font(.callout)
             .controlSize(.small)

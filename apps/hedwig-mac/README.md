@@ -42,8 +42,13 @@ and optionally `HEDWIG_OPEN` with any place `burrowctl hedwig show` takes (`filt
   inbox count from the server (all mail, not the loaded page), which the folder chevron
   replaces on hover or while the folders show. The list header counts the whole folder
   the same way.
-- Spam stays unread and never loads remote images, not even on request, until you say
-  "Geen spam"; then it goes back to the inbox as read.
+- Spam stays unread and loads remote images only when you click "Afbeeldingen laden" for
+  that one message (never by the "Altijd" setting); "Geen spam" sends it back to the
+  inbox as read. Mail the bot thinks might be spam stays in the inbox with a marker in the
+  list and "Kreacher twijfelt of dit spam is" above it: "Spam" or "Geen spam" decide, and
+  its images wait the same way.
+- "Markeer als spam" (⇧⌘J), moving spam back and both doubt answers teach the server the
+  sender; Settings › Geleerd van jouw controles lists those rules to remove.
 - "Evenementen": the household's outings, each with one status sentence; Details holds
   times, tickets per person, mails and search words. Drop a pdf, Wallet pass or
   screenshot on an outing to keep it as a ticket. Each outing shows a picture from its mail or

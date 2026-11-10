@@ -146,6 +146,8 @@ public final class AppModel {
     public var outingsChanged: (@MainActor () -> Void)?
     /// What the bot moved to Spam or Archief and the person has not reviewed yet.
     public private(set) var filtered: [FilteredEntry] = []
+    /// Inbox mail the bot thought might be spam; it waits for the person.
+    public private(set) var doubts: [FilteredEntry] = []
     public private(set) var drafts: [Draft] = []
     public var selectedDraftId: String?
     public private(set) var tasks: [TaskItem] = []
@@ -464,6 +466,17 @@ public final class AppModel {
     func refreshFiltered() async {
         guard let api else { return }
         if let list = try? await api.filtered() { filtered = list }
+        if let list = try? await api.doubts() { doubts = list }
+    }
+
+    public func doubt(for messageId: String) -> FilteredEntry? {
+        doubts.first { $0.message.id == messageId }
+    }
+
+    /// Spam and doubt cases load remote images only when the person asks for
+    /// that one message; other mail also by the "Altijd" setting.
+    public func loadsRemoteImagesUnasked(_ message: MessageDetail) -> Bool {
+        message.mayLoadRemoteImages && doubt(for: message.id) == nil
     }
 
     /// The bot's choice about this message, while it waits for review.
@@ -542,6 +555,8 @@ public final class AppModel {
                 removeFromList(id)
             }
             await refreshCounts()
+            // Moving into or out of spam settles the bot's open verdicts on the server.
+            if ops.contains(.moveToSpam) || ops.contains(.moveToInbox) { await refreshFiltered() }
         } catch {
             await reportProviderError(error, mailboxId: messages.first { $0.id == id }?.mailboxId ?? detail?.mailboxId)
         }
@@ -813,6 +828,12 @@ public final class AppModel {
     public func restore(_ entry: FilteredEntry) async {
         await review { try await $0.restore(entry.id) }
         removeFromList(entry.message.id)
+    }
+
+    /// The person's answer to a doubt; either way the server learns the sender.
+    public func settle(_ entry: FilteredEntry, spam: Bool) async {
+        await review { try await $0.settleDoubt(entry.id, spam: spam) }
+        if spam, case .inbox = selection { removeFromList(entry.message.id) }
     }
 
     /// Confirms every review in the open Spam or Archief.

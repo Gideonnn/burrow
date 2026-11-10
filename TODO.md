@@ -27,6 +27,18 @@ minutes, for kinds where a small model is good enough (agreed, not built).
 was built" section.
 **Scope:** a day each for (1) and (2), an hour for (3).
 
+## Hedwig: notice when triage stops
+
+**What:** show in Hedwig (and the server log summary) when triage has failed for every
+message over the last hour, with the runner's reason, e.g. a notice above the list like
+the reconnect one; and a server CLI command that resets the attempts of untriaged inbox
+mail from the last N days so the sweep picks them up again once the cause is fixed.
+**Why:** on 2026-11-03 the Claude login on the server expired and triage silently stopped
+for eight days; 98 inbox mails passed the three-attempt limit and will never be sorted
+(see the diary, 2026-11-11-triage-stopped-when-the-claude-login-expired).
+**Scope:** half a day: a failure counter on the triage service, a field on `/me`, a notice
+in HedwigCore, a CLI command with a test.
+
 ## Hedwig: Reply-To for mail synced before it was kept
 
 **What:** messages stored before migration 0021 have `reply_to` null, so Reply answers

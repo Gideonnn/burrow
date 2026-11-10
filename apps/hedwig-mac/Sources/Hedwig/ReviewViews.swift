@@ -27,14 +27,17 @@ struct ReviewLine: View {
     }
 }
 
-/// Above an open message in Spam, or in Archief when the bot put it there.
+/// Above an open message in Spam, or in Archief when the bot put it there,
+/// or in the inbox when the bot doubts whether it is spam.
 struct ReviewBar: View {
     @Environment(AppModel.self) private var model
     let message: MessageDetail
 
     var body: some View {
         let entry = model.review(for: message.id)
-        if entry != nil || message.folder == .spam {
+        if let doubt = model.doubt(for: message.id) {
+            DoubtBar(entry: doubt)
+        } else if entry != nil || message.folder == .spam {
             VStack(alignment: .leading, spacing: 8) {
                 if let entry {
                     Label(
@@ -46,7 +49,7 @@ struct ReviewBar: View {
                     Text(entry.reason)
                 }
                 if message.folder == .spam {
-                    Text("Blijft ongelezen en zonder externe afbeeldingen tot je het geen spam noemt.")
+                    Text("Blijft ongelezen; externe afbeeldingen laden alleen als je erom vraagt.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -65,6 +68,35 @@ struct ReviewBar: View {
             .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 10))
         }
     }
+}
+
+/// The bot thought this might be spam but left it in the inbox; the answer
+/// teaches it the sender.
+struct DoubtBar: View {
+    @Environment(AppModel.self) private var model
+    let entry: FilteredEntry
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label("\(botName(entry)) twijfelt of dit spam is", systemImage: "questionmark.diamond")
+                .font(.headline)
+                .foregroundStyle(.orange)
+            Text(entry.reason)
+            HStack {
+                Button("Spam") { Task { await model.settle(entry, spam: true) } }
+                Button("Geen spam") { Task { await model.settle(entry, spam: false) } }
+            }
+            .disabled(model.me?.can(.organize) != true)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 10))
+    }
+}
+
+/// Bots are stored by their file name, such as "kreacher".
+func botName(_ entry: FilteredEntry) -> String {
+    entry.bot.prefix(1).uppercased() + entry.bot.dropFirst()
 }
 
 private func restoreTitle(_ entry: FilteredEntry) -> String {
