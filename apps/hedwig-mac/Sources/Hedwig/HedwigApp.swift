@@ -178,13 +178,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let model = model
         return AppServices(app: "hedwig", appName: "Hedwig", api: { model.api })
     }()
-    @MainActor lazy var notifications = OutingNotifications(model: model)
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         Task { @MainActor in
-            // The outings page moved to Hogsmeade; the reminders stay here until it has them.
-            model.followsOutings = true
-            notifications.start()
             if model.connection != nil { await model.start() }
         }
         Task { @MainActor in startControl() }

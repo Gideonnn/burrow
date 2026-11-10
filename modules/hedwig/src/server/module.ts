@@ -220,7 +220,7 @@ export function hedwigModule(platform: Platform, options: HedwigOptions) {
     api,
     browser: connect?.browser,
     // Hogsmeade's two faces show the same outings and get their updates here.
-    clients: ['hedwig', 'hogsmeade', 'hogsmeade-feest'],
+    clients: ['hedwig', 'hogsmeade'],
     me: (access) => ({
       mailboxes: access.mailboxIds.length
         ? db
