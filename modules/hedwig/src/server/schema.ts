@@ -6,6 +6,7 @@ import type {
   MailFolder,
   MailProvider,
   ImageFrame,
+  RuleKind,
   LineupArtist,
   OutingRead,
   ServerOp,
@@ -122,6 +123,9 @@ export const learnedRules = sqliteTable('learned_rules', {
     .notNull()
     .references(() => people.id),
   text: text('text').notNull(),
+  kind: text('kind').$type<RuleKind>(),
+  // A lowercased address, or a domain for bulk mail.
+  sender: text('sender'),
   createdAt: createdAt(),
 });
 

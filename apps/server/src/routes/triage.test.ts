@@ -1,4 +1,6 @@
 import { filteredEntry, messageSummary } from '@burrow/contracts';
+import { triageLog } from '@burrow/hedwig/schema';
+import { eq } from 'drizzle-orm';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { testHousehold } from '../testing';
@@ -276,5 +278,227 @@ describe('profile settings in the triage prompt', () => {
     expect(s.agentRequests[1]?.prompt).not.toContain(
       'Never archive mail from customers.',
     );
+  });
+});
+
+type Rule = { id: string; kind: string | null; sender: string | null };
+const rules = async (s: Setup, token: string) =>
+  (await (await s.call(token, '/api/rules')).json()) as Rule[];
+const doubts = async (s: Setup, token: string) =>
+  filteredList.parse(await (await s.call(token, '/api/doubts')).json());
+const act = (s: Setup, token: string, id: string, op: string) =>
+  s.call(token, `/api/messages/${id}/actions`, {
+    method: 'POST',
+    body: JSON.stringify({ ops: [{ op }] }),
+  });
+const keep = { action: { kind: 'keep' }, reason: 'Fine.', unsure: false };
+const spam = { action: { kind: 'spam' }, reason: 'Spam.', unsure: false };
+
+async function deliver(
+  s: Setup,
+  from: string,
+  headers: Record<string, string> = {},
+) {
+  s.provider(s.home.id).deliver({
+    subject: 'Aanbieding',
+    from: { email: from },
+    headers,
+  });
+  const arrived = await s.mail.sync(s.home.id);
+  await s.triage.enqueue(arrived);
+  return arrived[0]!;
+}
+
+const logOf = (s: Setup, messageId: string) =>
+  s.db.select().from(triageLog).where(eq(triageLog.messageId, messageId)).all();
+
+describe('learning from the person', () => {
+  it('learns a sender marked as spam by hand and spams its next mail without asking the bot', async () => {
+    const s = await setup();
+    s.decisions.push(keep);
+    const first = await deliver(s, 'deals@shop.example.com');
+
+    expect((await act(s, s.token, first, 'moveToSpam')).status).toBe(200);
+    expect(await rules(s, s.token)).toMatchObject([
+      { kind: 'spam', sender: 'deals@shop.example.com' },
+    ]);
+    expect(logOf(s, first).map((c) => [c.action.kind, c.status])).toEqual([
+      ['keep', 'kept'],
+      ['spam', 'confirmed'],
+    ]);
+
+    await deliver(s, 'Deals@Shop.example.com');
+    expect(s.agentRequests).toHaveLength(1);
+    expect(await inbox(s, s.token, s.home.id)).toEqual([]);
+    const [entry] = await filtered(s, s.token);
+    expect(entry).toMatchObject({
+      unsure: false,
+      message: { folder: 'spam', unread: true },
+    });
+    expect(entry?.reason).toContain('deals@shop.example.com');
+  });
+
+  it('learns the sending domain of bulk mail, but never a free-mail domain', async () => {
+    const s = await setup();
+    const bulk = { listUnsubscribe: '<https://news.example.com/off>' };
+    s.decisions.push(keep, keep);
+    const news = await deliver(s, 'weekly@news.example.com', bulk);
+    const friend = await deliver(s, 'promo.friend@gmail.com', bulk);
+    await act(s, s.token, news, 'moveToSpam');
+    await act(s, s.token, friend, 'moveToSpam');
+    expect(
+      (await rules(s, s.token)).map((r) => [r.kind, r.sender]).sort(),
+    ).toEqual([
+      ['spam', 'news.example.com'],
+      ['spam', 'promo.friend@gmail.com'],
+    ]);
+
+    s.decisions.push(keep);
+    await deliver(s, 'daily@news.example.com', bulk);
+    await deliver(s, 'other.friend@gmail.com');
+    expect(s.agentRequests).toHaveLength(3);
+    expect(
+      (await inbox(s, s.token, s.home.id)).map((m) => m.from.email),
+    ).toEqual(['other.friend@gmail.com']);
+  });
+
+  it('never lets the bot spam a sender the person called not spam, unless authentication fails', async () => {
+    const s = await setup();
+    s.decisions.push(spam);
+    await deliver(s, 'billing@example.com');
+    const [entry] = await filtered(s, s.token);
+    await s.call(s.token, `/api/filtered/${entry!.id}/restore`, {
+      method: 'POST',
+    });
+    expect(await rules(s, s.token)).toMatchObject([
+      { kind: 'not-spam', sender: 'billing@example.com' },
+    ]);
+
+    s.decisions.push(spam);
+    await deliver(s, 'billing@example.com');
+    expect((await inbox(s, s.token, s.home.id)).map((m) => m.folder)).toEqual([
+      'inbox',
+      'inbox',
+    ]);
+    expect(await filtered(s, s.token)).toEqual([]);
+
+    s.decisions.push(spam);
+    await deliver(s, 'billing@example.com', {
+      authenticationResults: 'mx.example.com; spf=fail; dmarc=fail',
+    });
+    expect(await filtered(s, s.token)).toHaveLength(1);
+  });
+
+  it('lets the latest correction win and learns from moving spam back by hand', async () => {
+    const s = await setup();
+    s.decisions.push(keep);
+    const id = await deliver(s, 'maybe@example.com');
+    await act(s, s.token, id, 'moveToSpam');
+    await act(s, s.token, id, 'moveToInbox');
+    expect(await rules(s, s.token)).toMatchObject([
+      { kind: 'not-spam', sender: 'maybe@example.com' },
+    ]);
+
+    await act(s, s.token, id, 'moveToSpam');
+    expect(await rules(s, s.token)).toMatchObject([
+      { kind: 'spam', sender: 'maybe@example.com' },
+    ]);
+    const next = await deliver(s, 'maybe@example.com');
+    const [entry] = await filtered(s, s.token);
+    expect(entry?.message.id).toBe(next);
+    await act(s, s.token, next, 'moveToInbox');
+    expect(await filtered(s, s.token)).toEqual([]);
+  });
+
+  it('keeps each person’s rules to themselves', async () => {
+    const s = await setup();
+    s.decisions.push(keep);
+    s.provider(s.evas.id).deliver({
+      subject: 'x',
+      from: { email: 'deals@shop.example.com' },
+    });
+    const [evas] = await s.mail.sync(s.evas.id);
+    await s.triage.enqueue([evas!]);
+    await act(s, s.evaToken, evas!, 'moveToSpam');
+
+    s.decisions.push(keep);
+    await deliver(s, 'deals@shop.example.com');
+    expect(s.agentRequests).toHaveLength(2);
+    expect(await rules(s, s.token)).toEqual([]);
+    expect(await inbox(s, s.token, s.home.id)).toHaveLength(1);
+  });
+});
+
+describe('doubt', () => {
+  const unsure = {
+    action: { kind: 'spam' },
+    reason: 'Unknown shop, but authentication passes.',
+    unsure: true,
+  };
+
+  it('leaves a doubtful spam verdict in the inbox, untouched, for the person to decide', async () => {
+    const s = await setup();
+    s.decisions.push(unsure);
+    const id = await deliver(s, 'shop@example.com');
+    expect(s.provider(s.home.id).applied).toEqual([]);
+    expect((await inbox(s, s.token, s.home.id))[0]).toMatchObject({
+      id,
+      unread: true,
+      folder: 'inbox',
+    });
+    expect(await filtered(s, s.token)).toEqual([]);
+    expect(await doubts(s, s.token)).toMatchObject([
+      { reason: unsure.reason, unsure: true, message: { id } },
+    ]);
+    expect(await doubts(s, s.evaToken)).toEqual([]);
+  });
+
+  it('moves it to spam and learns the sender when the person says spam', async () => {
+    const s = await setup();
+    s.decisions.push(unsure);
+    const id = await deliver(s, 'shop@example.com');
+    const [doubt] = await doubts(s, s.token);
+    expect(
+      (
+        await s.call(s.evaToken, `/api/doubts/${doubt!.id}/spam`, {
+          method: 'POST',
+        })
+      ).status,
+    ).toBe(404);
+
+    const res = await s.call(s.token, `/api/doubts/${doubt!.id}/spam`, {
+      method: 'POST',
+    });
+    expect(res.status).toBe(200);
+    expect(s.mail.message(id)).toMatchObject({ folder: 'spam', unread: true });
+    expect(await doubts(s, s.token)).toEqual([]);
+    expect(await rules(s, s.token)).toMatchObject([
+      { kind: 'spam', sender: 'shop@example.com' },
+    ]);
+  });
+
+  it('keeps it and learns the sender when the person says not spam', async () => {
+    const s = await setup();
+    s.decisions.push(unsure);
+    const id = await deliver(s, 'shop@example.com');
+    const [doubt] = await doubts(s, s.token);
+    const res = await s.call(s.token, `/api/doubts/${doubt!.id}/not-spam`, {
+      method: 'POST',
+    });
+    expect(res.status).toBe(200);
+    expect(s.mail.message(id)).toMatchObject({ folder: 'inbox', unread: true });
+    expect(s.provider(s.home.id).applied).toEqual([]);
+    expect(await doubts(s, s.token)).toEqual([]);
+    expect(await rules(s, s.token)).toMatchObject([
+      { kind: 'not-spam', sender: 'shop@example.com' },
+    ]);
+  });
+
+  it('is settled when the person marks the message as spam by hand', async () => {
+    const s = await setup();
+    s.decisions.push(unsure);
+    const id = await deliver(s, 'shop@example.com');
+    await act(s, s.token, id, 'moveToSpam');
+    expect(await doubts(s, s.token)).toEqual([]);
   });
 });
