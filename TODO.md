@@ -278,11 +278,13 @@ asking when several are open. (2) "Opnieuw proberen" for a Seerr import problem 
 today the button only retries Lumos's own request outbox; a stuck import needs Radarr or
 Sonarr, which Lumos has no key for. (3) The stills ("Beelden") next to the trailer, which
 the old title page had; the large artwork replaced them. (4) A 4K or HDR filter in the
-Bibliotheek, now that the media facts are there.
+Bibliotheek, now that the media facts are there. (5) Titles Jellyfin holds but Seerr
+does not know (files copied in by hand) are missing from the Bibliotheek, since the list
+comes from Seerr's `/media`; Jellyfin's library read could add them as locked rows.
 **Why:** drawn or implied by `docs/design/lumos-redesign.html`, not needed for the first
 build.
 **Scope:** (1) an hour with `@AppStorage`; (2) a Radarr/Sonarr key and `command` call,
-half a day; (3) and (4) an hour each.
+half a day; (3) and (4) an hour each; (5) half a day.
 
 ## Hedwig: a mailbox that keeps failing shows up
 

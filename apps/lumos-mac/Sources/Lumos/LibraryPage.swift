@@ -133,7 +133,8 @@ struct DiskChart: View {
             domain: parts.map { "\($0.name) \(Bytes.text($0.bytes))" },
             range: [
                 AnyShapeStyle(.tint), AnyShapeStyle(.tint.opacity(0.6)), AnyShapeStyle(.gray.opacity(0.6)),
-                AnyShapeStyle(.tint.opacity(0.3)), AnyShapeStyle(.quaternary),
+                // Charts cannot resolve the hierarchical .quaternary, so free space is grey by hand.
+                AnyShapeStyle(.tint.opacity(0.3)), AnyShapeStyle(Color.gray.opacity(0.25)),
             ])
         .chartXAxis(.hidden)
         .chartXScale(domain: 0...max(disk.total, 1))
