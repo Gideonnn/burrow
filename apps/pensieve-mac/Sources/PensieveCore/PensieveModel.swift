@@ -243,6 +243,12 @@ public final class PensieveModel {
         if let loaded = try? await api.recording(id), selectedId == id { detail = loaded }
     }
 
+    public func restore(kind: RecordingKind?, recording id: String?) {
+        kindFilter = kind
+        // Before the first load the list is empty; the load's own check drops an id that is gone.
+        if let id, all.isEmpty || recordings.contains(where: { $0.id == id }) { selectedId = id }
+    }
+
     public var selected: RecordingSummary? { recordings.first { $0.id == selectedId } }
 
     // MARK: A finished recording

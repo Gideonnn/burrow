@@ -19,7 +19,7 @@ struct SettingsView: View {
             }
             ConnectionSettings().tabItem { Label("Verbinding", systemImage: "network") }
         }
-        .padding(20)
+        .frame(width: 640, height: 600)
         .onAppear {
             if household == nil { household = HouseholdModel(api: { [model] in model.api }) }
         }

@@ -1,6 +1,6 @@
-import AVFoundation
 import BurrowUI
 import PensieveCore
+import QuickLookThumbnailing
 import SwiftUI
 
 /// Three columns like Hedwig: the kinds, the recordings, and the open one.
@@ -9,6 +9,8 @@ struct MainView: View {
     @Environment(PensieveModel.self) private var model
     @Environment(RecorderController.self) private var recorder
     @State private var shrink = ShrinkRequest.shared
+    @SceneStorage("pensieve.place") private var place: String?
+    @SceneStorage("pensieve.recording") private var recording: String?
 
     var body: some View {
         @Bindable var model = model
@@ -40,7 +42,12 @@ struct MainView: View {
         .onSubmit(of: .search) { Task { await model.reload() } }
         .onChange(of: model.query) { if model.query.isEmpty { Task { await model.reload() } } }
         .sheet(item: $shrink.source) { ShrinkSheet(source: $0.url) }
-        .task { await model.reload() }
+        .onChange(of: model.kindFilter) { place = model.kindFilter?.rawValue ?? "all" }
+        .onChange(of: model.selectedId) { if let id = model.selectedId { recording = id } }
+        .task {
+            if let place { model.restore(kind: RecordingKind(rawValue: place), recording: recording) }
+            await model.reload()
+        }
     }
 }
 
@@ -280,6 +287,7 @@ struct RecordingList: View {
     @Environment(PensieveModel.self) private var model
     @State private var renaming: RecordingSummary?
     @State private var newTitle = ""
+    @State private var deleting: RecordingSummary?
 
     var body: some View {
         @Bindable var model = model
@@ -292,6 +300,8 @@ struct RecordingList: View {
                         RecordingMenu(recording: recording) {
                             newTitle = recording.title
                             renaming = recording
+                        } delete: {
+                            deleting = recording
                         }
                     }
             }
@@ -301,6 +311,19 @@ struct RecordingList: View {
             TextField("Titel", text: $newTitle)
             Button("Bewaar") { if let id = renaming?.id { Task { await model.rename(id, to: newTitle) } } }
             Button("Annuleer", role: .cancel) {}
+        }
+        .onDeleteCommand { if let selected = model.selected, selected.mine { deleting = selected } }
+        .confirmationDialog(
+            "‘\(deleting?.title ?? "")’ verwijderen?",
+            isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }),
+            titleVisibility: .visible,
+            presenting: deleting
+        ) { recording in
+            Button("Verwijder", role: .destructive) { Task { await model.delete(recording.id) } }
+            Button("Annuleer", role: .cancel) {}
+                .keyboardShortcut(.defaultAction)
+        } message: { _ in
+            Text("Het geluid, het transcript en de samenvatting verdwijnen van Dobby. De map in iCloud Drive blijft staan.")
         }
         .overlay {
             if model.recordings.isEmpty {
@@ -356,6 +379,7 @@ struct RecordingRow: View {
             }
         }
         .padding(.vertical, 3)
+        .draggable(file: model.file(of: recording.id).flatMap { isOnDisk($0) ? $0 : nil })
     }
 }
 
@@ -391,6 +415,7 @@ struct RecordingMenu: View {
     @Environment(PensieveModel.self) private var model
     let recording: RecordingSummary
     let rename: () -> Void
+    let delete: () -> Void
 
     var body: some View {
         if let file = model.file(of: recording.id) {
@@ -415,21 +440,8 @@ struct RecordingMenu: View {
                 }
             }
             Divider()
-            Button("Verwijder…", role: .destructive) { confirmDelete(recording, model: model) }
+            Button("Verwijder…", role: .destructive, action: delete)
         }
-    }
-}
-
-@MainActor
-func confirmDelete(_ recording: RecordingSummary, model: PensieveModel) {
-    let alert = NSAlert()
-    alert.messageText = "‘\(recording.title)’ verwijderen?"
-    alert.informativeText = "Het geluid, het transcript en de samenvatting verdwijnen van Dobby. De map in iCloud Drive blijft staan."
-    alert.alertStyle = .warning
-    alert.addButton(withTitle: "Annuleer")
-    alert.addButton(withTitle: "Verwijder")
-    if alert.runModal() == .alertSecondButtonReturn {
-        Task { await model.delete(recording.id) }
     }
 }
 
@@ -464,11 +476,9 @@ final class Thumbnails {
 
     func image(_ url: URL) async -> NSImage? {
         if let cached = cache[url] { return cached }
-        let generator = AVAssetImageGenerator(asset: AVURLAsset(url: url))
-        generator.appliesPreferredTrackTransform = true
-        generator.maximumSize = CGSize(width: 160, height: 160)
-        guard let frame = try? await generator.image(at: CMTime(seconds: 3, preferredTimescale: 600)).image else { return nil }
-        let image = NSImage(cgImage: frame, size: .zero)
+        let request = QLThumbnailGenerator.Request(fileAt: url, size: CGSize(width: 80, height: 80), scale: 2, representationTypes: .thumbnail)
+        guard let thumbnail = try? await QLThumbnailGenerator.shared.generateBestRepresentation(for: request) else { return nil }
+        let image = thumbnail.nsImage
         cache[url] = image
         return image
     }

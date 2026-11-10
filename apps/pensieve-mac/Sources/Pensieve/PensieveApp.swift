@@ -15,6 +15,7 @@ struct PensieveApp: App {
                 .environment(delegate.services.updater)
                 .frame(minWidth: 980, minHeight: 600)
         }
+        .defaultSize(width: 1240, height: 800)
         .commands { PensieveCommands(model: delegate.model, recorder: delegate.recorder) }
 
         Settings {
@@ -23,7 +24,6 @@ struct PensieveApp: App {
                 .environment(delegate.recorder)
                 .environment(delegate.dictation)
                 .tint(BurrowColor.pensieve)
-                .frame(width: 640, height: 600)
         }
 
         MenuBarExtra {
@@ -65,6 +65,7 @@ struct PensieveCommands: Commands {
     let recorder: RecorderController
 
     var body: some Commands {
+        SidebarCommands()
         CommandGroup(after: .newItem) {
             Button("Nieuwe opname") {
                 record(RecordingKind(rawValue: UserDefaults.standard.string(forKey: RecordingKind.lastKey) ?? "") ?? .call, model: model, recorder: recorder)

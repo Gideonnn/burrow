@@ -100,9 +100,10 @@ it. Admins manage settings, never recordings. Starting a recording is never an a
   sheet on the file in iCloud), Verklein and Toon in Finder as one toolbar group, and
   search as the toolbar field. The detail is one column: `AVPlayerView` (SwiftUI's
   `VideoPlayer` does not load in a package executable), the timeline of speakers and
-  marks, the transcript following playback, the summary per kind, the folder's files.
-  While a call or the screen is recorded with Pensieve in the background, a bubble
-  floats above every app. Settings on this Mac live in `MacSettings`.
+  marks, the transcript following playback, the summary per kind, the folder's files
+  (space shows one in Quick Look). A recording or a file on disk drags into Mail or
+  Finder; each window remembers its kind and recording. While a call or the screen is
+  recorded with Pensieve in the background, a bubble floats above every app. Settings on this Mac live in `MacSettings`.
 - **RecHoarder import**: Archief › Importeer RecHoarder-opnames uploads
   `iCloud Drive/Meetings` once, with the transcripts and notes they had (source
   `imported`, so the server only compresses).
