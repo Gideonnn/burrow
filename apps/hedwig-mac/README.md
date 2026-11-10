@@ -25,7 +25,7 @@ pnpm dev                       # http://127.0.0.1:4717
 Then connect Hedwig to `http://127.0.0.1:4717` with the "MacBook Gideon" key. For
 screenshots without the Keychain, start the binary with `HEDWIG_SERVER`, `HEDWIG_KEY`
 and optionally `HEDWIG_OPEN` with any place `burrowctl hedwig show` takes (`filtered`, `drafts`,
-`outings`, `archive`, an address).
+`archive`, an address).
 
 ## What it does
 
@@ -44,11 +44,8 @@ and optionally `HEDWIG_OPEN` with any place `burrowctl hedwig show` takes (`filt
   the same way.
 - Spam stays unread and never loads remote images, not even on request, until you say
   "Geen spam"; then it goes back to the inbox as read.
-- "Evenementen": the household's outings, each with one status sentence; Details holds
-  times, tickets per person, mails and search words. Drop a pdf, Wallet pass or
-  screenshot on an outing to keep it as a ticket. Each outing shows a picture from its mail or
-  website; paste (⌘V) or drop another on the top of the page. Until Patronus exists, the Mac
-  reminds of the day and of deadlines with notifications (see the
+- The household's outings live in Hogsmeade (`apps/hogsmeade-mac`); Hedwig only keeps
+  reminding of the day and of deadlines with notifications until Hogsmeade does (see the
   [outings topic](../../.agents/wiki/topics/outings.md)).
 - "Concepten" (per mailbox): drafts prepared by bots or agents through MCP, to review and send.
 - "Taken": what routines propose, to approve or reject. Tasks meant for this Mac run in

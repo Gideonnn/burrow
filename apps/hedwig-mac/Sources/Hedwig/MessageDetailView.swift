@@ -22,7 +22,6 @@ struct MessageDetailView: View {
                         VStack(alignment: .leading, spacing: 12) {
                             MessageHeader(message: message)
                             ShareBar(message: message)
-                            if model.showsOutingCard { OutingCard() }
                             ReviewBar(message: message)
                             if let summary = model.insights?.summary {
                                 Label(summary, systemImage: "sparkles")

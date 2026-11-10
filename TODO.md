@@ -246,6 +246,22 @@ credential.
 **Why:** a series that went on the list with season 1 can only get more in Seerr itself.
 **Scope:** half a day for the extra seasons; the TMDB row after deciding on a credential.
 
+## Move the outing code out of HedwigCore into Hogsmeade
+
+**What:** move the outing types, `OutingStatus`, `PlaceBook`, the ticket readers
+(`OutingTickets`, `TicketCodes`, `TicketDedupe`), the picture cache and colours, and the
+outing API calls from `apps/hedwig-mac/Sources/HedwigCore` into `HogsmeadeCore`, with their
+tests. Move the reminders (`Sources/Hedwig/OutingNotifications.swift`,
+`AppModel.outingReminders`) into Hogsmeade first, then drop `AppModel`'s outing state
+(`outings`, `outing`, `outingSuggestion`, `followsOutings`, `showsOutingCards`,
+`AppModel+Outings.swift`, `AppModel+OutingPictures.swift`) and the `.outings` sidebar case.
+HedwigCore then stops being a library product.
+**Why:** Hedwig's Evenementen page and mail card are gone; Hedwig only keeps the outing
+list for its reminders. Hogsmeade imports HedwigCore just for outings, so every outing
+change still rebuilds the mail app and its tests.
+**Scope:** half a day, mostly moving files; Hogsmeade's reminders need a notification
+permission prompt of its own.
+
 ## Hogsmeade: wishes without a date
 
 **What:** an outing the household is still thinking about ("Kerstcircus met de buren?")

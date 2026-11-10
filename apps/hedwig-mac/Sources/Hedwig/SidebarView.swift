@@ -33,10 +33,6 @@ struct SidebarView: View {
             // Every row keeps its tag: badged rows once ignored clicks without one
             // (see the diary, 2026-10-22).
             Section {
-                NavigationLink(value: SidebarItem.outings) {
-                    CountedLabel(title: "Evenementen", icon: "ticket", count: model.outingsBadge)
-                }
-                .tag(SidebarItem.outings)
                 NavigationLink(value: SidebarItem.tasks) {
                     CountedLabel(title: "Taken", icon: "checklist", count: model.tasksAwaitingReview)
                 }
@@ -52,7 +48,7 @@ struct SidebarView: View {
             }
         }
         .listStyle(.sidebar)
-        // A folder opened elsewhere (a link, an outing's mail) shows under its mailbox.
+        // A folder opened elsewhere (a link, burrowctl) shows under its mailbox.
         .onChange(of: model.selection, initial: true) { _, place in
             if let place, let id = place.mailboxId, place != .inbox(mailboxId: id) { setOpen(id, true) }
         }

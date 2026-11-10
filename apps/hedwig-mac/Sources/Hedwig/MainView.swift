@@ -18,7 +18,6 @@ struct MainView: View {
                     switch model.selection {
                     case .drafts: DraftListView()
                     case .tasks: TaskListView()
-                    case .outings: OutingListView()
                     case .shared: SharedListView()
                     default: MessageListView()
                     }
@@ -39,7 +38,6 @@ struct MainView: View {
                     switch model.selection {
                     case .drafts: DraftDetailView()
                     case .tasks: TaskDetailView()
-                    case .outings: OutingDetailView()
                     default: MessageDetailView()
                     }
                 }

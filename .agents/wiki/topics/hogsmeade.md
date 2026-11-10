@@ -56,5 +56,6 @@ item and update channel (`hogsmeade`, `hogsmeade-feest`, clients of the Hedwig m
 ## Not yet
 
 Wishes (an outing without a date) and stars after the night, drawn in the playful
-design, need server support: `TODO.md`. Reminders stay Hedwig's. After the household's
-choice the other face goes, and Hedwig's Evenementen page can follow.
+design, need server support: `TODO.md`. Reminders stay Hedwig's until Hogsmeade takes
+them, and the outing code moves out of HedwigCore (`TODO.md`). Hedwig's Evenementen page
+is gone; after the household's choice the other face goes too.

@@ -103,6 +103,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         Task { @MainActor in
+            // The outings page moved to Hogsmeade; the reminders stay here until it has them.
+            model.followsOutings = true
             notifications.start()
             if model.connection != nil { await model.start() }
         }
@@ -124,7 +126,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             onError: { model.error = $0 }
         ) { service in
             service.register(
-                "show", help: "Show a list: inbox, archive, sent, spam or drafts of the open mailbox, each also as <place>:<address>; private, work or school (the inbox of its first mailbox); filtered (Spam or Archief with mail to review), tasks or outings.",
+                "show", help: "Show a list: inbox, archive, sent, spam or drafts of the open mailbox, each also as <place>:<address>; private, work or school (the inbox of its first mailbox); filtered (Spam or Archief with mail to review) or tasks.",
                 arguments: [.init("text", "where to go")]
             ) { request in
                 try await model.show(request["text"] as? String ?? "inbox")

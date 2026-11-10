@@ -144,6 +144,10 @@ public final class AppModel {
     public internal(set) var people: [Person] = []
     /// Called whenever the outings change; the app reschedules its reminders.
     public var outingsChanged: (@MainActor () -> Void)?
+    /// Outings moved to Hogsmeade: Hedwig keeps the list only for its reminders,
+    /// and no app asks per mail any more unless it shows the card.
+    public var followsOutings = false
+    public var showsOutingCards = false
     /// What the bot moved to Spam or Archief and the person has not reviewed yet.
     public private(set) var filtered: [FilteredEntry] = []
     public private(set) var drafts: [Draft] = []
@@ -254,7 +258,7 @@ public final class AppModel {
         await refreshDrafts()
         await refreshTasks()
         await refreshRunners()
-        await refreshOutings()
+        if followsOutings { await refreshOutings() }
         eventsTask?.cancel()
         eventsTask = Task { [weak self] in
             let reachability = self?.reachability
@@ -279,9 +283,9 @@ public final class AppModel {
         // A setting changed on another Mac: who we are again, so the language and the
         // features follow at once.
         if event.type == "settings.changed" || event.type == "mailbox.changed" { me = (try? await api?.me()) ?? me }
-        if event.type == "outing.changed" {
+        if followsOutings, event.type == "outing.changed" {
             await refreshOutings()
-            if let id = event["outingId"], id == outing?.id || id == outingSuggestion?.outingId, let messageId = detail?.id {
+            if showsOutingCards, let id = event["outingId"], id == outing?.id || id == outingSuggestion?.outingId, let messageId = detail?.id {
                 await loadOuting(messageId: messageId)
             }
         }
@@ -322,7 +326,7 @@ public final class AppModel {
             await refreshFiltered()
             await refreshDrafts()
             await refreshTasks()
-            await refreshOutings()
+            if followsOutings { await refreshOutings() }
         }
         if !isSearching { await loadSelection(keepSelection: true) }
         if selectedMessageId != detail?.id { await openSelected() }
@@ -519,7 +523,7 @@ public final class AppModel {
                 insights = nil
                 outingSuggestion = nil
                 outing = nil
-                await loadOuting(messageId: id)
+                if showsOutingCards { await loadOuting(messageId: id) }
                 // The bot only gets asked when it is likely to help: mail that
                 // needs an answer, or long mail worth a summary.
                 if message.flagged || (message.bodyText?.count ?? 0) > 1_500 { await loadInsights() }
