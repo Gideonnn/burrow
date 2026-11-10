@@ -690,8 +690,9 @@ export class SeerrCatalogue implements CatalogueProvider, MediaRequester {
   // by how well the name matches and how well known the title is.
   async search(query: string) {
     const genres = await this.genreNames();
-    const pages = await Promise.all(
-      [1, 2, 3].map((page) =>
+    const [pool, ...pages] = await Promise.all([
+      this.candidates().catch(() => [] as CatalogueTitle[]),
+      ...[1, 2, 3].map((page) =>
         this.call<Page>('/search', { query, page, language: LANGUAGE }).catch(
           (error: unknown) => {
             if (page === 1) throw error;
@@ -699,7 +700,7 @@ export class SeerrCatalogue implements CatalogueProvider, MediaRequester {
           },
         ),
       ),
-    );
+    ]);
     const results = pages.flatMap((p) => p.results ?? []);
     const ranked: {
       title: CatalogueTitle;
@@ -729,6 +730,16 @@ export class SeerrCatalogue implements CatalogueProvider, MediaRequester {
     for (const p of people.slice(0, 3)) {
       const fit = Math.max(0, nameFit(p.name ?? '', query) - 0.5);
       for (const k of p.knownFor ?? []) push(k, `Werk van ${p.name}`, fit);
+    }
+    // TMDB matches whole words only ('dead' misses Deadpool); trending and
+    // held titles are known well enough to match by the start of a word.
+    for (const t of pool) {
+      const key = `${t.mediaType}:${t.tmdbId}`;
+      const fit = nameFit(t.title, query);
+      if (seen.has(key) || fit < 2.5) continue;
+      seen.add(key);
+      const held = t.availability === 'available' ? 1 : 0;
+      ranked.push({ title: t, why: null, score: fit * 1.5 + 3.5 + held });
     }
     ranked.sort((a, b) => b.score - a.score);
     return {
