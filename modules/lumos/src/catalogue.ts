@@ -102,8 +102,10 @@ export interface CatalogueProvider {
   candidates(): Promise<CatalogueTitle[]>;
   title(ref: TitleRef): Promise<CatalogueTitle | undefined>;
   // Title, maker, cast, genre and trait, old and new alike.
+  // `known`: titles to match by the start of a word as well.
   search(
     query: string,
+    known?: CatalogueTitle[],
   ): Promise<{ hits: CatalogueHit[]; credits: { id: string; name: string }[] }>;
   // Films or series a page at a time, the way a shop sorts them.
   browse(query: BrowseQuery): Promise<BrowsePage>;

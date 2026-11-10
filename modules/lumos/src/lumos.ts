@@ -647,7 +647,11 @@ export class Lumos {
   ) {
     const catalogue = this.need();
     const ctx = this.context(access, scope);
-    const { hits, credits } = await catalogue.search(query);
+    const known = await this.withListed(
+      await catalogue.candidates().catch(() => []),
+      ctx,
+    );
+    const { hits, credits } = await catalogue.search(query, known);
     return {
       dataOrigin: catalogue.origin,
       query,

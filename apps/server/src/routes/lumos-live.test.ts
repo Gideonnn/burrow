@@ -446,12 +446,17 @@ describe('the live catalogue from Seerr', () => {
     ]);
   });
 
-  it('finds a trending title by the start of a word the search missed', async () => {
+  it('finds a trending or listed title by the start of a word the search missed', async () => {
     const h = household();
     const found = titleSearchResponse.parse(
       await h.json(h.adaKey, '/api/lumos/search?q=pold'),
     );
     expect(found.hits[0]?.title.title).toBe('Polder Blues');
+    await h.put(h.adaKey, 'shared', 'tv/203');
+    const listed = titleSearchResponse.parse(
+      await h.json(h.adaKey, '/api/lumos/search?q=dyk'),
+    );
+    expect(listed.hits[0]?.title.title).toBe('Dyke Watch');
   });
 
   it('never passes the key or Seerr user data on, and sends the key only to Seerr', async () => {

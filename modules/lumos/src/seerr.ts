@@ -688,11 +688,10 @@ export class SeerrCatalogue implements CatalogueProvider, MediaRequester {
   // Seerr hands out TMDB's order a page at a time: a short word brings
   // obscure exact matches, series and people first. Three pages, ranked
   // by how well the name matches and how well known the title is.
-  async search(query: string) {
+  async search(query: string, known: CatalogueTitle[] = []) {
     const genres = await this.genreNames();
-    const [pool, ...pages] = await Promise.all([
-      this.candidates().catch(() => [] as CatalogueTitle[]),
-      ...[1, 2, 3].map((page) =>
+    const pages = await Promise.all(
+      [1, 2, 3].map((page) =>
         this.call<Page>('/search', { query, page, language: LANGUAGE }).catch(
           (error: unknown) => {
             if (page === 1) throw error;
@@ -700,7 +699,7 @@ export class SeerrCatalogue implements CatalogueProvider, MediaRequester {
           },
         ),
       ),
-    ]);
+    );
     const results = pages.flatMap((p) => p.results ?? []);
     const ranked: {
       title: CatalogueTitle;
@@ -731,9 +730,9 @@ export class SeerrCatalogue implements CatalogueProvider, MediaRequester {
       const fit = Math.max(0, nameFit(p.name ?? '', query) - 0.5);
       for (const k of p.knownFor ?? []) push(k, `Werk van ${p.name}`, fit);
     }
-    // TMDB matches whole words only ('dead' misses Deadpool); trending and
-    // held titles are known well enough to match by the start of a word.
-    for (const t of pool) {
+    // TMDB matches whole words only ('dead' misses Deadpool); the titles
+    // Lumos knows (trending, held, listed) match by the start of a word.
+    for (const t of known) {
       const key = `${t.mediaType}:${t.tmdbId}`;
       const fit = nameFit(t.title, query);
       if (seen.has(key) || fit < 2.5) continue;
