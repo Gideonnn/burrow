@@ -1,6 +1,7 @@
 import AVKit
 import BurrowUI
 import PensieveCore
+import QuickLook
 import SwiftUI
 
 /// One recording in a single column: what it is, the player with the
@@ -285,6 +286,7 @@ private struct Timeline: View {
                         .offset(x: min(width - 2, playback.time / total * width))
                 }
                 .contentShape(Rectangle())
+                // A click on the timeline seeks there; the player above is the keyboard way.
                 .onTapGesture { point in playback.seek(point.x / width * total) }
             }
             .frame(height: 40)
@@ -353,7 +355,9 @@ private struct FollowingTranscript: View {
                         }
                         .id(index)
                         .contentShape(Rectangle())
+                        // Not a Button: that would end the text selection in the sentence.
                         .onTapGesture { playback.seek(segment.start) }
+                        .accessibilityAction(named: "Speel vanaf hier") { playback.seek(segment.start) }
                     }
                 }
                 .padding(.vertical, 8)
@@ -505,7 +509,7 @@ private struct NotesSection: View {
                                 HStack(spacing: 6) {
                                     if let speaker = quote.speaker { Text(speaker) }
                                     if let at = quote.at {
-                                        Button(stamp(at)) { playback.seek(at) }.buttonStyle(.plain).foregroundStyle(.tint).monospacedDigit()
+                                        Button(stamp(at)) { playback.seek(at) }.buttonStyle(.link).monospacedDigit()
                                     }
                                 }
                                 .font(.caption)
@@ -576,8 +580,7 @@ private struct Moment: View {
         HStack(alignment: .firstTextBaseline, spacing: 10) {
             if let at {
                 Button(stamp(at)) { playback.seek(at) }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(.tint)
+                    .buttonStyle(.link)
                     .monospacedDigit()
                     .frame(width: 52, alignment: .leading)
             }
@@ -586,45 +589,70 @@ private struct Moment: View {
     }
 }
 
-/// What the recording's folder in iCloud Drive holds.
+/// What the recording's folder in iCloud Drive holds. Space shows a file in
+/// Quick Look, a double-click opens it, and a file on disk drags into Mail or Finder.
 private struct FilesSection: View {
     let folder: URL
+    @State private var selected: URL?
+    @State private var previewed: URL?
 
     var body: some View {
         let files = ((try? FileManager.default.contentsOfDirectory(
             at: folder, includingPropertiesForKeys: [.fileSizeKey], options: [.skipsHiddenFiles])) ?? [])
             .sorted { $0.lastPathComponent < $1.lastPathComponent }
         DetailSection("In iCloud Drive") {
-            VStack(spacing: 0) {
-                ForEach(files, id: \.self) { file in
-                    Button { NSWorkspace.shared.open(file) } label: {
-                        HStack(spacing: 8) {
-                            Image(nsImage: NSWorkspace.shared.icon(forFile: file.path))
-                                .resizable()
-                                .frame(width: 18, height: 18)
-                            Text(file.lastPathComponent)
-                            Spacer()
-                            Text(bytes(Int64((try? file.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0)))
-                                .foregroundStyle(.secondary)
-                                .monospacedDigit()
-                        }
-                        .padding(.vertical, 6)
-                        .contentShape(Rectangle())
+            List(files, id: \.self, selection: $selected) { file in
+                Label {
+                    HStack {
+                        Text(file.lastPathComponent)
+                        Spacer()
+                        Text(bytes(Int64((try? file.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0)))
+                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
                     }
-                    .buttonStyle(.plain)
-                    .contextMenu {
-                        Button("Toon in Finder") { NSWorkspace.shared.activateFileViewerSelecting([file]) }
+                } icon: {
+                    Image(nsImage: NSWorkspace.shared.icon(forFile: file.path)).resizable().scaledToFit()
+                }
+                .draggable(file: isOnDisk(file) ? file : nil)
+            }
+            .listStyle(.bordered(alternatesRowBackgrounds: true))
+            .environment(\.defaultMinListRowHeight, 28)
+            // Inside the detail's scroll view the list shows every row and does not scroll itself.
+            .frame(height: CGFloat(files.count) * 28 + 2)
+            .scrollDisabled(true)
+            .contextMenu(forSelectionType: URL.self) { chosen in
+                if !chosen.isEmpty {
+                    Button("Open") { chosen.forEach { NSWorkspace.shared.open($0) } }
+                    Button("Snel bekijken") { previewed = chosen.first }
+                    Button("Toon in Finder") { NSWorkspace.shared.activateFileViewerSelecting(Array(chosen)) }
+                    if let file = chosen.first, chosen.count == 1 {
                         ShareLink(item: file) { Text("Stuur…") }
                     }
-                    if file != files.last { Divider() }
                 }
+            } primaryAction: { chosen in
+                chosen.forEach { NSWorkspace.shared.open($0) }
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 2)
-            .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 10))
+            .onKeyPress(.space) {
+                guard let selected else { return .ignored }
+                previewed = previewed == nil ? selected : nil
+                return .handled
+            }
+            .quickLookPreview($previewed, in: files)
             Button("Toon in Finder") { NSWorkspace.shared.open(folder) }
                 .buttonStyle(.link)
                 .font(.callout)
         }
+    }
+}
+
+/// False for a file iCloud has evicted to free space; dragging that would hand over a placeholder.
+func isOnDisk(_ url: URL) -> Bool {
+    let status = try? url.resourceValues(forKeys: [.ubiquitousItemDownloadingStatusKey]).ubiquitousItemDownloadingStatus
+    return status != .notDownloaded && FileManager.default.fileExists(atPath: url.path)
+}
+
+extension View {
+    @ViewBuilder func draggable(file: URL?) -> some View {
+        if let file { draggable(file) } else { self }
     }
 }

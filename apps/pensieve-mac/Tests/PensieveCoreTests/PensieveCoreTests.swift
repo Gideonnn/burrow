@@ -99,6 +99,35 @@ func temporaryDirectory() -> URL {
         #expect(model.selectedId == "r2")
     }
 
+    @Test func aNewWindowReturnsToThePlaceAndRecordingOfLastTime() async throws {
+        let server = server()
+        server.on("GET", "/api/pensieve/recordings", json: "[\(Fixture.recording("r1")),\(Fixture.recording("r2", kind: "video")),\(Fixture.recording("r3", kind: "video"))]")
+        server.on("GET", "/api/pensieve/recordings/r3", json: Fixture.detail("r3", kind: "video"))
+        let model = model(server, outbox: Outbox(dir: temporaryDirectory()))
+
+        model.restore(kind: .video, recording: "r3")
+        await model.start()
+
+        #expect(model.kindFilter == .video)
+        #expect(model.selectedId == "r3")
+        await model.detailLoad?.value
+        #expect(model.detail?.id == "r3")
+    }
+
+    @Test func aRecordingDeletedMeanwhileFallsBackToTheFirst() async throws {
+        let server = server()
+        server.on("GET", "/api/pensieve/recordings", json: "[\(Fixture.recording("r1")),\(Fixture.recording("r2", kind: "video"))]")
+        let early = model(server, outbox: Outbox(dir: temporaryDirectory()))
+        early.restore(kind: nil, recording: "gone")
+        await early.start()
+        #expect(early.selectedId == "r1")
+
+        let late = model(server, outbox: Outbox(dir: temporaryDirectory()))
+        await late.start()
+        late.restore(kind: .video, recording: "gone")
+        #expect(late.selectedId == "r2")
+    }
+
     @Test func aRecordingWaitsInTheOutboxWhenTheServerIsUnreachable() async throws {
         let server = server()
         server.on("POST", "/api/pensieve/recordings", status: 503, json: #"{"error":"down"}"#)
