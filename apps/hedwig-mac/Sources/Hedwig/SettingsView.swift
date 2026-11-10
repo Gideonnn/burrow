@@ -20,7 +20,7 @@ struct SettingsView: View {
             }
             ConnectionSettings().tabItem { Label("Verbinding", systemImage: "network") }
         }
-        .padding(20)
+        .frame(minWidth: 560, idealWidth: 620, minHeight: 420, idealHeight: 540)
         .onAppear {
             if household == nil { household = HouseholdModel(api: { [model] in model.api }) }
         }
@@ -33,17 +33,17 @@ struct AgentSettings: View {
     @Environment(AppModel.self) private var model
     @State private var text = ""
     @State private var rules: [LearnedRule] = []
+    // What the server holds, so loading the fields saves nothing.
+    @State private var savedText: String?
+    @State private var savedLanguage: String?
     @State private var saved = false
     @State private var language = ""
 
     var body: some View {
         Form {
             Section("Profiel van \(model.me?.person.name ?? "")") {
-                HStack {
-                    TextField("Taal van de bots", text: $language, prompt: Text("Standaard van de server"))
-                        .onSubmit { Task { try? await model.setLanguage(language) } }
-                    Button("Bewaar") { Task { try? await model.setLanguage(language) } }
-                }
+                TextField("Taal van de bots", text: $language, prompt: Text("Standaard van de server"))
+                    .onSubmit { Task { await saveLanguage() } }
                 Text("Bijvoorbeeld Nederlands of English. Geldt voor jouw mailboxen, op elke Mac.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -54,20 +54,14 @@ struct AgentSettings: View {
                     .font(.body)
                     .frame(minHeight: 150)
                 HStack {
-                    Text("Schrijf het zoals je het tegen een assistent zou zeggen.")
+                    Text("Schrijf het zoals je het tegen een assistent zou zeggen. Wordt vanzelf bewaard.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     Spacer()
-                    if saved { Text("Bewaard").font(.caption).foregroundStyle(.green) }
-                    Button("Bewaar") {
-                        Task {
-                            try? await model.api?.setInstructions(text)
-                            saved = true
-                        }
-                    }
-                    .disabled(model.me?.can(.organize) != true)
+                    if saved { Text("Bewaard").font(.caption).foregroundStyle(.secondary) }
                 }
             }
+            .disabled(model.me?.can(.organize) != true)
             Section("Taken op deze Mac") {
                 if model.thisMacRunners.isEmpty {
                     Text("Deze Mac voert nog geen taken uit. Zet de runner aan in Terminal; hij draait ook als Hedwig dicht is:")
@@ -93,19 +87,46 @@ struct AgentSettings: View {
                                 rules = (try? await model.api?.rules()) ?? []
                             }
                         } label: {
-                            Image(systemName: "xmark.circle")
+                            Label("Vergeet", systemImage: "xmark.circle")
                         }
+                        .labelStyle(.iconOnly)
                         .buttonStyle(.borderless)
+                        .help("Vergeet deze regel")
                     }
                 }
             }
         }
         .formStyle(.grouped)
-        .onChange(of: text) { saved = false }
         .task {
             language = model.me?.language ?? ""
-            text = (try? await model.api?.instructions()) ?? ""
+            savedLanguage = language
+            let loaded = (try? await model.api?.instructions()) ?? ""
+            savedText = loaded
+            text = loaded
             rules = (try? await model.api?.rules()) ?? []
+        }
+        // Saved a moment after typing stops, like the rest of Settings.
+        .task(id: text) {
+            guard let savedText, text != savedText else { return }
+            saved = false
+            try? await Task.sleep(for: .seconds(1))
+            guard !Task.isCancelled, (try? await model.api?.setInstructions(text)) != nil else { return }
+            self.savedText = text
+            saved = true
+        }
+        .task(id: language) {
+            try? await Task.sleep(for: .seconds(1))
+            if !Task.isCancelled { await saveLanguage() }
+        }
+    }
+
+    private func saveLanguage() async {
+        guard let savedLanguage, language != savedLanguage else { return }
+        do {
+            try await model.setLanguage(language)
+            self.savedLanguage = language
+        } catch {
+            model.error = error.localizedDescription
         }
     }
 }
@@ -207,6 +228,7 @@ struct AccountSettings: View {
 
 struct ConnectionSettings: View {
     @Environment(AppModel.self) private var model
+    @State private var confirming = false
 
     var body: some View {
         Form {
@@ -214,9 +236,14 @@ struct ConnectionSettings: View {
             LabeledContent("Sleutel", value: model.me?.key.name ?? "")
             LabeledContent("Persoon", value: model.me?.person.name ?? "")
             LabeledContent("Rechten", value: (model.me?.rights ?? []).map(\.rawValue).joined(separator: ", "))
-            Button("Verbinding verbreken", role: .destructive) { model.disconnect() }
+            Button("Verbinding verbreken…", role: .destructive) { confirming = true }
         }
         .formStyle(.grouped)
+        .confirmationDialog("Verbinding met de server verbreken?", isPresented: $confirming) {
+            Button("Verbreek", role: .destructive) { model.disconnect() }
+        } message: {
+            Text("De sleutel verdwijnt van deze Mac; daarna log je opnieuw in.")
+        }
     }
 }
 
@@ -227,6 +254,7 @@ struct MailboxSettingsRow: View {
     @State private var name = ""
     @State private var instructions = ""
     @State private var editing = false
+    @State private var savedInstructions: String?
     @State private var failure: String?
 
     var body: some View {
@@ -245,11 +273,7 @@ struct MailboxSettingsRow: View {
                 TextEditor(text: $instructions)
                     .font(.body)
                     .frame(minHeight: 70)
-                HStack {
-                    Text("Bijvoorbeeld: klantmail nooit archiveren.").font(.caption).foregroundStyle(.secondary)
-                    Spacer()
-                    Button("Bewaar") { save(instructions: instructions) }
-                }
+                Text("Bijvoorbeeld: klantmail nooit archiveren. Wordt vanzelf bewaard.").font(.caption).foregroundStyle(.secondary)
             }
             .font(.caption)
             if let failure { Text(failure).font(.caption).foregroundStyle(.red) }
@@ -258,6 +282,14 @@ struct MailboxSettingsRow: View {
         .onAppear {
             name = box.name == box.address ? "" : box.name
             instructions = box.instructions ?? ""
+            savedInstructions = instructions
+        }
+        .task(id: instructions) {
+            guard let savedInstructions, instructions != savedInstructions else { return }
+            try? await Task.sleep(for: .seconds(1))
+            guard !Task.isCancelled else { return }
+            self.savedInstructions = instructions
+            save(instructions: instructions)
         }
     }
 

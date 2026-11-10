@@ -33,6 +33,7 @@ import UniformTypeIdentifiers
             store: ConnectionStore(service: "app.burrow.hedwig.tests"),
             makeClient: { _ in client },
             connection: Connection(serverURL: URL(string: "http://burrow.test")!, token: "bk_test"))
+        model.followsOutings = true
         await model.start()
         return model
     }

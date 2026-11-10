@@ -4,19 +4,30 @@ import SwiftUI
 
 struct MessageListView: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         @Bindable var model = model
-        List(selection: $model.selectedMessageId) {
+        List(selection: $model.selectedMessageIds) {
             ForEach(model.messages) { message in
                 VStack(alignment: .leading, spacing: 6) {
                     MessageRow(message: message, showMailbox: model.isSearching && model.searchScope.mailboxId == nil)
                     if !model.isSearching, let entry = model.review(for: message.id) { ReviewLine(entry: entry) }
                 }
                 .tag(message.id)
+                // A message id: the sidebar's mailbox folders take it as a move.
+                .draggable(message.id)
             }
         }
         .listStyle(.inset)
+        .contextMenu(forSelectionType: String.self) { ids in
+            MessageContextMenu(ids: model.messages.map(\.id).filter(ids.contains))
+        } primaryAction: { ids in
+            if ids.count == 1, let id = ids.first { openWindow(value: OpenMessage(id: id)) }
+        }
+        .onDeleteCommand {
+            if model.canOrganizeSelection { Task { await model.perform([.trash]) } }
+        }
         .pullToRefresh { await model.refresh() }
         .safeAreaInset(edge: .top, spacing: 0) {
             VStack(spacing: 0) {
@@ -27,7 +38,7 @@ struct MessageListView: View {
                 // Above the list rather than in it: a list row keeps its first height,
                 // and the answer arrives seconds after the results.
                 if model.isSearching {
-                    SearchHeader(place: placeTitle)
+                    SearchHeader()
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
                     Divider()
@@ -37,7 +48,9 @@ struct MessageListView: View {
         .overlay {
             if model.isSearching {
                 if model.messages.isEmpty && !model.aiSearching { ContentUnavailableView.search(text: model.searchText) }
-            } else if model.messages.isEmpty && !model.isLoading {
+            } else if model.messages.isEmpty && model.isLoading {
+                ProgressView()
+            } else if model.messages.isEmpty {
                 if model.isFiltering {
                     ContentUnavailableView("Geen berichten", systemImage: "line.3.horizontal.decrease", description: Text("Niets past bij het filter."))
                 } else {
@@ -64,17 +77,9 @@ struct MessageListView: View {
 
     private var title: String {
         if model.isSearching {
-            return model.searchEverywhere || model.placeScope == .everywhere ? "Zoeken in alle mailboxen" : "Zoeken in \(placeTitle)"
+            return model.searchEverywhere || model.placeScope == .everywhere ? "Zoeken in alle mailboxen" : "Zoeken in \(model.placeTitle)"
         }
-        return placeTitle
-    }
-
-    private var placeTitle: String {
-        switch model.selection {
-        case .inbox(let id): model.mailbox(id).map(mailboxTitle) ?? "Inbox"
-        case .folder(let folder, let id): "\(folderTitle(folder)) · \(model.mailbox(id).map(mailboxTitle) ?? "")"
-        default: "Hedwig"
-        }
+        return model.placeTitle
     }
 
     private var subtitle: String {
@@ -89,25 +94,26 @@ struct MessageListView: View {
     }
 }
 
-/// Above search results: where it looks, what the bot made of the question as chips,
-/// its answer, and lenses to narrow by.
+extension AppModel {
+    /// The open mailbox or folder by name, for titles and the search scope.
+    var placeTitle: String {
+        switch selection {
+        case .inbox(let id): mailbox(id).map(mailboxTitle) ?? "Inbox"
+        case .folder(let folder, let id): "\(folderTitle(folder)) · \(mailbox(id).map(mailboxTitle) ?? "")"
+        default: "Hedwig"
+        }
+    }
+}
+
+/// Above search results: the order, what the bot made of the question as chips,
+/// its answer, and lenses to narrow by. Where it looks is the search field's scope bar.
 private struct SearchHeader: View {
     @Environment(AppModel.self) private var model
-    let place: String
 
     var body: some View {
         @Bindable var model = model
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
-                if model.placeScope != .everywhere {
-                    Picker("Zoek in", selection: $model.searchEverywhere) {
-                        Text(place).tag(false)
-                        Text("Overal").tag(true)
-                    }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
-                    .fixedSize()
-                }
                 Spacer(minLength: 0)
                 Menu {
                     Picker("Volgorde", selection: $model.searchSort) {
@@ -131,23 +137,25 @@ private struct SearchHeader: View {
                 ChipRow {
                     ForEach(lenses) { lens in
                         Button { model.addSearchToken(lens.token) } label: {
-                            HStack(spacing: 4) {
-                                Image(systemName: lens.token.systemImage).imageScale(.small)
-                                Text(lens.token.label).lineLimit(1)
-                                Text("\(lens.count)").foregroundStyle(.secondary)
+                            Label {
+                                Text("\(lens.token.label) \(Text("\(lens.count)").foregroundStyle(.secondary))").lineLimit(1)
+                            } icon: {
+                                Image(systemName: lens.token.systemImage)
                             }
-                            .font(.caption)
-                            .padding(.horizontal, 7)
-                            .padding(.vertical, 2)
-                            .overlay(Capsule().strokeBorder(.separator))
-                            .contentShape(Capsule())
                         }
-                        .buttonStyle(.plain)
+                        .chip()
                         .help("Verfijn tot \(lens.token.label)")
                     }
                 }
             }
         }
+    }
+}
+
+extension View {
+    /// A search chip: a small bordered capsule button.
+    func chip() -> some View {
+        buttonStyle(.bordered).buttonBorderShape(.capsule).controlSize(.small)
     }
 }
 
@@ -183,18 +191,15 @@ private struct AIRow: View {
                     Image(systemName: "sparkles").foregroundStyle(Color.accentColor)
                     ForEach(model.planTokens) { token in
                         Button { model.removePlanToken(token) } label: {
-                            HStack(spacing: 3) {
-                                Image(systemName: token.systemImage).imageScale(.small)
+                            Label {
                                 Text(token.label).lineLimit(1)
-                                Image(systemName: "xmark").imageScale(.small).foregroundStyle(.secondary)
+                            } icon: {
+                                Image(systemName: token.systemImage)
                             }
-                            .font(.caption)
-                            .padding(.horizontal, 7)
-                            .padding(.vertical, 2)
-                            .background(Capsule().fill(Color.accentColor.opacity(0.14)))
-                            .contentShape(Capsule())
                         }
-                        .buttonStyle(.plain)
+                        .chip()
+                        .tint(.accentColor)
+                        .accessibilityHint("Zoekt zonder dit")
                         .help("Zoek zonder \(token.label)")
                     }
                 }
@@ -233,10 +238,9 @@ private struct AnswerCard: View {
                 Button { model.selectedMessageId = source.id } label: {
                     Label("\(source.from.display) · \(shortDate(source.receivedAt))", systemImage: "arrow.turn.down.right")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.link)
             }
         }
         .padding(10)
@@ -260,6 +264,8 @@ struct MessageRow: View {
                 .fill(message.unread ? Color.accentColor : .clear)
                 .frame(width: 8, height: 8)
                 .padding(.top, 4)
+                .accessibilityLabel(message.unread ? "Ongelezen" : "")
+                .accessibilityHidden(!message.unread)
             // Mail's list: the sender at 13 pt semibold, the rest in its 11 pt list font.
             VStack(alignment: .leading, spacing: 3) {
                 HStack(alignment: .firstTextBaseline) {
@@ -321,3 +327,53 @@ struct Tag: View {
 }
 
 func shortDate(_ date: Date) -> String { MailFormat().listDate(date) }
+
+/// The list's context menu: the same actions as the Bericht menu, for the
+/// clicked messages. Reply and forward take one message.
+struct MessageContextMenu: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.openWindow) private var openWindow
+    let ids: [String]
+
+    var body: some View {
+        let list = model.summaries(ids)
+        let one = list.count == 1 ? list.first : nil
+        let canSend = one != nil && one?.share?.by == nil && model.me?.can(.send) == true
+        let canOrganize = model.canOrganize(ids)
+        if let one {
+            Button("Open in nieuw venster") { openWindow(value: OpenMessage(id: one.id)) }
+            Divider()
+        }
+        Button("Beantwoord") { compose(all: false, forwarding: false) }.disabled(!canSend)
+        Button("Allen beantwoorden") { compose(all: true, forwarding: false) }.disabled(!canSend)
+        Button("Stuur door") { compose(all: false, forwarding: true) }.disabled(!canSend)
+        Divider()
+        Button("Archiveer") { Task { await model.move(ids, to: .archive) } }
+            .disabled(!model.canMove(ids, to: .archive))
+        Button(list.contains(where: \.unread) ? "Markeer als gelezen" : "Markeer als ongelezen") {
+            Task { await model.toggleRead(ids) }
+        }
+        .disabled(!canOrganize)
+        Button(!list.isEmpty && list.allSatisfy(\.flagged) ? "Verwijder vlag" : "Markeer met vlag") {
+            Task { await model.toggleFlag(ids) }
+        }
+        .disabled(!canOrganize)
+        Menu("Verplaats naar") {
+            ForEach([MailFolder.inbox, .archive, .spam], id: \.self) { folder in
+                Button(folderTitle(folder)) { Task { await model.move(ids, to: folder) } }
+                    .disabled(!model.canMove(ids, to: folder))
+            }
+        }
+        .disabled(!canOrganize)
+        Divider()
+        Button("Verwijder", role: .destructive) { Task { await model.perform([.trash], on: ids) } }
+            .disabled(!canOrganize)
+    }
+
+    private func compose(all: Bool, forwarding: Bool) {
+        guard let id = ids.first else { return }
+        Task {
+            if let draft = await model.draft(replyingTo: id, all: all, forwarding: forwarding) { openWindow(value: draft) }
+        }
+    }
+}

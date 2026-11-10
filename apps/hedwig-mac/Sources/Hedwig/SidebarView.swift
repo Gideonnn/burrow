@@ -6,7 +6,6 @@ struct SidebarView: View {
     @Environment(AppModel.self) private var model
     @State private var renaming: MailboxSummary?
     @State private var newName = ""
-    @State private var hovered: String?
     // The mailboxes whose folders show, as comma-separated ids: AppStorage holds no sets.
     @AppStorage("hedwig.sidebar.openMailboxes") private var openMailboxes = ""
 
@@ -18,8 +17,11 @@ struct SidebarView: View {
             ForEach(model.mailboxGroups) { group in
                 Section {
                     ForEach(group.mailboxes) { box in
-                        mailboxRow(box, in: group)
-                        if isOpen(box.id) { folderRows(box) }
+                        DisclosureGroup(isExpanded: expanded(box)) {
+                            folderRows(box)
+                        } label: {
+                            mailboxRow(box, in: group)
+                        }
                     }
                     // An open mailbox is several rows, which dragging cannot place;
                     // Omhoog and Omlaag in its menu still work.
@@ -33,10 +35,6 @@ struct SidebarView: View {
             // Every row keeps its tag: badged rows once ignored clicks without one
             // (see the diary, 2026-10-22).
             Section {
-                NavigationLink(value: SidebarItem.outings) {
-                    CountedLabel(title: "Evenementen", icon: "ticket", count: model.outingsBadge)
-                }
-                .tag(SidebarItem.outings)
                 NavigationLink(value: SidebarItem.tasks) {
                     CountedLabel(title: "Taken", icon: "checklist", count: model.tasksAwaitingReview)
                 }
@@ -52,7 +50,7 @@ struct SidebarView: View {
             }
         }
         .listStyle(.sidebar)
-        // A folder opened elsewhere (a link, an outing's mail) shows under its mailbox.
+        // A folder opened elsewhere (a link, burrowctl) shows under its mailbox.
         .onChange(of: model.selection, initial: true) { _, place in
             if let place, let id = place.mailboxId, place != .inbox(mailboxId: id) { setOpen(id, true) }
         }
@@ -75,39 +73,15 @@ struct SidebarView: View {
 
     private func mailboxRow(_ box: MailboxSummary, in group: AppModel.MailboxGroup) -> some View {
         let open = isOpen(box.id)
-        let unread = model.unreadCounts[box.id] ?? 0
-        // Folders are rarely needed, so the toggle only shows on hover or while they show.
-        let showsToggle = if case .toggle = MailboxRowSlot(unread: unread, hovered: hovered == box.id, open: open) { true } else { false }
         return NavigationLink(value: SidebarItem.inbox(mailboxId: box.id)) {
             HStack(spacing: 6) {
                 Label(mailboxTitle(box), systemImage: box.needsReconnect == true ? "exclamationmark.triangle" : "tray")
                 Spacer(minLength: 0)
-                // One trailing slot: the unread count, or the toggle in its place.
-                // Both stay laid out, so the row keeps its width when they swap.
-                ZStack(alignment: .trailing) {
-                    SidebarCount(count: unread)
-                        .opacity(showsToggle ? 0 : 1)
-                        .accessibilityHidden(showsToggle || unread == 0)
-                    Button { toggle(box) } label: {
-                        Image(systemName: "chevron.right")
-                            .rotationEffect(.degrees(open ? 90 : 0))
-                            .frame(width: 12, height: 12)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                    .help(open ? "Verberg mappen" : "Toon Archief, Verstuurd, Concepten en Spam")
-                    .opacity(showsToggle ? 1 : 0)
-                    .allowsHitTesting(showsToggle)
-                    .accessibilityHidden(!showsToggle)
-                }
+                SidebarCount(count: model.unreadCounts[box.id] ?? 0)
             }
         }
-        .onHover { inside in
-            if inside { hovered = box.id } else if hovered == box.id { hovered = nil }
-        }
         .help(box.address)
+        .modifier(MailDrop(place: .inbox(mailboxId: box.id)))
         .contextMenu {
             let index = group.mailboxes.firstIndex(of: box) ?? 0
             Button(open ? "Verberg mappen" : "Toon mappen") { toggle(box) }
@@ -136,9 +110,14 @@ struct SidebarView: View {
 
     private func folderRow(_ place: SidebarItem, _ icon: String, waiting: Int) -> some View {
         NavigationLink(value: place) {
-            CountedLabel(title: placeName(place), icon: icon, count: waiting).padding(.leading, 14)
+            CountedLabel(title: placeName(place), icon: icon, count: waiting)
         }
+        .modifier(MailDrop(place: place))
         .tag(place)
+    }
+
+    private func expanded(_ box: MailboxSummary) -> Binding<Bool> {
+        Binding(get: { isOpen(box.id) }, set: { if $0 != isOpen(box.id) { toggle(box) } })
     }
 
     private func isOpen(_ id: String) -> Bool { openMailboxes.split(separator: ",").contains { $0 == id } }
@@ -223,5 +202,24 @@ func providerName(_ box: MailboxSummary) -> String {
     case .gmail: "Gmail"
     case .microsoft: "Outlook"
     case .fastmail: "Fastmail"
+    }
+}
+
+/// Mail dragged from the list onto Inbox, Archief or Spam of its own mailbox moves there.
+private struct MailDrop: ViewModifier {
+    @Environment(AppModel.self) private var model
+    let place: SidebarItem
+
+    func body(content: Content) -> some View {
+        switch place {
+        case .inbox, .folder(.archive, _), .folder(.spam, _):
+            content.dropDestination(for: String.self) { ids, _ in
+                guard model.canMove(ids, to: place) else { return false }
+                Task { await model.move(ids, to: place) }
+                return true
+            }
+        default:
+            content
+        }
     }
 }

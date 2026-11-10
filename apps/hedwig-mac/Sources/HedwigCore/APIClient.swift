@@ -97,6 +97,16 @@ extension APIClient {
 
     public func message(id: String) async throws -> MessageDetail { try await call("GET", "api/messages/\(id)") }
 
+    public func attachments(messageId: String) async throws -> [Attachment] {
+        try await call("GET", "api/messages/\(messageId)/attachments")
+    }
+
+    public func attachment(messageId: String, id: String) async throws -> Data {
+        let (data, response) = try await session.data(for: request("GET", "api/messages/\(messageId)/attachments/\(id)"))
+        try Self.check(response, data)
+        return data
+    }
+
     public func apply(_ ops: [ServerOp], to id: String) async throws -> MessageDetail {
         try await call("POST", "api/messages/\(id)/actions", body: ["ops": ops])
     }

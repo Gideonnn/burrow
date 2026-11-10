@@ -56,7 +56,8 @@ extension AppModel {
     /// `inbox`, `archive`, `sent`, `spam` or `drafts` of the open mailbox (the
     /// first one elsewhere), each also as `<place>:<address>`; a role (`private`,
     /// `work`, `school`: the inbox of its first mailbox); `filtered` (the first
-    /// Spam or Archief with mail to review), `tasks`, `outings` or `shared`.
+    /// Spam or Archief with mail to review), `tasks` or `shared` (`outings` only where
+    /// `showsOutingCards` is on).
     public func show(_ place: String) async throws {
         try select(place)
         await selectionLoad?.value
@@ -67,7 +68,9 @@ extension AppModel {
         let boxes = me?.mailboxes ?? []
         switch place {
         case "tasks": selection = .tasks
-        case "outings": selection = .outings
+        case "outings":
+            guard showsOutingCards else { throw ControlError("outings moved to Hogsmeade") }
+            selection = .outings
         case "shared": selection = .shared
         case "private", "work", "school":
             // The merged inbox per role is gone; older links land on a single inbox.

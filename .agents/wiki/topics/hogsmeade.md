@@ -48,3 +48,4 @@ and Keychain item are `hogsmeade`.
 Wishes (an outing without a date), stars after the night and merging two outings need
 server support: `TODO.md`. A linked mail shows as plain text; opening it in Hedwig needs
 a way for one app to open a mail in the other.
+The outing Swift code still lives in HedwigCore until it moves (`TODO.md`).

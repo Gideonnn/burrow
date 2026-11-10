@@ -26,10 +26,28 @@ import Testing
 
     private func model(_ server: MockServer) -> AppModel {
         let client = server.client()
-        return AppModel(
+        let model = AppModel(
             store: ConnectionStore(service: "app.burrow.hedwig.tests"),
             makeClient: { _ in client },
             connection: Connection(serverURL: URL(string: "http://burrow.test")!, token: "bk_test"))
+        model.followsOutings = true
+        model.showsOutingCards = true
+        return model
+    }
+
+    @Test func aMailClientWithoutTheCardNeverAsksAboutAMail() async throws {
+        let server = MockServer()
+        server.on("GET", "/api/me", json: Fixture.me)
+        server.on("GET", "/api/mailboxes/mb1/messages", json: "[\(Fixture.message("m1", subject: "Je bestelling", unread: false))]")
+        server.on("GET", "/api/messages/m1", json: Fixture.message("m1", subject: "Je bestelling", unread: false))
+        server.on("GET", "/api/messages/m1/outing", json: Self.suggestion)
+        server.on("GET", "/api/outings", json: "[]")
+        let model = model(server)
+        model.showsOutingCards = false
+        await model.start()
+        await model.selectionLoad?.value
+        await model.messageLoad?.value
+        #expect(server.requests("GET", "/api/messages/m1/outing").isEmpty)
     }
 
     @Test func anOrderMailBecomesASharedOutingInOneClick() async throws {

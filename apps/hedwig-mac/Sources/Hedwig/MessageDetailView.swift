@@ -1,5 +1,8 @@
+import BurrowUI
 import HedwigCore
+import QuickLook
 import SwiftUI
+import UniformTypeIdentifiers
 import WebKit
 
 /// The header scrolls with the message, as in Mail: one ScrollView holds the
@@ -22,7 +25,6 @@ struct MessageDetailView: View {
                         VStack(alignment: .leading, spacing: 12) {
                             MessageHeader(message: message)
                             ShareBar(message: message)
-                            if model.showsOutingCard { OutingCard() }
                             ReviewBar(message: message)
                             if let summary = model.insights?.summary {
                                 Label(summary, systemImage: "sparkles")
@@ -40,22 +42,10 @@ struct MessageDetailView: View {
                         .padding(.bottom, 16)
                         .id(Self.top)
                         Divider().padding(.horizontal, 28)
-                        if let html = message.bodyHtml {
-                            HTMLView(
-                                html: html,
-                                allowRemote: message.mayLoadRemoteImages && (loadRemoteImages || allowedMessageId == message.id),
-                                height: $bodyHeight
-                            )
-                            .frame(height: bodyHeight)
-                        } else {
-                            // Mail's default message font.
-                            Text(message.bodyText ?? message.snippet)
-                                .font(.custom("Helvetica", size: 12))
-                                .textSelection(.enabled)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.horizontal, 28)
-                                .padding(.vertical, 20)
-                        }
+                        MessageBody(
+                            message: message,
+                            allowRemote: message.mayLoadRemoteImages && (loadRemoteImages || allowedMessageId == message.id),
+                            height: $bodyHeight)
                     }
                 }
                 .onChange(of: message.id) { proxy.scrollTo(Self.top, anchor: .top) }
@@ -63,6 +53,28 @@ struct MessageDetailView: View {
             .safeAreaInset(edge: .bottom) { SuggestionBar() }
         } else {
             ContentUnavailableView("Geen bericht geselecteerd", systemImage: "envelope")
+        }
+    }
+}
+
+/// The mail itself, as tall as it is, inside the reader's scroll view.
+struct MessageBody: View {
+    let message: MessageDetail
+    let allowRemote: Bool
+    @Binding var height: CGFloat
+
+    var body: some View {
+        if let html = message.bodyHtml {
+            HTMLView(html: html, allowRemote: allowRemote, height: $height)
+                .frame(height: height)
+        } else {
+            // Mail's default message font, which no text style matches.
+            Text(message.bodyText ?? message.snippet)
+                .font(.custom("Helvetica", size: 12))
+                .textSelection(.enabled)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 28)
+                .padding(.vertical, 20)
         }
     }
 }
@@ -77,14 +89,15 @@ struct MessageHeader: View {
         HStack(alignment: .top, spacing: 10) {
             Avatar(name: message.from.display, size: 32)
                 .padding(.top, 2)
+                .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
                 HStack(alignment: .firstTextBaseline, spacing: 12) {
                     Text(message.from.display)
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.title3.weight(.semibold))
                         .lineLimit(1)
                         .help(message.from.email)
                         .contextMenu {
-                            Button("Kopieer adres") { copy(message.from.email) }
+                            SenderMenu(address: message.from, mailboxId: message.mailboxId)
                         }
                     Spacer(minLength: 0)
                     Text(MailFormat().headerDate(message.receivedAt))
@@ -102,12 +115,95 @@ struct MessageHeader: View {
                     .padding(.top, 2)
                 MessageTags(message: message)
                 if message.hasAttachments {
-                    Label("Bevat bijlagen; open ze voorlopig in de webmail", systemImage: "paperclip")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    AttachmentStrip(messageId: message.id).padding(.top, 6)
                 }
             }
         }
+    }
+}
+
+/// The mail's files: a click shows one in Quick Look (arrows step through the
+/// rest), dragging or sharing hands over the file, fetched when first needed.
+struct AttachmentStrip: View {
+    @Environment(AppModel.self) private var model
+    let messageId: String
+    @State private var files: [Attachment] = []
+    @State private var fetched: [String: URL] = [:]
+    @State private var preview: URL?
+
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                ForEach(files) { file in
+                    let item = AttachmentItem(name: file.name) { [model, messageId] in
+                        guard let url = await model.attachmentFile(file, messageId: messageId) else { throw CocoaError(.fileReadUnknown) }
+                        return url
+                    }
+                    Button { Task { await show(file) } } label: {
+                        Label {
+                            Text("\(file.name) \(Text(ByteCountFormatter.string(fromByteCount: Int64(file.size), countStyle: .file)).foregroundStyle(.secondary))")
+                                .lineLimit(1)
+                        } icon: {
+                            Image(nsImage: NSWorkspace.shared.icon(for: UTType(mimeType: file.contentType) ?? .data))
+                                .resizable()
+                                .frame(width: 16, height: 16)
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .help("Voorvertoning")
+                    .draggable(item)
+                    .contextMenu {
+                        Button("Voorvertoning") { Task { await show(file) } }
+                        Button("Open") { Task { if let url = await model.attachmentFile(file, messageId: messageId) { NSWorkspace.shared.open(url) } } }
+                        Button("Bewaar in Downloads") { Task { await saveToDownloads(file) } }
+                        ShareLink(item: item, preview: SharePreview(file.name))
+                    }
+                }
+            }
+        }
+        .scrollClipDisabled()
+        .quickLookPreview($preview, in: files.compactMap { fetched[$0.id] })
+        .task(id: messageId) {
+            files = []
+            fetched = [:]
+            files = await model.attachments(messageId: messageId)
+        }
+    }
+
+    private func show(_ file: Attachment) async {
+        guard let url = await model.attachmentFile(file, messageId: messageId) else { return }
+        fetched[file.id] = url
+        preview = url
+    }
+
+    private func saveToDownloads(_ file: Attachment) async {
+        guard let url = await model.attachmentFile(file, messageId: messageId),
+              let downloads = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first else { return }
+        var target = downloads.appending(path: url.lastPathComponent)
+        var n = 2
+        while FileManager.default.fileExists(atPath: target.path) {
+            let base = "\(url.deletingPathExtension().lastPathComponent) \(n)"
+            target = downloads.appending(path: url.pathExtension.isEmpty ? base : "\(base).\(url.pathExtension)")
+            n += 1
+        }
+        do {
+            try FileManager.default.copyItem(at: url, to: target)
+            NSWorkspace.shared.activateFileViewerSelecting([target])
+        } catch {
+            model.error = error.localizedDescription
+        }
+    }
+}
+
+/// An attachment for drag and share; the file is fetched only when it is dropped or shared.
+struct AttachmentItem: Transferable {
+    let name: String
+    let file: @Sendable () async throws -> URL
+
+    static var transferRepresentation: some TransferRepresentation {
+        FileRepresentation(exportedContentType: .data) { item in SentTransferredFile(try await item.file()) }
+            .suggestedFileName { $0.name }
     }
 }
 
@@ -200,6 +296,19 @@ private struct MessageTags: View {
     }
 }
 
+private struct SenderMenu: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.openWindow) private var openWindow
+    let address: Address
+    let mailboxId: String
+
+    var body: some View {
+        Button("Stuur bericht") { openWindow(value: ComposeDraft(mailboxId: mailboxId, to: Address.format([address]))) }
+            .disabled(model.me?.can(.send) != true)
+        Button("Kopieer adres") { copy(address.email) }
+    }
+}
+
 private func copy(_ text: String) {
     NSPasteboard.general.clearContents()
     NSPasteboard.general.setString(text, forType: .string)
@@ -212,15 +321,11 @@ struct Avatar: View {
     var body: some View {
         let initials = name.split(separator: " ").prefix(2).compactMap(\.first).map(String.init).joined()
         Text(initials.uppercased())
+            // Sized to the circle, like BurrowUI's PersonBadge; no text style scales with it.
             .font(.system(size: size * 0.38, weight: .semibold))
             .foregroundStyle(.white)
             .frame(width: size, height: size)
-            .background(Circle().fill(color))
-    }
-
-    private var color: Color {
-        let palette: [Color] = [.blue, .purple, .pink, .orange, .teal, .indigo, .green]
-        return palette[abs(name.hashValue) % palette.count]
+            .background(Circle().fill(BurrowColor.person(name)))
     }
 }
 
@@ -489,16 +594,32 @@ struct SuggestionBar: View {
                             if let draft = model.compose(reply: reply) { openWindow(value: draft) }
                         }
                         .buttonStyle(.bordered)
-                        .clipShape(Capsule())
+                        .buttonBorderShape(.capsule)
                         .fixedSize()
                     }
                 }
                 Spacer()
             }
             .font(.callout)
-            .padding(.horizontal, 24)
-            .padding(.vertical, 12)
-            .background(.bar)
+            .modifier(SuggestionBackground())
+        }
+    }
+}
+
+/// A floating glass bar on macOS 26, the window's bar material before.
+private struct SuggestionBackground: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(macOS 26, *) {
+            content
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .modifier(Glass(shape: Capsule()))
+                .padding(12)
+        } else {
+            content
+                .padding(.horizontal, 24)
+                .padding(.vertical, 12)
+                .background(.bar)
         }
     }
 }
