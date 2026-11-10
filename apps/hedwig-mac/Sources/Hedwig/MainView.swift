@@ -60,6 +60,7 @@ struct MainView: View {
         .searchable(text: $model.searchText, tokens: $model.searchTokens, placement: .toolbar, prompt: "Zoek, @iemand, of vraag iets") { token in
             Label(token.label, systemImage: token.systemImage)
         }
+        .modifier(SearchScopes())
         .searchSuggestions {
             ForEach(model.searchSuggestions) { suggestion in
                 SuggestionRow(suggestion: suggestion)
@@ -120,6 +121,23 @@ private struct ListFilterButton: View {
         }
         .help(model.filterOn ? "Zet het filter uit (⌘L)" : "Filter de lijst (⌘L)")
         .disabled(model.placeScope == nil || model.isSearching)
+    }
+}
+
+/// Mail's scope bar under the search field: the open place or every mailbox.
+private struct SearchScopes: ViewModifier {
+    @Environment(AppModel.self) private var model
+
+    func body(content: Content) -> some View {
+        // One modifier whatever the place: switching views here would rebuild the window.
+        let hasPlace = model.placeScope != nil && model.placeScope != .everywhere
+        content.searchScopes(
+            Binding(get: { hasPlace ? model.searchEverywhere : true }, set: { model.searchEverywhere = $0 }),
+            activation: .onSearchPresentation
+        ) {
+            if hasPlace { Text(model.placeTitle).tag(false) }
+            Text("Overal").tag(true)
+        }
     }
 }
 

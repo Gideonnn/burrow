@@ -38,7 +38,7 @@ struct MessageListView: View {
                 // Above the list rather than in it: a list row keeps its first height,
                 // and the answer arrives seconds after the results.
                 if model.isSearching {
-                    SearchHeader(place: placeTitle)
+                    SearchHeader()
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
                     Divider()
@@ -75,17 +75,9 @@ struct MessageListView: View {
 
     private var title: String {
         if model.isSearching {
-            return model.searchEverywhere || model.placeScope == .everywhere ? "Zoeken in alle mailboxen" : "Zoeken in \(placeTitle)"
+            return model.searchEverywhere || model.placeScope == .everywhere ? "Zoeken in alle mailboxen" : "Zoeken in \(model.placeTitle)"
         }
-        return placeTitle
-    }
-
-    private var placeTitle: String {
-        switch model.selection {
-        case .inbox(let id): model.mailbox(id).map(mailboxTitle) ?? "Inbox"
-        case .folder(let folder, let id): "\(folderTitle(folder)) · \(model.mailbox(id).map(mailboxTitle) ?? "")"
-        default: "Hedwig"
-        }
+        return model.placeTitle
     }
 
     private var subtitle: String {
@@ -100,25 +92,26 @@ struct MessageListView: View {
     }
 }
 
-/// Above search results: where it looks, what the bot made of the question as chips,
-/// its answer, and lenses to narrow by.
+extension AppModel {
+    /// The open mailbox or folder by name, for titles and the search scope.
+    var placeTitle: String {
+        switch selection {
+        case .inbox(let id): mailbox(id).map(mailboxTitle) ?? "Inbox"
+        case .folder(let folder, let id): "\(folderTitle(folder)) · \(mailbox(id).map(mailboxTitle) ?? "")"
+        default: "Hedwig"
+        }
+    }
+}
+
+/// Above search results: the order, what the bot made of the question as chips,
+/// its answer, and lenses to narrow by. Where it looks is the search field's scope bar.
 private struct SearchHeader: View {
     @Environment(AppModel.self) private var model
-    let place: String
 
     var body: some View {
         @Bindable var model = model
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
-                if model.placeScope != .everywhere {
-                    Picker("Zoek in", selection: $model.searchEverywhere) {
-                        Text(place).tag(false)
-                        Text("Overal").tag(true)
-                    }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
-                    .fixedSize()
-                }
                 Spacer(minLength: 0)
                 Menu {
                     Picker("Volgorde", selection: $model.searchSort) {
@@ -142,23 +135,25 @@ private struct SearchHeader: View {
                 ChipRow {
                     ForEach(lenses) { lens in
                         Button { model.addSearchToken(lens.token) } label: {
-                            HStack(spacing: 4) {
-                                Image(systemName: lens.token.systemImage).imageScale(.small)
-                                Text(lens.token.label).lineLimit(1)
-                                Text("\(lens.count)").foregroundStyle(.secondary)
+                            Label {
+                                Text("\(lens.token.label) \(Text("\(lens.count)").foregroundStyle(.secondary))").lineLimit(1)
+                            } icon: {
+                                Image(systemName: lens.token.systemImage)
                             }
-                            .font(.caption)
-                            .padding(.horizontal, 7)
-                            .padding(.vertical, 2)
-                            .overlay(Capsule().strokeBorder(.separator))
-                            .contentShape(Capsule())
                         }
-                        .buttonStyle(.plain)
+                        .chip()
                         .help("Verfijn tot \(lens.token.label)")
                     }
                 }
             }
         }
+    }
+}
+
+extension View {
+    /// A search chip: a small bordered capsule button.
+    func chip() -> some View {
+        buttonStyle(.bordered).buttonBorderShape(.capsule).controlSize(.small)
     }
 }
 
@@ -194,18 +189,15 @@ private struct AIRow: View {
                     Image(systemName: "sparkles").foregroundStyle(Color.accentColor)
                     ForEach(model.planTokens) { token in
                         Button { model.removePlanToken(token) } label: {
-                            HStack(spacing: 3) {
-                                Image(systemName: token.systemImage).imageScale(.small)
+                            Label {
                                 Text(token.label).lineLimit(1)
-                                Image(systemName: "xmark").imageScale(.small).foregroundStyle(.secondary)
+                            } icon: {
+                                Image(systemName: token.systemImage)
                             }
-                            .font(.caption)
-                            .padding(.horizontal, 7)
-                            .padding(.vertical, 2)
-                            .background(Capsule().fill(Color.accentColor.opacity(0.14)))
-                            .contentShape(Capsule())
                         }
-                        .buttonStyle(.plain)
+                        .chip()
+                        .tint(.accentColor)
+                        .accessibilityHint("Zoekt zonder dit")
                         .help("Zoek zonder \(token.label)")
                     }
                 }

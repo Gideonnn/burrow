@@ -157,8 +157,9 @@ struct NewKeySheet: View {
             HStack {
                 Spacer()
                 Button("Annuleer", role: .cancel) { dismiss() }
+                    .keyboardShortcut(.cancelAction)
                 Button("Maak sleutel") { Task { await create() } }
-                    .buttonStyle(.borderedProminent)
+                    .keyboardShortcut(.defaultAction)
                     .disabled(name.isEmpty || personId.isEmpty || rights.isEmpty)
             }
         }

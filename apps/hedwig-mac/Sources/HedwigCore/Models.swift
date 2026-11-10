@@ -198,6 +198,15 @@ public struct Recipients: Codable, Hashable, Sendable {
     public var cc: [Address]
 }
 
+/// A file on a message; the server fetches it from the provider when asked.
+public struct Attachment: Codable, Hashable, Identifiable, Sendable {
+    public var id: String
+    public var name: String
+    public var contentType: String
+    public var size: Int
+    public var inline: Bool
+}
+
 public enum ServerOp: Codable, Hashable, Sendable {
     case markRead, markUnread, moveToSpam, moveToInbox, archive, trash, flag, unflag
     case addLabel(String), removeLabel(String)

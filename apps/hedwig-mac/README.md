@@ -29,19 +29,24 @@ and optionally `HEDWIG_OPEN` with any place `burrowctl hedwig show` takes (`filt
 
 ## What it does
 
-- The sidebar's "Inbox" lists every mailbox; each opens (a small chevron on hover, or its
-  menu) to its own Archief, Verstuurd, Concepten and Spam. Reading shows HTML without
-  JavaScript or remote content (trackers stay blocked) under a header laid out like
-  Mail's (sender, subject, Aan/Kopie/Antwoord aan) that scrolls with the message;
-  replying (to Reply-To when the mail has one; the server decides who Reply and Reply
-  all address), forwarding.
+- The sidebar's "Inbox" lists every mailbox; each opens (its disclosure triangle, or its
+  menu) to its own Archief, Verstuurd, Concepten and Spam. The window remembers the open
+  place. Reading shows HTML without JavaScript or remote content (trackers stay blocked)
+  under a header laid out like Mail's (sender, subject, Aan/Kopie/Antwoord aan) that
+  scrolls with the message; replying (to Reply-To when the mail has one; the server
+  decides who Reply and Reply all address), forwarding. Attachments show under the
+  header: a click opens Quick Look, dragging or Deel hands over the file, which is
+  fetched through the server when first needed.
+- The list selects like Mail's (⇧ and ⌘ for several): the context menu, the Bericht menu
+  and the toolbar act on the whole selection (one call per message), ⌫ deletes,
+  Return or a double-click opens a message in its own window, and mail dragged onto
+  Inbox, Archief or Spam of its own mailbox moves there. Replying takes one message.
 - Archive, delete, spam, read and flag act at the provider, so phones see the same.
 - What the bot filtered waits for review in that mailbox's Spam or Archief, on top and
   with its reason: "Klopt" confirms, "Geen spam" or "Terug naar inbox" restores. A count
   on Spam or Archief shows what still waits; the mailbox row shows only its unread
-  inbox count from the server (all mail, not the loaded page), which the folder chevron
-  replaces on hover or while the folders show. The list header counts the whole folder
-  the same way.
+  inbox count from the server (all mail, not the loaded page). The list header counts the
+  whole folder the same way.
 - Spam stays unread and never loads remote images, not even on request, until you say
   "Geen spam"; then it goes back to the inbox as read.
 - The household's outings live in Hogsmeade (`apps/hogsmeade-mac`); Hedwig only keeps
@@ -52,7 +57,10 @@ and optionally `HEDWIG_OPEN` with any place `burrowctl hedwig show` takes (`filt
   `burrowctl runner` (see the [agent-control topic](../../.agents/wiki/topics/agent-control.md)),
   also while Hedwig is closed; Settings › Agent and Settings › Runners show and pause it.
 - Messages show the summary and a lock for sensitive mail (the category only in the reader) once the
-  server has facts for them; search hides login codes unless "Toon ook codes" is on.
+  server has facts for them; search hides login codes unless "Toon ook codes" is on. The
+  search field's scope bar picks the open place or Overal.
+- Writing: Verstuur (⇧⌘D or ⌘↩) is in the toolbar; closing an edited message asks
+  "Concept bewaren?", and Bewaar keeps it under Concepten.
 - The filter above the list works like Mail's: a click (or ⌘L) shows only Ongelezen, or
   what the chevron menu picks (Antwoord nodig, Met bijlagen, Aan mij, Van vandaag; all
   must match). The server filters the whole folder; the criteria are remembered, the
@@ -60,7 +68,8 @@ and optionally `HEDWIG_OPEN` with any place `burrowctl hedwig show` takes (`filt
 - The dot at the bottom of the sidebar turns orange while the server cannot be reached
   (a deploy, the tunnel); Hedwig retries by itself and reloads once it is back.
 - Settings: the bot instructions and learned rules, adding accounts (admin keys), the
-  household (everyone's features and devices, for admins) and the workers.
+  household (everyone's features and devices, for admins) and the workers. Fields save
+  themselves a moment after typing stops.
 
 ## Letting an agent operate Hedwig
 

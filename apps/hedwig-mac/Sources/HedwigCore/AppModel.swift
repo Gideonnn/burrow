@@ -1077,6 +1077,16 @@ public final class AppModel {
         }
     }
 
+    /// Keeps an unsent message under Concepten; a draft it came from gives way to it.
+    public func saveDraft(_ draft: ComposeDraft) async throws {
+        guard let api else { return }
+        _ = try await api.createDraft(
+            mailboxId: draft.mailboxId, to: Address.parseList(draft.to), cc: Address.parseList(draft.cc),
+            subject: draft.subject, body: draft.body, inReplyTo: draft.inReplyTo)
+        if let id = draft.serverDraftId { try? await api.deleteDraft(id) }
+        await refreshDrafts()
+    }
+
     public func discard(_ draft: Draft) async {
         guard let api else { return }
         try? await api.deleteDraft(draft.id)
