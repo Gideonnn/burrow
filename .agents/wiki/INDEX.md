@@ -6,7 +6,7 @@
 - [Adding a module](topics/modules.md): the checklist for a new application, server and Mac app.
 - [Login and the household](topics/login-and-household.md): device login through the browser, admins, settings, who may read what.
 - [Pensieve](topics/pensieve.md): calls, video, screen and dictation; upload, compression, transcription with segments, notes per kind, labels, video on the Mac, the iCloud copy.
-- [Hogsmeade](topics/hogsmeade.md): the household's outings as an app of their own, on Hedwig's outings, in two faces to compare: the native Hogsmeade and the playful Hogsmeade Feest; one model, shared pictures, maps and ticket codes.
+- [Hogsmeade](topics/hogsmeade.md): the household's outings as an app of their own and the only Mac app for them, on Hedwig's outings: the wall, the page, tickets, the linked mails and reminders.
 - [Lumos](topics/lumos.md): films and series to watch together; Ontdekken with one row of filters, the list, the Bibliotheek with the disk, a table and deleting; the Seerr catalogue, requests through an outbox, the fixtures and their fences, lists, verdicts, undo by change id, trailers, watching and the household's Jellyfin account read only, pages on a navigation stack with a prefetched cache.
 - [Naming](topics/naming.md): the Harry Potter names and what each application does.
 - [Testing](topics/testing.md): tiers, red before green, quiet output.

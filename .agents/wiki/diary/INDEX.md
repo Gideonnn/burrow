@@ -2,6 +2,7 @@
 
 Newest first.
 
+- [2026-11-11 Hogsmeade keeps the native face](2026-11-11-hogsmeade-keeps-the-native-face.md): Feest is gone, Evenementen moves from Hedwig, a HIG pass; mails can be read and moved; merging waits for the server.
 - [2026-11-10 Lumos goes native and reads the household's Jellyfin account](2026-11-10-lumos-reads-the-household-jellyfin-account.md): three pages, macOS 26, the Bibliotheek with the disk; played state, sizes and resume read from one shared account; menu letters and the TMDB-less files.
 - [2026-11-10 Lumos deletes through Seerr](2026-11-10-lumos-deletes-through-seerr.md): Beheren shows downloads and the library; deletes go through Seerr to Radarr or Sonarr, admins only, and never for a file copied in by hand.
 - [2026-11-02 Mail search on an FTS5 index](2026-11-02-mail-search-on-an-fts5-index.md): the index, people, vectors on the Mac, a reading step, and what was rejected.
