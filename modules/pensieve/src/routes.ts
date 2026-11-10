@@ -16,6 +16,7 @@ import { zValidator } from '@hono/zod-validator';
 import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import { z } from 'zod';
+import { LabelError } from './labels';
 import { RecordingError, type Recordings } from './recordings';
 
 const listQuery = z.object({
@@ -25,7 +26,7 @@ const listQuery = z.object({
 });
 
 const asHttp = (error: unknown): never => {
-  if (error instanceof RecordingError) {
+  if (error instanceof RecordingError || error instanceof LabelError) {
     if (error.message === 'not found') throw notFound();
     throw new HTTPException(400, { message: error.message });
   }
@@ -34,10 +35,12 @@ const asHttp = (error: unknown): never => {
 
 // Recordings of the key's person and those shared with them. Changing,
 // sharing or deleting is for the owner only; someone a recording was shared
-// with can read and listen.
+// with can read and listen. `onError` reaches every route below: Hono's
+// `route()` wraps each handler.
 export function pensieveRoutes(recordings: Recordings) {
   return (
     new Hono<PlatformEnv>()
+      .onError(asHttp)
       .get(
         '/pensieve/recordings',
         requireRight('read'),
@@ -73,42 +76,28 @@ export function pensieveRoutes(recordings: Recordings) {
         '/pensieve/labels/:id',
         requireRight('organize'),
         zValidator('json', labelRequest),
-        (c) => {
-          try {
-            return c.json(
-              recordings.renameLabel(
-                c.var.access,
-                c.req.param('id'),
-                c.req.valid('json').name,
-              ),
-            );
-          } catch (error) {
-            return asHttp(error);
-          }
-        },
+        (c) =>
+          c.json(
+            recordings.renameLabel(
+              c.var.access,
+              c.req.param('id'),
+              c.req.valid('json').name,
+            ),
+          ),
       )
       .delete('/pensieve/labels/:id', requireRight('organize'), (c) => {
-        try {
-          recordings.removeLabel(c.var.access, c.req.param('id'));
-        } catch (error) {
-          asHttp(error);
-        }
+        recordings.removeLabel(c.var.access, c.req.param('id'));
         return c.json({ deleted: true });
       })
       .post(
         '/pensieve/recordings',
         requireRight('organize'),
         zValidator('json', createRecordingRequest),
-        async (c) => {
-          try {
-            return c.json(
-              await recordings.create(c.var.access, c.req.valid('json')),
-              201,
-            );
-          } catch (error) {
-            return asHttp(error);
-          }
-        },
+        async (c) =>
+          c.json(
+            await recordings.create(c.var.access, c.req.valid('json')),
+            201,
+          ),
       )
       .get('/pensieve/recordings/:id', requireRight('read'), (c) => {
         const row = recordings.find(c.var.access, c.req.param('id'));
@@ -157,29 +146,20 @@ export function pensieveRoutes(recordings: Recordings) {
         '/pensieve/recordings/:id',
         requireRight('organize'),
         zValidator('json', updateRecordingRequest),
-        (c) => {
-          try {
-            return c.json(
-              recordings.rename(
-                c.var.access,
-                c.req.param('id'),
-                c.req.valid('json').title,
-              ),
-            );
-          } catch (error) {
-            return asHttp(error);
-          }
-        },
+        (c) =>
+          c.json(
+            recordings.rename(
+              c.var.access,
+              c.req.param('id'),
+              c.req.valid('json').title,
+            ),
+          ),
       )
       .delete(
         '/pensieve/recordings/:id',
         requireRight('organize'),
         async (c) => {
-          try {
-            await recordings.remove(c.var.access, c.req.param('id'));
-          } catch (error) {
-            asHttp(error);
-          }
+          await recordings.remove(c.var.access, c.req.param('id'));
           return c.json({ deleted: true });
         },
       )
@@ -187,85 +167,58 @@ export function pensieveRoutes(recordings: Recordings) {
         '/pensieve/recordings/:id/share',
         requireRight('organize'),
         zValidator('json', shareRequest),
-        (c) => {
-          try {
-            return c.json(
-              recordings.share(
-                c.var.access,
-                c.req.param('id'),
-                c.req.valid('json').personId,
-              ),
-            );
-          } catch (error) {
-            return asHttp(error);
-          }
-        },
+        (c) =>
+          c.json(
+            recordings.share(
+              c.var.access,
+              c.req.param('id'),
+              c.req.valid('json').personId,
+            ),
+          ),
       )
       .delete(
         '/pensieve/recordings/:id/share/:personId',
         requireRight('organize'),
-        (c) => {
-          try {
-            return c.json(
-              recordings.unshare(
-                c.var.access,
-                c.req.param('id'),
-                c.req.param('personId'),
-              ),
-            );
-          } catch (error) {
-            return asHttp(error);
-          }
-        },
+        (c) =>
+          c.json(
+            recordings.unshare(
+              c.var.access,
+              c.req.param('id'),
+              c.req.param('personId'),
+            ),
+          ),
       )
       .put(
         '/pensieve/recordings/:id/labels',
         requireRight('organize'),
         zValidator('json', setLabelsRequest),
-        (c) => {
-          try {
-            return c.json(
-              recordings.setLabels(
-                c.var.access,
-                c.req.param('id'),
-                c.req.valid('json').labels,
-              ),
-            );
-          } catch (error) {
-            return asHttp(error);
-          }
-        },
+        (c) =>
+          c.json(
+            recordings.setLabels(
+              c.var.access,
+              c.req.param('id'),
+              c.req.valid('json').labels,
+            ),
+          ),
       )
       .put(
         '/pensieve/recordings/:id/marks',
         requireRight('organize'),
         zValidator('json', setMarksRequest),
-        (c) => {
-          try {
-            return c.json(
-              recordings.setMarks(
-                c.var.access,
-                c.req.param('id'),
-                c.req.valid('json').marks,
-              ),
-            );
-          } catch (error) {
-            return asHttp(error);
-          }
-        },
+        (c) =>
+          c.json(
+            recordings.setMarks(
+              c.var.access,
+              c.req.param('id'),
+              c.req.valid('json').marks,
+            ),
+          ),
       )
       .post(
         '/pensieve/recordings/:id/transcribe',
         requireRight('organize'),
-        (c) => {
-          try {
-            return c.json(
-              recordings.requestTranscript(c.var.access, c.req.param('id')),
-            );
-          } catch (error) {
-            return asHttp(error);
-          }
-        },
+        (c) =>
+          c.json(recordings.requestTranscript(c.var.access, c.req.param('id'))),
       )
       .get('/pensieve/recordings/:id/subtitles', requireRight('read'), (c) => {
         const row = recordings.find(c.var.access, c.req.param('id'));
@@ -279,19 +232,14 @@ export function pensieveRoutes(recordings: Recordings) {
         '/pensieve/recordings/:id/redo',
         requireRight('organize'),
         zValidator('json', redoRequest),
-        (c) => {
-          try {
-            return c.json(
-              recordings.redo(
-                c.var.access,
-                c.req.param('id'),
-                c.req.valid('json').step,
-              ),
-            );
-          } catch (error) {
-            return asHttp(error);
-          }
-        },
+        (c) =>
+          c.json(
+            recordings.redo(
+              c.var.access,
+              c.req.param('id'),
+              c.req.valid('json').step,
+            ),
+          ),
       )
   );
 }

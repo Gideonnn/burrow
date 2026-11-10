@@ -28,7 +28,7 @@ import {
 import { and, desc, eq, inArray, like, or } from 'drizzle-orm';
 import { z } from 'zod';
 import { type Audio, STORED_EXTENSION } from './audio';
-import { LabelError, Labels } from './labels';
+import { Labels } from './labels';
 import {
   hasNotes,
   NOTES_SKILLS,
@@ -293,28 +293,21 @@ export class Recordings {
     );
   }
 
-  addLabel(access: Access, name: string) {
-    const label = this.labels.ensure(access.personId, name);
+  // With how many visible recordings carry it.
+  private counted(access: Access, label: { id: string }) {
     return this.listLabels(access).find((l) => l.id === label.id)!;
   }
 
+  addLabel(access: Access, name: string) {
+    return this.counted(access, this.labels.ensure(access.personId, name));
+  }
+
   renameLabel(access: Access, id: string, name: string) {
-    try {
-      const label = this.labels.rename(access.personId, id, name);
-      return this.listLabels(access).find((l) => l.id === label.id)!;
-    } catch (error) {
-      if (error instanceof LabelError) throw new RecordingError(error.message);
-      throw error;
-    }
+    return this.counted(access, this.labels.rename(access.personId, id, name));
   }
 
   removeLabel(access: Access, id: string) {
-    try {
-      this.labels.remove(access.personId, id);
-    } catch (error) {
-      if (error instanceof LabelError) throw new RecordingError(error.message);
-      throw error;
-    }
+    this.labels.remove(access.personId, id);
   }
 
   async remove(access: Access, id: string) {
