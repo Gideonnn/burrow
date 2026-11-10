@@ -153,6 +153,13 @@ extension APIClient {
         let _: Empty = try await call("POST", "api/filtered/\(id)/restore")
     }
 
+    /// Inbox mail the bot thought might be spam, waiting for the person.
+    public func doubts() async throws -> [FilteredEntry] { try await call("GET", "api/doubts") }
+
+    public func settleDoubt(_ id: String, spam: Bool) async throws {
+        let _: Empty = try await call("POST", "api/doubts/\(id)/\(spam ? "spam" : "not-spam")")
+    }
+
     public func drafts() async throws -> [Draft] { try await call("GET", "api/drafts") }
 
     /// Prepares a draft on the server; it appears under Concepten to review and send.

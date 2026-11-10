@@ -79,7 +79,7 @@ struct AgentSettings: View {
                 if rules.isEmpty { Text("Nog niets geleerd.").foregroundStyle(.secondary) }
                 ForEach(rules) { rule in
                     HStack {
-                        Text(rule.text)
+                        Text(rule.label)
                         Spacer()
                         Button(role: .destructive) {
                             Task {

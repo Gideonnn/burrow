@@ -3,6 +3,7 @@ import {
   aiSearchRequest,
   createDraftRequest,
   type FolderCount,
+  type LearnedRule,
   mailboxOrderRequest,
   type MailboxSummary,
   messageActionsRequest,
@@ -12,6 +13,7 @@ import {
   type PeopleResponse,
   rankRequest,
   type RankResponse,
+  ruleKind,
   searchFilterParams,
   type SearchResponse,
   type SearchScope,
@@ -456,9 +458,9 @@ export function hedwigRoutes({
           if (!row || !canSeeMailbox(c.var.access, row.mailboxId)) {
             throw notFound();
           }
-          const updated = await providerCall(() =>
-            mail.apply(row.id, c.req.valid('json').ops),
-          );
+          const { ops } = c.req.valid('json');
+          const updated = await providerCall(() => mail.apply(row.id, ops));
+          triage.learnFromHand(row, ops, c.var.access);
           const facts = factsFor(c.var.db, [row.id]).get(row.id) ?? null;
           const [view] = sharing.decorate(c.var.access.personId, [
             c.var.access.factsOnly
@@ -623,11 +625,32 @@ export function hedwigRoutes({
         }
         return c.json({ restored: true });
       })
+      // Inbox mail the bot was unsure about; the person answers spam or not.
+      .get('/doubts', requireRight('read'), (c) =>
+        c.json(triage.listDoubts(c.var.access)),
+      )
+      .post(
+        '/doubts/:id/:verdict{spam|not-spam}',
+        requireRight('organize'),
+        async (c) => {
+          const verdict = ruleKind.parse(c.req.param('verdict'));
+          await providerCall(() =>
+            triage
+              .settleDoubt(c.req.param('id'), verdict, c.var.access)
+              .catch((error: Error) => {
+                throw error.message === 'not found' ? notFound() : error;
+              }),
+          );
+          return c.json({ settled: true });
+        },
+      )
       .get('/rules', requireRight('read'), (c) =>
-        c.json(
+        c.json<LearnedRule[]>(
           triage.rules(c.var.access.personId).map((r) => ({
             id: r.id,
             text: r.text,
+            kind: r.kind,
+            sender: r.sender,
             createdAt: r.createdAt.toISOString(),
           })),
         ),

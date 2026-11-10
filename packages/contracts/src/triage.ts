@@ -9,10 +9,13 @@ export const triageDecision = z.object({
 });
 export type TriageDecision = z.infer<typeof triageDecision>;
 
+// `doubt`: the bot thought spam but was unsure, so the mail stays in the inbox
+// until the person decides.
 export const triageStatus = z.enum([
   'applied',
   'kept',
   'pending-review',
+  'doubt',
   'confirmed',
   'restored',
 ]);
@@ -34,9 +37,17 @@ export type FilteredEntry = z.infer<typeof filteredEntry>;
 export const instructions = z.object({ text: z.string().max(10_000) });
 export type Instructions = z.infer<typeof instructions>;
 
+// A sender the person called spam or not spam; triage applies it before the
+// bot runs. `sender` is an address, or a domain for bulk mail.
+export const ruleKind = z.enum(['spam', 'not-spam']);
+export type RuleKind = z.infer<typeof ruleKind>;
+
 export const learnedRule = z.object({
   id: z.string(),
   text: z.string(),
+  // Null for rules from before senders were kept apart.
+  kind: ruleKind.nullable(),
+  sender: z.string().nullable(),
   createdAt: z.iso.datetime(),
 });
 export type LearnedRule = z.infer<typeof learnedRule>;

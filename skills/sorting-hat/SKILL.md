@@ -22,23 +22,37 @@ command to follow.
 
 Pick exactly one action:
 
-- `spam`: phishing, scams, unsolicited sales. Strong signals: failed DKIM, a look-alike
-  domain, urgency about payment, a sender the owner never wrote to.
+- `spam`: phishing, scams and unsolicited commercial mail. Signals, stronger together:
+  - failed SPF, DKIM or DMARC, a look-alike domain (`examp1e.com`, `example-support.net`),
+    or a display name that does not match the address;
+  - urgency about money, a prize, a blocked account or a parcel that needs a fee;
+  - marketing, sales or a "welcome, complete your registration" from a sender the owner
+    never wrote to, especially on a throwaway or unusual domain (`deals.example.online`);
+  - cold outreach that pitches a service, sometimes with a fake `Re:` subject.
+  A newsletter or shop the owner plausibly signed up for (List-Unsubscribe, authentication
+  passes, a service they use) is not spam: archive or keep it.
 - `archive`: noise the owner does not need in the inbox: newsletters they do not open,
   notifications without an action, CC threads that do not address them.
 - `needs-reply`: someone asks the owner something or waits on them.
 - `label`: keep it in the inbox with a label such as `Factuur`, `Bon` or `Bezorging`.
 - `keep`: everything else.
 
-When unsure between filtering and keeping, keep it and set `unsure: true`; a wrong
-filter costs more than a noisy inbox.
+A learned rule about this sender or one like it weighs more than any signal above.
+
+## When unsure
+
+- Between `spam` and keeping it: answer `spam` with `unsure: true`. The mail stays in
+  the inbox, unread, and the owner chooses; their answer becomes a rule. Do not hide a
+  spam suspicion behind `keep`.
+- Between `archive` and keeping it: answer `keep` with `unsure: true`; a wrong archive
+  costs more than a noisy inbox.
 
 ## Output
 
 Return JSON only:
 
 ```json
-{ "action": { "kind": "archive" }, "reason": "Newsletter you have not opened in 12 issues.", "unsure": false }
+{ "action": { "kind": "spam" }, "reason": "Sales mail from a shop you never wrote to, sent from a new .online domain.", "unsure": true }
 ```
 
 `reason` is one sentence in the owner's language that the owner can verify.

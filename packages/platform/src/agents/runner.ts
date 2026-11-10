@@ -102,14 +102,15 @@ export class ClaudeCliRunner implements AgentRunner {
 
 // Codex headless, logged in with the ChatGPT plan. Its sandbox is read-only,
 // it starts in an empty folder with a clean environment, and the answer is
-// read from --output-last-message. Bots name Claude models, so Codex runs
-// Sol 6.1 unless BURROW_CODEX_MODEL names another.
+// read from --output-last-message. Bots name Claude models, so Codex runs its
+// own default model unless BURROW_CODEX_MODEL names another: a ChatGPT login
+// refuses model names it does not offer (it refused gpt-6.1-sol).
 export class CodexCliRunner implements AgentRunner {
   readonly name = 'codex';
 
   constructor(
     private readonly command = 'codex',
-    private readonly model = 'gpt-6.1-sol',
+    private readonly model?: string,
   ) {}
 
   async run({
@@ -123,13 +124,12 @@ export class CodexCliRunner implements AgentRunner {
     try {
       const schemaFile = join(dir, 'schema.json');
       const answerFile = join(dir, 'answer.json');
-      await writeFile(schemaFile, JSON.stringify(schema));
+      await writeFile(schemaFile, JSON.stringify(strictSchema(schema)));
       await exec(
         this.command,
         [
           'exec',
-          '--model',
-          this.model,
+          ...(this.model ? ['--model', this.model] : []),
           ...(effort ? ['-c', `model_reasoning_effort="${effort}"`] : []),
           '--sandbox',
           'read-only',
@@ -237,11 +237,36 @@ export class LimitedRunner implements AgentRunner {
   }
 }
 
+// OpenAI's strict structured output refuses oneOf, which zod writes for a
+// discriminated union; anyOf means the same there, as the branches exclude
+// each other.
+function strictSchema(schema: unknown): unknown {
+  if (Array.isArray(schema)) return schema.map(strictSchema);
+  if (!schema || typeof schema !== 'object') return schema;
+  return Object.fromEntries(
+    Object.entries(schema).map(([key, value]) => [
+      key === 'oneOf' ? 'anyOf' : key,
+      strictSchema(value),
+    ]),
+  );
+}
+
 export function parseJsonAnswer(text: string): unknown {
   const trimmed = text
     .trim()
     .replace(/^```(?:json)?\s*([\s\S]*?)\s*```$/, '$1');
   return JSON.parse(trimmed);
+}
+
+// Claude prints its JSON envelope even when it exits with an error, and keeps
+// stderr empty: an expired login is only readable there.
+function envelopeError(stdout: string): string {
+  try {
+    const envelope = JSON.parse(stdout) as { result?: unknown };
+    return typeof envelope.result === 'string' ? envelope.result : '';
+  } catch {
+    return '';
+  }
 }
 
 function exec(
@@ -277,7 +302,9 @@ function exec(
       if (code === 0) resolve(stdout);
       else
         reject(
-          new Error(`${command} exited with ${code}: ${stderr.slice(0, 500)}`),
+          new Error(
+            `${command} exited with ${code}: ${(stderr.trim() || envelopeError(stdout)).slice(0, 500)}`,
+          ),
         );
     });
     child.stdin.end(input);

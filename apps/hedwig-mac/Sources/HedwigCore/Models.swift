@@ -180,8 +180,9 @@ public struct MessageDetail: Codable, Hashable, Identifiable, Sendable {
     public var share: MessageShare?
     public var shareSuggestion: ShareSuggestionNote?
 
-    /// Remote images tell the sender the mail was opened; in Spam they stay off,
-    /// with no offer, until the person says it is not spam.
+    /// Remote images tell the sender the mail was opened; in Spam they load
+    /// only when the person asks for this one message, never by the "Altijd"
+    /// setting. A doubt case is the same (`AppModel.loadsRemoteImagesUnasked`).
     public var mayLoadRemoteImages: Bool { folder != .spam }
 
     public var summary: MessageSummary {
@@ -277,7 +278,21 @@ public struct Draft: Codable, Hashable, Identifiable, Sendable {
 public struct LearnedRule: Codable, Hashable, Identifiable, Sendable {
     public var id: String
     public var text: String
+    /// "spam" or "not-spam" for a sender the person corrected; nil for older
+    /// rules, which only have their text.
+    public var kind: String?
+    /// An address, or a sending domain for bulk mail.
+    public var sender: String?
     public var createdAt: Date
+
+    public var label: String {
+        guard let sender else { return text }
+        switch kind {
+        case "spam": return "Spam: \(sender)"
+        case "not-spam": return "Geen spam: \(sender)"
+        default: return text
+        }
+    }
 }
 
 public struct ComposeDraft: Codable, Hashable, Sendable {

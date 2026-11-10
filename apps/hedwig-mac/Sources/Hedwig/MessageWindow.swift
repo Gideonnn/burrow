@@ -26,7 +26,7 @@ struct MessageWindow: View {
                             .padding(.top, 18)
                             .padding(.bottom, 16)
                         Divider().padding(.horizontal, 28)
-                        MessageBody(message: message, allowRemote: message.mayLoadRemoteImages && loadRemoteImages, height: $bodyHeight)
+                        MessageBody(message: message, allowRemote: loadRemoteImages && model.loadsRemoteImagesUnasked(message), height: $bodyHeight)
                     }
                 }
             } else if let failure {

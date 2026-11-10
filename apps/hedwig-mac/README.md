@@ -48,10 +48,14 @@ and optionally `HEDWIG_OPEN` with any place `burrowctl hedwig show` takes (`filt
   on Spam or Archief shows what still waits; the mailbox row shows only its unread
   inbox count from the server (all mail, not the loaded page). The list header counts the
   whole folder the same way.
-- Spam stays unread and never loads remote images, not even on request, until you say
-  "Geen spam"; then it goes back to the inbox as read.
-- The household's outings live in Hogsmeade (`apps/hogsmeade-mac`); Hedwig only keeps
-  reminding of the day and of deadlines with notifications until Hogsmeade does (see the
+- Spam stays unread and loads remote images only when you click "Afbeeldingen laden" for
+  that one message (never by the "Altijd" setting); "Geen spam" sends it back to the
+  inbox as read. Mail the bot thinks might be spam stays in the inbox with a marker in the
+  list and "Kreacher twijfelt of dit spam is" above it: "Spam" or "Geen spam" decide, and
+  its images wait the same way.
+- "Markeer als spam" (⇧⌘J), moving spam back and both doubt answers teach the server the
+  sender; Settings › Geleerd van jouw controles lists those rules to remove.
+- The household's outings live in Hogsmeade (`apps/hogsmeade-mac`), reminders included (see the
   [outings topic](../../.agents/wiki/topics/outings.md)).
 - "Concepten" (per mailbox): drafts prepared by bots or agents through MCP, to review and send.
 - "Taken": what routines propose, to approve or reject. Tasks meant for this Mac run in
