@@ -22,6 +22,7 @@ import { and, asc, desc, eq, gt, like, lt, or } from 'drizzle-orm';
 import { z } from 'zod';
 import { factsFor } from '../facts/store';
 import type { MailService, MessageRow } from '../mail-service';
+import { once } from '../memo';
 import {
   mailboxes,
   messages,
@@ -267,16 +268,12 @@ export class OutingsService {
 
   async setImage(access: Access, id: string, request: SetOutingImageRequest) {
     await this.pictures.set(access, id, request).catch(asOutingError);
-    this.touch(access, id);
-    this.changed(id);
-    return this.get(access, id);
+    return this.saved(access, id);
   }
 
   async clearImage(access: Access, id: string) {
     await this.pictures.clear(id).catch(asOutingError);
-    this.touch(access, id);
-    this.changed(id);
-    return this.get(access, id);
+    return this.saved(access, id);
   }
 
   // --- the line-up --------------------------------------------------------
@@ -287,17 +284,13 @@ export class OutingsService {
     } catch (error) {
       asOutingError(error);
     }
-    this.touch(access, id);
-    this.changed(id);
-    return this.get(access, id);
+    return this.saved(access, id);
   }
 
   removeLineup(access: Access, id: string) {
     this.row(id);
     this.lineups.remove(id);
-    this.touch(access, id);
-    this.changed(id);
-    return this.get(access, id);
+    return this.saved(access, id);
   }
 
   async remove(id: string) {
@@ -374,9 +367,7 @@ export class OutingsService {
         addedBy: access.personId,
       })
       .run();
-    this.touch(access, id);
-    if (notify) this.changed(id);
-    return this.get(access, id);
+    return this.saved(access, id, notify);
   }
 
   updateTicket(
@@ -392,18 +383,14 @@ export class OutingsService {
       .where(eq(outingTickets.id, ticketId))
       .run();
     this.closePersonaliseWhenNamed(access, id);
-    this.touch(access, id);
-    this.changed(id);
-    return this.get(access, id);
+    return this.saved(access, id);
   }
 
   async removeTicket(access: Access, id: string, ticketId: string) {
     const ticket = this.ticket(id, ticketId);
     this.db.delete(outingTickets).where(eq(outingTickets.id, ticketId)).run();
     await rm(join(this.dir(id), ticket.file), { force: true });
-    this.touch(access, id);
-    this.changed(id);
-    return this.get(access, id);
+    return this.saved(access, id);
   }
 
   ticketFile(id: string, ticketId: string) {
@@ -433,9 +420,7 @@ export class OutingsService {
         assigneeId: this.person(request.assigneeId),
       })
       .run();
-    this.touch(access, id);
-    this.changed(id);
-    return this.get(access, id);
+    return this.saved(access, id);
   }
 
   updateTask(
@@ -469,17 +454,13 @@ export class OutingsService {
       )
       .where(eq(outingTasks.id, taskId))
       .run();
-    this.touch(access, id);
-    this.changed(id);
-    return this.get(access, id);
+    return this.saved(access, id);
   }
 
   removeTask(access: Access, id: string, taskId: string) {
     this.task(id, taskId);
     this.db.delete(outingTasks).where(eq(outingTasks.id, taskId)).run();
-    this.touch(access, id);
-    this.changed(id);
-    return this.get(access, id);
+    return this.saved(access, id);
   }
 
   // --- mails --------------------------------------------------------------
@@ -492,10 +473,8 @@ export class OutingsService {
       .values({ outingId: id, messageId: message.id })
       .onConflictDoNothing()
       .run();
-    this.touch(access, id);
     void this.enrich(id);
-    this.changed(id);
-    return this.get(access, id);
+    return this.saved(access, id);
   }
 
   unlink(access: Access, id: string, messageId: string) {
@@ -510,9 +489,7 @@ export class OutingsService {
         ),
       )
       .run();
-    this.touch(access, id);
-    this.changed(id);
-    return this.get(access, id);
+    return this.saved(access, id);
   }
 
   // Order mails become outings by themselves, for whoever's mailbox they
@@ -636,19 +613,14 @@ export class OutingsService {
       .where(eq(outingReads.messageId, message.id))
       .get();
     if (hit) return Promise.resolve(hit.answer);
-    let run = this.reading.get(message.id);
-    if (!run) {
-      run = this.readNow(message)
-        .catch((error: Error) => {
-          console.error(
-            `hedwig: reading outing ${message.id} failed: ${error.message}`,
-          );
-          return null;
-        })
-        .finally(() => this.reading.delete(message.id));
-      this.reading.set(message.id, run);
-    }
-    return run;
+    return once(this.reading, message.id, () =>
+      this.readNow(message).catch((error: Error) => {
+        console.error(
+          `hedwig: reading outing ${message.id} failed: ${error.message}`,
+        );
+        return null;
+      }),
+    );
   }
 
   private async readNow(message: MessageRow): Promise<OutingRead> {
@@ -686,18 +658,13 @@ export class OutingsService {
   // order, reminders, lockers and practical info. Haiku reads each once; what
   // they say fills what the outing still misses, never what someone typed.
   enrich(id: string): Promise<void> {
-    let run = this.enriching.get(id);
-    if (!run) {
-      run = this.enrichNow(id)
-        .catch((error: Error) =>
-          console.error(
-            `hedwig: enriching outing ${id} failed: ${error.message}`,
-          ),
-        )
-        .finally(() => this.enriching.delete(id));
-      this.enriching.set(id, run);
-    }
-    return run;
+    return once(this.enriching, id, () =>
+      this.enrichNow(id).catch((error: Error) =>
+        console.error(
+          `hedwig: enriching outing ${id} failed: ${error.message}`,
+        ),
+      ),
+    );
   }
 
   private async enrichNow(id: string) {
@@ -877,12 +844,15 @@ export class OutingsService {
       .run();
   }
 
-  private touch(access: Access, id: string) {
+  // Records who changed the outing, tells the Macs and returns it.
+  private saved(access: Access, id: string, notify = true) {
     this.db
       .update(outings)
       .set({ updatedBy: access.personId, updatedAt: new Date() })
       .where(eq(outings.id, id))
       .run();
+    if (notify) this.changed(id);
+    return this.get(access, id);
   }
 
   // Both Macs refresh their list; the event says only which outing changed.

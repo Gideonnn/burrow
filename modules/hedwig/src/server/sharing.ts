@@ -42,6 +42,7 @@ import { textOf } from './facts/rules';
 import { FACTS_FEATURE } from './facts/service';
 import { summaries } from './facts/store';
 import type { MailService, MessageRow } from './mail-service';
+import { answerOf, answerResult, Recent } from './memo';
 import {
   mailboxes,
   messageFacts,
@@ -82,10 +83,10 @@ export type SharingOptions = {
 // suggestions of household mail (energy, rent, bookings) to share. The share
 // itself is the platform's `shares` row; who may read it is canSeeMessage.
 export class SharingService {
-  private readonly progressCache = new Map<
-    string,
-    { at: number; value: { waiting: number; done: number | null } }
-  >();
+  private readonly progress = new Recent<{
+    waiting: number;
+    done: number | null;
+  }>(30_000);
 
   constructor(private readonly o: SharingOptions) {}
 
@@ -464,30 +465,31 @@ export class SharingService {
         .filter((id) => this.active(id)),
     progress: (personId) => {
       if (!this.active(personId)) return { waiting: 0, done: null };
-      const cached = this.progressCache.get(personId);
-      if (cached && Date.now() - cached.at < 30_000) return cached.value;
-      const waiting = this.db
-        .select({ n: count() })
-        .from(messages)
-        .innerJoin(mailboxes, eq(mailboxes.id, messages.mailboxId))
-        .innerJoin(messageFacts, eq(messageFacts.messageId, messages.id))
-        .leftJoin(shareSuggestions, eq(shareSuggestions.messageId, messages.id))
-        .where(this.waiting(personId))
-        .get()!.n;
-      const done = this.db
-        .select({ n: count() })
-        .from(shareSuggestions)
-        .where(
-          and(
-            eq(shareSuggestions.ownerId, personId),
-            isNotNull(shareSuggestions.judgedAt),
-          ),
-        )
-        .get()!.n;
-      // Someone with nothing to judge yet sees no row in the runner list.
-      const value = { waiting, done: waiting || done ? done : null };
-      this.progressCache.set(personId, { at: Date.now(), value });
-      return value;
+      return this.progress.get(personId, () => {
+        const waiting = this.db
+          .select({ n: count() })
+          .from(messages)
+          .innerJoin(mailboxes, eq(mailboxes.id, messages.mailboxId))
+          .innerJoin(messageFacts, eq(messageFacts.messageId, messages.id))
+          .leftJoin(
+            shareSuggestions,
+            eq(shareSuggestions.messageId, messages.id),
+          )
+          .where(this.waiting(personId))
+          .get()!.n;
+        const done = this.db
+          .select({ n: count() })
+          .from(shareSuggestions)
+          .where(
+            and(
+              eq(shareSuggestions.ownerId, personId),
+              isNotNull(shareSuggestions.judgedAt),
+            ),
+          )
+          .get()!.n;
+        // Someone with nothing to judge yet sees no row in the runner list.
+        return { waiting, done: waiting || done ? done : null };
+      });
     },
     next: (personId, running, access) => {
       if (!this.active(personId)) return undefined;
@@ -574,7 +576,7 @@ export class SharingService {
   }
 
   private apply(task: TaskRow, result: TaskResult) {
-    const answer = shareAnswer.parse(JSON.parse(result.fields.answer!));
+    const answer = shareAnswer.parse(answerOf(result));
     const ids = this.ids(task);
     const answered = new Map<string, ShareAnswer['mails'][number]>();
     for (const a of answer.mails) {
@@ -637,7 +639,7 @@ export class SharingService {
         }
       }
     });
-    this.progressCache.delete(ownerId);
+    this.progress.forget(ownerId);
     for (const m of [...shared, ...suggested]) this.changed(m, ownerId);
     this.failed(
       ownerId,
@@ -703,7 +705,8 @@ export class SharingService {
         }),
         agent: {
           request: (t) => this.request(t),
-          accept: (_t, raw) => answerResult(shareAnswer.parse(trim(raw))),
+          accept: (_t, raw) =>
+            answerResult('Judged', shareAnswer.parse(trim(raw))),
         },
         apply: async (t, result) => this.apply(t, result),
         failed: (t, error) => this.failed(t.personId, this.ids(t), error),
@@ -714,15 +717,6 @@ export class SharingService {
 
 const senderOf = (m: Pick<MessageRow, 'from'>) =>
   m.from.email.trim().toLowerCase() || null;
-
-function answerResult(answer: unknown): TaskResult {
-  return {
-    summary: 'Judged',
-    fields: { answer: JSON.stringify(answer) },
-    ops: [],
-    draft: null,
-  };
-}
 
 // Small models overshoot limits; a long reason is cut, not a failure.
 function trim(raw: unknown): unknown {

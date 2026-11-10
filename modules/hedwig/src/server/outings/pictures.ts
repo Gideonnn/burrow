@@ -8,6 +8,7 @@ import type {
 import type { Access, Platform } from '@burrow/platform';
 import { eq } from 'drizzle-orm';
 import type { MailService } from '../mail-service';
+import { once } from '../memo';
 import { messages, outingMessages, outings } from '../schema';
 import {
   type FetchPublic,
@@ -121,18 +122,11 @@ export class OutingPictures {
   // Looks for a picture in the background when the outing has none yet;
   // tests await the returned promise.
   pickSoon(id: string): Promise<void> {
-    let run = this.picking.get(id);
-    if (!run) {
-      run = this.pick(id)
-        .catch((error: Error) =>
-          console.error(
-            `hedwig: no picture for outing ${id}: ${error.message}`,
-          ),
-        )
-        .finally(() => this.picking.delete(id));
-      this.picking.set(id, run);
-    }
-    return run;
+    return once(this.picking, id, () =>
+      this.pick(id).catch((error: Error) =>
+        console.error(`hedwig: no picture for outing ${id}: ${error.message}`),
+      ),
+    );
   }
 
   // The largest picture that fits above an outing, from its mails first and

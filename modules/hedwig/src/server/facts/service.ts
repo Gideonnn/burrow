@@ -29,6 +29,7 @@ import {
 } from 'drizzle-orm';
 import { z } from 'zod';
 import type { MailService, MessageRow } from '../mail-service';
+import { answerOf, answerResult, Recent } from '../memo';
 import { mailboxes, messageFacts, messages, messageTemplates } from '../schema';
 import {
   noise,
@@ -76,10 +77,10 @@ export class FactsService {
   // Per person and key scope, the next messages for Winky, newest first, so
   // the backlog is not sorted again for every piece.
   private readonly backlog = new Map<string, string[]>();
-  private readonly progressCache = new Map<
-    string,
-    { at: number; value: { waiting: number; done: number | null } }
-  >();
+  private readonly progress = new Recent<{
+    waiting: number;
+    done: number | null;
+  }>(30_000);
 
   constructor(private readonly o: FactsOptions) {}
 
@@ -377,7 +378,7 @@ export class FactsService {
   }
 
   private applyTemplates(task: TaskRow, result: TaskResult) {
-    const answer = templatesAnswer.parse(JSON.parse(result.fields.answer!));
+    const answer = templatesAnswer.parse(answerOf(result));
     const ids = this.templateIds(task);
     const answered = new Set<string>();
     this.db.transaction((tx) => {
@@ -453,28 +454,26 @@ export class FactsService {
     // Counting the backlog is a scan; runners ask after every piece.
     progress: (personId) => {
       if (!this.enabled(personId)) return { waiting: 0, done: null };
-      const cached = this.progressCache.get(personId);
-      if (cached && Date.now() - cached.at < 30_000) return cached.value;
-      this.ensureTemplates(personId);
-      const waiting = this.db
-        .select({ n: count() })
-        .from(messageFacts)
-        .innerJoin(messages, eq(messages.id, messageFacts.messageId))
-        .where(this.waiting(personId))
-        .get()!.n;
-      const done = this.db
-        .select({ n: count() })
-        .from(messageFacts)
-        .where(
-          and(
-            eq(messageFacts.personId, personId),
-            isNotNull(messageFacts.modelAt),
-          ),
-        )
-        .get()!.n;
-      const value = { waiting, done };
-      this.progressCache.set(personId, { at: Date.now(), value });
-      return value;
+      return this.progress.get(personId, () => {
+        this.ensureTemplates(personId);
+        const waiting = this.db
+          .select({ n: count() })
+          .from(messageFacts)
+          .innerJoin(messages, eq(messages.id, messageFacts.messageId))
+          .where(this.waiting(personId))
+          .get()!.n;
+        const done = this.db
+          .select({ n: count() })
+          .from(messageFacts)
+          .where(
+            and(
+              eq(messageFacts.personId, personId),
+              isNotNull(messageFacts.modelAt),
+            ),
+          )
+          .get()!.n;
+        return { waiting, done };
+      });
     },
     next: (personId, running, access) => {
       if (!this.enabled(personId)) return undefined;
@@ -571,7 +570,7 @@ export class FactsService {
   }
 
   private applyFacts(task: TaskRow, result: TaskResult) {
-    const a = factsAnswer.parse(JSON.parse(result.fields.answer!));
+    const a = factsAnswer.parse(answerOf(result));
     const f = this.db
       .select()
       .from(messageFacts)
@@ -631,7 +630,8 @@ export class FactsService {
         }),
         agent: {
           request: (t) => this.factsRequest(t),
-          accept: (_t, raw) => answerResult(factsAnswer.parse(trimFacts(raw))),
+          accept: (_t, raw) =>
+            answerResult('Indexed', factsAnswer.parse(trimFacts(raw))),
         },
         apply: async (t, result) => this.applyFacts(t, result),
         failed: (t, error) => {
@@ -669,7 +669,7 @@ export class FactsService {
         agent: {
           request: (t) => this.templatesRequest(t),
           accept: (_t, raw) =>
-            answerResult(templatesAnswer.parse(trimTemplates(raw))),
+            answerResult('Indexed', templatesAnswer.parse(trimTemplates(raw))),
         },
         apply: async (t, result) => this.applyTemplates(t, result),
         failed: (t) => this.templatesFailed(this.templateIds(t)),
@@ -718,16 +718,6 @@ function applyTemplate(tx: Tx, t: TemplateRow) {
       ),
     )
     .run();
-}
-
-// The answer travels to apply() inside the generic task result.
-function answerResult(answer: unknown): TaskResult {
-  return {
-    summary: 'Indexed',
-    fields: { answer: JSON.stringify(answer) },
-    ops: [],
-    draft: null,
-  };
 }
 
 const cut = (value: unknown, max: number) =>

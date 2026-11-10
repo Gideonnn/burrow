@@ -9,6 +9,7 @@ import {
 import { and, count, desc, eq, inArray, isNull, notInArray } from 'drizzle-orm';
 import { z } from 'zod';
 import { FACTS_FEATURE } from './facts/service';
+import { Recent } from './memo';
 import { mailboxes, messageFacts, messages, messageVectors } from './schema';
 import { DIMS, type VectorIndex } from './vectors';
 
@@ -44,11 +45,9 @@ function embedText(
 export class EmbeddingsService {
   // Vectors a runner sent, held from accepting the answer until applying it.
   private readonly pending = new Map<string, number[][]>();
-  // Counting is a scan; runners ask after every piece.
-  private readonly counted = new Map<
-    string,
-    { at: number; value: { waiting: number; done: number } }
-  >();
+  private readonly progress = new Recent<{ waiting: number; done: number }>(
+    30_000,
+  );
 
   constructor(
     private readonly platform: Platform,
@@ -80,24 +79,22 @@ export class EmbeddingsService {
       if (!this.platform.settings.enabled(personId, FACTS_FEATURE)) {
         return { waiting: 0, done: null };
       }
-      const cached = this.counted.get(personId);
-      if (cached && Date.now() - cached.at < 30_000) return cached.value;
-      const base = this.db
-        .select({ n: count() })
-        .from(messages)
-        .innerJoin(mailboxes, eq(mailboxes.id, messages.mailboxId))
-        .leftJoin(messageVectors, eq(messageVectors.messageId, messages.id));
-      const waiting = base.where(this.waiting(personId)).get()!.n;
-      const done = this.db
-        .select({ n: count() })
-        .from(messageVectors)
-        .innerJoin(messages, eq(messages.id, messageVectors.messageId))
-        .innerJoin(mailboxes, eq(mailboxes.id, messages.mailboxId))
-        .where(eq(mailboxes.ownerId, personId))
-        .get()!.n;
-      const value = { waiting, done };
-      this.counted.set(personId, { at: Date.now(), value });
-      return value;
+      return this.progress.get(personId, () => {
+        const base = this.db
+          .select({ n: count() })
+          .from(messages)
+          .innerJoin(mailboxes, eq(mailboxes.id, messages.mailboxId))
+          .leftJoin(messageVectors, eq(messageVectors.messageId, messages.id));
+        const waiting = base.where(this.waiting(personId)).get()!.n;
+        const done = this.db
+          .select({ n: count() })
+          .from(messageVectors)
+          .innerJoin(messages, eq(messages.id, messageVectors.messageId))
+          .innerJoin(mailboxes, eq(mailboxes.id, messages.mailboxId))
+          .where(eq(mailboxes.ownerId, personId))
+          .get()!.n;
+        return { waiting, done };
+      });
     },
     next: (personId, running, access) => {
       if (!this.platform.settings.enabled(personId, FACTS_FEATURE))
