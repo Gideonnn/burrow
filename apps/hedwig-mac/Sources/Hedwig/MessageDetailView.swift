@@ -581,16 +581,32 @@ struct SuggestionBar: View {
                             if let draft = model.compose(reply: reply) { openWindow(value: draft) }
                         }
                         .buttonStyle(.bordered)
-                        .clipShape(Capsule())
+                        .buttonBorderShape(.capsule)
                         .fixedSize()
                     }
                 }
                 Spacer()
             }
             .font(.callout)
-            .padding(.horizontal, 24)
-            .padding(.vertical, 12)
-            .background(.bar)
+            .modifier(SuggestionBackground())
+        }
+    }
+}
+
+/// A floating glass bar on macOS 26, the window's bar material before.
+private struct SuggestionBackground: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(macOS 26, *) {
+            content
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .modifier(Glass(shape: Capsule()))
+                .padding(12)
+        } else {
+            content
+                .padding(.horizontal, 24)
+                .padding(.vertical, 12)
+                .background(.bar)
         }
     }
 }

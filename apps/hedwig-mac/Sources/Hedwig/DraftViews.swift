@@ -19,7 +19,7 @@ struct DraftListView: View {
                     Text(draft.subject).font(.subheadline).lineLimit(1)
                     Label("Klaargezet door \(draft.createdBy)", systemImage: "key")
                         .font(.caption)
-                        .foregroundStyle(.blue)
+                        .foregroundStyle(.secondary)
                 }
                 .padding(.vertical, 4)
                 .tag(draft.id)
