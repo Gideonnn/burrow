@@ -230,6 +230,38 @@ final class Household: @unchecked Sendable {
         #expect(server.requests("GET", "/api/lumos/titles/movie/1").count == 2)
     }
 
+    @Test func beherenShowsTheDownloadsAndOnlyAnAdminDeletes() async {
+        let server = server()
+        let manage = Box(#"""
+        {"dataOrigin":"live","busy":[{"title":\#(Fixture.title(2, "Bravo")),"download":{"progress":0.4,"eta":null},"addedAt":null,"removable":true}],
+         "library":[{"title":\#(Fixture.title(1, "Alpha")),"download":null,"addedAt":"2026-11-01T10:00:00Z","removable":true}]}
+        """#)
+        server.on("GET", "/api/lumos/manage") { _ in (200, manage.value) }
+        server.on("DELETE", "/api/lumos/library/movie/1") { _ in
+            manage.value = #"{"dataOrigin":"live","busy":[],"library":[]}"#
+            return (200, #"{"ok":true}"#)
+        }
+        let model = await started(server)
+        await model.show(.manage)
+        #expect(model.title == "Beheren")
+        #expect(model.manageAnswer?.busy.first?.download?.progress == 0.4)
+        #expect(model.manageAnswer?.library.map(\.title.title) == ["Alpha"])
+
+        // A key without the admin right deletes nothing.
+        let alpha = model.manageAnswer!.library[0]
+        #expect(!model.canDelete)
+        await model.removeFromLibrary(alpha)
+        #expect(server.requests("DELETE", "/api/lumos/library/movie/1").isEmpty)
+
+        server.on("GET", "/api/me", json: Fixture.me.replacingOccurrences(of: #""organize"]"#, with: #""organize","admin"]"#))
+        await model.refreshProfile()
+        #expect(model.canDelete)
+        await model.removeFromLibrary(alpha)
+        #expect(server.requests("DELETE", "/api/lumos/library/movie/1").count == 1)
+        #expect(model.toast?.message == "Alpha is van Dobby verwijderd.")
+        #expect(model.manageAnswer?.library.isEmpty == true)
+    }
+
     @Test func chosenSeasonsGoWithYesAndIntoTheToast() async {
         let server = server()
         let model = await started(server)

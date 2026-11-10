@@ -464,6 +464,22 @@ public struct VerdictsResponse: Codable, Sendable {
     public var items: [Verdict]
 }
 
+/// A title on Beheren. `removable`: Radarr or Sonarr manages it, so a
+/// delete through Seerr really removes the files.
+public struct ManageItem: Codable, Sendable, Identifiable {
+    public var title: TitleSummary
+    public var download: Download?
+    public var addedAt: String?
+    public var removable: Bool
+    public var id: TitleRef { title.ref }
+}
+
+public struct ManageResponse: Codable, Sendable {
+    public var dataOrigin: DataOrigin
+    public var busy: [ManageItem]
+    public var library: [ManageItem]
+}
+
 public struct LumosStatus: Codable, Sendable {
     public var dataOrigin: DataOrigin?
     public var catalogue: String?
@@ -582,6 +598,14 @@ extension APIClient {
     }
 
     struct Done: Decodable { var ok: Bool }
+
+    public func manage(scope: ListScope) async throws -> ManageResponse {
+        try await call("GET", "api/lumos/manage", query: scoped(scope))
+    }
+
+    public func removeFromLibrary(_ ref: TitleRef) async throws {
+        let _: Done = try await call("DELETE", "api/lumos/library/\(ref.mediaType.rawValue)/\(ref.tmdbId)")
+    }
 
     public func retryRequest(_ ref: TitleRef) async throws {
         let _: Done = try await call("POST", "api/lumos/requests/\(ref.mediaType.rawValue)/\(ref.tmdbId)/retry")

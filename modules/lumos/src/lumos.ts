@@ -8,6 +8,8 @@ import {
   type ListEntry,
   type ListScope,
   type LumosStatus,
+  type ManageItem,
+  type ManageResponse,
   type MediaType,
   passKinds,
   type PlayResponse,
@@ -26,6 +28,7 @@ import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
 import {
   type CatalogueProvider,
   type CatalogueTitle,
+  type Holding,
   type MediaRequester,
   overlap,
   refKey,
@@ -95,6 +98,8 @@ const noEffects = (): ChangeEffects => ({
 export class Lumos {
   readonly requests?: LumosRequests;
 
+  private readonly manager?: MediaRequester;
+
   constructor(
     private readonly platform: Platform,
     private readonly catalogue?: CatalogueProvider,
@@ -103,6 +108,7 @@ export class Lumos {
   ) {
     if (requester && catalogue?.origin === 'live') {
       this.requests = new LumosRequests(platform, requester);
+      this.manager = requester;
     }
   }
 
@@ -961,6 +967,42 @@ export class Lumos {
     this.requests?.schedule();
     this.changed(access, scope);
     return { changeId };
+  }
+
+  // --- managing --------------------------------------------------------------
+
+  private needManager() {
+    if (!this.manager) throw new NotConnected();
+    return this.manager;
+  }
+
+  async manage(access: Access, scope: ListScope): Promise<ManageResponse> {
+    const { busy, library } = await this.needManager().holdings();
+    const ctx = this.context(access, scope);
+    const item = (h: Holding): ManageItem => ({
+      title: this.summary(h.title, ctx),
+      download: h.download,
+      addedAt: h.addedAt,
+      removable: h.removable,
+    });
+    return {
+      dataOrigin: 'live',
+      busy: busy.map(item),
+      library: library.map(item),
+    };
+  }
+
+  // Deletes the files on the media server. A person's own action: the route
+  // asks `admin`, which no bot can hold. Lists stay as they are; the request
+  // turns dropped, so a new "Ja" asks for the title again.
+  async removeFromLibrary(ref: TitleRef) {
+    await this.needManager().remove(ref);
+    this.requests?.forget(ref);
+    this.platform.events.emit({
+      data: { type: 'lumos.changed', scope: 'shared' },
+      visibleTo: () => true,
+    });
+    return { ok: true as const };
   }
 
   retryRequest(ref: TitleRef) {

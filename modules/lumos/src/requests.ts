@@ -230,6 +230,12 @@ export class LumosRequests {
     return true;
   }
 
+  // The title left the media server, so the next wish asks again.
+  forget(ref: TitleRef, now = new Date()) {
+    const row = this.get(ref);
+    if (row) this.set(row, { status: 'dropped', nextAttemptAt: null }, now);
+  }
+
   private changed() {
     this.platform.events.emit({
       data: { type: 'lumos.changed', scope: 'shared' },

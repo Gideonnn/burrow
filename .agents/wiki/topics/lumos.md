@@ -107,9 +107,20 @@ checks the title is still on a list (else `dropped`) and whether Seerr already k
 (`exists`, nothing asked), then `POST /request` with Seerr's own defaults (no `is4k`,
 which is a separate 4K server). Failures retry with backoff for eight attempts, then
 `failed` with "Opnieuw proberen" (`POST /api/lumos/requests/:mediaType/:tmdbId/retry`). A
-sent request is never cancelled; removing a title leaves Seerr alone. Series ask the
+sent request is never cancelled; removing a title from a list leaves Seerr alone. Series ask the
 seasons chosen in the season menu, season 1 when none was chosen (and always with `J`).
 The fixtures never request.
+
+## Beheren
+
+`GET manage` reads Seerr's `/media` fresh (pending, processing, and `allavailable` by
+`mediaAdded`): `busy` with the live download progress, `library` with what Jellyfin holds.
+`DELETE library/:mediaType/:tmdbId` needs `admin` (no bot can hold it) and asks Seerr's
+`DELETE /media/{id}/file`, which has Radarr or Sonarr delete the title with its files,
+then `DELETE /media/{id}`, so Seerr forgets it and its requests. The outbox row turns
+`dropped`, so a new "Ja" asks again; lists stay. Only a title with Seerr's
+`externalServiceId` is `removable`: for a file copied in by hand Seerr would only mark it
+deleted and leave the file, so Lumos refuses with 409.
 
 ## Watching
 
@@ -178,7 +189,9 @@ The pages, in the sidebar's order:
   (Populair, Nieuw, Binnenkort, Best beoordeeld, Trending, Verborgen parels), a genre
   menu, a decade menu and "Nederlands"; the next page loads while scrolling and when the
   keyboard reaches the last lines. Taste never sorts a shelf.
-- **Klaar in Jellyfin**, **Smaak**, **Overgeslagen** as before.
+- **Beheren**: what is requested, waiting or downloading with its progress, and what
+  Jellyfin holds with a delete for admins (see Beheren above).
+- **Smaak**, **Overgeslagen** as before.
 
 A title opens as a page over the rows (`TitlePage.swift`), not in a drawer: the still
 across the top, the trailer or the stills beside the facts and the actions, then scores

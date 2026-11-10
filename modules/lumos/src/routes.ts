@@ -12,6 +12,7 @@ import { Hono } from 'hono';
 import { createMiddleware } from 'hono/factory';
 import { HTTPException } from 'hono/http-exception';
 import { z } from 'zod';
+import { NotRemovable } from './catalogue';
 import { JellyfinError } from './jellyfin';
 import { LumosError, type Lumos, NoPlayer, NotConnected } from './lumos';
 import { SeerrError } from './seerr';
@@ -31,6 +32,9 @@ const asHttp = (error: unknown): never => {
     throw new HTTPException(error.status === 409 ? 409 : 503, {
       message: error.message,
     });
+  }
+  if (error instanceof NotRemovable) {
+    throw new HTTPException(409, { message: error.message });
   }
   if (
     error instanceof NotConnected ||
@@ -54,7 +58,8 @@ const attempt = async <T>(work: () => T | Promise<T>) => {
   }
 };
 
-// Catalogue reads need `read`; lists and verdicts `organize`. A personal list
+// Catalogue reads need `read`; lists and verdicts `organize`; deleting files
+// from the media server `admin`, which no bot can hold. A personal list
 // is always the key's own person's: there is no way to name someone else's.
 export function lumosRoutes(lumos: Lumos) {
   const enabled = createMiddleware<PlatformEnv>(async (c, next) => {
@@ -226,6 +231,26 @@ export function lumosRoutes(lumos: Lumos) {
             lumos.undoVerdict(c.var.access, c.req.param('id')),
           ),
         ),
+      )
+      .get(
+        '/lumos/manage',
+        requireRight('read'),
+        zValidator('query', scoped),
+        async (c) =>
+          c.json(
+            await attempt(() =>
+              lumos.manage(c.var.access, c.req.valid('query').scope),
+            ),
+          ),
+      )
+      .delete(
+        '/lumos/library/:mediaType/:tmdbId',
+        requireRight('admin'),
+        zValidator('param', ref),
+        async (c) =>
+          c.json(
+            await attempt(() => lumos.removeFromLibrary(c.req.valid('param'))),
+          ),
       )
       .post(
         '/lumos/requests/:mediaType/:tmdbId/retry',

@@ -53,11 +53,11 @@ public func controlState(_ model: LumosModel) -> [String: Any] {
 @MainActor
 public func registerCommands(_ service: ControlService, model: LumosModel) {
     service.register(
-        "show", help: "Show a page: discover, explore, list, movies, series, available, taste or passed; optionally for shared or mine.",
-        arguments: [.init("page", "discover, explore, list, movies, series, available, taste or passed"), .init("scope", "shared or mine")]
+        "show", help: "Show a page: discover, explore, list, movies, series, manage, taste or passed; optionally for shared or mine.",
+        arguments: [.init("page", "discover, explore, list, movies, series, manage, taste or passed"), .init("scope", "shared or mine")]
     ) { request in
         guard let page = LumosModel.Page(rawValue: request["page"] as? String ?? "discover"), page != .search else {
-            throw ControlError("page is discover, explore, list, movies, series, available, taste or passed")
+            throw ControlError("page is discover, explore, list, movies, series, manage, taste or passed")
         }
         if let text = request["scope"] as? String {
             guard let scope = ListScope(rawValue: text) else { throw ControlError("scope is shared or mine") }

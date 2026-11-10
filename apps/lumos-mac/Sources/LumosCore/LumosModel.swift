@@ -10,7 +10,7 @@ import Observation
 @Observable
 public final class LumosModel {
     public enum Page: String, CaseIterable, Sendable {
-        case discover, explore, list, movies, series, available, taste, passed, search
+        case discover, explore, list, movies, series, manage, taste, passed, search
     }
 
     public enum Focus: Sendable {
@@ -83,6 +83,8 @@ public final class LumosModel {
     public private(set) var loaded: [TitleRow] = []
     public private(set) var searchCredits: [Credit] = []
     public private(set) var verdictItems: [Verdict] = []
+    /// Beheren: what the media server is busy with, and what it holds.
+    public private(set) var manageAnswer: ManageResponse?
     public private(set) var listCount = 0
     public private(set) var passedCount = 0
     public private(set) var isLoading = false
@@ -308,7 +310,7 @@ public final class LumosModel {
         case .list: scope == .shared ? "Onze lijst" : "Jouw lijst"
         case .movies: "Films"
         case .series: "Series"
-        case .available: "Klaar in Jellyfin"
+        case .manage: "Beheren"
         case .taste: "Smaak"
         case .passed: "Overgeslagen"
         case .search: "Zoeken"
@@ -383,9 +385,10 @@ public final class LumosModel {
                     }
                 }
                 loaded = rows
-            case .available:
-                let items = try await api.titles(scope: scope, type: nil, available: true).items
-                loaded = [TitleRow(key: "library-\(page.rawValue)", title: title, subtitle: "\(items.count) titels", items: items, grid: true)]
+            case .manage:
+                manageAnswer = try await api.manage(scope: scope)
+                loaded = []
+                followManage()
             case .movies, .series:
                 let type: MediaType = page == .movies ? .movie : .tv
                 var state = browse[type] ?? Browse()
@@ -717,6 +720,34 @@ public final class LumosModel {
             try? await Task.sleep(for: .seconds(seconds))
             guard !Task.isCancelled, self?.inspected == ref else { return }
             await self?.loadDetail(ref)
+        }
+    }
+
+    private var manageTask: Task<Void, Never>?
+
+    /// While something downloads or waits, Beheren looks again now and then.
+    private func followManage() {
+        manageTask?.cancel()
+        guard page == .manage, manageAnswer?.busy.isEmpty == false, let seconds = progressSeconds else { return }
+        manageTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(seconds))
+            guard !Task.isCancelled, let self, page == .manage, let api else { return }
+            if let answer = try? await api.manage(scope: scope) { manageAnswer = answer }
+            followManage()
+        }
+    }
+
+    /// Deleting files is for a household admin; no bot can hold that right.
+    public var canDelete: Bool { profile?.isAdmin == true }
+
+    public func removeFromLibrary(_ item: ManageItem) async {
+        guard let api, canDelete else { return }
+        do {
+            try await api.removeFromLibrary(item.id)
+            show("\(item.title.title) is van Dobby verwijderd.")
+            await reload()
+        } catch {
+            report(error)
         }
     }
 

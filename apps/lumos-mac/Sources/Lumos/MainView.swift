@@ -112,7 +112,7 @@ struct Sidebar: View {
             Section {
                 Label("Films", systemImage: "film").tag(LumosModel.Page.movies)
                 Label("Series", systemImage: "tv").tag(LumosModel.Page.series)
-                Label("Klaar in Jellyfin", systemImage: "checkmark.circle").tag(LumosModel.Page.available)
+                Label("Beheren", systemImage: "externaldrive").tag(LumosModel.Page.manage)
             } header: {
                 SidebarSectionHeader("Bibliotheek")
             }
@@ -208,6 +208,7 @@ struct ContentArea: View {
                 switch model.page {
                 case .passed: PassedPage()
                 case .taste: TastePage()
+                case .manage: ManagePage()
                 default: CardPage(focused: focused)
                 }
             }

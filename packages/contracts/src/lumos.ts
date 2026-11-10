@@ -349,6 +349,24 @@ export const verdictsResponse = z.object({
   items: z.array(verdict),
 });
 
+// A title on the Beheren page: what the media server is busy with, and what
+// it holds. `removable`: Radarr or Sonarr manages it, so deleting through
+// Seerr really removes the files; a file added by hand it never touches.
+export const manageItem = z.object({
+  title: titleSummary,
+  download: download.nullable(),
+  addedAt: z.string().nullable(),
+  removable: z.boolean(),
+});
+export type ManageItem = z.infer<typeof manageItem>;
+
+export const manageResponse = z.object({
+  dataOrigin,
+  busy: z.array(manageItem),
+  library: z.array(manageItem),
+});
+export type ManageResponse = z.infer<typeof manageResponse>;
+
 export const lumosStatus = z.object({
   // null: no catalogue is connected ("niet gekoppeld").
   dataOrigin: dataOrigin.nullable(),

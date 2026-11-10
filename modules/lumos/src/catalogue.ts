@@ -115,7 +115,21 @@ export interface MediaRequester {
     ref: TitleRef,
     seasons: number[] | null,
   ): Promise<{ requestId: number | null; existed: boolean }>;
+  // What the media server is busy with and what it holds, read fresh.
+  holdings(): Promise<{ busy: Holding[]; library: Holding[] }>;
+  // Deletes the files through Radarr or Sonarr and forgets the title, so a
+  // new wish asks for it again. Only for a title Radarr or Sonarr manages.
+  remove(ref: TitleRef): Promise<void>;
 }
+
+export class NotRemovable extends Error {}
+
+export type Holding = {
+  title: CatalogueTitle;
+  download: Download | null;
+  addedAt: string | null;
+  removable: boolean;
+};
 
 // How much two titles share: traits count double, genres once.
 export function overlap(a: CatalogueTitle, b: CatalogueTitle) {

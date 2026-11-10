@@ -5,16 +5,18 @@ import type {
   Score,
   Trailer,
 } from '@burrow/contracts';
-import type {
-  BrowsePage,
-  BrowseQuery,
-  CatalogueHit,
-  CatalogueProvider,
-  CatalogueTitle,
-  MediaRequester,
-  MediaState,
-  Person,
-  TitleRef,
+import {
+  type BrowsePage,
+  type BrowseQuery,
+  type CatalogueHit,
+  type CatalogueProvider,
+  type CatalogueTitle,
+  type Holding,
+  type MediaRequester,
+  type MediaState,
+  NotRemovable,
+  type Person,
+  type TitleRef,
 } from './catalogue';
 
 // The real catalogue: the household's Seerr, which serves TMDB's metadata,
@@ -52,7 +54,11 @@ export class SeerrError extends Error {
 }
 
 type MediaInfo = {
+  id?: number;
   status?: number;
+  // Radarr's or Sonarr's own id: set once one of them manages the title.
+  externalServiceId?: number | null;
+  mediaAddedAt?: string | null;
   mediaType?: string;
   tmdbId?: number;
   requests?: { id?: number }[];
@@ -273,7 +279,9 @@ export class SeerrCatalogue implements CatalogueProvider, MediaRequester {
     if (!res.ok) {
       throw new SeerrError(`Seerr antwoordde HTTP ${res.status}`, res.status);
     }
-    return (await res.json()) as T;
+    // A delete answers 204 without a body.
+    const text = await res.text();
+    return (text ? JSON.parse(text) : undefined) as T;
   }
 
   private async genreData() {
@@ -912,6 +920,93 @@ export class SeerrCatalogue implements CatalogueProvider, MediaRequester {
         return { requestId: null, existed: true };
       }
       throw error;
+    } finally {
+      this.forget(ref);
+    }
+  }
+
+  // --- managing -------------------------------------------------------------
+
+  private async media(filter: string, sort?: string) {
+    const all: MediaInfo[] = [];
+    for (let page = 0; page < 10; page++) {
+      const answer = await this.call<{
+        pageInfo?: { pages?: number };
+        results?: MediaInfo[];
+      }>('/media', { filter, sort, take: 100, skip: page * 100 });
+      all.push(...(answer.results ?? []));
+      if (page + 1 >= (answer.pageInfo?.pages ?? 1)) break;
+    }
+    return all;
+  }
+
+  // The titles come from the cache; status and download never do, so the
+  // page shows how far a download is right now.
+  private async holding(info: MediaInfo): Promise<Holding | null> {
+    const mediaType =
+      info.mediaType === 'tv'
+        ? 'tv'
+        : info.mediaType === 'movie'
+          ? 'movie'
+          : null;
+    if (!mediaType || !info.tmdbId) return null;
+    const title = await this.title({ mediaType, tmdbId: info.tmdbId }).catch(
+      () => undefined,
+    );
+    if (!title) return null;
+    return {
+      title: {
+        ...title,
+        availability: availabilityOf(
+          info,
+          title.releaseDate ?? undefined,
+          this.today(),
+        ),
+      },
+      download: this.download(info),
+      addedAt: info.mediaAddedAt ?? null,
+      removable: info.externalServiceId != null,
+    };
+  }
+
+  async holdings() {
+    const [pending, processing, held] = await Promise.all([
+      this.media('pending'),
+      this.media('processing'),
+      this.media('allavailable', 'mediaAdded'),
+    ]);
+    // A series partly in the library may still be fetching its next season.
+    const fetching = held.filter((m) => m.downloadStatus?.length);
+    const all = async (infos: MediaInfo[]) =>
+      (await Promise.all(infos.map((m) => this.holding(m)))).filter(
+        (h): h is Holding => h !== null,
+      );
+    return {
+      busy: await all([...processing, ...pending, ...fetching]),
+      library: await all(held),
+    };
+  }
+
+  // Seerr asks Radarr or Sonarr to delete the title with its files, then
+  // forgets it, requests included, so it can be asked for again.
+  async remove(ref: TitleRef) {
+    try {
+      const d = await this.call<Details>(`/${ref.mediaType}/${ref.tmdbId}`, {
+        language: LANGUAGE,
+      });
+      const info = d.mediaInfo;
+      if (!info?.id || (info.status ?? 1) < 2) {
+        throw new NotRemovable('Seerr heeft deze titel niet');
+      }
+      if (info.externalServiceId == null) {
+        throw new NotRemovable(
+          ref.mediaType === 'movie'
+            ? 'Radarr beheert deze film niet, dus Lumos kan hem niet verwijderen'
+            : 'Sonarr beheert deze serie niet, dus Lumos kan hem niet verwijderen',
+        );
+      }
+      await this.call(`/media/${info.id}/file`, {}, { method: 'DELETE' });
+      await this.call(`/media/${info.id}`, {}, { method: 'DELETE' });
     } finally {
       this.forget(ref);
     }

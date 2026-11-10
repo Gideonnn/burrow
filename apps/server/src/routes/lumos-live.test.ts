@@ -2,6 +2,7 @@ import {
   browseResponse,
   creditResponse,
   listResponse,
+  manageResponse,
   rowsResponse,
   titleDetail,
   titleSearchResponse,
@@ -15,7 +16,12 @@ import { testHousehold } from '../testing';
 const KEY = 'seerr-service-key-0f9e8d7c6b5a';
 const BASE = 'http://seerr.example.com:5055';
 
-type Media = { status: number; requests?: { id: number }[] };
+type Media = {
+  id?: number;
+  status: number;
+  externalServiceId?: number;
+  requests?: { id: number }[];
+};
 
 // A stand-in for Seerr's API with the shapes of version 3.5.1. Its answers
 // carry the key and user records in places Lumos must never pass on.
@@ -23,6 +29,15 @@ function fakeSeerr() {
   const media = new Map<string, Media>();
   const calls: { method: string; path: string; key: string | null }[] = [];
   const posted: unknown[] = [];
+  const deleted: string[] = [];
+  // In the library: Radarr's own film, and a series copied in by hand.
+  media.set('movie:104', {
+    id: 4,
+    status: 5,
+    externalServiceId: 31,
+    requests: [{ id: 9 }],
+  });
+  media.set('tv:203', { id: 7, status: 4 });
   const discoverCalls: Record<string, string>[] = [];
   let down = false;
   let nextRequest = 500;
@@ -81,9 +96,43 @@ function fakeSeerr() {
           }
         : { results: [] },
     '/discover/tv': () => ({ results: [] }),
-    '/media': () => ({
-      results: [{ mediaType: 'movie', tmdbId: 104, status: 5, settings: leak }],
-    }),
+    '/tv/203': () => series(203, 'Dyke Watch'),
+    '/media': (q) => {
+      const held = (status: number) =>
+        [...media.entries()].flatMap(([key, m]) => {
+          const [mediaType, tmdbId] = key.split(':');
+          return m.status === status
+            ? [{ ...m, mediaType, tmdbId: Number(tmdbId), settings: leak }]
+            : [];
+        });
+      switch (q.get('filter')) {
+        case 'available':
+          return { pageInfo: { pages: 1 }, results: held(5) };
+        case 'allavailable':
+          return { pageInfo: { pages: 1 }, results: [...held(5), ...held(4)] };
+        case 'processing':
+          return {
+            pageInfo: { pages: 1 },
+            results: [
+              {
+                mediaType: 'movie',
+                tmdbId: 101,
+                status: 3,
+                externalServiceId: 32,
+                downloadStatus: [
+                  {
+                    size: 4000,
+                    sizeLeft: 1000,
+                    estimatedCompletionTime: '2026-11-10T22:00:00Z',
+                  },
+                ],
+              },
+            ],
+          };
+        default:
+          return { pageInfo: { pages: 1 }, results: [] };
+      }
+    },
     '/movie/101': () => ({
       ...movie(101, 'Harbour Lights', '2026-03-01'),
       runtime: 104,
@@ -127,7 +176,6 @@ function fakeSeerr() {
     }),
     '/movie/104': () => ({
       ...movie(104, 'Already Home', '2019-01-01'),
-      mediaInfo: { status: 5, requests: [{ id: 9, requestedBy: leak }] },
     }),
     '/tv/202': () => ({
       ...series(202, 'Polder Blues'),
@@ -222,6 +270,14 @@ function fakeSeerr() {
     });
     if (down) throw new TypeError('fetch failed');
     if (url.origin !== BASE) return new Response('{}', { status: 404 });
+    if (init?.method === 'DELETE') {
+      deleted.push(path);
+      const id = Number(path.split('/')[2]);
+      if (!path.endsWith('/file')) {
+        for (const [key, m] of media) if (m.id === id) media.delete(key);
+      }
+      return new Response(null, { status: 204 });
+    }
     if (init?.method === 'POST' && path === '/request') {
       const body = JSON.parse(String(init.body));
       posted.push(body);
@@ -248,6 +304,7 @@ function fakeSeerr() {
     seerr,
     calls,
     posted,
+    deleted,
     discoverCalls,
     media,
     setDown: (value: boolean) => {
@@ -577,5 +634,61 @@ describe('browsing, people and the Zoeker from Seerr', () => {
     const text = await (await h.call(h.adaKey, '/api/lumos/credits/7')).text();
     expect(text).not.toContain(KEY);
     expect(text).not.toContain('ops@example.com');
+  });
+  it('Beheren shows what is under way with its progress, and the library', async () => {
+    const h = household();
+    const page = manageResponse.parse(
+      await h.json(h.adaKey, '/api/lumos/manage'),
+    );
+    expect(
+      page.busy.map((i) => [i.title.tmdbId, i.title.availability, i.download]),
+    ).toEqual([
+      [101, 'downloading', { progress: 0.75, eta: '2026-11-10T22:00:00Z' }],
+    ]);
+    expect(
+      page.library.map((i) => [
+        i.title.title,
+        i.title.availability,
+        i.removable,
+      ]),
+    ).toEqual([
+      ['Already Home', 'available', true],
+      ['Dyke Watch', 'partially-available', false],
+    ]);
+  });
+
+  it('deletes only for an admin, through Seerr, and a new Ja asks again', async () => {
+    const h = household();
+    const admin = h.key(h.ada.id, ['read', 'organize', 'admin']);
+    const remove = (key: string, ref: string) =>
+      h.call(key, `/api/lumos/library/${ref}`, { method: 'DELETE' });
+    await h.put(h.adaKey, 'shared', 'movie/104');
+    await h.later();
+    expect((await h.detail('movie/104')).request?.status).toBe('exists');
+
+    expect((await remove(h.adaKey, 'movie/104')).status).toBe(403);
+    expect(h.deleted).toEqual([]);
+
+    expect((await remove(admin, 'movie/104')).status).toBe(200);
+    expect(h.deleted).toEqual(['/media/4/file', '/media/4']);
+    const film = await h.detail('movie/104');
+    expect(film.availability).toBe('not-requested');
+    expect(film.onList).toBe(true);
+    expect(film.request?.status).toBe('dropped');
+
+    await h.put(h.adaKey, 'shared', 'movie/104');
+    await h.later();
+    expect(h.posted).toEqual([{ mediaType: 'movie', mediaId: 104 }]);
+  });
+
+  it('leaves a title Radarr or Sonarr does not manage, and says why', async () => {
+    const h = household();
+    const admin = h.key(h.ada.id, ['read', 'organize', 'admin']);
+    const res = await h.call(admin, '/api/lumos/library/tv/203', {
+      method: 'DELETE',
+    });
+    expect(res.status).toBe(409);
+    expect(await res.text()).toContain('Sonarr beheert deze serie niet');
+    expect(h.deleted).toEqual([]);
   });
 });

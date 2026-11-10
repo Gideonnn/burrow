@@ -290,6 +290,10 @@ describe('lists', () => {
           asked.push(ref);
           return { requestId: 1, existed: false };
         },
+        holdings: async () => ({ busy: [], library: [] }),
+        remove: async (ref) => {
+          asked.push(ref);
+        },
       },
     });
     await h.add(h.adaKey, 'shared', HOLDOVERS);
