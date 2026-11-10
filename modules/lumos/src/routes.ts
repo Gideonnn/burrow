@@ -51,17 +51,10 @@ const asHttp = (error: unknown): never => {
   throw error;
 };
 
-const attempt = async <T>(work: () => T | Promise<T>) => {
-  try {
-    return await work();
-  } catch (error) {
-    return asHttp(error);
-  }
-};
-
 // Catalogue reads need `read`; lists and verdicts `organize`; deleting files
 // from the media server `admin`, which no bot can hold. A personal list
 // is always the key's own person's: there is no way to name someone else's.
+// `onError` reaches every route below: Hono's `route()` wraps each handler.
 export function lumosRoutes(lumos: Lumos) {
   const enabled = createMiddleware<PlatformEnv>(async (c, next) => {
     if (
@@ -74,6 +67,7 @@ export function lumosRoutes(lumos: Lumos) {
 
   return (
     new Hono<PlatformEnv>()
+      .onError(asHttp)
       .use('/lumos/*', enabled)
       .get('/lumos/status', requireRight('read'), (c) => c.json(lumos.status()))
       .get(
@@ -82,9 +76,7 @@ export function lumosRoutes(lumos: Lumos) {
         zValidator('query', kinded),
         async (c) => {
           const { scope, type } = c.req.valid('query');
-          return c.json(
-            await attempt(() => lumos.rows(c.var.access, scope, type)),
-          );
+          return c.json(await lumos.rows(c.var.access, scope, type));
         },
       )
       .get(
@@ -100,12 +92,10 @@ export function lumosRoutes(lumos: Lumos) {
         async (c) => {
           const { scope, type, available } = c.req.valid('query');
           return c.json(
-            await attempt(() =>
-              lumos.titles(c.var.access, scope, {
-                mediaType: type,
-                available: available === 'true',
-              }),
-            ),
+            await lumos.titles(c.var.access, scope, {
+              mediaType: type,
+              available: available === 'true',
+            }),
           );
         },
       )
@@ -118,9 +108,7 @@ export function lumosRoutes(lumos: Lumos) {
         ),
         async (c) => {
           const { scope, q, type } = c.req.valid('query');
-          return c.json(
-            await attempt(() => lumos.search(c.var.access, scope, q, type)),
-          );
+          return c.json(await lumos.search(c.var.access, scope, q, type));
         },
       )
       .get(
@@ -130,12 +118,10 @@ export function lumosRoutes(lumos: Lumos) {
         zValidator('query', scoped),
         async (c) =>
           c.json(
-            await attempt(() =>
-              lumos.detail(
-                c.var.access,
-                c.req.valid('query').scope,
-                c.req.valid('param'),
-              ),
+            await lumos.detail(
+              c.var.access,
+              c.req.valid('query').scope,
+              c.req.valid('param'),
             ),
           ),
       )
@@ -146,12 +132,10 @@ export function lumosRoutes(lumos: Lumos) {
         zValidator('query', scoped),
         async (c) =>
           c.json(
-            await attempt(() =>
-              lumos.similar(
-                c.var.access,
-                c.req.valid('query').scope,
-                c.req.valid('param'),
-              ),
+            await lumos.similar(
+              c.var.access,
+              c.req.valid('query').scope,
+              c.req.valid('param'),
             ),
           ),
       )
@@ -161,12 +145,10 @@ export function lumosRoutes(lumos: Lumos) {
         zValidator('query', scoped),
         async (c) =>
           c.json(
-            await attempt(() =>
-              lumos.credit(
-                c.var.access,
-                c.req.valid('query').scope,
-                c.req.param('id'),
-              ),
+            await lumos.credit(
+              c.var.access,
+              c.req.valid('query').scope,
+              c.req.param('id'),
             ),
           ),
       )
@@ -185,13 +167,11 @@ export function lumosRoutes(lumos: Lumos) {
         async (c) => {
           const { scope, ...title } = c.req.valid('param');
           return c.json(
-            await attempt(() =>
-              lumos.addToList(
-                c.var.access,
-                scope,
-                title,
-                c.req.valid('json').seasons,
-              ),
+            await lumos.addToList(
+              c.var.access,
+              scope,
+              title,
+              c.req.valid('json').seasons,
             ),
           );
         },
@@ -220,29 +200,19 @@ export function lumosRoutes(lumos: Lumos) {
         zValidator('json', createVerdictRequest),
         async (c) =>
           c.json(
-            await attempt(() =>
-              lumos.addVerdict(c.var.access, c.req.valid('json')),
-            ),
+            await lumos.addVerdict(c.var.access, c.req.valid('json')),
             201,
           ),
       )
-      .delete('/lumos/verdicts/:id', requireRight('organize'), async (c) =>
-        c.json(
-          await attempt(() =>
-            lumos.undoVerdict(c.var.access, c.req.param('id')),
-          ),
-        ),
+      .delete('/lumos/verdicts/:id', requireRight('organize'), (c) =>
+        c.json(lumos.undoVerdict(c.var.access, c.req.param('id'))),
       )
       .get(
         '/lumos/manage',
         requireRight('read'),
         zValidator('query', scoped),
         async (c) =>
-          c.json(
-            await attempt(() =>
-              lumos.manage(c.var.access, c.req.valid('query').scope),
-            ),
-          ),
+          c.json(await lumos.manage(c.var.access, c.req.valid('query').scope)),
       )
       .delete(
         '/lumos/library/:mediaType/:tmdbId',
@@ -250,33 +220,24 @@ export function lumosRoutes(lumos: Lumos) {
         zValidator('param', ref),
         async (c) =>
           c.json(
-            await attempt(() =>
-              lumos.removeFromLibrary(c.var.access, c.req.valid('param')),
-            ),
+            await lumos.removeFromLibrary(c.var.access, c.req.valid('param')),
           ),
       )
       .post(
         '/lumos/requests/:mediaType/:tmdbId/retry',
         requireRight('organize'),
         zValidator('param', ref),
-        async (c) =>
-          c.json(await attempt(() => lumos.retryRequest(c.req.valid('param')))),
+        (c) => c.json(lumos.retryRequest(c.req.valid('param'))),
       )
-      .post('/lumos/changes/:id/undo', requireRight('organize'), async (c) =>
-        c.json(
-          await attempt(() => lumos.undo(c.var.access, c.req.param('id'))),
-        ),
+      .post('/lumos/changes/:id/undo', requireRight('organize'), (c) =>
+        c.json(lumos.undo(c.var.access, c.req.param('id'))),
       )
       .get(
         '/lumos/browse',
         requireRight('read'),
         zValidator('query', browseQuery),
         async (c) =>
-          c.json(
-            await attempt(() =>
-              lumos.browse(c.var.access, c.req.valid('query')),
-            ),
-          ),
+          c.json(await lumos.browse(c.var.access, c.req.valid('query'))),
       )
       .get(
         '/lumos/explore',
@@ -284,17 +245,14 @@ export function lumosRoutes(lumos: Lumos) {
         zValidator('query', explore),
         async (c) => {
           const { scope, seed, type } = c.req.valid('query');
-          return c.json(
-            await attempt(() => lumos.explore(c.var.access, scope, seed, type)),
-          );
+          return c.json(await lumos.explore(c.var.access, scope, seed, type));
         },
       )
       .get(
         '/lumos/watch/:mediaType/:tmdbId',
         requireRight('read'),
         zValidator('param', ref),
-        async (c) =>
-          c.json(await attempt(() => lumos.watch(c.req.valid('param')))),
+        async (c) => c.json(await lumos.watch(c.req.valid('param'))),
       )
       // Starting a title on the household's screen is an action on the
       // house, so it takes `organize`, like putting a title on a list.
@@ -305,8 +263,9 @@ export function lumosRoutes(lumos: Lumos) {
         zValidator('json', playRequest),
         async (c) =>
           c.json(
-            await attempt(() =>
-              lumos.play(c.req.valid('param'), c.req.valid('json').deviceId),
+            await lumos.play(
+              c.req.valid('param'),
+              c.req.valid('json').deviceId,
             ),
           ),
       )
