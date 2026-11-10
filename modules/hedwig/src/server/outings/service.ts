@@ -1084,51 +1084,28 @@ function fillFrom(row: OutingRow, reads: OutingRead[]) {
   const fill: Partial<OutingRow> = {};
   const set = <K extends keyof OutingRow>(
     key: K,
-    value: OutingRow[K] | null,
+    pick: (r: OutingRead) => OutingRow[K] | null,
   ) => {
-    if (row[key] == null && value != null) fill[key] = value as OutingRow[K];
+    const value = row[key] == null ? first(pick) : null;
+    if (value != null) fill[key] = value;
   };
-  set(
-    'venue',
-    first((r) => r.venue),
-  );
-  set(
-    'address',
-    first((r) => r.city),
-  );
-  set(
-    'organiser',
-    first((r) => r.organiser),
-  );
-  set(
-    'kind',
-    first((r) => r.kind),
-  );
-  set(
-    'orderNumber',
-    first((r) => r.orderNumber),
-  );
-  set(
-    'url',
-    first((r) =>
-      r.website && /^https?:\/\//.test(r.website) ? r.website : null,
-    ),
+  set('venue', (r) => r.venue);
+  set('address', (r) => r.city);
+  set('organiser', (r) => r.organiser);
+  set('kind', (r) => r.kind);
+  set('orderNumber', (r) => r.orderNumber);
+  set('url', (r) =>
+    r.website && /^https?:\/\//.test(r.website) ? r.website : null,
   );
   const day = row.startsAt.toDateString();
-  set(
-    'doorsAt',
-    first((r) => {
-      const d = time(sameDay(r)?.doorsAt ?? null);
-      return d && d.toDateString() === day ? d : null;
-    }),
-  );
-  set(
-    'endsAt',
-    first((r) => {
-      const d = time(sameDay(r)?.endsAt ?? null);
-      return d && d > row.startsAt ? d : null;
-    }),
-  );
+  set('doorsAt', (r) => {
+    const d = time(sameDay(r)?.doorsAt ?? null);
+    return d && d.toDateString() === day ? d : null;
+  });
+  set('endsAt', (r) => {
+    const d = time(sameDay(r)?.endsAt ?? null);
+    return d && d > row.startsAt ? d : null;
+  });
   if (row.allDay) {
     const start = first((r) => {
       const d = time(sameDay(r)?.startsAt ?? null);

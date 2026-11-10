@@ -145,6 +145,15 @@ export function hedwigRoutes({
   sharing,
   onArrived,
 }: HedwigRouteDeps) {
+  // A message the key may open and read the content of.
+  const readable = (v: PlatformEnv['Variables'], id: string) => {
+    const row = mail.message(id);
+    if (!row || !canSeeMessage(v.access, row, v.platform.shares)) {
+      throw notFound();
+    }
+    contentAllowed(v.access);
+    return row;
+  };
   return (
     new Hono<PlatformEnv>()
       // The person orders their mailboxes in the sidebar.
@@ -398,11 +407,7 @@ export function hedwigRoutes({
         return c.json({ arrived: arrived.length });
       })
       .get('/messages/:id', requireRight('read'), (c) => {
-        const row = mail.message(c.req.param('id'));
-        if (!row || !canSeeMessage(c.var.access, row, c.var.platform.shares)) {
-          throw notFound();
-        }
-        contentAllowed(c.var.access);
+        const row = readable(c.var, c.req.param('id'));
         const [detail] = sharing.decorate(c.var.access.personId, [
           toDetail(
             row,
@@ -413,11 +418,7 @@ export function hedwigRoutes({
         return c.json(detail);
       })
       .get('/messages/:id/attachments', requireRight('read'), async (c) => {
-        const row = mail.message(c.req.param('id'));
-        if (!row || !canSeeMessage(c.var.access, row, c.var.platform.shares)) {
-          throw notFound();
-        }
-        contentAllowed(c.var.access);
+        const row = readable(c.var, c.req.param('id'));
         return c.json<AttachmentSummary[]>(
           await attachmentCall(() => mail.attachments(row.id)),
         );
@@ -428,14 +429,7 @@ export function hedwigRoutes({
         '/messages/:id/attachments/:attachmentId',
         requireRight('read'),
         async (c) => {
-          const row = mail.message(c.req.param('id'));
-          if (
-            !row ||
-            !canSeeMessage(c.var.access, row, c.var.platform.shares)
-          ) {
-            throw notFound();
-          }
-          contentAllowed(c.var.access);
+          const row = readable(c.var, c.req.param('id'));
           const { meta, data } = await attachmentCall(() =>
             mail.attachment(row.id, c.req.param('attachmentId')),
           );
