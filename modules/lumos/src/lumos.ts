@@ -11,6 +11,8 @@ import {
   type ManageItem,
   type ManageResponse,
   type MediaType,
+  type ResumePoint,
+  type SeenVerdicts,
   passKinds,
   type PlayResponse,
   type RowsResponse,
@@ -34,7 +36,7 @@ import {
   refKey,
   type TitleRef,
 } from './catalogue';
-import type { JellyfinPlayer } from './jellyfin';
+import { type JellyfinPlayer, LibraryFacts } from './jellyfin';
 import { LumosRequests, requestState } from './requests';
 import {
   type ChangeEffects,
@@ -45,6 +47,9 @@ import {
 } from './schema';
 
 export const MODULE = 'lumos';
+
+// "Ruimte maken" proposes titles larger than this.
+export const SPACE_CANDIDATE_BYTES = 25_000_000_000;
 
 export class LumosError extends Error {}
 // No catalogue is connected; lists still work.
@@ -90,6 +95,20 @@ const noEffects = (): ChangeEffects => ({
   verdictsUndone: [],
 });
 
+const minutes = (s: number) => Math.max(1, Math.round(s / 60));
+
+// "Nog 50 min", or for a series "S1E4 De dijk, nog 40 min".
+function resumeLine(r: ResumePoint) {
+  const left =
+    r.runtimeSeconds && r.positionSeconds
+      ? `nog ${minutes(r.runtimeSeconds - r.positionSeconds)} min`
+      : null;
+  if (!r.episode) return left ? `N${left.slice(1)}` : 'Verder kijken';
+  const e = r.episode;
+  const name = `S${e.season}E${e.number}${e.title ? ` ${e.title}` : ''}`;
+  return left ? `${name}, ${left}` : name;
+}
+
 // Lumos: a catalogue to browse with lists and verdicts of its own. The
 // household's list and verdicts belong to everyone in it; a personal list is
 // its owner's and nobody else ever sees it, like a recording in Pensieve.
@@ -131,6 +150,64 @@ export class Lumos {
     return this.player;
   }
 
+  // What Jellyfin knows of the library; empty when it is not connected or
+  // does not answer, so a page never waits on it to fail.
+  private async libraryFacts(): Promise<LibraryFacts> {
+    return (
+      (await this.player?.library().catch(() => undefined)) ??
+      new LibraryFacts()
+    );
+  }
+
+  // Only what was watched matters to the proposals; without the household
+  // account there is nothing to read for them.
+  private watchedFacts() {
+    return this.player?.readsUser
+      ? this.libraryFacts()
+      : Promise.resolve(new LibraryFacts());
+  }
+
+  // Played to the end by the household account.
+  private playedIn(facts: LibraryFacts) {
+    return (t: CatalogueTitle) => facts.get(t)?.watched?.played === true;
+  }
+
+  // "Al gezien" verdicts: the household's and the person's own.
+  private seenVerdicts(access: Access) {
+    const keys = (person: string | null) =>
+      new Set(
+        this.activeVerdicts(person)
+          .filter((v) => v.kind === 'seen')
+          .map(refKey),
+      );
+    const together = keys(null);
+    const me = keys(access.personId);
+    return (t: TitleRef): SeenVerdicts => ({
+      together: together.has(refKey(t)),
+      me: me.has(refKey(t)),
+    });
+  }
+
+  // On anyone's list, the shared one or a person's own.
+  private listedAnywhere() {
+    return new Set(
+      this.db
+        .select({
+          mediaType: lumosListItems.mediaType,
+          tmdbId: lumosListItems.tmdbId,
+        })
+        .from(lumosListItems)
+        .where(
+          and(
+            eq(lumosListItems.origin, this.origin),
+            isNull(lumosListItems.removedAt),
+          ),
+        )
+        .all()
+        .map(refKey),
+    );
+  }
+
   status(): LumosStatus {
     return {
       dataOrigin: this.catalogue?.origin ?? null,
@@ -156,7 +233,7 @@ export class Lumos {
     const episode = item
       ? await player.episode(item, screens[0]?.userId)
       : null;
-    return {
+    const answer: WatchResponse = {
       web: item ? await player.webUrl(item) : null,
       episode: episode
         ? {
@@ -167,6 +244,11 @@ export class Lumos {
         : null,
       screens: screens.map(({ userId: _user, ...screen }) => screen),
     };
+    if (player.readsUser) {
+      const facts = await player.facts(t).catch(() => null);
+      answer.resume = facts?.watched?.resume ?? null;
+    }
+    return answer;
   }
 
   async play(ref: TitleRef, deviceId: string): Promise<PlayResponse> {
@@ -314,9 +396,14 @@ export class Lumos {
     t: CatalogueTitle,
     ctx: Context,
     pool: Map<string, CatalogueTitle>,
+    watched: CatalogueTitle[] = [],
   ) {
     const key = refKey(t);
     let score = t.popularity;
+    // What the household watched to the end counts as a light "more like this".
+    for (const source of watched) {
+      if (refKey(source) !== key) score += overlap(source, t) * 0.3;
+    }
     if ((ctx.scope === 'shared' ? ctx.shared : ctx.mine).has(key)) score += 2;
     if (ctx.scope === 'shared' && ctx.mine.has(key)) score += 1;
     for (const verdict of ctx.taste.values()) {
@@ -350,14 +437,22 @@ export class Lumos {
     return best ? `Lijkt op ${best.title}` : null;
   }
 
-  async rows(access: Access, scope: ListScope) {
+  async rows(access: Access, scope: ListScope, type?: MediaType) {
     const catalogue = this.need();
     const ctx = this.context(access, scope);
-    const all = await this.withListed(await catalogue.candidates(), ctx);
+    const [candidates, facts, going] = await Promise.all([
+      catalogue.candidates(),
+      this.watchedFacts(),
+      this.player?.continueWatching().catch(() => []) ?? [],
+    ]);
+    const all = await this.withListed(candidates, ctx);
     const pool = new Map(all.map((t) => [refKey(t), t]));
+    // Seen together on the TV hides a title from the proposals, like "seen".
+    const played = this.playedIn(facts);
+    const watched = all.filter(played);
     const ranked = all
-      .filter((t) => !ctx.pass.has(refKey(t)))
-      .map((t) => ({ t, score: this.rank(t, ctx, pool) }))
+      .filter((t) => !ctx.pass.has(refKey(t)) && !played(t))
+      .map((t) => ({ t, score: this.rank(t, ctx, pool, watched) }))
       .sort((a, b) => b.score - a.score)
       .map(({ t }) => t);
     const card = (t: CatalogueTitle) =>
@@ -371,21 +466,54 @@ export class Lumos {
       .sort((a, b) => b.popularity - a.popularity);
     const seed = this.seed(ctx, pool, list, ranked);
     const newest = Math.max(...all.map((t) => t.year ?? 0));
-    const rows: TitleRow[] = [
-      {
-        key: 'tonight',
-        title: together ? 'Voor jullie samen' : 'Voor jou',
-        subtitle: together
-          ? 'Gewogen op jullie lijst en bijstellingen · eigen regels, geen AI'
-          : 'Gewogen op jouw lijst en bijstellingen · eigen regels, geen AI',
+    const rows: TitleRow[] = [];
+    if (going.length) {
+      // Jellyfin's item to the catalogue: by the id Seerr knows, else TMDB's.
+      const byItem = new Map(
+        all.flatMap((t) =>
+          t.mediaServerId
+            ? [[t.mediaServerId.replaceAll('-', '').toLowerCase(), t]]
+            : [],
+        ),
+      );
+      const titles = await Promise.all(
+        going.slice(0, 12).map(async (g) => {
+          let t = byItem.get(g.itemId.replaceAll('-', '').toLowerCase());
+          if (!t && g.key) {
+            const [mediaType, id] = g.key.split(':');
+            const ref = {
+              mediaType: mediaType as MediaType,
+              tmdbId: Number(id),
+            };
+            t =
+              pool.get(refKey(ref)) ??
+              (await catalogue.title(ref).catch(() => undefined));
+          }
+          return t ? this.summary(t, ctx, resumeLine(g.resume)) : null;
+        }),
+      );
+      rows.push({
+        key: 'continue',
+        title: 'Verder kijken',
+        subtitle: 'Waar jullie op de tv gebleven zijn',
         style: 'wide',
-        items: ranked
-          .filter((t) => !onlyMine(t))
-          .slice(0, 10)
-          .map(card),
-        empty: 'Alles is overgeslagen. Zet titels terug onder Overgeslagen.',
-      },
-    ];
+        items: titles.filter((t): t is TitleSummary => t !== null),
+        empty: null,
+      });
+    }
+    rows.push({
+      key: 'tonight',
+      title: together ? 'Voor jullie samen' : 'Voor jou',
+      subtitle: together
+        ? 'Gewogen op jullie lijst en bijstellingen · eigen regels, geen AI'
+        : 'Gewogen op jouw lijst en bijstellingen · eigen regels, geen AI',
+      style: 'wide',
+      items: ranked
+        .filter((t) => !onlyMine(t))
+        .slice(0, 10)
+        .map(card),
+      empty: 'Alles is overgeslagen. Zet titels terug onder Overgeslagen.',
+    });
     if (together) {
       rows.push({
         key: 'mine-not-shared',
@@ -463,7 +591,13 @@ export class Lumos {
     );
     return {
       dataOrigin: catalogue.origin,
-      rows: rows.filter((r) => r.items.length || r.empty),
+      rows: rows
+        .map((r) =>
+          type
+            ? { ...r, items: r.items.filter((t) => t.mediaType === type) }
+            : r,
+        )
+        .filter((r) => r.items.length || r.empty),
     };
   }
 
@@ -529,11 +663,31 @@ export class Lumos {
     const t = await catalogue.title(ref);
     if (!t) throw new LumosError('not found');
     const ctx = this.context(access, scope);
-    const pool = new Map(
-      (await catalogue.candidates()).map((c) => [refKey(c), c]),
-    );
+    const held =
+      t.availability === 'available' ||
+      t.availability === 'partially-available';
+    const [candidates, facts] = await Promise.all([
+      catalogue.candidates(),
+      held ? this.libraryFacts() : new LibraryFacts(),
+    ]);
+    const pool = new Map(candidates.map((c) => [refKey(c), c]));
+    const server = facts.get(t);
     return {
       ...this.summary(t, ctx, this.matchOf(t, ctx, pool)),
+      library: held
+        ? {
+            addedAt: t.addedAt ?? null,
+            removable: t.removable ?? false,
+            server: server
+              ? {
+                  sizeBytes: server.sizeBytes,
+                  media: server.media,
+                  watched: server.watched,
+                }
+              : null,
+          }
+        : null,
+      seen: this.seenVerdicts(access)(t),
       dataOrigin: catalogue.origin,
       synopsis: t.synopsis,
       synopsisLanguage: t.synopsisLanguage,
@@ -645,12 +799,18 @@ export class Lumos {
     access: Access,
     scope: ListScope,
     seed: number,
+    type?: MediaType,
   ): Promise<RowsResponse> {
     const catalogue = this.need();
     const ctx = this.context(access, scope);
-    const all = await catalogue.candidates();
+    const [all, facts] = await Promise.all([
+      catalogue.candidates(),
+      this.watchedFacts(),
+    ]);
     const pool = new Map(all.map((t) => [refKey(t), t]));
-    const keep = (t: CatalogueTitle) => !ctx.pass.has(refKey(t));
+    const played = this.playedIn(facts);
+    const keep = (t: CatalogueTitle) =>
+      !ctx.pass.has(refKey(t)) && !played(t) && (!type || t.mediaType === type);
     const card = (t: CatalogueTitle, match: string | null = null) =>
       this.summary(t, ctx, match);
     const random = mulberry(seed);
@@ -711,15 +871,16 @@ export class Lumos {
     const year = new Date().getFullYear();
     const decade = pick([1970, 1980, 1990, 2000, 2010]) ?? 1990;
     const surprisePage = 2 + Math.floor(random() * 12);
+    const kind = type ?? 'movie';
     const [trending, topYear, dutch, gems, old, surprise, series] =
       await Promise.all([
-        shelf('trending', 'movie'),
-        shelf('top', 'movie', { year }),
-        shelf('popular', 'movie', { language: 'nl' }),
-        shelf('gems', 'movie'),
-        shelf('popular', 'movie', { decade }),
-        shelf('popular', 'movie', { page: surprisePage }),
-        shelf('top', 'tv'),
+        shelf('trending', kind),
+        shelf('top', kind, { year }),
+        shelf('popular', kind, { language: 'nl' }),
+        shelf('gems', kind),
+        shelf('popular', kind, { decade }),
+        shelf('popular', kind, { page: surprisePage }),
+        type ? Promise.resolve([] as CatalogueTitle[]) : shelf('top', 'tv'),
       ]);
     row(
       'trending',
@@ -742,7 +903,7 @@ export class Lumos {
     );
     row(
       'dutch',
-      'Nederlandse films',
+      kind === 'tv' ? 'Nederlandse series' : 'Nederlandse films',
       'Gemaakt in Nederland',
       dutch.map((t) => card(t)),
     );
@@ -977,32 +1138,101 @@ export class Lumos {
   }
 
   async manage(access: Access, scope: ListScope): Promise<ManageResponse> {
-    const { busy, library } = await this.needManager().holdings();
+    const [{ busy, library }, facts, disk] = await Promise.all([
+      this.needManager().holdings(),
+      this.libraryFacts(),
+      this.player?.disk() ?? null,
+    ]);
     const ctx = this.context(access, scope);
-    const item = (h: Holding): ManageItem => ({
-      title: this.summary(h.title, ctx),
-      download: h.download,
-      addedAt: h.addedAt,
-      removable: h.removable,
-    });
+    const seen = this.seenVerdicts(access);
+    const listed = this.listedAnywhere();
+    const item = (h: Holding): ManageItem => {
+      const f = facts.get(h.title);
+      const server = f
+        ? { sizeBytes: f.sizeBytes, media: f.media, watched: f.watched }
+        : null;
+      return {
+        title: this.summary(h.title, ctx),
+        download: h.download,
+        addedAt: h.addedAt,
+        removable: h.removable,
+        server,
+        seen: seen(h.title),
+        spaceCandidate:
+          h.removable &&
+          server?.watched?.played === true &&
+          (server.sizeBytes ?? 0) > SPACE_CANDIDATE_BYTES &&
+          !listed.has(refKey(h.title)),
+      };
+    };
     return {
       dataOrigin: 'live',
       busy: busy.map(item),
       library: library.map(item),
+      disk,
     };
   }
 
   // Deletes the files on the media server. A person's own action: the route
   // asks `admin`, which no bot can hold. Lists stay as they are; the request
   // turns dropped, so a new "Ja" asks for the title again.
-  async removeFromLibrary(ref: TitleRef) {
-    await this.needManager().remove(ref);
+  // A title that was seen (on the TV, or "Al gezien" by anyone) gets the
+  // household's "Al gezien", so it is not proposed again; an unseen one
+  // does not.
+  async removeFromLibrary(access: Access, ref: TitleRef) {
+    const manager = this.needManager();
+    const [facts, t] = await Promise.all([
+      this.libraryFacts(),
+      this.catalogue?.title(ref).catch(() => undefined),
+    ]);
+    const seenInLumos = this.db
+      .select({ id: lumosVerdicts.id })
+      .from(lumosVerdicts)
+      .where(
+        and(
+          eq(lumosVerdicts.mediaType, ref.mediaType),
+          eq(lumosVerdicts.tmdbId, ref.tmdbId),
+          eq(lumosVerdicts.origin, this.origin),
+          eq(lumosVerdicts.kind, 'seen'),
+          isNull(lumosVerdicts.undoneAt),
+        ),
+      )
+      .get();
+    const watched =
+      facts.get(t ?? ref)?.watched?.played === true ||
+      seenInLumos !== undefined;
+    await manager.remove(ref);
     this.requests?.forget(ref);
+    if (watched) this.markSeenTogether(access, ref);
     this.platform.events.emit({
       data: { type: 'lumos.changed', scope: 'shared' },
       visibleTo: () => true,
     });
     return { ok: true as const };
+  }
+
+  // The household's "Al gezien", unless it is there already. Lists stay.
+  private markSeenTogether(access: Access, ref: TitleRef) {
+    if (this.seenVerdicts(access)(ref).together) return;
+    this.db.transaction((tx) => {
+      const effects = noEffects();
+      this.undoActive(tx, null, ref, passKinds, effects);
+      const row = tx
+        .insert(lumosVerdicts)
+        .values({
+          personId: null,
+          byId: access.personId,
+          mediaType: ref.mediaType,
+          tmdbId: ref.tmdbId,
+          origin: this.origin,
+          kind: 'seen',
+          reason: null,
+        })
+        .returning({ id: lumosVerdicts.id })
+        .get();
+      effects.verdictsAdded.push(row.id);
+      this.record(access, effects, tx);
+    });
   }
 
   retryRequest(ref: TitleRef) {

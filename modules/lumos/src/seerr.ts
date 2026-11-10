@@ -501,6 +501,8 @@ export class SeerrCatalogue implements CatalogueProvider, MediaRequester {
       stillsCredit: base.backdrop ? 'TMDB' : null,
       availability: availabilityOf(d.mediaInfo, released, this.today()),
       download: this.download(d.mediaInfo),
+      addedAt: d.mediaInfo?.mediaAddedAt ?? null,
+      removable: d.mediaInfo?.externalServiceId != null,
       tagline: d.tagline?.trim() || null,
       originalTitle: (() => {
         const original = d.originalTitle ?? d.originalName;
@@ -629,6 +631,7 @@ export class SeerrCatalogue implements CatalogueProvider, MediaRequester {
     return {
       progress: Math.max(0, Math.min(1, 1 - left / size)),
       eta: eta ?? null,
+      bytesLeft: left,
     };
   }
 

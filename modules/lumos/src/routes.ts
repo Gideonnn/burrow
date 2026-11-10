@@ -18,7 +18,8 @@ import { LumosError, type Lumos, NoPlayer, NotConnected } from './lumos';
 import { SeerrError } from './seerr';
 
 const scoped = z.object({ scope: listScope.default('shared') });
-const explore = scoped.extend({
+const kinded = scoped.extend({ type: mediaType.optional() });
+const explore = kinded.extend({
   seed: z.coerce.number().int().min(0).default(1),
 });
 const ref = z.object({
@@ -78,13 +79,13 @@ export function lumosRoutes(lumos: Lumos) {
       .get(
         '/lumos/rows',
         requireRight('read'),
-        zValidator('query', scoped),
-        async (c) =>
-          c.json(
-            await attempt(() =>
-              lumos.rows(c.var.access, c.req.valid('query').scope),
-            ),
-          ),
+        zValidator('query', kinded),
+        async (c) => {
+          const { scope, type } = c.req.valid('query');
+          return c.json(
+            await attempt(() => lumos.rows(c.var.access, scope, type)),
+          );
+        },
       )
       .get(
         '/lumos/titles',
@@ -249,7 +250,9 @@ export function lumosRoutes(lumos: Lumos) {
         zValidator('param', ref),
         async (c) =>
           c.json(
-            await attempt(() => lumos.removeFromLibrary(c.req.valid('param'))),
+            await attempt(() =>
+              lumos.removeFromLibrary(c.var.access, c.req.valid('param')),
+            ),
           ),
       )
       .post(
@@ -279,16 +282,12 @@ export function lumosRoutes(lumos: Lumos) {
         '/lumos/explore',
         requireRight('read'),
         zValidator('query', explore),
-        async (c) =>
-          c.json(
-            await attempt(() =>
-              lumos.explore(
-                c.var.access,
-                c.req.valid('query').scope,
-                c.req.valid('query').seed,
-              ),
-            ),
-          ),
+        async (c) => {
+          const { scope, seed, type } = c.req.valid('query');
+          return c.json(
+            await attempt(() => lumos.explore(c.var.access, scope, seed, type)),
+          );
+        },
       )
       .get(
         '/lumos/watch/:mediaType/:tmdbId',

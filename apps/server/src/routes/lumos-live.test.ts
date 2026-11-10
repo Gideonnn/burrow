@@ -643,7 +643,11 @@ describe('browsing, people and the Zoeker from Seerr', () => {
     expect(
       page.busy.map((i) => [i.title.tmdbId, i.title.availability, i.download]),
     ).toEqual([
-      [101, 'downloading', { progress: 0.75, eta: '2026-11-10T22:00:00Z' }],
+      [
+        101,
+        'downloading',
+        { progress: 0.75, eta: '2026-11-10T22:00:00Z', bytesLeft: 1000 },
+      ],
     ]);
     expect(
       page.library.map((i) => [

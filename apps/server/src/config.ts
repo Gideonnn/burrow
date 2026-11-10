@@ -55,6 +55,9 @@ const env = z.object({
   LUMOS_JELLYFIN_URL: z.string().optional(),
   LUMOS_JELLYFIN_API_KEY: z.string().optional(),
   LUMOS_JELLYFIN_WEB_URL: z.string().optional(),
+  // The household's shared Jellyfin account (name or id), read only for
+  // what was played and where it stopped. Unset: nothing per user is read.
+  LUMOS_JELLYFIN_USER: z.string().optional(),
 });
 
 export type Config = {
@@ -87,7 +90,9 @@ export type Config = {
   lumosCatalogue: 'fixture' | undefined;
   // Seerr's address and the household's one service key.
   seerr: { url: string; apiKey: string } | undefined;
-  jellyfin: { url: string; apiKey: string; webUrl?: string } | undefined;
+  jellyfin:
+    | { url: string; apiKey: string; webUrl?: string; user?: string }
+    | undefined;
 };
 
 export function loadConfig(source: NodeJS.ProcessEnv = process.env): Config {
@@ -155,6 +160,7 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): Config {
             url: parsed.LUMOS_JELLYFIN_URL,
             apiKey: parsed.LUMOS_JELLYFIN_API_KEY.trim(),
             webUrl: parsed.LUMOS_JELLYFIN_WEB_URL || undefined,
+            user: parsed.LUMOS_JELLYFIN_USER?.trim() || undefined,
           }
         : undefined,
     microsoft: parsed.MICROSOFT_CLIENT_ID

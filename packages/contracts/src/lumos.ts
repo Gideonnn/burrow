@@ -171,7 +171,63 @@ export type RequestState = z.infer<typeof requestState>;
 export const download = z.object({
   progress: z.number().min(0).max(1),
   eta: z.string().nullable(),
+  // What the download still needs on disk, when the client says.
+  bytesLeft: z.number().nullable().optional(),
 });
+
+export const episode = z.object({
+  season: z.number().int(),
+  number: z.number().int(),
+  title: z.string().nullable(),
+});
+export type Episode = z.infer<typeof episode>;
+
+// The file as Jellyfin reads it: "4K", "HDR10", the audio and subtitle
+// languages in Dutch. Absent fields are null or empty, never guessed.
+export const mediaFacts = z.object({
+  resolution: z.string().nullable(),
+  hdr: z.string().nullable(),
+  audio: z.array(z.string()),
+  subtitles: z.array(z.string()),
+});
+export type MediaFacts = z.infer<typeof mediaFacts>;
+
+// Where the household stopped: a film's position, or a series' episode.
+export const resumePoint = z.object({
+  positionSeconds: z.number(),
+  runtimeSeconds: z.number().nullable(),
+  episode: episode.nullable(),
+});
+export type ResumePoint = z.infer<typeof resumePoint>;
+
+// The household's one Jellyfin account, so "played" means seen together.
+// Per person "seen" comes only from Lumos's own verdicts.
+export const playState = z.object({
+  played: z.boolean(),
+  playCount: z.number().int(),
+  lastPlayed: z.string().nullable(),
+  // A series: episodes played of the episodes the library has.
+  episodesPlayed: z.number().int().nullable(),
+  episodes: z.number().int().nullable(),
+  resume: resumePoint.nullable(),
+});
+export type PlayState = z.infer<typeof playState>;
+
+// What Jellyfin knows of a title it holds. `watched` is null when no
+// household account is configured.
+export const onServer = z.object({
+  sizeBytes: z.number().nullable(),
+  media: mediaFacts.nullable(),
+  watched: playState.nullable(),
+});
+export type OnServer = z.infer<typeof onServer>;
+
+// "Al gezien" in Lumos: the household's verdict, and the asking person's own.
+export const seenVerdicts = z.object({
+  together: z.boolean(),
+  me: z.boolean(),
+});
+export type SeenVerdicts = z.infer<typeof seenVerdicts>;
 
 export const titleDetail = titleSummary.extend({
   dataOrigin,
@@ -204,6 +260,17 @@ export const titleDetail = titleSummary.extend({
   crew: z.array(castMember),
   seasonList: z.array(seasonSummary),
   episodes: z.number().int().nullable(),
+  // On Dobby: when it came, whether Radarr or Sonarr manages it, and what
+  // Jellyfin knows. Null when the media server does not hold it.
+  library: z
+    .object({
+      addedAt: z.string().nullable(),
+      removable: z.boolean(),
+      server: onServer.nullable(),
+    })
+    .nullable()
+    .optional(),
+  seen: seenVerdicts.optional(),
 });
 export type TitleDetail = z.infer<typeof titleDetail>;
 
@@ -357,13 +424,27 @@ export const manageItem = z.object({
   download: download.nullable(),
   addedAt: z.string().nullable(),
   removable: z.boolean(),
+  server: onServer.nullable().optional(),
+  seen: seenVerdicts.optional(),
+  // "Ruimte maken" would take it: seen together on the TV, large, and on
+  // nobody's list.
+  spaceCandidate: z.boolean().optional(),
 });
 export type ManageItem = z.infer<typeof manageItem>;
+
+// The disks the media library lives on, each counted once.
+export const disk = z.object({
+  totalBytes: z.number(),
+  freeBytes: z.number(),
+});
+export type Disk = z.infer<typeof disk>;
 
 export const manageResponse = z.object({
   dataOrigin,
   busy: z.array(manageItem),
   library: z.array(manageItem),
+  // Null when Jellyfin does not say.
+  disk: disk.nullable().optional(),
 });
 export type ManageResponse = z.infer<typeof manageResponse>;
 
@@ -391,13 +472,6 @@ export const screen = z.object({
 });
 export type Screen = z.infer<typeof screen>;
 
-export const episode = z.object({
-  season: z.number().int(),
-  number: z.number().int(),
-  title: z.string().nullable(),
-});
-export type Episode = z.infer<typeof episode>;
-
 export const watchResponse = z.object({
   // The title's page in the media server's web app, for this machine; null
   // when the library does not have the title.
@@ -405,6 +479,8 @@ export const watchResponse = z.object({
   // A series: the episode a screen would start (the next unwatched one).
   episode: episode.nullable(),
   screens: z.array(screen),
+  // Where the household stopped; K starts there.
+  resume: resumePoint.nullable().optional(),
 });
 export type WatchResponse = z.infer<typeof watchResponse>;
 
@@ -416,6 +492,8 @@ export const playResponse = z.object({
   // The screen itself reported the title as playing; without that Lumos
   // only knows the command was sent.
   confirmed: z.boolean(),
+  // Where it started, when it picked up where the household stopped.
+  startSeconds: z.number().nullable().optional(),
 });
 export type PlayResponse = z.infer<typeof playResponse>;
 

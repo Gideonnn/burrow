@@ -43,6 +43,10 @@ export type CatalogueTitle = TitleRef & {
   download?: Download | null;
   // The media server's own id for the title, once it has it.
   mediaServerId?: string | null;
+  // When the media server added it, and whether Radarr or Sonarr manages
+  // its files (so a delete really removes them).
+  addedAt?: string | null;
+  removable?: boolean;
   // The rest a provider may know; the details show what is there.
   tagline?: string | null;
   originalTitle?: string | null;
@@ -81,7 +85,11 @@ export type Person = PersonDetail & {
   titles: (CatalogueTitle & { part: string | null })[];
 };
 
-export type Download = { progress: number; eta: string | null };
+export type Download = {
+  progress: number;
+  eta: string | null;
+  bytesLeft?: number | null;
+};
 
 export type CatalogueHit = { title: CatalogueTitle; why: string | null };
 
