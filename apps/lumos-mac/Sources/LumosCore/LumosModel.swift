@@ -114,6 +114,7 @@ public final class LumosModel {
         var detail: TitleDetail
         var similar: [TitleSummary]
         var at: Date
+        var fresh: Bool { Date().timeIntervalSince(at) < LumosModel.detailLife }
     }
     /// Details once loaded stay, so a page opens at once a second time and
     /// the cursor's neighbour is already there (`prefetch`).
@@ -356,9 +357,9 @@ public final class LumosModel {
         guard let api else { return }
         isLoading = true
         defer { isLoading = false }
-        // Lists and verdicts change what every detail says, so they load again.
-        details.removeAll()
-        detailOrder.removeAll()
+        // Lists and verdicts change what every detail says, so they load
+        // again; the old ones stay meanwhile, so an open page keeps its place.
+        for ref in details.keys { details[ref]?.at = .distantPast }
         do {
             // The counts for the sidebar come in alongside the page itself.
             async let passedCount = countPassed(api)
@@ -478,11 +479,12 @@ public final class LumosModel {
     }
 
     public func summary(_ ref: TitleRef) -> TitleSummary? {
-        if let known = details[ref] { return known.detail.summary }
+        if let known = details[ref], known.fresh { return known.detail.summary }
         for row in loaded { if let found = row.items.first(where: { $0.ref == ref }) { return found } }
         return verdictItems.first(where: { $0.title.ref == ref })?.title
             ?? similar.first(where: { $0.ref == ref })
             ?? personPage?.titles.first(where: { $0.ref == ref })
+            ?? details[ref]?.detail.summary
     }
 
     /// What J, N and T act on: the open title when focus is in the inspector.
@@ -581,11 +583,11 @@ public final class LumosModel {
     public var detailTaskForTests: Task<Void, Never>? { detailTask }
 
     /// How long a loaded detail stays good; lists and verdicts clear it anyway.
-    static let detailLife: TimeInterval = 300
+    nonisolated static let detailLife: TimeInterval = 300
 
     func loadDetail(_ ref: TitleRef) async {
         guard let api else { return }
-        if let hit = details[ref], Date().timeIntervalSince(hit.at) < Self.detailLife {
+        if let hit = details[ref], hit.fresh {
             followProgress(of: hit.detail)
             followWatch(of: hit.detail)
             return
@@ -614,11 +616,11 @@ public final class LumosModel {
     /// Loads a title's page before it is asked for: the card under the
     /// cursor or the mouse, so Enter or a click shows it at once.
     public func prefetch(_ ref: TitleRef) {
-        guard details[ref] == nil, !prefetching.contains(ref), let api else { return }
+        guard details[ref]?.fresh != true, !prefetching.contains(ref), let api else { return }
         prefetchTask?.cancel()
         prefetchTask = Task { [weak self] in
             try? await Task.sleep(for: .milliseconds(150))
-            guard !Task.isCancelled, let self, details[ref] == nil else { return }
+            guard !Task.isCancelled, let self, details[ref]?.fresh != true else { return }
             prefetching.insert(ref)
             defer { prefetching.remove(ref) }
             async let detailAnswer = api.title(ref, scope: scope)

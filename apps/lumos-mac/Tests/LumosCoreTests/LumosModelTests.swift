@@ -205,6 +205,31 @@ final class Household: @unchecked Sendable {
         #expect(model.toast?.message == "Niets om ongedaan te maken.")
     }
 
+    @Test func theOpenPageStaysWhileTheListReloadsAfterYes() async throws {
+        let household = Household()
+        let server = server(household)
+        let model = await started(server)
+        model.open(alpha, from: CardID(row: "tonight", ref: alpha), focusInside: true)
+        await model.detailTaskForTests?.value
+        #expect(model.detail?.title == "Alpha")
+
+        // Hold the rows that follow the change, to look at the page meanwhile.
+        let gate = DispatchSemaphore(value: 0)
+        let held = Box(false)
+        server.on("GET", "/api/lumos/rows") { _ in
+            held.value = true
+            _ = gate.wait(timeout: .now() + 5)
+            return (200, household.rows())
+        }
+        let yes = Task { await model.toggleList(alpha) }
+        while !held.value { try await Task.sleep(for: .milliseconds(5)) }
+        #expect(model.detail?.ref == alpha)
+        gate.signal()
+        await yes.value
+        #expect(model.detail?.ref == alpha)
+        #expect(server.requests("GET", "/api/lumos/titles/movie/1").count == 2)
+    }
+
     @Test func chosenSeasonsGoWithYesAndIntoTheToast() async {
         let server = server()
         let model = await started(server)
