@@ -647,8 +647,9 @@ extension APIClient {
         return try await call("GET", "api/lumos/titles", query: scoped(scope, more))
     }
 
-    public func search(titles query: String, scope: ListScope) async throws -> SearchResponse {
-        try await call("GET", "api/lumos/search", query: scoped(scope, [URLQueryItem(name: "q", value: query)]))
+    public func search(titles query: String, scope: ListScope, type: MediaType? = nil) async throws -> SearchResponse {
+        let kind = type.map { [URLQueryItem(name: "type", value: $0.rawValue)] } ?? []
+        return try await call("GET", "api/lumos/search", query: scoped(scope, [URLQueryItem(name: "q", value: query)] + kind))
     }
 
     public func title(_ ref: TitleRef, scope: ListScope) async throws -> TitleDetail {

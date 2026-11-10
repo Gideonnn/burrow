@@ -639,17 +639,24 @@ export class Lumos {
   }
 
   // Taste never applies to search: every match is shown.
-  async search(access: Access, scope: ListScope, query: string) {
+  async search(
+    access: Access,
+    scope: ListScope,
+    query: string,
+    type?: MediaType,
+  ) {
     const catalogue = this.need();
     const ctx = this.context(access, scope);
     const { hits, credits } = await catalogue.search(query);
     return {
       dataOrigin: catalogue.origin,
       query,
-      hits: hits.map((h) => ({
-        title: this.summary(h.title, ctx),
-        why: h.why,
-      })),
+      hits: hits
+        .filter((h) => !type || h.title.mediaType === type)
+        .map((h) => ({
+          title: this.summary(h.title, ctx),
+          why: h.why,
+        })),
       credits,
     };
   }

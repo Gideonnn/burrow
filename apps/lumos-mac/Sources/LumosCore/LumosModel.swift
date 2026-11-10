@@ -502,7 +502,10 @@ public final class LumosModel {
 
     static func matches(_ title: TitleSummary, _ text: String) -> Bool {
         let haystack = ([title.title, title.year.map(String.init) ?? ""] + title.genres + title.traits).joined(separator: " ")
-        return haystack.localizedCaseInsensitiveContains(text)
+        // Every typed word, in any order, ignoring case and accents.
+        return text.split(separator: " ").allSatisfy {
+            haystack.range(of: $0, options: [.caseInsensitive, .diacriticInsensitive]) != nil
+        }
     }
 
     public func reload() async {
@@ -557,7 +560,7 @@ public final class LumosModel {
         gridPages = [:]
         let text = queryText
         if !text.isEmpty {
-            let found = try await api.search(titles: text, scope: scope)
+            let found = try await api.search(titles: text, scope: scope, type: filter.kind.type)
             guard text == queryText else { return }
             let items = found.hits.map { hit -> TitleSummary in
                 var title = hit.title

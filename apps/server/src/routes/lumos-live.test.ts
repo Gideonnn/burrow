@@ -247,17 +247,41 @@ function fakeSeerr() {
         { ...movie(103, 'Quiet Ferry', '1979-05-02'), job: 'Writer' },
       ],
     }),
-    '/search': () => ({
+    '/search': (q) => {
+      const page = Number(q.get('page') ?? 1);
+      if (q.get('query') === 'dead')
+        return deadSearch[page - 1] ?? { results: [] };
+      return page > 1 ? { results: [] } : exampleSearch;
+    },
+  };
+  // Seerr ranks the obscure exact matches of a short word first and mixes
+  // series and people in; the film people mean sits on a later page.
+  const known = (r: object, voteCount: number, popularity: number) => ({
+    ...r,
+    voteCount,
+    popularity,
+  });
+  const deadSearch = [
+    {
       results: [
-        movie(103, 'Quiet Ferry', '1979-05-02'),
-        {
-          id: 7,
-          mediaType: 'person',
-          name: 'Lotte Example',
-          knownFor: [movie(101, 'Harbour Lights', '2026-03-01')],
-        },
+        known(movie(901, 'Dead', '2019-01-01'), 4, 0.6),
+        known(series(902, 'The Dead Coast'), 5200, 80),
+        known(movie(903, 'Dead Harbour', '2011-01-01'), 12, 1.2),
+        { id: 904, mediaType: 'person', name: 'Dead Example', knownFor: [] },
       ],
-    }),
+    },
+    { results: [known(movie(905, 'Deadline Ferry', '2016-02-12'), 31000, 95)] },
+  ];
+  const exampleSearch = {
+    results: [
+      movie(103, 'Quiet Ferry', '1979-05-02'),
+      {
+        id: 7,
+        mediaType: 'person',
+        name: 'Lotte Example',
+        knownFor: [movie(101, 'Harbour Lights', '2026-03-01')],
+      },
+    ],
   };
   const fetch = async (input: string | URL | Request, init?: RequestInit) => {
     const url = new URL(String(input));
@@ -396,11 +420,30 @@ describe('the live catalogue from Seerr', () => {
       await h.json(h.adaKey, '/api/lumos/search?q=example'),
     );
     expect(found.hits.map((hit) => [hit.title.tmdbId, hit.why])).toEqual([
-      [103, null],
       [101, 'Werk van Lotte Example'],
+      [103, null],
     ]);
-    expect(found.hits[0]?.title.year).toBe(1979);
+    expect(found.hits[1]?.title.year).toBe(1979);
     expect(found.credits).toEqual([{ id: '7', name: 'Lotte Example' }]);
+  });
+
+  it('puts the titles people mean first, beyond the first page, in one kind', async () => {
+    const h = household();
+    const titles = async (path: string) =>
+      titleSearchResponse
+        .parse(await h.json(h.adaKey, path))
+        .hits.map((hit) => hit.title.title);
+    expect(await titles('/api/lumos/search?q=dead')).toEqual([
+      'Deadline Ferry',
+      'The Dead Coast',
+      'Dead',
+      'Dead Harbour',
+    ]);
+    expect(await titles('/api/lumos/search?q=dead&type=movie')).toEqual([
+      'Deadline Ferry',
+      'Dead',
+      'Dead Harbour',
+    ]);
   });
 
   it('never passes the key or Seerr user data on, and sends the key only to Seerr', async () => {

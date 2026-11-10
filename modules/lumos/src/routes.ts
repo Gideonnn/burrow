@@ -114,12 +114,12 @@ export function lumosRoutes(lumos: Lumos) {
         requireRight('read'),
         zValidator(
           'query',
-          scoped.extend({ q: z.string().trim().min(1).max(200) }),
+          kinded.extend({ q: z.string().trim().min(1).max(200) }),
         ),
         async (c) => {
-          const { scope, q } = c.req.valid('query');
+          const { scope, q, type } = c.req.valid('query');
           return c.json(
-            await attempt(() => lumos.search(c.var.access, scope, q)),
+            await attempt(() => lumos.search(c.var.access, scope, q, type)),
           );
         },
       )

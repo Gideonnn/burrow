@@ -441,6 +441,16 @@ final class Household: @unchecked Sendable {
         #expect(!LumosModel.Mood.light.matches(quiet))
     }
 
+    @Test func searchingTheListFindsEveryWordInAnyOrderWithoutAccents() {
+        let film = TitleSummary(
+            mediaType: .movie, tmdbId: 9, title: "Amélie aan zee", year: 2001, runtimeMinutes: 120, seasons: nil,
+            genres: ["Komedie"], traits: [], language: nil, poster: nil, backdrop: nil, availability: .available,
+            hasTrailer: false, onList: true, onShared: true, onMine: false, pass: nil, taste: nil, match: nil)
+        #expect(LumosModel.matches(film, "zee amelie"))
+        #expect(LumosModel.matches(film, "komedie 2001"))
+        #expect(!LumosModel.matches(film, "amelie bergen"))
+    }
+
     @Test func aMoodMakesAGridOfTheRowsThatFit() async {
         let model = await started(server())
         await model.setFilter { $0.genre = .mood(.light) }

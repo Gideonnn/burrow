@@ -8,7 +8,6 @@ import type {
 import {
   type BrowsePage,
   type BrowseQuery,
-  type CatalogueHit,
   type CatalogueProvider,
   type CatalogueTitle,
   type Holding,
@@ -686,35 +685,57 @@ export class SeerrCatalogue implements CatalogueProvider, MediaRequester {
     return scores;
   }
 
+  // Seerr hands out TMDB's order a page at a time: a short word brings
+  // obscure exact matches, series and people first. Three pages, ranked
+  // by how well the name matches and how well known the title is.
   async search(query: string) {
     const genres = await this.genreNames();
-    const page = await this.call<Page>('/search', {
-      query,
-      page: 1,
-      language: LANGUAGE,
-    });
-    const results = page.results ?? [];
-    const hits: CatalogueHit[] = [];
+    const pages = await Promise.all(
+      [1, 2, 3].map((page) =>
+        this.call<Page>('/search', { query, page, language: LANGUAGE }).catch(
+          (error: unknown) => {
+            if (page === 1) throw error;
+            return {} as Page;
+          },
+        ),
+      ),
+    );
+    const results = pages.flatMap((p) => p.results ?? []);
+    const ranked: {
+      title: CatalogueTitle;
+      why: string | null;
+      score: number;
+    }[] = [];
     const seen = new Set<string>();
-    const push = (t: CatalogueTitle | null, why: string | null) => {
+    const push = (r: Result, why: string | null, fit: number) => {
+      const t = this.fromResult(r, genres, 0);
       if (!t) return;
       const key = `${t.mediaType}:${t.tmdbId}`;
       if (seen.has(key)) return;
       seen.add(key);
-      hits.push({ title: t, why });
+      ranked.push({
+        title: t,
+        why,
+        score: searchScore(r, fit, t.availability),
+      });
     };
-    results.forEach((r, i) => {
-      if (r.mediaType === 'person') return;
-      push(this.fromResult(r, genres, 10 - i / 2), null);
-    });
-    const people = results.filter((r) => r.mediaType === 'person' && r.name);
-    for (const p of people) {
-      for (const k of p.knownFor ?? []) {
-        push(this.fromResult(k, genres, 1), `Werk van ${p.name}`);
-      }
+    for (const r of results) {
+      if (r.mediaType === 'person') continue;
+      push(r, null, nameFit(r.title ?? r.name ?? '', query));
     }
+    const people = results
+      .filter((r) => r.mediaType === 'person' && r.name)
+      .sort((a, b) => (b.popularity ?? 0) - (a.popularity ?? 0));
+    for (const p of people.slice(0, 3)) {
+      const fit = Math.max(0, nameFit(p.name ?? '', query) - 0.5);
+      for (const k of p.knownFor ?? []) push(k, `Werk van ${p.name}`, fit);
+    }
+    ranked.sort((a, b) => b.score - a.score);
     return {
-      hits,
+      hits: ranked.map(({ title, why }, i) => ({
+        title: { ...title, popularity: 10 * (1 - i / ranked.length) },
+        why,
+      })),
       credits: people
         .slice(0, 6)
         .map((p) => ({ id: String(p.id), name: p.name as string })),
@@ -1014,4 +1035,38 @@ export class SeerrCatalogue implements CatalogueProvider, MediaRequester {
       this.forget(ref);
     }
   }
+}
+
+const fold = (text: string) =>
+  text
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim();
+
+// 4 the whole name, 3 its start, 2.75 a whole word, 2.5 the start of a
+// word, 2 every typed word starts a word, 1.5 inside a word, 0 elsewhere.
+function nameFit(name: string, query: string): number {
+  const n = fold(name);
+  const q = fold(query);
+  if (!q || !n) return 0;
+  if (n === q) return 4;
+  if (n.startsWith(q)) return 3;
+  const words = n.split(' ');
+  if (` ${n} `.includes(` ${q} `)) return 2.75;
+  if (` ${n}`.includes(` ${q}`)) return 2.5;
+  const typed = q.split(' ');
+  if (typed.every((t) => words.some((w) => w.startsWith(t)))) return 2;
+  return n.includes(q) ? 1.5 : 0;
+}
+
+function searchScore(r: Result, fit: number, availability: string): number {
+  const held = availability === 'available' ? 1 : 0;
+  return (
+    fit * 1.5 +
+    Math.log10(1 + (r.voteCount ?? 0)) +
+    0.3 * Math.log10(1 + (r.popularity ?? 0)) +
+    held
+  );
 }
