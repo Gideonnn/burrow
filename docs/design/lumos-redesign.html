@@ -1,0 +1,841 @@
+<!doctype html>
+<!-- Redesign of Lumos (films and series), drawn 10 November 2026 as macOS 26 draws standard SwiftUI. A clickable mock, not built. Every title, person and number is invented. -->
+<html lang="nl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="color-scheme" content="light dark" />
+<title>Lumos · films en series · herontwerp</title>
+<style>
+/* System colours of macOS, not the Burrow palette: Lumos only brings its tint (BurrowColor.lumos). */
+:root, [data-theme="light"] {
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --desk: #ECECEE; --win: #FFFFFF; --label: rgba(0,0,0,.85); --label2: rgba(0,0,0,.5); --label3: rgba(0,0,0,.28);
+  --sep: rgba(0,0,0,.1); --fill: rgba(0,0,0,.06); --alt: rgba(0,0,0,.03); --ctl: #FFFFFF; --ctl-line: rgba(0,0,0,.14);
+  --glass: rgba(255,255,255,.7); --glass-line: rgba(0,0,0,.07); --side: rgba(242,242,244,.82); --group: rgba(0,0,0,.035);
+  --accent: #735B84; --on-accent: #FFFFFF; --red: #FF3B30; --orange: #FF9500; --green: #34C759; --gray: #8E8E93;
+  --shadow-win: 0 30px 80px rgba(0,0,0,.28), 0 0 0 .5px rgba(0,0,0,.2);
+  --shadow-glass: 0 2px 10px rgba(0,0,0,.09), 0 0 0 .5px rgba(0,0,0,.08), inset 0 1px 0 rgba(255,255,255,.7);
+}
+[data-theme="dark"] {
+  --desk: #121213; --win: #1E1E1F; --label: rgba(255,255,255,.86); --label2: rgba(255,255,255,.55); --label3: rgba(255,255,255,.27);
+  --sep: rgba(255,255,255,.12); --fill: rgba(255,255,255,.09); --alt: rgba(255,255,255,.04); --ctl: rgba(255,255,255,.14); --ctl-line: rgba(255,255,255,.06);
+  --glass: rgba(70,70,74,.55); --glass-line: rgba(255,255,255,.1); --side: rgba(44,44,46,.8); --group: rgba(255,255,255,.05);
+  --accent: #C9AEDC; --on-accent: #1E1E1F; --red: #FF453A; --orange: #FF9F0A; --green: #30D158; --gray: #98989D;
+  --shadow-win: 0 30px 80px rgba(0,0,0,.6), 0 0 0 .5px rgba(255,255,255,.18);
+  --shadow-glass: 0 2px 10px rgba(0,0,0,.35), 0 0 0 .5px rgba(255,255,255,.12), inset 0 1px 0 rgba(255,255,255,.12);
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: var(--font); font-size: 14px; line-height: 1.5; background: var(--desk); color: var(--label); -webkit-font-smoothing: antialiased; }
+h1, h2, h3, h4, p, dl, dd { margin: 0; }
+button, select, input { font: inherit; color: inherit; }
+button { background: none; border: 0; padding: 0; cursor: default; }
+code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .9em; }
+svg.i { width: 16px; height: 16px; flex: none; stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+svg.i.f { fill: currentColor; stroke: none; }
+svg.i.sm { width: 13px; height: 13px; }
+.grow { flex: 1; min-width: 0; }
+
+/* The document around the window */
+main { max-width: 1228px; margin: 0 auto; padding: 32px 24px 96px; }
+main > h1 { font-size: 30px; font-weight: 700; letter-spacing: -.02em; }
+.lead { font-size: 16px; color: var(--label2); max-width: 840px; margin-top: 6px; }
+main > h2 { font-size: 21px; font-weight: 700; margin: 44px 0 4px; letter-spacing: -.01em; }
+.sub { color: var(--label2); max-width: 840px; margin-bottom: 14px; font-size: 13.5px; }
+.strip { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin-bottom: 12px; font-size: 12.5px; color: var(--label2); }
+.ia { display: grid; grid-template-columns: 200px 28px 200px 1fr; gap: 16px; align-items: start; }
+@media (max-width: 900px) { .ia { grid-template-columns: 1fr 1fr; } .ia .arrow { display: none; } .ia .why { grid-column: 1 / -1; } }
+.ia .mini { background: var(--win); border-radius: 14px; padding: 10px 8px 12px; box-shadow: 0 0 0 .5px var(--ctl-line), 0 2px 8px rgba(0,0,0,.06); font-size: 13px; }
+.ia .mini h4 { font-size: 11px; color: var(--label2); font-weight: 600; padding: 0 8px 6px; }
+.ia .arrow { align-self: center; color: var(--label3); font-size: 22px; text-align: center; }
+.ia .gone { color: var(--label3); text-decoration: line-through; }
+.ia .tag { margin-left: auto; font-size: 11px; color: var(--accent); font-weight: 600; }
+.why { display: grid; gap: 8px; }
+.why div, .box { background: var(--win); border-radius: 14px; padding: 12px 16px; box-shadow: 0 0 0 .5px var(--ctl-line); font-size: 13px; }
+.why b { color: var(--accent); } .why span { color: var(--label2); }
+.notes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 900px) { .notes { grid-template-columns: 1fr; } }
+.box h3 { font-size: 14px; margin-bottom: 4px; }
+.box ul { margin: 0; padding-left: 18px; color: var(--label2); }
+.box li { margin: 3px 0; } .box li b { color: var(--label); font-weight: 600; }
+.box.wide { grid-column: 1 / -1; }
+.box.ask { box-shadow: 0 0 0 1.5px var(--accent); } .box.ask h3 { color: var(--accent); }
+.box.src { background: none; box-shadow: none; color: var(--label2); font-size: 12px; }
+table.map { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+table.map td { padding: 4px 12px 4px 0; vertical-align: top; color: var(--label2); border-top: .5px solid var(--sep); }
+table.map tr:first-child td { border-top: 0; }
+table.map td:first-child { white-space: nowrap; color: var(--label); font-weight: 600; width: 190px; }
+kbd { font: inherit; font-size: 11.5px; background: var(--fill); border-radius: 4px; padding: 0 5px; white-space: nowrap; }
+
+/* macOS text styles: the only sizes used inside the window */
+.large { font-size: 26px; line-height: 32px; font-weight: 700; letter-spacing: -.01em; }
+.title2 { font-size: 17px; line-height: 22px; font-weight: 700; }
+.title3 { font-size: 15px; line-height: 20px; font-weight: 600; }
+.headline { font-size: 13px; line-height: 16px; font-weight: 700; }
+.callout { font-size: 12px; line-height: 15px; }
+.subhead { font-size: 11px; line-height: 14px; }
+.caption { font-size: 10px; line-height: 13px; }
+.sec { color: var(--label2); } .ter { color: var(--label3); }
+.num { font-variant-numeric: tabular-nums; }
+
+/* Desk: menu bar, window, floating windows and menus */
+.fit { width: 100%; }
+.desk { width: 1180px; height: 772px; transform-origin: 0 0; position: relative; font-size: 13px; line-height: 16px; }
+.menubar { height: 24px; display: flex; align-items: center; gap: 2px; padding: 0 8px; font-size: 13px; border-radius: 8px; background: var(--glass); box-shadow: 0 0 0 .5px var(--glass-line); margin-bottom: 8px; }
+.menubar button { padding: 2px 9px; border-radius: 5px; }
+.menubar button:first-of-type { font-weight: 700; }
+.menubar button.open, .menubar button:hover { background: var(--fill); }
+.mac { height: 740px; position: relative; background: var(--win); border-radius: 18px; box-shadow: var(--shadow-win); overflow: hidden; display: grid; grid-template-columns: 220px 1fr; }
+
+/* NavigationSplitView: the sidebar floats as glass on macOS 26 */
+.side { margin: 8px 0 8px 8px; border-radius: 14px; background: var(--side); box-shadow: 0 0 0 .5px var(--glass-line), 0 2px 12px rgba(0,0,0,.06); padding: 0 10px 10px; display: flex; flex-direction: column; gap: 1px; min-height: 0; }
+.lights { display: flex; gap: 8px; height: 44px; align-items: center; padding-left: 6px; }
+.lights i { width: 12px; height: 12px; border-radius: 50%; background: #FF5F57; box-shadow: inset 0 0 0 .5px rgba(0,0,0,.12); }
+.lights i:nth-child(2) { background: #FEBC2E; } .lights i:nth-child(3) { background: #28C840; }
+.srow { display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 8px; border-radius: 8px; width: 100%; text-align: left; }
+.srow svg { color: var(--accent); }
+.srow.sel { background: var(--fill); }
+.srow.drop { box-shadow: inset 0 0 0 2px var(--accent); }
+.srow .badge { color: var(--label2); }
+.sdisk { padding: 8px; display: grid; gap: 5px; }
+progress { -webkit-appearance: none; appearance: none; width: 100%; height: 6px; border: 0; border-radius: 3px; overflow: hidden; background: var(--fill); display: block; }
+progress::-webkit-progress-bar { background: var(--fill); }
+progress::-webkit-progress-value { background: var(--accent); border-radius: 3px; }
+progress::-moz-progress-bar { background: var(--accent); }
+progress.tight::-webkit-progress-value { background: var(--orange); } progress.tight::-moz-progress-bar { background: var(--orange); }
+
+/* Detail column with .toolbar */
+.content { display: flex; flex-direction: column; min-width: 0; min-height: 0; position: relative; }
+.tb { height: 52px; display: flex; align-items: center; gap: 10px; padding: 0 12px 0 16px; flex: none; }
+.tb .ttl { display: grid; min-width: 0; }
+.tb .ttl b { font-size: 15px; line-height: 18px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cap { height: 32px; min-width: 32px; border-radius: 16px; background: var(--glass); box-shadow: var(--shadow-glass); backdrop-filter: blur(20px) saturate(1.6); display: inline-flex; align-items: center; justify-content: center; gap: 2px; padding: 0 3px; flex: none; }
+.cap > button { height: 26px; min-width: 28px; padding: 0 7px; border-radius: 13px; display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
+.cap > button:hover { background: var(--fill); }
+.cap > button[disabled] { color: var(--label3); background: none; }
+.cap > button.on { background: var(--fill); color: var(--accent); }
+.cap.pick > button { padding: 0 12px; }
+.cap.pick > button.on { background: var(--ctl); color: var(--label); box-shadow: 0 1px 3px rgba(0,0,0,.14), 0 0 0 .5px var(--ctl-line); font-weight: 500; }
+.cap.search { width: 220px; justify-content: flex-start; padding: 0 10px; gap: 6px; color: var(--label2); }
+.cap.search:focus-within { box-shadow: var(--shadow-glass), 0 0 0 3.5px color-mix(in srgb, var(--accent) 45%, transparent); }
+.cap.search input { border: 0; outline: 0; background: none; width: 100%; color: var(--label); }
+.cap.search input::placeholder { color: var(--label2); }
+.main { flex: 1; min-height: 0; display: flex; }
+.pane { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.scroll { overflow-y: auto; min-height: 0; flex: 1; }
+
+/* Standard controls */
+.seg { display: inline-flex; background: var(--fill); border-radius: 7px; padding: 2px; gap: 1px; flex: none; }
+.seg button { height: 20px; padding: 0 11px; border-radius: 5px; white-space: nowrap; }
+.seg button.on { background: var(--ctl); box-shadow: 0 1px 2.500px rgba(0,0,0,.16), 0 0 0 .5px var(--ctl-line); font-weight: 500; }
+.btn { display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 11px; border-radius: 7px; background: var(--ctl); box-shadow: 0 .5px 1.500px rgba(0,0,0,.14), 0 0 0 .5px var(--ctl-line); white-space: nowrap; }
+.btn:active { filter: brightness(.94); }
+.btn.prom { background: var(--accent); color: var(--on-accent); box-shadow: none; }
+.btn.bless { background: none; box-shadow: none; color: var(--accent); padding: 0 4px; }
+.btn.destr { color: var(--red); }
+.btn.tog.on { background: var(--accent); color: var(--on-accent); box-shadow: none; }
+.btn.lg { height: 32px; padding: 0 16px; border-radius: 16px; }
+.btn.glass { background: rgba(255,255,255,.2); color: #fff; box-shadow: inset 0 0 0 .5px rgba(255,255,255,.4), inset 0 1px 0 rgba(255,255,255,.35), 0 2px 10px rgba(0,0,0,.18); backdrop-filter: blur(14px) saturate(1.5); }
+.btn.glass.prom { background: rgba(255,255,255,.92); color: #1d1d1f; }
+.btn[disabled] { opacity: .4; }
+.btn kbd { background: none; padding: 0; opacity: .55; }
+select.pop { height: 24px; border-radius: 7px; border: 0; background-color: var(--ctl); box-shadow: 0 .5px 1.500px rgba(0,0,0,.14), 0 0 0 .5px var(--ctl-line); padding: 0 6px; max-width: 170px; }
+:is(.btn, .seg button, .srow, .cap > button, select.pop, .card, .table):focus-visible { outline: 3.500px solid color-mix(in srgb, var(--accent) 55%, transparent); outline-offset: 1px; }
+.fbar { display: flex; align-items: center; gap: 8px; padding: 4px 20px 10px; flex: none; }
+.gbox { background: var(--group); border-radius: 10px; box-shadow: 0 0 0 .5px var(--sep); padding: 12px 14px; }
+.lc { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; }
+.lc dd { text-align: right; color: var(--label2); }
+.cuv { flex: 1; display: grid; place-content: center; justify-items: center; gap: 4px; text-align: center; padding: 48px 24px; color: var(--label2); }
+.cuv svg { width: 44px; height: 44px; stroke-width: 1.3; margin-bottom: 8px; }
+.cuv b { color: var(--label); }
+
+/* Posters: large, the chrome around them stays the system's */
+.row-h { display: flex; align-items: baseline; gap: 8px; padding: 14px 20px 8px; }
+.cards { display: flex; gap: 14px; padding: 4px 20px 6px; overflow-x: auto; scrollbar-width: none; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, 150px); gap: 18px 14px; padding: 4px 20px 24px; }
+.card { width: 150px; flex: none; text-align: left; border-radius: 10px; outline-offset: 3px !important; position: relative; }
+.card.wide { width: 300px; }
+.art { height: 225px; border-radius: 10px; position: relative; overflow: hidden; display: flex; align-items: flex-end; padding: 12px; color: #fff;
+  background: radial-gradient(120% 90% at 20% 0%, hsl(var(--h) 55% 62% / .9), transparent 60%), linear-gradient(160deg, hsl(var(--h) 42% 40%), hsl(calc(var(--h) + 48) 52% 14%)); box-shadow: 0 0 0 .5px var(--sep), 0 4px 14px rgba(0,0,0,.12); }
+.card.wide .art { height: 169px; }
+.art > b { font-size: 15px; line-height: 18px; font-weight: 700; text-shadow: 0 1px 6px rgba(0,0,0,.4); }
+.card.wide .art > b { font-size: 22px; line-height: 26px; }
+.card.passed { opacity: .35; }
+.card.drag { opacity: .5; }
+.mat { height: 20px; padding: 0 8px; border-radius: 10px; background: rgba(40,40,40,.5); color: #fff; display: inline-flex; align-items: center; gap: 4px; backdrop-filter: blur(10px) saturate(1.5); position: absolute; }
+.mat.tl { left: 8px; top: 8px; } .mat.rt { right: 8px; top: 8px; padding: 0; width: 20px; justify-content: center; }
+.mat .d { width: 6px; height: 6px; border-radius: 50%; background: #30D158; }
+.ct { padding: 6px 2px 0; }
+.ct div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Bibliotheek: chart, Table, inspector */
+.stack { height: 14px; border-radius: 4px; overflow: hidden; display: flex; gap: 1.500px; margin: 10px 0 8px; }
+.stack i { display: block; height: 100%; }
+.c-film { background: var(--accent); } .c-serie { background: color-mix(in srgb, var(--accent) 55%, transparent); } .c-pend { background: color-mix(in srgb, var(--accent) 25%, transparent); }
+.c-other { background: var(--gray); } .c-free { background: var(--fill); }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+.legend span { display: inline-flex; align-items: center; gap: 5px; }
+.legend i { width: 8px; height: 8px; border-radius: 50%; display: block; }
+.table { flex: 1; min-height: 0; display: flex; flex-direction: column; outline-offset: -3px !important; }
+.thead, .tr { display: grid; grid-template-columns: minmax(0, 1fr) 176px 104px 84px; align-items: center; }
+.thead { height: 28px; border-top: .5px solid var(--sep); border-bottom: .5px solid var(--sep); padding: 0 10px; flex: none; }
+.thead button { text-align: left; height: 100%; padding: 0 8px; border-left: .5px solid var(--sep); display: flex; align-items: center; gap: 4px; color: var(--label2); font-weight: 500; }
+.thead button:first-child { border-left: 0; }
+.thead button.on { color: var(--label); font-weight: 600; }
+.thead .r, .tr .r { justify-content: flex-end; text-align: right; }
+.tbody { padding: 0 10px 8px; }
+.tr { height: 44px; border-radius: 6px; }
+.tr > span { padding: 0 8px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tr:nth-child(even) { background: var(--alt); }
+.tr.sel { background: var(--accent); color: var(--on-accent); }
+.tr.sel .sec, .tr.sel svg { color: inherit; opacity: .85; }
+.cell { display: flex !important; align-items: center; gap: 9px; }
+.cell > div { min-width: 0; } .cell > div div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.thumb { width: 26px; height: 38px; border-radius: 3px; flex: none; background: linear-gradient(160deg, hsl(var(--h) 45% 50%), hsl(calc(var(--h) + 48) 52% 18%)); }
+.ok { color: var(--green); }
+.lrow { display: grid; grid-template-columns: 26px minmax(0, 1fr) 150px; gap: 4px 12px; align-items: center; padding: 9px 0; margin: 0 20px; border-bottom: .5px solid var(--sep); }
+.lrow progress { grid-column: 2 / 3; }
+.insp { width: 248px; flex: none; border-left: .5px solid var(--sep); padding: 4px 16px 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+.insp .art { height: 170px; }
+.bbar { flex: none; height: 30px; display: flex; align-items: center; gap: 10px; padding: 0 16px; border-top: .5px solid var(--sep); background: var(--alt); color: var(--label2); }
+
+/* Title page */
+.hero { height: 330px; position: relative; color: #fff; display: flex; align-items: flex-end; padding: 24px 28px; flex: none;
+  background: radial-gradient(90% 120% at 85% 10%, hsl(var(--h) 60% 62% / .95), transparent 60%), linear-gradient(110deg, hsl(calc(var(--h) + 48) 50% 12%), hsl(var(--h) 42% 36%)); }
+.hero::after { content: ""; position: absolute; inset: auto 0 0 0; height: 120px; background: linear-gradient(transparent, rgba(0,0,0,.45)); }
+.hero > div { position: relative; z-index: 1; display: grid; gap: 6px; }
+.hero h2 { font-size: 26px; line-height: 32px; font-weight: 700; }
+.acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.tp { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 28px; padding: 20px 28px 28px; }
+
+/* confirmationDialog, Settings scene, menus */
+.veil { position: absolute; inset: 0; background: rgba(0,0,0,.2); display: grid; place-items: center; z-index: 5; }
+.alert { width: 260px; background: var(--win); border-radius: 18px; box-shadow: var(--shadow-win); padding: 20px 16px 16px; display: grid; justify-items: center; text-align: center; gap: 6px; }
+.appicon { width: 56px; height: 56px; border-radius: 14px; background: linear-gradient(180deg, #9A82AB, #5F4970); display: grid; place-items: center; color: #fff; margin-bottom: 6px; box-shadow: 0 2px 6px rgba(0,0,0,.2); }
+.appicon svg { width: 30px; height: 30px; }
+.alert .btn { width: 100%; justify-content: center; height: 28px; box-shadow: none; background: var(--fill); }
+.alert .btn.dflt { background: var(--accent); color: var(--on-accent); }
+#dlg { display: contents; }
+.float { position: absolute; z-index: 8; }
+.prefs { left: 330px; top: 110px; width: 540px; background: var(--win); border-radius: 18px; box-shadow: var(--shadow-win); overflow: hidden; }
+.prefs .ptb { display: grid; grid-template-columns: 1fr auto 1fr; align-items: start; padding: 0 14px 8px; border-bottom: .5px solid var(--sep); }
+.prefs .tabs { display: flex; gap: 2px; padding-top: 8px; }
+.prefs .tabs button { width: 92px; padding: 5px 0 4px; border-radius: 8px; display: grid; justify-items: center; gap: 3px; color: var(--label2); }
+.prefs .tabs button svg { width: 20px; height: 20px; }
+.prefs .tabs button.on { background: var(--fill); color: var(--accent); }
+.form { padding: 16px 20px 20px; display: grid; gap: 8px; max-height: 400px; overflow: auto; background: var(--alt); }
+.form .gbox { padding: 0 12px; }
+.frow { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 6px 0; border-top: .5px solid var(--sep); }
+.frow:first-child { border-top: 0; }
+.menu { min-width: 220px; padding: 5px; border-radius: 12px; background: color-mix(in srgb, var(--win) 88%, transparent); backdrop-filter: blur(30px) saturate(1.8); box-shadow: 0 10px 34px rgba(0,0,0,.24), 0 0 0 .5px var(--ctl-line); }
+.menu button { display: flex; width: 100%; gap: 20px; height: 24px; align-items: center; padding: 0 10px; border-radius: 7px; text-align: left; white-space: nowrap; }
+.menu button:hover:not([disabled]) { background: var(--accent); color: var(--on-accent); }
+.menu button[disabled] { color: var(--label3); }
+.menu button span:last-child { margin-left: auto; color: var(--label2); }
+.menu button:hover:not([disabled]) span:last-child { color: inherit; }
+.menu hr { border: 0; border-top: .5px solid var(--sep); margin: 5px 10px; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="i-spark" viewBox="0 0 24 24"><path d="M10 3l1.8 5.2L17 10l-5.2 1.8L10 17l-1.8-5.2L3 10l5.2-1.8z"/><path d="M18 15l.8 2.2L21 18l-2.2.8L18 21l-.8-2.2L15 18l2.2-.8z"/></symbol>
+  <symbol id="i-mark" viewBox="0 0 24 24"><path d="M6 4h12v17l-6-4.5L6 21z"/></symbol>
+  <symbol id="i-drive" viewBox="0 0 24 24"><path d="M5 5h14l2 9v5H3v-5z"/><path d="M3 14h18"/><path d="M17 17h.01"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l5 5"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5z"/></symbol>
+  <symbol id="i-tv" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12.500l3 3 5-6" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-half" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.500" fill="none" stroke="currentColor" stroke-width="1.700"/><path d="M12 3.500a8.500 8.500 0 0 0 0 17z"/></symbol>
+  <symbol id="i-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.500"/></symbol>
+  <symbol id="i-dice" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M9 9h.01M15 15h.01M15 9h.01M9 15h.01"/></symbol>
+  <symbol id="i-slid" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></symbol>
+  <symbol id="i-eyeoff" viewBox="0 0 24 24"><path d="M3 3l18 18M10.500 6.200A9.700 9.700 0 0 1 12 6c5 0 9 6 9 6a15 15 0 0 1-2.600 3.100M6.300 7.700A15 15 0 0 0 3 12s4 6 9 6a8.700 8.700 0 0 0 3.300-.700"/></symbol>
+  <symbol id="i-share" viewBox="0 0 24 24"><path d="M12 15V3M8 7l4-4 4 4M6 11H5v10h14V11h-1"/></symbol>
+  <symbol id="i-insp" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M15 5v14"/></symbol>
+</svg>
+
+<main>
+<h1>Lumos · films en series · herontwerp</h1>
+<p class="lead">Van acht pagina's naar drie: één plek om te ontdekken, jullie lijst, en een Bibliotheek die laat zien wat er op Dobby staat, wat gekeken is en hoeveel ruimte er nog is. Getekend zoals macOS 26 standaard SwiftUI tekent: systeemkleuren, tekststijlen en standaardonderdelen, met de Lumos-kleur alleen als accent. Klikbaar ontwerp, niet gebouwd. Alle titels, namen en getallen zijn verzonnen.</p>
+
+<h2>De nieuwe indeling</h2>
+<p class="sub">Links wat er nu staat, daarnaast wat het wordt.</p>
+<div class="ia">
+  <div class="mini">
+    <h4>Nu · 8 pagina's</h4>
+    <div class="srow">Ontdekken<span class="tag">blijft</span></div>
+    <div class="srow gone">Zoeker</div>
+    <div class="srow">Onze lijst<span class="tag">blijft</span></div>
+    <div class="srow gone">Films</div>
+    <div class="srow gone">Series</div>
+    <div class="srow gone">Beheren</div>
+    <div class="srow gone">Smaak</div>
+    <div class="srow gone">Overgeslagen</div>
+  </div>
+  <div class="arrow">→</div>
+  <div class="mini">
+    <h4>Straks · 3 pagina's</h4>
+    <div class="srow"><svg class="i"><use href="#i-spark"/></svg>Ontdekken</div>
+    <div class="srow"><svg class="i"><use href="#i-mark"/></svg>Onze lijst</div>
+    <div class="srow"><svg class="i"><use href="#i-drive"/></svg>Bibliotheek</div>
+    <div class="srow" style="margin-top:18px;color:var(--label2)">Instellingen… <span class="tag" style="color:var(--label2);font-weight:400">⌘,</span></div>
+  </div>
+  <div class="why">
+    <div><b>Ontdekken + Zoeker + Films + Series → Ontdekken.</b> <span>Vier pagina's deden hetzelfde: titels tonen om uit te kiezen. Nu is het één pagina met één rij filters. Zonder filter zie je de rijen (voor jullie samen, veel bekeken, parels); met een sortering, genre of zoekwoord wordt het een rooster. Films en Series zijn het eerste filter.</span></div>
+    <div><b>Beheren → Bibliotheek, als hoofdpagina.</b> <span>Alles wat op Dobby staat of onderweg is: vrije ruimte bovenaan, een tabel met grootte en gekeken, Bezig met voortgang, en verwijderen.</span></div>
+    <div><b>Smaak en Overgeslagen → het Instellingen-venster (⌘,).</b> <span>Je stelt ze zelden bij. Terugzetten kan ook nog op de titelpagina en met Herstel direct na een Niet nu.</span></div>
+    <div><b>Geen kopjes meer in de zijbalk.</b> <span>Drie regels hebben geen groepen nodig. Onderin staat de schijf, altijd in beeld.</span></div>
+  </div>
+</div>
+
+<h2>Het venster</h2>
+<p class="sub">Alles werkt: zoeken, filters, de menubalk, rechtsklikken op een poster of regel, selecteren met ⌘ en ⇧, ⌫ om te verwijderen, een poster naar de lijst slepen. Klik eerst in het venster voor de toetsen.</p>
+<div class="strip">
+  <span>Spring naar</span>
+  <button class="btn" data-jump="discover">Ontdekken</button>
+  <button class="btn" data-jump="grid">Ontdekken, gefilterd</button>
+  <button class="btn" data-jump="library">Bibliotheek</button>
+  <button class="btn" data-jump="busy">Bezig</button>
+  <button class="btn" data-jump="freeup">Ruimte maken</button>
+  <button class="btn" data-jump="locked">Niet te verwijderen</button>
+  <button class="btn" data-jump="title">Titelpagina</button>
+  <button class="btn" data-jump="prefs">Instellingen</button>
+  <span class="grow"></span>
+  <span>Rol</span><span class="seg" id="role"><button data-role="admin" class="on">Beheerder</button><button data-role="member">Lid</button></span>
+  <span class="seg" id="theme"><button data-t="light" class="on">Licht</button><button data-t="dark">Donker</button></span>
+</div>
+<div class="fit"><div class="desk" id="desk">
+  <div class="menubar" id="menubar"></div>
+  <div class="mac" id="mac">
+    <div class="side" id="side"></div>
+    <div class="content">
+      <div class="tb">
+        <span class="cap" id="back"><button data-act="back" title="Terug" aria-label="Terug"><svg class="i"><use href="#i-back"/></svg></button></span>
+        <span class="ttl"><b id="tt"></b><span class="subhead sec" id="ts"></span></span>
+        <span class="grow"></span>
+        <span class="cap pick" id="scope" role="radiogroup" aria-label="Voor wie"><button data-scope="samen" class="on">Samen</button><button data-scope="ada">Ada</button></span>
+        <span id="tbi" style="display:contents"></span>
+        <label class="cap search"><svg class="i sm"><use href="#i-search"/></svg><input id="q" autocomplete="off" aria-label="Zoek" /></label>
+      </div>
+      <div class="main" id="main"></div>
+    </div>
+    <div id="dlg"></div>
+  </div>
+  <div id="float"></div>
+</div></div>
+
+<h2>Besluiten</h2>
+<div class="notes">
+  <div class="box"><h3>Ontdekken</h3><ul>
+    <li><b>Eén rij filters:</b> Alles · Films · Series, daarna Sorteer, Genre, Decennium, Nederlands. Dezelfde filters die de planken Films en Series nu hebben.</li>
+    <li><b>Rijen of rooster:</b> sortering "Voor jullie" zonder verder filter toont de rijen; het soort-filter versmalt die rijen. Elk ander filter of een zoekwoord geeft een rooster dat doorlaadt.</li>
+    <li><b>Zoeken is geen pagina meer:</b> het zoekveld in de knoppenbalk zoekt in de pagina waar je bent (catalogus, lijst of Bibliotheek).</li>
+    <li><b>Posters groot, de rest systeem.</b> Geen eigen knoppen op de poster: Ja, Niet nu, Al gezien, Trailer, Kijken en Deel staan in het contextmenu en in het menu Titel. Een poster sleep je naar de lijst in de zijbalk.</li>
+    <li>De stemmingen van "Vanavond" (Luchtig, Spannend, Rustig) staan bovenaan het Genre-menu.</li>
+  </ul></div>
+  <div class="box"><h3>Bibliotheek</h3><ul>
+    <li><b>Schijf bovenaan:</b> vrij van totaal, verdeeld over films, series, overig en wat de lopende downloads nog nodig hebben. Onder 15 % vrij wordt de balk in de zijbalk oranje.</li>
+    <li><b>Eén tabel</b> voor films en series: Titel, Gekeken, Toegevoegd, Grootte. Sorteren op elke kolomkop, filteren op soort en op gekeken.</li>
+    <li><b>Selecteren zoals in Finder:</b> klik, ⌘-klik, ⇧-klik, ⌘A. Geen vinkjes. De ondertitel en de inspector tellen de selectie op.</li>
+    <li><b>Ruimte maken:</b> één knop selecteert wat jullie samen gezien hebben en groter is dan 25 GB, grootste eerst. Je ⌘-klikt weg wat moet blijven en drukt ⌫.</li>
+    <li><b>Bezig</b> is het vierde segment (aangevraagd, wacht op release, downloadt met voortgang en eindtijd, importeert, importprobleem). De schijf-kaart noemt altijd de eerstvolgende download.</li>
+    <li><b>Verwijderen</b> alleen voor beheerders, altijd met bevestiging, standaardknop Annuleer. Lijsten blijven staan. Een serie gaat in zijn geheel.</li>
+    <li><b>Met de hand gekopieerd:</b> slotje bij de titel; Verwijder is uitgeschakeld en de inspector zegt waarom.</li>
+  </ul></div>
+  <div class="box"><h3>Titelpagina en instellingen</h3><ul>
+    <li>De titelpagina krijgt een groot sfeerbeeld (zoals de TV-app) en een blok <b>Op Dobby</b>: grootte, toegevoegd, gekeken per persoon, Verwijderen. Tijdens een download staat daar de voortgang. De rest van de pagina blijft.</li>
+    <li><b>Instellingen (⌘,)</b> is een eigen venster met de tabbladen Algemeen, Smaak en Overgeslagen. Er is geen tandwiel in het hoofdvenster: het staat in het menu Lumos, zoals bij elke Mac-app.</li>
+    <li>Meldingen ("op de lijst", "verwijderd") staan in een smalle statusbalk onderin met Herstel, niet in een zwevende toast.</li>
+  </ul></div>
+  <div class="box"><h3>Toetsenbord en Mac-gewoontes</h3><ul>
+    <li><b>Blijft:</b> <kbd>J</kbd> <kbd>N</kbd> <kbd>T</kbd> <kbd>K</kbd> <kbd>Z</kbd>, pijlen, Enter, Esc, <kbd>/</kbd> en <kbd>⌘F</kbd>. Ze werken nu ook op de selectie in de Bibliotheek en staan allemaal in de menubalk (Titel, Wijzig).</li>
+    <li><b>Verandert:</b> <kbd>⌘1</kbd> Ontdekken, <kbd>⌘2</kbd> lijst (was ⌘3), <kbd>⌘3</kbd> Bibliotheek. <kbd>⌘4</kbd> en <kbd>⌘5</kbd> blijven werken: Ontdekken met alleen films of series.</li>
+    <li><b>Nieuw:</b> <kbd>⌫</kbd> verwijdert de selectie in de Bibliotheek (via de bevestiging), <kbd>⌘A</kbd> selecteert alles, <kbd>⌥⌘I</kbd> toont of verbergt de inspector, <kbd>V</kbd> Verras me, <kbd>⌘,</kbd> Instellingen.</li>
+    <li><b>Z</b> en ⌘Z maken een verwijdering niet ongedaan: de bestanden zijn weg, de statusbalk zegt dat.</li>
+    <li>Slepen: poster of tabelregel naar de lijst in de zijbalk. Venstergrootte, zijbalk, inspector, tabelsortering en kolombreedtes worden onthouden. Elke poster en elk symbool krijgt een toegankelijkheidslabel ("Zout Water, film, op Dobby, samen gezien").</li>
+  </ul></div>
+  <div class="box wide"><h3>Welk SwiftUI-onderdeel is wat</h3>
+    <table class="map">
+      <tr><td>Venster</td><td><code>NavigationSplitView</code>; zijbalk is een <code>List(selection:)</code> met <code>.listStyle(.sidebar)</code>, <code>Label</code> per regel, <code>.badge</code> voor de aantallen, <code>.dropDestination</code> op de lijst. De schijf onderin: <code>.safeAreaInset(edge: .bottom)</code> met <code>ProgressView(value:)</code> en een <code>Text</code> in <code>.caption</code>.</td></tr>
+      <tr><td>Knoppenbalk</td><td><code>.navigationTitle</code> en <code>.navigationSubtitle</code>; <code>.toolbar</code> met <code>ToolbarItem(placement: .principal)</code> voor de <code>Picker</code> Samen / naam (<code>.segmented</code>), <code>.primaryAction</code> voor Verwijder, <code>ShareLink</code> en de inspector-knop; <code>.searchable(text:placement: .toolbar)</code>.</td></tr>
+      <tr><td>Filters Ontdekken</td><td><code>HStack</code> met <code>Picker(.segmented)</code> voor soort, drie <code>Picker(.menu)</code> (Sorteer, Genre met een <code>Section</code> Stemming, Decennium), <code>Toggle("Nederlands").toggleStyle(.button)</code>, <code>Button("Verras me", systemImage: "dice")</code> in <code>.bordered</code>.</td></tr>
+      <tr><td>Rijen en rooster</td><td><code>ScrollView</code> met <code>LazyVStack</code>; per rij een <code>Text</code> in <code>.title3</code> en <code>ScrollView(.horizontal)</code> met <code>LazyHStack</code>; het rooster is een <code>LazyVGrid(.adaptive)</code>. Een poster is een <code>Button</code> in <code>.buttonStyle(.borderless)</code> met <code>.focusable()</code> (de systeem-focusring), <code>.contextMenu</code>, <code>.draggable</code>; de labels op het beeld zijn <code>.background(.ultraThinMaterial, in: Capsule())</code>.</td></tr>
+      <tr><td>Schijf</td><td><code>GroupBox</code> met één gestapelde <code>BarMark</code> uit Swift Charts (zoals Opslag in Systeeminstellingen) en <code>chartLegend</code>; kleuren zijn <code>.tint</code> in drie sterktes en <code>.gray</code>.</td></tr>
+      <tr><td>Tabel</td><td><code>Table(selection: Set, sortOrder:)</code> met vier <code>TableColumn</code>s, <code>.alternatingRowBackgrounds()</code>, <code>.contextMenu(forSelectionType:menu:primaryAction:)</code> (dubbelklik of Enter opent de titel), <code>.onDeleteCommand</code> voor ⌫, <code>.draggable</code> op de regel. Gekeken is een <code>Label</code> met <code>checkmark.circle.fill</code>, <code>circle.lefthalf.filled</code> of <code>circle</code>.</td></tr>
+      <tr><td>Bezig</td><td><code>List</code> met per regel <code>ProgressView(value:)</code>, de eindtijd in <code>.callout</code> en bij een importprobleem een <code>Button("Opnieuw proberen")</code> in <code>.bordered</code>.</td></tr>
+      <tr><td>Detailkolom</td><td><code>.inspector(isPresented:)</code> met <code>.inspectorColumnWidth</code>; daarin <code>LabeledContent</code> en twee knoppen (<code>.borderedProminent</code> Kijken, <code>role: .destructive</code> Verwijderen).</td></tr>
+      <tr><td>Titelpagina</td><td><code>NavigationStack</code> in de detailkolom (de terug-knop is van het systeem); sfeerbeeld onder de knoppenbalk met <code>.ignoresSafeArea(edges: .top)</code>; titel in <code>.largeTitle</code>; knoppen <code>.glass</code> en <code>.glassProminent</code> op macOS 26; Op Dobby is een <code>GroupBox</code> met <code>LabeledContent</code>.</td></tr>
+      <tr><td>Bevestigen</td><td><code>.confirmationDialog(titleVisibility: .visible)</code> met <code>Button(role: .destructive)</code> en <code>Button(role: .cancel)</code>; macOS toont dat als waarschuwing met het app-symbool.</td></tr>
+      <tr><td>Leeg</td><td><code>ContentUnavailableView.search(text:)</code> bij geen resultaten; <code>ContentUnavailableView("Nog niets op de lijst", systemImage: "bookmark", description:)</code>; ook in de lege inspector.</td></tr>
+      <tr><td>Instellingen</td><td><code>Settings</code>-scene met een <code>TabView</code> (Algemeen, Smaak, Overgeslagen); elk tabblad een <code>Form</code> met <code>.formStyle(.grouped)</code>, <code>Section</code>, <code>LabeledContent</code> en <code>Button</code>.</td></tr>
+      <tr><td>Menubalk</td><td><code>Commands</code>: <code>CommandMenu("Titel")</code> voor J, N, T, K en ⌫ (<code>.keyboardShortcut("j", modifiers: [])</code>); <code>CommandGroup(after: .sidebar)</code> voor ⌘1 t/m ⌘5 en V; <code>SidebarCommands()</code>, <code>InspectorCommands()</code>; Herstel via de <code>UndoManager</code>.</td></tr>
+      <tr><td>Kleur en tekst</td><td><code>.tint(BurrowColor.lumos)</code> op de scene en verder niets van BurrowColor: achtergronden, tekst en lijnen zijn <code>.primary</code>, <code>.secondary</code>, <code>.tertiary</code>, <code>.separator</code> en materialen. Tekst alleen in <code>.largeTitle</code>, <code>.title2</code>, <code>.title3</code>, <code>.headline</code>, <code>.body</code>, <code>.callout</code>, <code>.subheadline</code> en <code>.caption</code>. Onthouden met <code>@SceneStorage</code>.</td></tr>
+    </table>
+  </div>
+  <div class="box"><h3>macOS 26 of 14</h3><ul>
+    <li><b>Voorstel: Lumos naar macOS 26.</b> Getekend is de macOS 26-vorm: zwevende zijbalk van glas, capsules in de knoppenbalk, glazen knoppen op het sfeerbeeld.</li>
+    <li>Bijna alles is standaard en krijgt dat glas vanzelf zodra er met de macOS 26-SDK gebouwd wordt. Alleen <code>.buttonStyle(.glass)</code> en <code>.glassProminent</code> op de titelpagina bestaan pas vanaf 26.</li>
+    <li><b>Blijft het minimum 14,</b> dan tekent dezelfde code de klassieke vorm: zijbalk over de volle hoogte met vibrancy, een vlakke knoppenbalk met lijn eronder, rechthoekige knoppen. Op het sfeerbeeld vallen de knoppen terug op <code>.borderedProminent</code> en <code>.bordered</code> achter <code>if #available(macOS 26, *)</code>. <code>Table</code>, <code>.inspector</code>, <code>ContentUnavailableView</code> en de gegroepeerde <code>Form</code> werken allemaal vanaf 14.</li>
+  </ul></div>
+  <div class="box ask"><h3>Open vragen</h3><ul>
+    <li>Mag Lumos naar minimaal macOS 26, of blijft 14 het minimum met de terugval hierboven?</li>
+    <li>Kijken jullie op de tv met één Jellyfin-account of elk met een eigen? Met één account kan "gekeken" alleen "samen gezien" zijn; per persoon komt dan alleen uit Lumos's eigen Al gezien.</li>
+    <li>Ruimte maken: is "samen gezien en groter dan 25 GB" de goede regel, en moeten titels die nog op een lijst staan er buiten blijven?</li>
+    <li>Moet verwijderen de titel ook als Al gezien markeren, zodat hij niet terugkomt in de voorstellen? Nu niet: de standaardbevestiging heeft geen plek voor een vinkje.</li>
+    <li>De stemmingen (Luchtig, Spannend, Rustig): in het Genre-menu zoals hier, of mogen ze weg?</li>
+  </ul></div>
+  <div class="box src wide"><h3>Waar de gegevens vandaan komen</h3><ul>
+    <li>Bestaat: Bezig en bibliotheek met voortgang, eindtijd, toegevoegd en <code>removable</code> (<code>GET manage</code>), verwijderen per titel (<code>DELETE library/…</code>, admin). Meerdere tegelijk is die aanroep per titel.</li>
+    <li>Nieuw: grootte per titel en schijf vrij/totaal (Radarr en Sonarr), gekeken per persoon (Jellyfin's afgespeeld per gebruiker, plus Lumos's Al gezien). Jellyfin wordt nu alleen met een servicesleutel gelezen, zonder gebruikersgegevens.</li>
+    <li>Ontdekken gebruikt de bestaande <code>rows</code>, <code>explore</code>, <code>browse</code> en <code>search</code>; het soort-filter op de rijen is nieuw.</li>
+  </ul></div>
+</div>
+</main>
+
+<script>
+// [id, titel, jaar, soort, minuten of [seizoenen, afleveringen], genres, Nederlands, score, tint, regel]
+const T = [
+  [1, 'De Laatste Veerman', 2024, 'film', 108, ['Drama'], 1, 7.8, 205, 'Een veerman vaart zijn laatste winter en krijgt een passagier die niet meer van boord wil.'],
+  [2, 'Noorderzon', 2025, 'film', 96, ['Thriller'], 1, 7.1, 250, 'Een accountant verdwijnt op een vrijdag en laat alleen een volle agenda achter.'],
+  [3, 'Zout Water', 2023, 'film', 121, ['Drama'], 0, 8.0, 190, 'Twee zussen erven een oesterkwekerij en een schuld die ouder is dan zij.'],
+  [4, 'Het Stille Uur', 2026, 'film', 102, ['Thriller'], 0, 7.4, 280, 'In een nachtradiostudio belt iemand in die weet wat de presentator verzwijgt.'],
+  [5, 'Glasbak Blues', 2025, 'film', 91, ['Komedie'], 1, 6.9, 35, 'Een buurtband oefent in een fietsenstalling voor het optreden van hun leven.'],
+  [6, 'Kamer 14', 2022, 'film', 99, ['Horror'], 0, 6.6, 350, 'Het hotel heeft dertien kamers. De sleutel zegt iets anders.'],
+  [7, 'De Kaartenmaker', 2019, 'film', 134, ['Avontuur'], 0, 8.2, 28, 'Een cartograaf tekent een eiland dat pas daarna gevonden wordt.'],
+  [8, 'Halve Maan', 2026, 'film', 104, ['Romantiek'], 0, 7.0, 320, 'Een bakker en een nachtverpleegkundige delen een stad, maar nooit hetzelfde uur.'],
+  [9, 'Papieren Stad', 2021, 'film', 117, ['Sciencefiction'], 0, 7.7, 165, 'Een archivaris ontdekt dat de plattegrond van de stad elke nacht verandert.'],
+  [10, 'Onder de Dijk', 2018, 'film', 88, ['Documentaire'], 1, 7.9, 100, 'Een jaar met de mensen die het water buiten houden.'],
+  [11, 'Nachttrein naar het Noorden', 2024, 'film', 112, ['Misdaad'], 0, 7.5, 230, 'Zes reizigers, één koffer te veel, en nog acht uur tot de grens.'],
+  [12, 'Lichtjaren', 2017, 'film', 142, ['Sciencefiction'], 0, 8.4, 265, 'Een bericht van thuis doet er negen jaar over. Het antwoord ook.'],
+  [13, 'De Lange Zomer', 1994, 'film', 97, ['Komedie'], 0, 7.2, 50, 'Drie vrienden, een caravan en een camping die al gesloten blijkt.'],
+  [14, 'Vuurtorenwachter', 2026, 'film', 110, ['Drama'], 0, 7.6, 15, 'De laatste wachter van het eiland krijgt een leerling die niet kan zwemmen.'],
+  [15, 'Kleine Stormen', 2023, 'film', 93, ['Animatie'], 0, 7.9, 180, 'Een meisje verzamelt het weer in jampotten tot er één openvalt.'],
+  [16, 'Tweede Viool', 2020, 'film', 101, ['Komedie'], 1, 7.0, 300, 'Een orkest verliest zijn dirigent en ontdekt dat niemand hem volgde.'],
+  [17, 'Zilveren Draad', 1988, 'film', 126, ['Romantiek'], 0, 7.8, 215, 'Brieven tussen een kleermaker en een telefoniste, dertig jaar lang.'],
+  [18, 'Het Negende Huis', 2025, 'film', 115, ['Horror'], 0, 6.8, 5, 'De straat telt acht huizen. De postbode bezorgt er negen.'],
+  [19, 'Wintertuin', 2024, 'serie', [3, 24], ['Drama'], 0, 8.1, 140, 'Een familie houdt een kwekerij overeind, en elkaar net niet.'],
+  [20, 'Radio Stilte', 2025, 'serie', [1, 8], ['Thriller'], 1, 7.6, 240, 'Een zendamateur vangt een noodsignaal op dat uit zijn eigen straat komt.'],
+  [21, 'Vogelvrij', 2022, 'serie', [4, 40], ['Misdaad'], 0, 8.3, 20, 'Een rechercheur met ontslag jaagt verder, nu zonder regels.'],
+  [22, 'De Overkant', 2023, 'serie', [2, 16], ['Drama'], 1, 7.7, 195, 'Twee dorpen, één pont, en een ruzie van drie generaties.'],
+  [23, 'Signaal', 2026, 'serie', [1, 6], ['Sciencefiction'], 0, 7.9, 275, 'Elke telefoon in de stad gaat tegelijk over. Niemand belt.'],
+  [24, 'Buurtwacht', 2021, 'serie', [5, 52], ['Komedie'], 1, 7.3, 60, 'De buurtapp weet alles, behalve wat er echt gebeurt.'],
+  [25, 'Het Archief', 2020, 'serie', [2, 12], ['Documentaire'], 0, 8.0, 85, 'Per aflevering één doos die nooit geopend had mogen worden.'],
+  [26, 'Koude Grond', 2025, 'serie', [1, 10], ['Misdaad'], 0, 7.8, 210, 'Bij het afgraven van een polder komt een oude zaak boven.'],
+  [27, 'Morgenland', 2019, 'serie', [3, 30], ['Avontuur'], 0, 7.4, 40, 'Een karavaan trekt oostwaarts achter een kaart aan die niet klopt.'],
+  [28, 'Brakwater', 2026, 'serie', [1, 8], ['Thriller'], 0, 7.5, 170, 'Een havenmeester vindt een schip zonder bemanning en met de motor aan.'],
+].map(([id, t, y, kind, len, g, nl, score, h, d]) => ({ id, t, y, kind, len, g, nl: !!nl, score, h, d }));
+const byId = id => T.find(t => t.id === +id);
+
+// Op Dobby: GB, toegevoegd, te verwijderen, gekeken door Ada en Bram (film: 1 of 0, serie: afleveringen)
+const LIB = new Map([
+  [3, [41.2, '2026-03-14', 1, 1, 1]], [7, [58.6, '2025-12-02', 1, 1, 1]], [12, [72.4, '2025-11-20', 1, 1, 1]],
+  [9, [23.8, '2026-06-01', 1, 1, 0]], [1, [18.3, '2026-09-12', 1, 0, 0]], [11, [14.9, '2026-10-03', 1, 0, 1]],
+  [13, [6.2, '2024-08-19', 0, 1, 1]], [15, [11.7, '2026-07-22', 1, 0, 0]], [17, [9.4, '2025-02-11', 1, 1, 1]],
+  [6, [27.5, '2026-01-30', 1, 1, 1]], [10, [7.8, '2026-10-28', 1, 0, 0]], [16, [12.6, '2026-05-09', 1, 0, 1]],
+  [19, [96.3, '2025-10-05', 1, 24, 24]], [21, [148.0, '2025-06-17', 1, 40, 40]], [24, [121.5, '2024-12-01', 1, 52, 31]],
+  [22, [54.7, '2026-04-11', 1, 9, 9]], [25, [38.9, '2026-02-03', 1, 0, 12]], [27, [87.2, '2025-09-09', 1, 30, 30]],
+  [20, [22.1, '2026-10-19', 1, 3, 3]],
+].map(([id, [size, added, rem, a, b]]) => [id, { size, added, removable: !!rem, a, b }]));
+const BUSY = new Map([
+  [4, { s: 'dl', p: .62, eta: 'klaar rond 21:40', size: 29.7 }],
+  [23, { s: 'dl', p: .18, eta: 'klaar morgen rond 03:10', size: 18.4 }],
+  [14, { s: 'imp', note: 'Bijna klaar' }],
+  [8, { s: 'wait', note: 'Verschijnt 28 november' }],
+  [28, { s: 'req', note: 'Zoekt een uitgave' }],
+  [18, { s: 'bad', note: 'Bestand niet herkend' }],
+]);
+const STATE = { dl: 'Downloadt', imp: 'Importeert', wait: 'Wacht op release', req: 'Aangevraagd', bad: 'Importprobleem' };
+const DISK = { total: 1000, other: 38 };
+const LIST = new Set([4, 23, 14, 8, 28, 18, 1, 15, 10, 20]), MINE = new Set([2, 26]);
+const PASSED = new Map([[6, 'Niet ons ding · 2 nov'], [13, 'Al gezien · 30 okt'], [24, 'Eén van ons wil niet · 21 okt']]);
+const TASTE = [[3, 'Meer zoals dit', 'Samen'], [21, 'Meer zoals dit', 'Samen'], [18, 'Minder zoals dit', 'Samen'], [12, 'Meer zoals dit', 'Ada']];
+const GENRES = [...new Set(T.flatMap(t => t.g))].sort();
+const MOODS = { Luchtig: ['Komedie', 'Animatie', 'Romantiek', 'Avontuur'], Spannend: ['Thriller', 'Misdaad', 'Horror', 'Sciencefiction'], Rustig: ['Drama', 'Documentaire'] };
+
+const S = { page: 'discover', from: 'discover', id: null, type: 'all', sort: 'voor', genre: '', decade: '', nl: false, q: '', scope: 'samen', role: 'admin',
+  lk: 'all', ls: 'all', lsort: 'added', ldir: -1, sel: new Set(), anchor: null, insp: true, del: null, prefs: false, tab: 'smaak', seed: 0, focus: null, note: null, menu: null };
+const undo = [];
+const el = id => document.getElementById(id);
+
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const ic = (n, c = '') => `<svg class="i ${c}" aria-hidden="true"><use href="#i-${n}"/></svg>`;
+const nf = (n, d = 1) => n.toLocaleString('nl-NL', { maximumFractionDigits: d });
+const gb = n => n >= 1000 ? nf(n / 1000, 2) + ' TB' : nf(n) + ' GB';
+const day = d => new Date(d).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' });
+const facts = t => `${t.y} · ${t.kind === 'film' ? `Film · ${t.len} min` : `Serie · ${t.len[0]} ${t.len[0] > 1 ? 'seizoenen' : 'seizoen'}`}`;
+const eps = t => t.kind === 'serie' ? t.len[1] : 1;
+const list = () => S.scope === 'samen' ? LIST : MINE;
+const listName = () => S.scope === 'samen' ? 'Onze lijst' : 'Jouw lijst';
+const admin = () => S.role === 'admin';
+const hit = t => { const q = S.q.trim().toLowerCase(); return !q || (t.t + ' ' + t.g.join(' ') + ' ' + t.y).toLowerCase().includes(q); };
+
+// 1 = gekeken, 0 = niet, daartussen = een serie halverwege
+function seenOf(id) {
+  const t = byId(id), l = LIB.get(id);
+  const a = l.a / eps(t), b = l.b / eps(t);
+  return { a, b, both: a === 1 && b === 1, none: a === 0 && b === 0, score: a + b };
+}
+function seenLabel(id) {
+  const s = seenOf(id), t = byId(id), l = LIB.get(id);
+  if (s.both) return ['check', 'Samen gezien'];
+  if (s.none) return ['circle', 'Niet gezien'];
+  if (s.a % 1 || s.b % 1) return ['half', l.a === l.b ? `Samen bij ${l.a} van ${eps(t)}` : `Ada ${l.a} · Bram ${l.b} van ${eps(t)}`];
+  return ['half', s.a === 1 && s.b === 1 ? '' : s.a === 1 ? `Ada${s.b ? ', Bram bezig' : ' heeft gezien'}` : `Bram${s.a ? ', Ada bezig' : ' heeft gezien'}`];
+}
+const seenCell = id => { const [i, l] = seenLabel(id); return `${ic(i, i === 'check' ? 'f ok' : i === 'half' ? 'f sec' : 'sec')}<span>${l}</span>`; };
+const who = (t, v) => v === eps(t) ? 'Gezien' : v ? `${v} van ${eps(t)}` : 'Nog niet';
+function usage() {
+  let film = 0, serie = 0, pend = 0;
+  for (const [id, l] of LIB) byId(id).kind === 'film' ? film += l.size : serie += l.size;
+  for (const b of BUSY.values()) if (b.s === 'dl') pend += b.size * (1 - b.p);
+  const free = DISK.total - DISK.other - film - serie;
+  return { film, serie, pend, free, tight: free / DISK.total < .15 };
+}
+const freeable = () => [...LIB].filter(([id, l]) => l.removable && l.size >= 25 && seenOf(id).both).map(([id]) => id);
+const sizeOf = ids => ids.reduce((n, id) => n + (LIB.get(id)?.size ?? 0), 0);
+const deletable = ids => admin() ? ids.filter(id => LIB.get(id)?.removable) : [];
+
+function card(t, wide) {
+  const b = BUSY.get(t.id), l = LIB.get(t.id), on = list().has(t.id);
+  const state = l ? 'Op Dobby' : b ? (b.s === 'dl' ? Math.round(b.p * 100) + ' %' : STATE[b.s]) : '';
+  const seen = l && seenOf(t.id).both ? ', samen gezien' : '';
+  return `<div class="card ${wide ? 'wide' : ''} ${PASSED.has(t.id) && S.page !== 'list' ? 'passed' : ''}" tabindex="0" draggable="true" data-id="${t.id}" data-act="open" role="button" aria-label="${esc(t.t)}, ${t.kind}${state ? ', ' + state.toLowerCase() : ''}${seen}${on ? ', op de lijst' : ''}">
+    <div class="art" style="--h:${t.h}"><b>${esc(t.t)}</b>${state ? `<span class="mat tl caption">${l ? '<i class="d"></i>' : ''}${state}${seen ? ' · gezien' : ''}</span>` : ''}${on ? `<span class="mat rt">${ic('mark', 'f sm')}</span>` : ''}</div>
+    <div class="ct"><div>${esc(t.t)}</div><div class="callout sec">${facts(t)}</div></div></div>`;
+}
+const cuv = (i, h, d) => `<div class="cuv">${ic(i)}<b class="title2">${h}</b><span>${d}</span></div>`;
+
+function filtered() {
+  const mood = MOODS[S.genre];
+  let r = T.filter(t => (S.type === 'all' || t.kind === S.type) && (!S.genre || (mood ? t.g.some(g => mood.includes(g)) : t.g.includes(S.genre)))
+    && (!S.decade || Math.floor(t.y / 10) * 10 === +S.decade) && (!S.nl || t.nl) && hit(t));
+  const mix = t => (t.id * 7 + S.seed * 3) % 29;
+  if (S.sort === 'nieuw') r.sort((a, b) => b.y - a.y);
+  else if (S.sort === 'best') r.sort((a, b) => b.score - a.score);
+  else if (S.sort === 'binnenkort') r = r.filter(t => t.y === 2026 && !LIB.has(t.id));
+  else if (S.sort === 'parels') r = r.filter(t => t.score >= 7.5 && t.y < 2024).sort((a, b) => mix(a) - mix(b));
+  else r.sort((a, b) => mix(a) - mix(b));
+  return r;
+}
+const plain = () => S.sort === 'voor' && !S.genre && !S.decade && !S.nl && !S.q.trim();
+const segs = (key, opts) => `<span class="seg" data-seg="${key}" role="radiogroup">${opts.map(([v, l]) => `<button data-v="${v}" class="${S[key] === v ? 'on' : ''}">${l}</button>`).join('')}</span>`;
+const opt = (v, l, cur) => `<option value="${v}" ${cur === v ? 'selected' : ''}>${l}</option>`;
+
+function discover() {
+  const bar = `<div class="fbar">${segs('type', [['all', 'Alles'], ['film', 'Films'], ['serie', 'Series']])}
+    <select class="pop" data-set="sort" aria-label="Sorteer">${[['voor', S.scope === 'samen' ? 'Voor jullie' : 'Voor jou'], ['populair', 'Populair'], ['nieuw', 'Nieuw'], ['binnenkort', 'Binnenkort'], ['best', 'Best beoordeeld'], ['parels', 'Verborgen parels']].map(([v, l]) => opt(v, l, S.sort)).join('')}</select>
+    <select class="pop" data-set="genre" aria-label="Genre">${opt('', 'Alle genres', S.genre)}<optgroup label="Stemming">${Object.keys(MOODS).map(m => opt(m, m, S.genre)).join('')}</optgroup><optgroup label="Genre">${GENRES.map(g => opt(g, g, S.genre)).join('')}</optgroup></select>
+    <select class="pop" data-set="decade" aria-label="Decennium">${opt('', 'Alle jaren', S.decade)}${[2020, 2010, 1990, 1980].map(d => opt(String(d), 'Jaren ' + String(d).slice(2), S.decade)).join('')}</select>
+    <button class="btn tog ${S.nl ? 'on' : ''}" data-act="nl" aria-pressed="${S.nl}">Nederlands</button>
+    <span class="grow"></span><button class="btn" data-act="shuffle" title="Nieuwe rijen (V)">${ic('dice', 'sm')}Verras me</button></div>`;
+  if (!plain()) {
+    const r = filtered();
+    return `<div class="pane">${bar}${r.length ? `<div class="scroll"><div class="row-h"><span class="title3">${S.q.trim() ? `Resultaten voor "${esc(S.q.trim())}"` : { all: 'Films en series', film: 'Films', serie: 'Series' }[S.type]}</span><span class="callout sec">${r.length} ${r.length === 1 ? 'titel' : 'titels'}</span></div><div class="grid">${r.map(t => card(t)).join('')}</div></div>`
+      : S.q.trim() ? cuv('search', `Geen resultaten voor "${esc(S.q.trim())}"`, 'Controleer de spelling of probeer een andere zoekopdracht.') : cuv('spark', 'Niets met deze filters', 'Kies een ander genre of decennium.')}</div>`;
+  }
+  const ok = t => S.type === 'all' || t.kind === S.type;
+  const pick = ids => ids.map((_, i) => ids[(i + S.seed) % ids.length]).map(byId).filter(ok);
+  const rows = [
+    [S.scope === 'samen' ? 'Voor jullie samen' : 'Voor jou', 'past bij jullie lijst en smaak', pick([5, 22, 11, 25, 16, 9, 27, 13]).filter(t => !list().has(t.id)), true],
+    S.scope === 'samen' ? ['Op jouw lijst, nog niet samen', 'alleen jij ziet deze rij', pick([...MINE])] : null,
+    ['Nu veel bekeken', '', pick([4, 23, 19, 3, 21, 12, 24, 6])],
+    ['Het beste van dit jaar', '', pick([14, 8, 28, 23, 4])],
+    ['Verborgen parels', '', pick([10, 15, 17, 25, 13, 7])],
+    ['Nederlands', '', T.filter(t => t.nl && ok(t))],
+  ].filter(r => r && r[2].length);
+  return `<div class="pane">${bar}<div class="scroll" style="padding-bottom:20px">${rows.map(([h, s, ts, wide]) => `<div class="row-h"><span class="title3">${h}</span><span class="callout sec">${s}</span></div><div class="cards">${ts.map(t => card(t, wide)).join('')}</div>`).join('')}</div></div>`;
+}
+
+function listPage() {
+  const all = [...list()].map(byId), ts = all.filter(hit).sort((a, b) => LIB.has(b.id) - LIB.has(a.id));
+  return `<div class="pane">${ts.length ? `<div class="scroll"><div class="grid" style="padding-top:8px">${ts.map(t => card(t)).join('')}</div></div>`
+    : all.length ? cuv('search', `Geen resultaten voor "${esc(S.q.trim())}"`, 'Niets op de lijst met die naam.') : cuv('mark', 'Nog niets op de lijst', 'Druk J op een titel of sleep een poster naar de lijst.')}</div>`;
+}
+
+function libRows() {
+  const r = [...LIB.keys()].filter(id => hit(byId(id)) && (S.lk === 'all' || byId(id).kind === S.lk) && (S.ls === 'all' || (S.ls === 'both' ? seenOf(id).both : S.ls === 'none' ? seenOf(id).none : !seenOf(id).both && !seenOf(id).none)));
+  const key = { title: id => byId(id).t, seen: id => seenOf(id).score, added: id => LIB.get(id).added, size: id => LIB.get(id).size }[S.lsort];
+  return r.sort((x, y) => (key(x) > key(y) ? 1 : key(x) < key(y) ? -1 : 0) * S.ldir);
+}
+
+function inspector() {
+  const sel = [...S.sel].filter(id => LIB.has(id));
+  if (!sel.length) return `<div class="insp">${cuv('insp', 'Geen selectie', 'Kies een titel in de tabel.')}</div>`;
+  const del = deletable(sel), delBtn = admin() ? `<button class="btn destr" data-act="delsel" ${del.length ? '' : 'disabled'}>${ic('trash', 'sm')}Verwijderen…</button>` : '';
+  if (sel.length > 1) return `<div class="insp"><div><div class="title2">${sel.length} titels</div><div class="sec">geselecteerd</div></div>
+    <dl class="lc"><dt>Samen</dt><dd class="num">${gb(sizeOf(sel))}</dd><dt>Samen gezien</dt><dd>${sel.filter(id => seenOf(id).both).length} van ${sel.length}</dd>${del.length < sel.length && admin() ? `<dt>Blijft staan</dt><dd>${sel.length - del.length}, met de hand gekopieerd</dd>` : ''}</dl><div>${delBtn}</div></div>`;
+  const id = sel[0], t = byId(id), l = LIB.get(id);
+  return `<div class="insp" data-id="${id}"><div class="art" style="--h:${t.h}"><b>${esc(t.t)}</b></div>
+    <div><div class="title2">${esc(t.t)}</div><div class="sec">${facts(t)}</div></div>
+    <div style="display:flex;gap:8px"><button class="btn prom" data-act="watch">${ic('play', 'f sm')}Kijken</button><button class="btn" data-act="open">Details</button></div>
+    <dl class="lc"><dt>Grootte</dt><dd class="num">${gb(l.size)}</dd><dt>Toegevoegd</dt><dd>${day(l.added)}</dd><dt>Ada</dt><dd>${who(t, l.a)}</dd><dt>Bram</dt><dd>${who(t, l.b)}</dd><dt>Beheerd door</dt><dd>${l.removable ? (t.kind === 'film' ? 'Radarr' : 'Sonarr') : 'niemand'}</dd></dl>
+    <div>${delBtn}</div>${l.removable || !admin() ? '' : `<div class="callout sec">${ic('lock', 'sm')} Met de hand naar Dobby gekopieerd. Radarr beheert dit bestand niet, dus Lumos kan het niet wissen.</div>`}</div>`;
+}
+
+function library() {
+  const u = usage(), w = n => `style="width:${Math.max(0, n) / DISK.total * 100}%"`, films = [...LIB.keys()].filter(id => byId(id).kind === 'film').length;
+  const cand = freeable(), rows = libRows(), next = [...BUSY].find(([, b]) => b.s === 'dl');
+  const disk = `<div class="gbox" style="margin:4px 20px 12px"><div style="display:flex;align-items:baseline;gap:8px"><span class="title2 num">${gb(u.free)} vrij</span><span class="sec">van ${gb(DISK.total)} op Dobby</span><span class="grow"></span>
+      ${admin() && cand.length ? `<span class="callout sec">${cand.length} grote titels samen gezien, ${gb(sizeOf(cand))}</span><button class="btn" data-act="freeup">Ruimte maken</button>` : ''}</div>
+    <div class="stack" role="img" aria-label="Schijfgebruik"><i class="c-film" ${w(u.film)}></i><i class="c-serie" ${w(u.serie)}></i><i class="c-other" ${w(DISK.other)}></i><i class="c-pend" ${w(u.pend)}></i><i class="c-free" ${w(u.free - u.pend)}></i></div>
+    <div class="legend callout sec"><span><i class="c-film"></i>Films ${gb(u.film)}</span><span><i class="c-serie"></i>Series ${gb(u.serie)}</span><span><i class="c-other"></i>Overig ${gb(DISK.other)}</span><span><i class="c-pend"></i>Onderweg ${gb(u.pend)}</span>
+      <span class="grow"></span>${next ? `<span>${esc(byId(next[0]).t)} ${Math.round(next[1].p * 100)} %, ${next[1].eta}</span>` : ''}</div></div>`;
+  const bar = `<div class="fbar">${segs('lk', [['all', `Alles ${LIB.size}`], ['film', `Films ${films}`], ['serie', `Series ${LIB.size - films}`], ['busy', `Bezig ${BUSY.size}`]])}
+    ${S.lk === 'busy' ? '' : `<select class="pop" data-set="ls" aria-label="Gekeken">${[['all', 'Alles'], ['both', 'Samen gezien'], ['one', 'Eén van ons, of half'], ['none', 'Niet gezien']].map(([v, l]) => opt(v, l, S.ls)).join('')}</select>`}
+    <span class="grow"></span>${admin() ? '' : '<span class="callout sec">Alleen een beheerder kan verwijderen</span>'}</div>`;
+  let body;
+  if (S.lk === 'busy') body = `<div class="scroll">${[...BUSY].filter(([id]) => hit(byId(id))).map(([id, b]) => { const t = byId(id); return `<div class="lrow" data-id="${id}">
+      <span class="thumb" style="--h:${t.h}"></span><div><div>${esc(t.t)}</div><div class="callout sec">${facts(t)}</div></div>
+      <div style="text-align:right;grid-row:span ${b.s === 'dl' ? 2 : 1}"><div style="${b.s === 'bad' ? 'color:var(--red)' : ''}">${STATE[b.s]}</div><div class="callout sec">${b.s === 'dl' ? b.eta : b.note}</div>${b.s === 'bad' ? '<button class="btn" data-act="retry" style="margin-top:4px">Opnieuw proberen</button>' : ''}</div>
+      ${b.s === 'dl' ? `<span></span><div><progress value="${b.p}" max="1"></progress><div class="callout sec num" style="margin-top:3px">${Math.round(b.p * 100)} % · ${nf(b.size * b.p)} van ${gb(b.size)}</div></div>` : ''}</div>`; }).join('')}</div>`;
+  else {
+    const th = (k, l, cls = '') => `<button class="subhead ${cls} ${S.lsort === k ? 'on' : ''}" data-sort="${k}">${l}${S.lsort === k ? (S.ldir > 0 ? ' ⌃' : ' ⌄') : ''}</button>`;
+    body = `<div class="table" tabindex="0" id="table" role="grid" aria-label="Bibliotheek" aria-multiselectable="true"><div class="thead">${th('title', 'Titel')}${th('seen', 'Gekeken')}${th('added', 'Toegevoegd')}${th('size', 'Grootte', 'r')}</div>
+      ${rows.length ? `<div class="scroll"><div class="tbody">${rows.map(id => { const t = byId(id), l = LIB.get(id); return `<div class="tr ${S.sel.has(id) ? 'sel' : ''}" data-row="${id}" data-id="${id}" draggable="true" role="row" aria-selected="${S.sel.has(id)}">
+        <span class="cell"><span class="thumb" style="--h:${t.h}"></span><div><div>${esc(t.t)}${l.removable ? '' : ` ${ic('lock', 'sm sec')}`}</div><div class="callout sec">${facts(t)}${list().has(id) ? ' · op de lijst' : ''}</div></div></span>
+        <span class="cell">${seenCell(id)}</span><span class="sec">${day(l.added)}</span><span class="num r">${gb(l.size)}</span></div>`; }).join('')}</div></div>`
+      : S.q.trim() ? cuv('search', `Geen resultaten voor "${esc(S.q.trim())}"`, 'Niets op Dobby met die naam.') : cuv('drive', 'Niets met dit filter', 'Kies een ander filter voor Gekeken.')}</div>`;
+  }
+  return `<div class="pane">${disk}${bar}${body}${note()}</div>${S.insp && S.lk !== 'busy' ? inspector() : ''}`;
+}
+
+function titlePage() {
+  const t = byId(S.id), l = LIB.get(t.id), b = BUSY.get(t.id), on = list().has(t.id);
+  const dobby = l ? `<div class="gbox"><div class="headline" style="margin-bottom:8px">Op Dobby</div><dl class="lc"><dt>Grootte</dt><dd class="num">${gb(l.size)}</dd><dt>Toegevoegd</dt><dd>${day(l.added)}</dd><dt>Ada</dt><dd>${who(t, l.a)}</dd><dt>Bram</dt><dd>${who(t, l.b)}</dd><dt>Beheerd door</dt><dd>${l.removable ? (t.kind === 'film' ? 'Radarr' : 'Sonarr') : 'niemand'}</dd></dl>
+      ${admin() ? `<div style="margin-top:12px"><button class="btn destr" data-act="del" ${l.removable ? '' : 'disabled'}>${ic('trash', 'sm')}Verwijderen…</button></div>${l.removable ? '' : `<div class="callout sec" style="margin-top:8px">Met de hand naar Dobby gekopieerd. Radarr beheert dit bestand niet, dus Lumos kan het niet wissen.</div>`}` : ''}</div>`
+    : b ? `<div class="gbox"><div class="headline" style="margin-bottom:8px">Onderweg naar Dobby</div>${b.s === 'dl' ? `<progress value="${b.p}" max="1"></progress><div class="callout sec num" style="margin-top:6px">${Math.round(b.p * 100)} % van ${gb(b.size)} · ${b.eta}</div>` : `<div class="sec">${STATE[b.s]} · ${b.note}</div>`}</div>`
+    : `<div class="gbox"><div class="headline" style="margin-bottom:4px">Niet op Dobby</div><div class="callout sec">Ja zet de titel op de lijst en vraagt hem aan.</div></div>`;
+  return `<div class="pane" data-id="${t.id}"><div class="scroll"><div class="hero" style="--h:${t.h}"><div><h2>${esc(t.t)}</h2><div>${facts(t)} · ${t.g.join(', ')}${t.nl ? ' · Nederlands' : ''} · ${nf(t.score)}</div>
+      <div class="acts">${l ? `<button class="btn lg glass prom" data-act="watch">${ic('play', 'f sm')}Kijken <kbd>K</kbd></button>` : ''}
+      <button class="btn lg glass ${l ? '' : 'prom'}" data-act="list">${ic('mark', on ? 'f sm' : 'sm')}${on ? 'Op de lijst' : 'Ja, op de lijst'} <kbd>J</kbd></button>
+      <button class="btn lg glass" data-act="pass">Niet nu <kbd>N</kbd></button><button class="btn lg glass" data-act="trailer">Trailer <kbd>T</kbd></button></div></div></div>
+    <div class="tp"><div><p>${esc(t.d)}</p>${PASSED.has(t.id) ? `<p class="sec" style="margin-top:12px">Overgeslagen: ${PASSED.get(t.id)}. <button class="btn" data-act="restore">Terugzetten</button></p>` : ''}
+      <p class="callout ter" style="margin-top:20px">Scores, productie, cast, seizoenen, Meer zoals dit en reviews blijven zoals ze zijn.</p></div>${dobby}</div></div>${note()}</div>`;
+}
+
+const note = () => S.note ? `<div class="bbar callout"><span>${S.note.text}</span><span class="grow"></span>${S.note.undo ? '<button class="btn bless callout" data-act="undo">Herstel</button>' : ''}</div>` : '';
+
+function dialog() {
+  if (!S.del) return '';
+  const ids = S.del.ids, one = ids.length === 1, serie = ids.some(id => byId(id).kind === 'serie');
+  return `<div class="veil"><div class="alert" role="alertdialog"><span class="appicon">${ic('spark')}</span>
+    <div class="headline">${one ? `"${esc(byId(ids[0]).t)}"` : `${ids.length} titels`} verwijderen van Dobby?</div>
+    <div class="subhead" style="margin-bottom:8px">De bestanden worden gewist en ${gb(sizeOf(ids))} komt vrij. Jullie lijsten blijven staan.${serie ? ' Een serie gaat in zijn geheel weg.' : ''}${S.del.kept ? ` ${S.del.kept === 1 ? '1 titel blijft' : S.del.kept + ' titels blijven'} staan: met de hand gekopieerd.` : ''} Dit kan niet worden hersteld.</div>
+    <button class="btn destr" data-act="confirm">Verwijderen</button><button class="btn dflt" data-act="cancel" id="dflt">Annuleer</button></div></div>`;
+}
+
+function floats() {
+  let h = '';
+  if (S.prefs) {
+    const tab = (k, l, i) => `<button class="subhead ${S.tab === k ? 'on' : ''}" data-tab="${k}">${ic(i)}${l}</button>`;
+    const item = (id, sub, btn, a, i = '') => `<div class="frow" data-id="${id}"><span class="thumb" style="--h:${byId(id).h}"></span><span class="grow"><div>${esc(byId(id).t)}</div><div class="callout sec">${sub}</div></span><button class="btn" data-act="${a}" data-i="${i}">${btn}</button></div>`;
+    const body = S.tab === 'alg' ? `<div class="gbox"><div class="frow"><span class="grow">Server</span><span class="sec">burrow.example.com</span></div><div class="frow"><span class="grow">Ingelogd als</span><span class="sec">Ada, beheerder</span></div><div class="frow"><span class="grow">Kijken start op</span><select class="pop"><option>Woonkamer</option><option>Vraag het steeds</option></select></div></div>`
+      : S.tab === 'smaak' ? `<div class="subhead sec" style="padding:0 12px">Meer en minder zoals dit</div><div class="gbox">${TASTE.map(([id, v, by], i) => item(id, `${v} · ${by}`, 'Verwijder', 'untaste', i)).join('') || '<div class="frow sec">Nog geen bijstellingen.</div>'}</div><div class="subhead sec" style="padding:0 12px">Alles begint neutraal. Bijstellingen gelden alleen voor voorstellen, nooit voor zoeken.</div>`
+      : `<div class="subhead sec" style="padding:0 12px">Niet nu en Al gezien</div><div class="gbox">${[...PASSED].map(([id, why]) => item(id, why, 'Terugzetten', 'restore')).join('') || '<div class="frow sec">Niets overgeslagen.</div>'}</div><div class="subhead sec" style="padding:0 12px">Terugzetten brengt een titel terug in de voorstellen.</div>`;
+    h += `<div class="float prefs" role="dialog" aria-label="Instellingen"><div class="ptb"><span class="lights" data-act="closeprefs"><i></i><i style="background:var(--fill)"></i><i style="background:var(--fill)"></i></span><span class="tabs">${tab('alg', 'Algemeen', 'gear')}${tab('smaak', 'Smaak', 'slid')}${tab('over', 'Overgeslagen', 'eyeoff')}</span><span></span></div><div class="form">${body}</div></div>`;
+  }
+  if (S.menu) h += `<div class="float menu" style="left:${S.menu.x}px;top:${S.menu.y}px" role="menu">${S.menu.items.map((m, i) => m === '-' ? '<hr>' : `<button data-menu="${i}" ${m[2] ? '' : 'disabled'} role="menuitem"><span>${m[0]}</span><span>${m[1] || ''}</span></button>`).join('')}</div>`;
+  return h;
+}
+
+// Commands: the same items serve the menu bar and the context menus
+function titleItems(id) {
+  const t = id != null && byId(id), on = t && list().has(id), lib = t && LIB.has(id), go = a => t && (() => act(a, id));
+  return [[on ? 'Haal van de lijst' : `Zet op ${listName().toLowerCase()}`, 'J', go('list')], ['Niet nu', 'N', go('pass')], ['Al gezien', '', go('seen')], '-',
+    ['Speel trailer af', 'T', go('trailer')], ['Kijk op de tv', 'K', lib && go('watch')], ['Kijk hier', '⇧⌘K', lib && go('watch')], ['Deel…', '', go('share')], '-',
+    ['Verwijder van Dobby…', '⌫', deletable(S.sel.has(id) ? [...S.sel] : [id]).length ? () => askDelete(S.sel.has(id) ? [...S.sel] : [id]) : null]];
+}
+const current = () => { const f = document.activeElement?.closest?.('.card'); return f ? +f.dataset.id : S.page === 'title' ? S.id : S.sel.size === 1 ? [...S.sel][0] : null; };
+const MENUS = {
+  Lumos: () => [['Over Lumos', '', null], '-', ['Instellingen…', '⌘,', () => act('prefs')], '-', ['Stop Lumos', '⌘Q', null]],
+  Archief: () => [['Nieuw venster', '⌘N', null], ['Sluit venster', '⌘W', null]],
+  Wijzig: () => [['Herstel', '⌘Z', undo.length ? () => act('undo') : null], '-', ['Selecteer alles', '⌘A', S.page === 'library' ? () => act('all') : null], ['Zoek', '⌘F', () => el('q').focus()]],
+  Weergave: () => [['Ontdekken', '⌘1', () => nav('discover')], [listName(), '⌘2', () => nav('list')], ['Bibliotheek', '⌘3', () => nav('library')], '-',
+    ['Alleen films', '⌘4', () => { nav('discover'); S.type = 'film'; render(); }], ['Alleen series', '⌘5', () => { nav('discover'); S.type = 'serie'; render(); }], '-',
+    ['Verras me', 'V', () => { nav('discover'); act('shuffle'); }], ['Vernieuw', '⌘R', () => render()], '-', ['Toon of verberg zijbalk', '⌃⌘S', null], ['Toon of verberg inspector', '⌥⌘I', S.page === 'library' ? () => act('insp') : null]],
+  Titel: () => [['Toon details', '↩', current() != null && S.page !== 'title' ? () => act('open', current()) : null], '-', ...titleItems(current())],
+  Venster: () => [['Minimaliseer', '⌘M', null], ['Zoom', '', null]],
+  Help: () => [['Lumos Help', '', null]],
+};
+
+function render() {
+  const u = usage(), cur = S.page === 'title' ? S.from : S.page, sel = [...S.sel].filter(id => LIB.has(id));
+  S.sel = new Set(sel);
+  const row = (p, icn, l, n = '') => `<button class="srow ${cur === p ? 'sel' : ''}" data-nav="${p}">${ic(icn)}<span class="grow">${l}</span><span class="badge callout num">${n}</span></button>`;
+  el('side').innerHTML = `<span class="lights"><i></i><i></i><i></i></span>` + row('discover', 'spark', 'Ontdekken') + row('list', 'mark', listName(), list().size) + row('library', 'drive', 'Bibliotheek', BUSY.size)
+    + `<span class="grow"></span><div class="sdisk"><progress class="${u.tight ? 'tight' : ''}" value="${DISK.total - u.free}" max="${DISK.total}" aria-label="Schijf op Dobby"></progress><span class="caption sec num">${gb(u.free)} vrij van ${gb(DISK.total)}</span></div>`;
+  el('menubar').innerHTML = Object.keys(MENUS).map(m => `<button data-mb="${m}" class="${S.menu?.mb === m ? 'open' : ''}">${m}</button>`).join('');
+  el('tt').textContent = S.page === 'title' ? byId(S.id).t : { discover: 'Ontdekken', list: listName(), library: 'Bibliotheek' }[S.page];
+  el('ts').textContent = S.page === 'discover' ? 'Films en series' : S.page === 'list' ? `${list().size} titels` : S.page === 'library' ? (sel.length ? `${sel.length} geselecteerd · ${gb(sizeOf(sel))}` : `${LIB.size} titels · ${gb(u.film + u.serie)}`) : facts(byId(S.id));
+  el('back').style.display = S.page === 'title' ? '' : 'none';
+  el('q').placeholder = S.page === 'library' ? 'Zoek in Bibliotheek' : S.page === 'list' ? `Zoek in ${listName().toLowerCase()}` : 'Zoek';
+  el('tbi').innerHTML = S.page === 'library' ? `<span class="cap">${admin() ? `<button data-act="delsel" ${deletable(sel).length ? '' : 'disabled'} title="Verwijder van Dobby (⌫)" aria-label="Verwijder">${ic('trash')}</button>` : ''}<button data-act="insp" class="${S.insp ? 'on' : ''}" title="Inspector (⌥⌘I)" aria-label="Inspector">${ic('insp')}</button></span>`
+    : S.page === 'title' ? `<span class="cap"><button data-act="share" data-id="${S.id}" title="Deel" aria-label="Deel">${ic('share')}</button></span>` : '';
+  el('main').innerHTML = { discover: () => discover().replace(/<\/div>$/, note() + '</div>'), list: () => listPage().replace(/<\/div>$/, note() + '</div>'), library, title: titlePage }[S.page]();
+  el('dlg').innerHTML = dialog();
+  el('float').innerHTML = floats();
+  if (S.del) el('dflt').focus();
+  else if (S.focus === 'table') el('table')?.focus();
+  else if (S.focus != null) document.querySelector(`#main .card[data-id="${S.focus}"]`)?.focus();
+}
+
+let noteTimer;
+function say(text, undoFn) {
+  if (undoFn) undo.push(undoFn);
+  S.note = { text, undo: !!undoFn };
+  clearTimeout(noteTimer); noteTimer = setTimeout(() => { S.note = null; render(); }, 6000);
+}
+function nav(page) { S.page = page; S.sel.clear(); S.focus = null; S.note = null; S.q = ''; el('q').value = ''; render(); }
+function askDelete(ids) { const d = deletable(ids); if (d.length) S.del = { ids: d, kept: ids.length - d.length }; render(); }
+
+function act(a, id, src) {
+  const t = id != null ? byId(id) : null, L = list();
+  if (a === 'open' && t) { if (S.page !== 'title') S.from = S.page; S.page = 'title'; S.id = id; S.focus = null; }
+  else if (a === 'back') { S.page = S.from; S.focus = S.page === 'library' ? 'table' : S.id; }
+  else if (a === 'list' && t) { const had = L.has(id); had ? L.delete(id) : L.add(id); say(had ? `"${t.t}" is van de lijst` : `"${t.t}" staat op ${listName().toLowerCase()}${LIB.has(id) || BUSY.has(id) ? '' : ' en wordt over 15 s aangevraagd'}`, () => had ? L.add(id) : L.delete(id)); }
+  else if ((a === 'pass' || a === 'seen') && t) { const had = L.delete(id), was = PASSED.get(id); PASSED.set(id, (a === 'seen' ? 'Al gezien' : 'Zonder reden') + ' · vandaag'); say(`${a === 'seen' ? 'Al gezien' : 'Niet nu'}: "${t.t}"`, () => { was ? PASSED.set(id, was) : PASSED.delete(id); if (had) L.add(id); }); }
+  else if (a === 'restore') PASSED.delete(id);
+  else if (a === 'untaste') TASTE.splice(+src.dataset.i, 1);
+  else if (a === 'trailer' && t) say(`Trailer van "${t.t}" speelt`);
+  else if (a === 'share' && t) say(`Deelvenster van macOS voor "${t.t}"`);
+  else if (a === 'watch' && t) say(LIB.has(id) ? `"${t.t}" is gestart op Woonkamer` : `"${t.t}" staat nog niet op Dobby`);
+  else if (a === 'undo') { const f = undo.pop(); if (f) { f(); say('Hersteld'); } }
+  else if (a === 'nl') S.nl = !S.nl;
+  else if (a === 'shuffle') { S.seed++; Object.assign(S, { sort: 'voor', genre: '', decade: '', nl: false, q: '' }); el('q').value = ''; }
+  else if (a === 'all') { S.sel = new Set(libRows()); S.focus = 'table'; }
+  else if (a === 'freeup') { Object.assign(S, { page: 'library', lk: 'all', ls: 'both', lsort: 'size', ldir: -1, q: '', focus: 'table' }); el('q').value = ''; S.sel = new Set(freeable()); }
+  else if (a === 'del') return askDelete([id]);
+  else if (a === 'delsel') return askDelete([...S.sel]);
+  else if (a === 'retry') { BUSY.set(id, { s: 'imp', note: 'Opnieuw aan het importeren' }); say('Import opnieuw gestart'); }
+  else if (a === 'insp') S.insp = !S.insp;
+  else if (a === 'prefs') S.prefs = true;
+  else if (a === 'closeprefs') S.prefs = false;
+  else if (a === 'cancel') S.del = null;
+  else if (a === 'confirm') {
+    const ids = S.del.ids, size = sizeOf(ids);
+    ids.forEach(i => { LIB.delete(i); S.sel.delete(i); });
+    S.del = null; if (S.page === 'title') S.page = 'library';
+    say(`${ids.length === 1 ? '1 titel' : ids.length + ' titels'} verwijderd, ${gb(size)} vrijgemaakt. Dit kan niet worden hersteld.`);
+  }
+  render();
+}
+
+function openMenu(items, x, y, mb) { S.menu = { items, x, y, mb }; render(); }
+function point(e) { const r = el('desk').getBoundingClientRect(), s = r.width / 1180; return [(e.clientX - r.left) / s, (e.clientY - r.top) / s]; }
+function pickRow(id, e) {
+  const rows = libRows();
+  if (e.metaKey || e.ctrlKey) S.sel.has(id) ? S.sel.delete(id) : S.sel.add(id);
+  else if (e.shiftKey && S.anchor != null && rows.includes(S.anchor)) { const [a, b] = [rows.indexOf(S.anchor), rows.indexOf(id)].sort((x, y) => x - y); S.sel = new Set(rows.slice(a, b + 1)); }
+  else S.sel = new Set([id]);
+  if (!e.shiftKey) S.anchor = id;
+  S.focus = 'table';
+}
+
+el('desk').addEventListener('click', e => {
+  const m = e.target.closest('[data-menu]');
+  if (m) { const f = S.menu.items[+m.dataset.menu][2]; S.menu = null; render(); return f && f(); }
+  const mb = e.target.closest('[data-mb]');
+  if (mb) { if (S.menu?.mb === mb.dataset.mb) { S.menu = null; return render(); } const r = el('desk').getBoundingClientRect(), s = r.width / 1180; return openMenu(MENUS[mb.dataset.mb](), (mb.getBoundingClientRect().left - r.left) / s, 28, mb.dataset.mb); }
+  if (S.menu) { S.menu = null; render(); }
+  const t = e.target.closest('[data-act],[data-nav],[data-seg] button,[data-sort],[data-tab],[data-scope],[data-row]');
+  if (!t) return;
+  const holder = t.closest('[data-id]'), id = holder ? +holder.dataset.id : null;
+  if (t.dataset.nav) return nav(t.dataset.nav);
+  if (t.dataset.sort) { S.lsort === t.dataset.sort ? S.ldir *= -1 : (S.lsort = t.dataset.sort, S.ldir = t.dataset.sort === 'title' ? 1 : -1); S.focus = 'table'; return render(); }
+  if (t.dataset.tab) { S.tab = t.dataset.tab; return render(); }
+  if (t.dataset.scope) { S.scope = t.dataset.scope; for (const b of t.parentElement.children) b.classList.toggle('on', b === t); return render(); }
+  if (t.dataset.v) { S[t.parentElement.dataset.seg] = t.dataset.v; return render(); }
+  if (t.dataset.row) { pickRow(+t.dataset.row, e); return render(); }
+  if (t.classList.contains('card')) S.focus = id;
+  act(t.dataset.act, id ?? (t.dataset.id ? +t.dataset.id : null), t);
+});
+el('desk').addEventListener('dblclick', e => { const r = e.target.closest('[data-row]'); if (r) act('open', +r.dataset.row); });
+el('desk').addEventListener('contextmenu', e => {
+  const c = e.target.closest('.card,[data-row]'); if (!c) return;
+  e.preventDefault();
+  const id = +c.dataset.id;
+  if (c.dataset.row && !S.sel.has(id)) { S.sel = new Set([id]); S.anchor = id; }
+  openMenu([['Toon details', '', () => act('open', id)], '-', ...titleItems(id)], ...point(e));
+});
+el('desk').addEventListener('change', e => { const k = e.target.dataset.set; if (k) { S[k] = e.target.value; render(); } });
+el('q').addEventListener('input', e => { S.q = e.target.value; if (S.page === 'title') S.page = S.from; S.note = null; render(); });
+
+// .draggable on posters and rows, .dropDestination on the list in the sidebar
+el('desk').addEventListener('dragstart', e => { const c = e.target.closest?.('[data-id]'); if (c) { e.dataTransfer.setData('text/plain', c.dataset.id); c.classList.add('drag'); } });
+el('desk').addEventListener('dragend', e => e.target.classList?.remove('drag'));
+el('side').addEventListener('dragover', e => { const r = e.target.closest('[data-nav="list"]'); if (r) { e.preventDefault(); r.classList.add('drop'); } });
+el('side').addEventListener('dragleave', e => e.target.closest?.('.srow')?.classList.remove('drop'));
+el('side').addEventListener('drop', e => { const r = e.target.closest('[data-nav="list"]'), id = +e.dataTransfer.getData('text/plain'); if (!r || !id) return; e.preventDefault(); list().has(id) ? render() : act('list', id); });
+
+document.addEventListener('keydown', e => {
+  const typing = /INPUT|SELECT|TEXTAREA/.test(e.target.tagName), k = e.key.toLowerCase(), cmd = e.metaKey || e.ctrlKey;
+  if (k === 'escape') {
+    if (typing) e.target.blur();
+    if (S.menu) S.menu = null; else if (S.del) S.del = null; else if (S.prefs) S.prefs = false; else if (S.page === 'title') return act('back'); else if (S.sel.size) S.sel.clear(); else return;
+    return render();
+  }
+  if (S.del || S.menu) return;
+  if (cmd && k === ',') { e.preventDefault(); return act('prefs'); }
+  if (cmd && k === 'f') { e.preventDefault(); return el('q').focus(); }
+  if (typing || S.prefs) return;
+  const inTable = S.page === 'library' && S.lk !== 'busy', id = current();
+  if (cmd) { if (k === 'a' && inTable) { e.preventDefault(); act('all'); } return; }
+  if (k === '/') { e.preventDefault(); return el('q').focus(); }
+  if (k === 'z') return act('undo');
+  if (k === 'v' && S.page === 'discover') return act('shuffle');
+  if ((k === 'backspace' || k === 'delete') && (inTable || S.page === 'title')) { e.preventDefault(); return askDelete(S.page === 'title' ? [S.id] : [...S.sel]); }
+  if (inTable && (k === 'arrowdown' || k === 'arrowup')) {
+    e.preventDefault();
+    const rows = libRows(), i = rows.indexOf(S.anchor), n = rows[Math.max(0, Math.min(rows.length - 1, i < 0 ? 0 : i + (k === 'arrowdown' ? 1 : -1)))];
+    if (n == null) return;
+    e.shiftKey ? S.sel.add(n) : S.sel = new Set([n]); S.anchor = n; S.focus = 'table'; render();
+    return document.querySelector(`[data-row="${n}"]`)?.scrollIntoView({ block: 'nearest' });
+  }
+  if (id == null || (k === 'enter' && e.target.tagName === 'BUTTON')) return;
+  const a = { j: 'list', n: 'pass', t: 'trailer', k: 'watch', enter: S.page === 'title' ? null : 'open' }[k];
+  if (a) { e.preventDefault(); if (document.activeElement?.closest?.('.card')) S.focus = id; return act(a, id); }
+  const c = document.activeElement?.closest?.('.card'); if (!c || !k.startsWith('arrow')) return;
+  e.preventDefault();
+  const all = [...document.querySelectorAll('#main .card')], r = c.getBoundingClientRect();
+  let to;
+  if (k === 'arrowright' || k === 'arrowleft') to = all[all.indexOf(c) + (k === 'arrowright' ? 1 : -1)];
+  else { const dir = k === 'arrowdown' ? 1 : -1; to = all.map(x => [x, x.getBoundingClientRect()]).filter(([, b]) => dir * (b.top - r.top) > 10).sort(([, a], [, b]) => (Math.abs(a.top - r.top) - Math.abs(b.top - r.top)) || (Math.abs(a.left - r.left) - Math.abs(b.left - r.left)))[0]?.[0]; }
+  to?.focus(); to?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+});
+
+// The strip above the window
+document.querySelector('.strip').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.t) document.documentElement.dataset.theme = b.dataset.t;
+  if (b.dataset.role) S.role = b.dataset.role;
+  if (b.dataset.t || b.dataset.role) for (const x of b.parentElement.children) x.classList.toggle('on', x === b);
+  const j = b.dataset.jump;
+  if (j) {
+    el('q').value = '';
+    Object.assign(S, { del: null, prefs: false, menu: null, note: null, focus: null, type: 'all', sort: 'voor', genre: '', decade: '', nl: false, q: '', lk: 'all', ls: 'all', lsort: 'added', ldir: -1, sel: new Set(), insp: true });
+    S.page = j === 'grid' || j === 'discover' ? 'discover' : 'library';
+    if (j === 'grid') Object.assign(S, { type: 'serie', sort: 'best' });
+    if (j === 'busy') S.lk = 'busy';
+    if (j === 'freeup') return act('freeup');
+    if (j === 'locked') { Object.assign(S, { lk: 'film', ldir: 1, anchor: 13, focus: 'table' }); S.sel = new Set([13]); }
+    if (j === 'title') Object.assign(S, { from: 'library', page: 'title', id: 21 });
+    if (j === 'prefs') Object.assign(S, { prefs: true, tab: 'over' });
+  }
+  render();
+});
+
+function fit() {
+  for (const f of document.querySelectorAll('.fit')) {
+    const s = Math.min(1, f.clientWidth / 1180);
+    f.firstElementChild.style.transform = `scale(${s})`;
+    f.style.height = `${772 * s}px`;
+  }
+}
+render(); fit(); addEventListener('resize', fit);
+</script>
+</body>
+</html>
