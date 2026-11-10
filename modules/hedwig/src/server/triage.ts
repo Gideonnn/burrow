@@ -26,7 +26,7 @@ const MAX_ATTEMPTS = 3;
 const TRIAGE_SKILL = 'sorting-hat';
 const decisionSchema = z.toJSONSchema(triageDecision, { target: 'draft-7' });
 
-export class TriageError extends Error {}
+class TriageError extends Error {}
 
 export type TriageOptions = {
   platform: Platform;

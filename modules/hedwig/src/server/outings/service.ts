@@ -1017,7 +1017,7 @@ export class OutingsService {
 }
 
 // Every name of an outing in one lower-case string, for mail search.
-export function searchText(o: {
+function searchText(o: {
   title: string;
   kind: string | null;
   venue: string | null;

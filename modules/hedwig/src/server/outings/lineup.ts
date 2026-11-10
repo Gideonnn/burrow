@@ -6,7 +6,7 @@ import { decodeEntities, htmlToText } from '../../html';
 import { outingLineups, outings } from '../schema';
 import { type FetchPublic, pageLimit } from './images';
 
-export const LINEUP_SKILL = 'festival-lineup';
+const LINEUP_SKILL = 'festival-lineup';
 const schema = z.toJSONSchema(lineupRead, { target: 'draft-7' });
 // Pages next to the home page that may name acts: the line-up itself and
 // the latest news, where festivals announce names one by one.
@@ -157,7 +157,7 @@ export class OutingLineups {
 }
 
 // Line-up pages first, then the newest news, all on the event's own site.
-export function pageLinks(html: string, base: string): string[] {
+function pageLinks(html: string, base: string): string[] {
   const host = new URL(base).hostname.replace(/^www\./, '');
   const lineup: string[] = [];
   const news: string[] = [];
@@ -178,7 +178,7 @@ export function pageLinks(html: string, base: string): string[] {
   return [...lineup.slice(0, 3), ...news];
 }
 
-export function pageText(html: string) {
+function pageText(html: string) {
   return htmlToText(
     html.replace(/<(nav|footer|noscript)[\s\S]*?<\/\1>/gi, ''),
   ).slice(0, PAGE_CHARS);

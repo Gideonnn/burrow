@@ -82,10 +82,7 @@ const FULL_MONTHS = [
 ];
 
 // "maart 2026", "2025", "1 mrt – 15 apr 2026", "na 1 mrt 2026".
-export function periodLabel(
-  after: string | null,
-  before: string | null,
-): string {
+function periodLabel(after: string | null, before: string | null): string {
   const d = (s: string) => new Date(`${s}T00:00:00Z`);
   const day = (s: string) =>
     `${d(s).getUTCDate()} ${MONTHS[d(s).getUTCMonth()]} ${d(s).getUTCFullYear()}`;

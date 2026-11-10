@@ -24,7 +24,7 @@ const embedAnswer = z.object({ vectors: z.array(z.array(z.number())) });
 
 // What a message means, for the model: subject, sender, the facts' summary
 // or else the start of the body, and the search words.
-export function embedText(
+function embedText(
   m: {
     subject: string;
     from: { name?: string | null; email: string };
@@ -37,10 +37,6 @@ export function embedText(
   const words = f?.keywords.length ? `\n${f.keywords.join(', ')}` : '';
   return `title: ${m.subject} | text: ${m.subject}\nVan: ${m.from.name || m.from.email}\n${body}${words}`;
 }
-
-// The way a question is put to the same model.
-export const embedQuery = (question: string) =>
-  `task: search result | query: ${question}`;
 
 // Search by meaning needs every message as a vector. The runner on the
 // owner's Mac makes them with Ollama, sixty-four at a time, newest first, for

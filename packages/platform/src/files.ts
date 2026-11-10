@@ -38,8 +38,8 @@ export class Files {
 // Cloudflare caps one request at 100 MB, so big files arrive in chunks. Each
 // chunk names the offset it starts at; a client that lost its connection asks
 // how much arrived and continues from there.
-export const MAX_UPLOAD = 4 * 1024 ** 3;
-export const MAX_CHUNK = 32 * 1024 ** 2;
+const MAX_UPLOAD = 4 * 1024 ** 3;
+const MAX_CHUNK = 32 * 1024 ** 2;
 const STALE_MS = 2 * 86_400_000;
 
 export class Uploads {

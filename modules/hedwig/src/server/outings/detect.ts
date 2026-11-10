@@ -200,7 +200,7 @@ const nameOf = (v: unknown) => str(v) ?? str((v as Json | undefined)?.name);
 const types = (v: Json) => [v['@type']].flat().map(String);
 
 // The first schema.org EventReservation or Event in the mail's JSON-LD.
-export function schemaEvent(html: string | null): SchemaEvent | undefined {
+function schemaEvent(html: string | null): SchemaEvent | undefined {
   if (!html) return undefined;
   const blocks = html.matchAll(
     /<script[^>]*type\s*=\s*["']?application\/ld\+json["']?[^>]*>([\s\S]*?)<\/script>/gi,

@@ -80,7 +80,6 @@ export function pageImages(html: string, base: string): string[] {
   return out;
 }
 
-const IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
 export const IMAGE_EXTENSIONS: Record<string, string> = {
   'image/png': '.png',
   'image/jpeg': '.jpg',
@@ -168,10 +167,6 @@ export function measure(
 export function fitsAbove(size: { width: number; height: number }) {
   const ratio = size.width / size.height;
   return size.width >= 300 && size.height >= 150 && ratio <= 5 && ratio >= 0.4;
-}
-
-export function isImageType(contentType: string) {
-  return IMAGE_TYPES.includes(contentType);
 }
 
 // Addresses in the home network and the machine itself; a link in a mail

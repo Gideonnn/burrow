@@ -42,7 +42,7 @@ const TIMEOUT_MS = 120_000;
 const PASSED_ENV =
   /^(PATH|HOME|USER|LOGNAME|LANG|LC_[A-Z]+|TMPDIR|TZ|XDG_[A-Z_]+|CLAUDE_[A-Z_]+|CODEX_HOME)$/;
 
-export function agentEnv(source: NodeJS.ProcessEnv = process.env) {
+function agentEnv(source: NodeJS.ProcessEnv = process.env) {
   return Object.fromEntries(
     Object.entries(source).filter(([name]) => PASSED_ENV.test(name)),
   );

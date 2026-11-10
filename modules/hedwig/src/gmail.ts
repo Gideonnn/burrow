@@ -265,7 +265,7 @@ export class GmailClient implements MailProviderClient {
   }
 }
 
-export function parseGmailMessage(
+function parseGmailMessage(
   raw: GmailMessage,
   userLabels: Map<string, string>,
 ): ProviderMessage {
