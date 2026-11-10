@@ -1,6 +1,6 @@
 import CoreGraphics
 import Testing
-@testable import HedwigCore
+@testable import HogsmeadeCore
 
 @Suite struct PictureColourTests {
     private static func image(_ stripes: [(red: Double, green: Double, blue: Double)]) -> CGImage {

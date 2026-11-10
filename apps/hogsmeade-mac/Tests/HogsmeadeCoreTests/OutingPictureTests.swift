@@ -3,7 +3,7 @@ import Foundation
 import ImageIO
 import Testing
 import UniformTypeIdentifiers
-@testable import HedwigCore
+@testable import HogsmeadeCore
 
 @MainActor
 @Suite(.serialized) struct OutingPictureTests {
@@ -26,14 +26,15 @@ import UniformTypeIdentifiers
         try APIClient.decoder.decode(Outing.self, from: Data(json.utf8))
     }
 
-    private func model(_ server: MockServer) async -> AppModel {
+    private func model(_ server: MockServer) async -> OutingsModel {
         server.on("GET", "/api/me", json: Fixture.me)
+        server.on("GET", "/api/outings", json: "[]")
         let client = server.client()
-        let model = AppModel(
-            store: ConnectionStore(service: "app.burrow.hedwig.tests"),
+        let model = OutingsModel(
+            store: ConnectionStore(service: "app.burrow.hogsmeade.tests"),
             makeClient: { _ in client },
             connection: Connection(serverURL: URL(string: "http://burrow.test")!, token: "bk_test"))
-        model.followsOutings = true
+        model.toastSeconds = nil
         await model.start()
         return model
     }
@@ -172,7 +173,8 @@ import UniformTypeIdentifiers
         let model = await model(server)
         let page = URL(string: "https://zaal.example.nl/agenda")!
 
-        #expect(await model.setPicture(PastedContents(urls: [page]), for: "o1"))
+        await model.setPicture(PastedContents(urls: [page]), for: "o1")
+        #expect(model.error == nil)
         #expect(server.requests("PUT", "/api/outings/o1/image") == [#"{"url":"https:\/\/zaal.example.nl\/agenda"}"#])
         #expect(model.outings.first?.image?.source == .website)
         #expect(model.pictureBusy.isEmpty)
@@ -189,7 +191,8 @@ import UniformTypeIdentifiers
         server.on("PUT", "/api/outings/o1/image", json: Self.outingJSON(image: Self.image("upload")))
         let model = await model(server)
 
-        #expect(await model.setPicture(PastedContents(images: [Self.picture(.tiff)]), for: "o1"))
+        await model.setPicture(PastedContents(images: [Self.picture(.tiff)]), for: "o1")
+        #expect(model.error == nil)
         #expect(server.requests("POST", "/api/uploads").first?.contains(#""size":0"#) == false)
         #expect(server.requests("PUT", "/api/outings/o1/image") == [#"{"uploadId":"u1"}"#])
         #expect(model.outings.first?.image?.source == .upload)
@@ -200,10 +203,10 @@ import UniformTypeIdentifiers
         server.on("PUT", "/api/outings/o1/image", status: 400, json: #"{"error":"no picture found on that page"}"#)
         let model = await model(server)
 
-        #expect(!(await model.setPicture(PastedContents(strings: ["https://zaal.example.nl"]), for: "o1")))
-        #expect(model.error == "Hedwig kan daar geen afbeelding van maken. Probeer een andere afbeelding of link.")
+        await model.setPicture(PastedContents(strings: ["https://zaal.example.nl"]), for: "o1")
+        #expect(model.error == "Daar kan Hogsmeade geen afbeelding van maken. Probeer een andere afbeelding of link.")
 
-        #expect(!(await model.setPicture(PastedContents(strings: ["oppas regelen"]), for: "o1")))
+        await model.setPicture(PastedContents(strings: ["oppas regelen"]), for: "o1")
         #expect(model.error == "Dat is geen afbeelding. Kopieer een afbeelding of een link naar een website.")
         #expect(server.requests("PUT", "/api/outings/o1/image").count == 1)
     }

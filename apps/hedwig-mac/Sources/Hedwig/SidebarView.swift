@@ -179,7 +179,6 @@ func placeName(_ place: SidebarItem) -> String {
     case .drafts: "Concepten"
     case .inbox: "Inbox"
     case .tasks: "Taken"
-    case .outings: "Evenementen"
     case .shared: "Gedeeld"
     }
 }

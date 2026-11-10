@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import HedwigCore
+@testable import HogsmeadeCore
 
 @MainActor
 @Suite struct OutingPlaceTests {

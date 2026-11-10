@@ -2,7 +2,7 @@ import AppKit
 import HogsmeadeCore
 import SwiftUI
 
-// The picture with an outing, as Hedwig shows it: loaded once per version
+// The picture with an outing: loaded once per version
 // through the model's cache, and the title's colours when there is none.
 
 extension HSL {

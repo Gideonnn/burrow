@@ -153,7 +153,7 @@ public final class PlaceBook {
 
     public static var defaultFile: URL {
         FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Library/Application Support/Hedwig/places.json")
+            .appendingPathComponent("Library/Application Support/Hogsmeade/places.json")
     }
 
     public func cached(_ outing: Outing) -> OutingPlace? {

@@ -19,11 +19,11 @@ was built to compare with it was dropped. Plan: `docs/plans/2026-10-26-hogsmeade
   delete. `OutingDraft` turns the edit sheet into a patch of only what changed;
   `reminders()` lists the Mac's notifications for the outings its person goes to. Tests
   drive it with a mock server, without a window.
-- `HogsmeadeCore` builds on `HedwigCore`, a library product of `apps/hedwig-mac`: the
-  `Outing` types and API calls, `OutingStatus` (the one sentence), `OutingFormat` (Dutch
-  dates), `PlaceBook` (places found once, kept in Hedwig's `places.json`), the ticket code
-  readers, the picture cache and `Outing.reminders`. Nothing outing-related is written
-  twice; only the mail link and unlink calls live in `OutingDraft.swift`.
+- `HogsmeadeCore` also holds every outing type and API call (`Outings.swift`),
+  `OutingStatus` (the one sentence), `OutingFormat` (Dutch dates), `PlaceBook` (places
+  found once, kept in `Application Support/Hogsmeade/places.json`), the ticket code
+  readers, the picture cache and `Outing.reminders`. It builds on BurrowKit alone; Hedwig
+  has no outing code.
 - `HogsmeadeUI`: the views that are not one screen: `OutingPoster`, `DateTile`,
   `MapSnapshot` (a button that opens Maps), `TicketEntriesReader`, `TicketViewer`,
   `NewOutingSheet`, `Avatar`, the menu bar and the `burrowctl` commands.
@@ -48,4 +48,3 @@ and Keychain item are `hogsmeade`.
 Wishes (an outing without a date), stars after the night and merging two outings need
 server support: `TODO.md`. A linked mail shows as plain text; opening it in Hedwig needs
 a way for one app to open a mail in the other.
-The outing Swift code still lives in HedwigCore until it moves (`TODO.md`).

@@ -1,6 +1,5 @@
 import BurrowKit
 import Foundation
-import HedwigCore
 import Observation
 
 /// Hogsmeade's state and every action it takes: the household's
@@ -55,7 +54,7 @@ public final class OutingsModel {
     }
 
     public private(set) var connection: Connection?
-    public private(set) var me: Me?
+    public private(set) var me: Profile?
     public private(set) var people: [Person] = []
     public private(set) var outings: [Outing] = [] {
         didSet { if outings != oldValue { onOutingsChanged?() } }
@@ -126,7 +125,7 @@ public final class OutingsModel {
 
     public func connect(serverURL: URL, token: String) async throws {
         let candidate = Connection(serverURL: serverURL, token: token)
-        me = try await makeClient(candidate).me()
+        me = try await makeClient(candidate).profile()
         try store.save(candidate)
         connection = candidate
         await start()
@@ -145,7 +144,7 @@ public final class OutingsModel {
         guard let api else { return }
         if outings.isEmpty, let kept = readSnapshot() { outings = kept }
         do {
-            async let me = api.me()
+            async let me = api.profile()
             async let people = api.people()
             self.me = try await me
             self.people = (try? await people) ?? []
@@ -170,7 +169,7 @@ public final class OutingsModel {
                 case "outing.changed": await self?.refresh()
                 case "settings.changed", "household.changed":
                     if let api = self?.api {
-                        self?.me = (try? await api.me()) ?? self?.me
+                        self?.me = (try? await api.profile()) ?? self?.me
                         self?.people = (try? await api.people()) ?? self?.people ?? []
                     }
                 default: break
@@ -196,7 +195,7 @@ public final class OutingsModel {
     func serverAnswers() async -> Bool {
         guard let api else { return false }
         do {
-            _ = try await api.me()
+            _ = try await api.profile()
             return true
         } catch {
             return !APIError.isTransient(error)
@@ -467,8 +466,8 @@ public final class OutingsModel {
     }
 
     /// A linked mail to read, when this key may see it.
-    public func mail(_ messageId: String) async -> MessageDetail? {
-        try? await api?.message(id: messageId)
+    public func mail(_ messageId: String) async -> LinkedMail? {
+        try? await api?.linkedMail(id: messageId)
     }
 
     /// What the Mac reminds its person of: only outings they go to. macOS

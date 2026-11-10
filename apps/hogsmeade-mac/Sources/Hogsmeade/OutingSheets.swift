@@ -212,7 +212,7 @@ struct MailSheet: View {
     @Environment(OutingsModel.self) private var model
     @Environment(\.dismiss) private var dismiss
     let mail: OutingMail
-    @State private var detail: MessageDetail?
+    @State private var detail: LinkedMail?
     @State private var loading = true
 
     var body: some View {

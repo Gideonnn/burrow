@@ -9,8 +9,6 @@ public enum SidebarItem: Hashable, Sendable {
     /// Concepten of one mailbox: drafts prepared by bots or agents, to review.
     case drafts(mailboxId: String)
     case tasks
-    /// Evenementen: the household's outings.
-    case outings
     /// Gedeeld: mail shared with or by this person, and Winky's suggestions.
     case shared
 
@@ -18,7 +16,7 @@ public enum SidebarItem: Hashable, Sendable {
     public var mailboxId: String? {
         switch self {
         case .inbox(let id), .folder(_, let id), .drafts(let id): id
-        case .tasks, .outings, .shared: nil
+        case .tasks, .shared: nil
         }
     }
 
@@ -29,7 +27,6 @@ public enum SidebarItem: Hashable, Sendable {
         case .folder(let folder, let id): "\(folder.rawValue):\(id)"
         case .drafts(let id): "drafts:\(id)"
         case .tasks: "tasks"
-        case .outings: "outings"
         case .shared: "shared"
         }
     }
@@ -37,7 +34,6 @@ public enum SidebarItem: Hashable, Sendable {
     public init?(storageKey: String) {
         switch storageKey {
         case "tasks": self = .tasks
-        case "outings": self = .outings
         case "shared": self = .shared
         default:
             let parts = storageKey.split(separator: ":", maxSplits: 1).map(String.init)
@@ -168,30 +164,8 @@ public final class AppModel {
     public private(set) var detail: MessageDetail?
     public private(set) var insights: MessageInsights?
     public private(set) var insightsLoading = false
-    /// What the open mail says about an outing, and the outing it belongs to.
-    public internal(set) var outingSuggestion: OutingSuggestion?
-    public internal(set) var outing: Outing?
-    public internal(set) var outingBusy = false
-    /// The household's outings for the Evenementen page, every one of them.
-    public internal(set) var outings: [Outing] = [] {
-        didSet { if oldValue != outings { outingsChanged?() } }
-    }
-    public var selectedOutingId: String?
-    /// Whether Details is open under an outing; kept while Hedwig runs.
-    public var showsOutingDetails = false
-    /// Tickets being uploaded right now.
-    public internal(set) var ticketUploads = 0
-    /// Outings whose picture is being changed right now.
-    public internal(set) var pictureBusy: Set<String> = []
-    @ObservationIgnored let pictureCache = OutingPictureCache()
-    /// Everyone in the household, for Wie and the ticket holders.
+    /// Everyone in the household, to share mail with.
     public internal(set) var people: [Person] = []
-    /// Called whenever the outings change; the app reschedules its reminders.
-    public var outingsChanged: (@MainActor () -> Void)?
-    /// Outings moved to Hogsmeade: Hedwig keeps the list only for its reminders,
-    /// and no app asks per mail any more unless it shows the card.
-    public var followsOutings = false
-    public var showsOutingCards = false
     /// What the bot moved to Spam or Archief and the person has not reviewed yet.
     public private(set) var filtered: [FilteredEntry] = []
     /// Inbox mail the bot thought might be spam; it waits for the person.
@@ -305,7 +279,6 @@ public final class AppModel {
         await refreshDrafts()
         await refreshTasks()
         await refreshRunners()
-        if followsOutings { await refreshOutings() }
         eventsTask?.cancel()
         eventsTask = Task { [weak self] in
             let reachability = self?.reachability
@@ -330,12 +303,6 @@ public final class AppModel {
         // A setting changed on another Mac: who we are again, so the language and the
         // features follow at once.
         if event.type == "settings.changed" || event.type == "mailbox.changed" { me = (try? await api?.me()) ?? me }
-        if followsOutings, event.type == "outing.changed" {
-            await refreshOutings()
-            if showsOutingCards, let id = event["outingId"], id == outing?.id || id == outingSuggestion?.outingId, let messageId = detail?.id {
-                await loadOuting(messageId: messageId)
-            }
-        }
     }
 
     // MARK: Errors and the connection
@@ -373,7 +340,6 @@ public final class AppModel {
             await refreshFiltered()
             await refreshDrafts()
             await refreshTasks()
-            if followsOutings { await refreshOutings() }
         }
         if !isSearching { await loadSelection(keepSelection: true) }
         if selectedMessageId != detail?.id { await openSelected() }
@@ -452,9 +418,6 @@ public final class AppModel {
                 if !here.contains(where: { $0.id == selectedDraftId }) { selectedDraftId = here.first?.id }
             case .tasks:
                 await refreshTasks()
-                messages = []
-            case .outings:
-                await refreshOutings()
                 messages = []
             case .shared:
                 messages = try await sharedMessages()
@@ -588,9 +551,6 @@ public final class AppModel {
             if selectedMessageId == id {
                 detail = message
                 insights = nil
-                outingSuggestion = nil
-                outing = nil
-                if showsOutingCards { await loadOuting(messageId: id) }
                 // The bot only gets asked when it is likely to help: mail that
                 // needs an answer, or long mail worth a summary.
                 if message.flagged || (message.bodyText?.count ?? 0) > 1_500 { await loadInsights() }

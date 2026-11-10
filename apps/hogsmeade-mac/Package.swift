@@ -10,17 +10,9 @@ let package = Package(
     ],
     dependencies: [
         .package(path: "../../packages/burrow-kit"),
-        // The outings themselves are Hedwig's: the same types, status sentences,
-        // Dutch dates, place book and ticket code readers.
-        .package(name: "Hedwig", path: "../hedwig-mac"),
     ],
     targets: [
-        .target(
-            name: "HogsmeadeCore",
-            dependencies: [
-                .product(name: "HedwigCore", package: "Hedwig"),
-                .product(name: "BurrowKit", package: "burrow-kit"),
-            ]),
+        .target(name: "HogsmeadeCore", dependencies: [.product(name: "BurrowKit", package: "burrow-kit")]),
         // The views that are not one screen: pictures, the map, ticket codes,
         // the new-outing sheet, the menu bar and the burrowctl commands.
         .target(

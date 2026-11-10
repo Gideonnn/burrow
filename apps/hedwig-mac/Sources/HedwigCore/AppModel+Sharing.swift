@@ -59,6 +59,11 @@ extension AppModel {
         return (suggested + shared.withMe + shared.byMe).filter { seen.insert($0.id).inserted }
     }
 
+    public func loadPeople() async {
+        guard people.isEmpty, let api else { return }
+        people = (try? await api.people()) ?? []
+    }
+
     private func sharingChanged(_ updated: MessageSummary) async {
         if selection == .shared, !isSearching {
             await loadSelection(keepSelection: true)

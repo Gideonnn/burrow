@@ -298,3 +298,39 @@ extension HSL {
         self.init(hue: hue, saturation: min(1, delta / (1 - abs(2 * lightness - 1))), lightness: lightness)
     }
 }
+
+/// The outings' pictures, one version per outing, so the wall and the page
+/// load each picture once.
+@MainActor
+public final class OutingPictureCache {
+    private var pictures: [String: (version: Date, picture: OutingPicture?)] = [:]
+    private var loads: [String: (version: Date, task: Task<OutingPicture?, Never>)] = [:]
+    private var order: [String] = []
+    let limit: Int
+
+    public init(limit: Int = 80) { self.limit = limit }
+
+    public func cached(_ outingId: String, version: Date) -> OutingPicture?? {
+        guard let hit = pictures[outingId], hit.version == version else { return nil }
+        return .some(hit.picture)
+    }
+
+    public func picture(_ outingId: String, version: Date, load: @escaping @MainActor () async -> OutingPicture?) async -> OutingPicture? {
+        if let hit = cached(outingId, version: version) { return hit }
+        if let running = loads[outingId], running.version == version { return await running.task.value }
+        let task = Task { await load() }
+        loads[outingId] = (version, task)
+        let picture = await task.value
+        if loads[outingId]?.version == version { loads[outingId] = nil }
+        store(picture, for: outingId, version: version)
+        return picture
+    }
+
+    private func store(_ picture: OutingPicture?, for outingId: String, version: Date) {
+        if let known = pictures[outingId], known.version > version { return }
+        pictures[outingId] = (version, picture)
+        order.removeAll { $0 == outingId }
+        order.append(outingId)
+        while order.count > limit { pictures[order.removeFirst()] = nil }
+    }
+}

@@ -151,6 +151,14 @@ public struct OutingSuggestion: Codable, Hashable, Sendable {
     public var confidence: Confidence
 }
 
+/// A linked mail as Hogsmeade shows it: as text, without the rest of a message.
+public struct LinkedMail: Decodable, Sendable {
+    public var subject: String
+    public var from: Address
+    public var snippet: String
+    public var bodyText: String?
+}
+
 /// Body of POST /api/outings. Optional fields stay out of the JSON.
 public struct CreateOutingRequest: Encodable, Sendable {
     public var title: String
@@ -312,6 +320,16 @@ extension APIClient {
         try Self.check(response, bytes)
         return bytes
     }
+
+    public func linkMail(outingId: String, messageId: String) async throws -> Outing {
+        try await call("POST", "api/outings/\(outingId)/mails", body: ["messageId": messageId])
+    }
+
+    public func unlinkMail(outingId: String, messageId: String) async throws -> Outing {
+        try await call("DELETE", "api/outings/\(outingId)/mails/\(messageId)")
+    }
+
+    public func linkedMail(id: String) async throws -> LinkedMail { try await call("GET", "api/messages/\(id)") }
 
     /// The ticket's file, for Quick Look or the printer.
     public func ticketFile(outingId: String, ticketId: String) async throws -> Data {

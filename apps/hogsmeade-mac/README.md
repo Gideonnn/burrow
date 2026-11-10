@@ -12,11 +12,11 @@ pnpm hogsmeade:install               # build, install in /Applications, start
 ./scripts/make-icon.sh               # the icon, after changing it
 ```
 
-- `HogsmeadeCore` is the outings model (`OutingsModel`), on `HedwigCore` for the outing
-  types, the status sentence, the Dutch dates, the place book, the ticket code readers
-  and the reminders. `HogsmeadeUI` holds pictures, the map, ticket codes, the menu bar
-  and the control commands; `Hogsmeade` the window, the page, the sheets and the
-  notifications.
+- `HogsmeadeCore` is the outings model (`OutingsModel`) with the outing types and API
+  calls, the status sentence, the Dutch dates, the place book, the ticket code readers
+  and the reminders; it needs only BurrowKit. `HogsmeadeUI` holds pictures, the map,
+  ticket codes, the menu bar and the control commands; `Hogsmeade` the window, the page,
+  the sheets and the notifications.
 - Keys: `⌘1` Binnenkort, `⌘2` Geweest, `⌘F` search, `⌘N` new, `⌘E` edit the open outing,
   `⌘R` refresh, `⌘[` and Esc back, `⌘V` on a page sets its picture.
 - Agents: `burrowctl hogsmeade state`, `show` (upcoming, past), `search`, `open`, `close`.

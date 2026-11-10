@@ -199,7 +199,3 @@ extension Outing {
         return all.filter { $0.fireAt > now }
     }
 }
-
-private extension String {
-    var nilIfEmpty: String? { isEmpty ? nil : self }
-}

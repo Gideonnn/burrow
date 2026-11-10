@@ -6,7 +6,7 @@ extension AppModel {
     var showsMail: Bool {
         if isSearching { return true }
         return switch selection {
-        case .drafts, .tasks, .outings: false
+        case .drafts, .tasks: false
         default: true
         }
     }
@@ -78,7 +78,7 @@ struct MainView: View {
 
     // The place open at the last quit; a mailbox that is gone leaves the first inbox.
     private func restorePlace() {
-        guard let place = SidebarItem(storageKey: savedPlace), place != .outings, place != model.selection else { return }
+        guard let place = SidebarItem(storageKey: savedPlace), place != model.selection else { return }
         if let id = place.mailboxId, model.me != nil, model.mailbox(id) == nil { return }
         model.selection = place
     }
