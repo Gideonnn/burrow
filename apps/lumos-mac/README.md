@@ -1,7 +1,7 @@
 # Lumos for macOS
 
-Films and series to choose together: a fixed sidebar, image rows, and the details on
-the right with the trailer, scores per source and short reviews. Lists and verdicts live
+Films and series to choose together, and what is on Dobby: a sidebar with three pages,
+large artwork, and a title page with the trailer, scores per source and short reviews. Lists and verdicts live
 on the Burrow server; the media stack (Seerr, Radarr, Sonarr, Jellyfin) stays the
 backend and a title on a list is requested there. See `.agents/wiki/topics/lumos.md`.
 
@@ -14,24 +14,22 @@ pnpm lumos:install                   # build, install in /Applications, start (f
 - `LumosCore` is the model, the API and the state machine; `LumosUI` is what the screens
   share on screen: the artwork with its cache, the trailer player, the season menu, the
   menu bar and the control commands. `Lumos` is the app.
-- Arrows move between cards and rows, Enter opens the title as a page over the rows,
-  Space shows it without moving focus, Esc stops the trailer, then goes one page back
-  (a person, "Meer zoals dit" and a person's work stack) and returns focus to the card.
-  `J` list, `N` not now (Enter for no reason), `T` trailer, `Z` or ⌘Z undo, ⌘F or `/`
-  search, ⌘1 Ontdekken, ⌘2 Zoeker, ⌘3 Lijst, ⌘4 Films, ⌘5 Series, ⌘[ back.
-- Films and Series are the shop's shelves: sort chips, a genre, a decade, Nederlands,
-  and the next page while scrolling. The Zoeker is for wandering; "Verras me" reshuffles.
-- Details are kept once loaded and fetched ahead for the card under the cursor or the
-  mouse, so a page opens at once; a face opens the person's page with everything they made.
-- A series with more than one season gets a season menu next to "Op onze lijst zetten";
-  `J` takes season 1.
-- An available title gets a "Kijken" row: "Op <tv>" starts it on the screen where the
-  Jellyfin app is open, "Hier" opens its page in the browser. `K` (⌘K) takes the only
-  screen, the page when none is open, and asks when several are; ⇧⌘K is the page.
-- Trailers stream only after a click: YouTube in a small web view inside the inspector,
+- Three pages: Ontdekken (one row of filters; rows without a filter, a grid with one),
+  the list, and the Bibliotheek (disk, table, Bezig, delete for admins). Smaak and
+  Overgeslagen are in the settings (⌘,). macOS 26 only; standard SwiftUI, the Lumos
+  colour as tint.
+- Arrows move between cards and rows, Enter opens the title on top, Space shows it
+  without moving focus, Esc stops the trailer, then goes one page back. `J` list, `N` not
+  now, `T` trailer, `K` watch (where the household stopped), `V` Verras me and ⌫ delete
+  are menu shortcuts; `Z` or ⌘Z undo, ⌘F or `/` search (the page you are on), ⌘1
+  Ontdekken, ⌘2 the list, ⌘3 Bibliotheek, ⌘4 films, ⌘5 series, ⌥⌘I inspector, ⌘[ back.
+- Drag a poster or a table row onto the list in the sidebar.
+- A series with more than one season gets a season menu next to the list button; `J`
+  takes season 1.
+- Trailers stream only after a click: YouTube in a small web view on the title page,
   direct streams in the Mac's own player. Nothing is kept on disk.
-- Agents: `burrowctl lumos state`, `show`, `search`, `open`, `person`, `back`, `trailer`,
-  `stop`, `close`, `watch [screen=<name>|here]`.
+- Agents: `burrowctl lumos state`, `show`, `filter`, `search`, `open`, `person`, `back`,
+  `trailer`, `stop`, `close`, `watch [screen=<name>|here]`.
 
 For a development server with the fixture catalogue (never on Dobby):
 

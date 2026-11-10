@@ -1,11 +1,11 @@
-// swift-tools-version:6.0
+// swift-tools-version:6.2
 import PackageDescription
 
 let package = Package(
     name: "Lumos",
     defaultLocalization: "nl",
-    // The inspector column and key presses need macOS 14.
-    platforms: [.macOS(.v14)],
+    // Drawn as macOS 26 draws SwiftUI: Liquid Glass, glass buttons on the artwork.
+    platforms: [.macOS(.v26)],
     products: [
         .executable(name: "Lumos", targets: ["Lumos"]),
         // Library products, so another face or tool can build on the model and the shared views.

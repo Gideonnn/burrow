@@ -3,46 +3,58 @@ import LumosCore
 import LumosUI
 import SwiftUI
 
-/// A title as a page over the rows: the trailer or the still beside the
-/// facts and the actions, then the story, the scores, what it cost and
-/// made, the reviews, the cast and makers with their own pages, the
-/// seasons, and more like it.
+/// A title as a page: the artwork large across the top with the actions on
+/// glass, then the story beside Op Dobby, the trailer when it plays, and
+/// the scores, production, cast and makers, seasons, more like it and the
+/// reviews.
 struct TitlePage: View {
     @Environment(LumosModel.self) private var model
     let ref: TitleRef
     var focused: FocusState<LumosModel.Focus?>.Binding
 
     var body: some View {
-        ZStack {
+        Group {
             if let detail = model.detail, detail.ref == ref {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
-                        Backdrop(detail: detail)
+                        Hero(detail: detail)
                         VStack(alignment: .leading, spacing: 0) {
-                            HStack(alignment: .top, spacing: 24) {
-                                Stage(detail: detail).frame(width: 520)
-                                Facts(detail: detail)
+                            if let player = model.player, player.ref == ref { Trailer(player: player) }
+                            HStack(alignment: .top, spacing: 28) {
+                                Story(detail: detail)
+                                OnDobby(detail: detail).frame(width: 320)
                             }
                             Sections(detail: detail)
                         }
-                        .padding(EdgeInsets(top: 18, leading: 24, bottom: 36, trailing: 24))
+                        .padding(EdgeInsets(top: 20, leading: 28, bottom: 36, trailing: 28))
                     }
                 }
+                .ignoresSafeArea(edges: .top)
             } else if let summary = model.summary(ref) {
                 // The card's own facts while the page loads, so nothing is blank.
                 VStack(alignment: .leading, spacing: 12) {
-                    Artwork(title: summary, style: .wide).frame(width: 520, height: 292.5).clipShape(RoundedRectangle(cornerRadius: 8))
-                    Text(summary.title).font(.system(size: 26, weight: .bold))
-                    Text(summary.line).foregroundStyle(.secondary)
-                    ProgressView().controlSize(.small)
+                    Artwork(title: summary, style: .wide).frame(maxWidth: .infinity).frame(height: 360).clipped()
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(summary.title).font(.largeTitle).bold()
+                        Text(summary.line).foregroundStyle(.secondary)
+                        ProgressView().controlSize(.small)
+                    }
+                    .padding(.horizontal, 28)
+                    Spacer()
                 }
-                .padding(24)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .ignoresSafeArea(edges: .top)
             } else {
                 ProgressView()
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .navigationTitle(model.detail?.title ?? model.summary(ref)?.title ?? "")
+        .toolbar {
+            if let detail = model.detail, detail.ref == ref, let url = detail.tmdbUrl.flatMap(URL.init(string:)) {
+                ToolbarItem(placement: .primaryAction) {
+                    ShareLink(item: url, subject: Text(detail.title)) { Label("Deel", systemImage: "square.and.arrow.up") }
+                }
+            }
+        }
         .focusable()
         .focused(focused, equals: .inspector)
         .focusEffectDisabled()
@@ -69,10 +81,6 @@ struct TitlePage: View {
         case .space: model.toggleInspector()
         default:
             switch press.characters.lowercased() {
-            case "j": Task { await model.toggleList() }
-            case "n": model.reasonMenu = model.inspected
-            case "t": Task { await model.playTrailer() }
-            case "k": Task { await model.watch() }
             case "z": Task { await model.undo() }
             default: return .ignored
             }
@@ -81,198 +89,47 @@ struct TitlePage: View {
     }
 }
 
-/// The still across the top, faded into the page, so the page has a mood
-/// before anything is read.
-private struct Backdrop: View {
-    let detail: TitleDetail
+// MARK: The artwork with the actions
 
-    var body: some View {
-        let url = (detail.stills.first ?? detail.backdrop).flatMap(URL.init(string:))
-        CachedImage(url: url, maxPixels: 1280) { Placeholder(title: detail.summary, style: .wide, showsTitle: false) }
-            .frame(height: 220)
-            .frame(maxWidth: .infinity)
-            .clipped()
-            .overlay {
-                LinearGradient(
-                    stops: [.init(color: .clear, location: 0), .init(color: BurrowColor.plaster.opacity(0.6), location: 0.6), .init(color: BurrowColor.plaster, location: 1)],
-                    startPoint: .top, endPoint: .bottom)
-            }
-            .overlay(alignment: .bottomLeading) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(detail.title).font(.system(size: 30, weight: .bold)).lineLimit(2)
-                    if let tagline = detail.tagline { Text(tagline).font(.system(size: 13)).italic().foregroundStyle(.secondary) }
-                }
-                .padding(.horizontal, 24)
-                .padding(.bottom, 4)
-            }
-            .accessibilityHidden(true)
-    }
-}
-
-// MARK: The trailer and the stills
-
-struct Stage: View {
-    @Environment(LumosModel.self) private var model
-    let detail: TitleDetail
-    @State private var showStills = false
-    @State private var still = 0
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 7) {
-            ZStack {
-                if showStills, let url = URL(string: detail.stills[min(still, detail.stills.count - 1)]) {
-                    CachedImage(url: url, maxPixels: 1280) { Color.black }
-                } else if let player = model.player, player.ref == detail.ref {
-                    TrailerPlayerView(playback: player, origin: model.connection?.serverURL)
-                        .id(detail.ref)
-                } else {
-                    Artwork(title: detail.summary, style: .wide, maxPixels: 1280, placeholderTitle: false)
-                    if detail.trailer != nil {
-                        LinearGradient(colors: [.black.opacity(0.55), .clear], startPoint: .bottom, endPoint: .center)
-                        Button {
-                            Task { await model.playTrailer(detail.ref) }
-                        } label: {
-                            VStack(spacing: 8) {
-                                Image(systemName: "play.fill")
-                                    .font(.system(size: 20))
-                                    .foregroundStyle(Color(white: 0.12))
-                                    .frame(width: 54, height: 54)
-                                    .background(Circle().fill(.white.opacity(0.92)))
-                                    .shadow(color: .black.opacity(0.35), radius: 9, y: 3)
-                                Text("Trailer afspelen").font(.caption.weight(.semibold)).foregroundStyle(.white)
-                            }
-                        }
-                        .buttonStyle(.plain)
-                        .help("Streamt pas na deze klik; er wordt niets bewaard (T)")
-                    }
-                }
-            }
-            .aspectRatio(16 / 9, contentMode: .fit)
-            .frame(maxWidth: .infinity)
-            .background(.black)
-            .clipShape(RoundedRectangle(cornerRadius: 8))
-            HStack(spacing: 8) {
-                if !detail.stills.isEmpty {
-                    Picker("Media", selection: $showStills) {
-                        Label("Trailer", systemImage: "play").tag(false)
-                        Label("Beelden", systemImage: "photo").tag(true)
-                    }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
-                    .fixedSize()
-                    .onChange(of: showStills) { if showStills { model.stopTrailer() } }
-                }
-                StageBar(detail: detail, showStills: showStills)
-            }
-        }
-    }
-}
-
-struct StageBar: View {
-    @Environment(LumosModel.self) private var model
-    let detail: TitleDetail
-    let showStills: Bool
-
-    var body: some View {
-        HStack(spacing: 8) {
-            Group {
-                if showStills {
-                    Text(detail.stillsCredit ?? "Beelden van de bron")
-                } else if let player = model.player, player.ref == detail.ref {
-                    Text(player.statusText).accessibilityIdentifier("lumos.player.status")
-                } else if let trailer = detail.trailer {
-                    switch trailer {
-                    case .youtube: Text("Streamt na klik via youtube-nocookie.com · \(trailer.publisher) · niets lokaal")
-                    case let .direct(_, _, publisher, _, license, _):
-                        Text("Stream van \(publisher)\(license.map { " · \($0)" } ?? "") · niets lokaal")
-                    }
-                } else {
-                    Text("Geen trailer gekoppeld")
-                }
-            }
-            .lineLimit(2)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            if model.player?.ref == detail.ref {
-                Button("Stop", systemImage: "stop.fill") { model.stopTrailer() }
-                    .controlSize(.small)
-                    .help("Stop de trailer (Esc)")
-            }
-            if let url = detail.trailer?.sourceURL, !showStills {
-                Link(destination: url) { Label("Groot beeld bij bron", systemImage: "arrow.up.right.square") }
-                    .help("Opent de bron voor volledig scherm of een betere kwaliteit")
-            }
-        }
-        .font(.system(size: 11))
-        .foregroundStyle(.secondary)
-    }
-}
-
-// MARK: Facts and actions
-
-struct Facts: View {
+/// The still large across the top, like the TV app; the title and the
+/// buttons on glass, drawn dark so they read on any picture.
+private struct Hero: View {
     @Environment(LumosModel.self) private var model
     let detail: TitleDetail
     @State private var seasons: Set<Int> = [1]
 
-    private var list: String { model.scope == .shared ? "onze lijst" : "jouw lijst" }
-
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            meta
-            actions.padding(.top, 14)
-            progress.padding(.top, 8)
-            if let pass = detail.pass {
-                HStack(spacing: 6) {
-                    Image(systemName: "eye.slash")
-                    Text(pass.kind == .seen ? "Al gezien" : "Overgeslagen\(pass.reason.map { ": \($0)" } ?? "")")
-                    Button("Terugzetten") { Task { await model.restore(verdictId: pass.id, title: detail.title) } }
-                        .buttonStyle(.link)
+        let url = (detail.stills.first ?? detail.backdrop).flatMap(URL.init(string:))
+        CachedImage(url: url, maxPixels: 1600) { Placeholder(title: detail.summary, style: .wide, showsTitle: false) }
+            .frame(maxWidth: .infinity)
+            .frame(height: 460)
+            .clipped()
+            .overlay {
+                LinearGradient(stops: [.init(color: .clear, location: 0.35), .init(color: .black.opacity(0.78), location: 1)], startPoint: .top, endPoint: .bottom)
+            }
+            .overlay(alignment: .bottomLeading) {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text(detail.title).font(.largeTitle).bold().lineLimit(2)
+                    Text(facts).font(.callout).foregroundStyle(.secondary)
+                    actions.padding(.top, 6)
                 }
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .padding(.top, 8)
+                .padding(28)
+                .environment(\.colorScheme, .dark)
             }
-            if detail.match != nil || (model.scope == .shared && detail.onMine) {
-                InfoSection("Waarom voorgesteld") {
-                    VStack(alignment: .leading, spacing: 3) {
-                        if let match = detail.match { Text(match) }
-                        if model.scope == .shared, detail.onMine, !detail.onShared { Text("Staat op jouw eigen lijst; samen nog niet.") }
-                    }
-                    .font(.callout)
-                }
-            }
-            if let synopsis = detail.synopsis {
-                Text(synopsis)
-                    .font(.system(size: 13))
-                    .lineSpacing(3)
-                    .textSelection(.enabled)
-                    .padding(.top, 14)
-            }
-            labels.padding(.top, 12)
-            InfoSection("Voorstellen bijstellen") { tune }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityElement(children: .contain)
     }
 
-    private var meta: some View {
+    private var facts: String {
         let summary = detail.summary
-        return FlowLayout(spacing: 10) {
-            Text(summary.kind)
-            if let year = detail.year { Text(String(year)) }
-            if let length = summary.length { Text(length) }
-            if detail.mediaType == .tv, let episodes = detail.episodes { Text("\(episodes) afleveringen") }
-            if let language = detail.language { Text(language) }
-            if let status = detail.statusLabel { Text(status) }
-            if let original = detail.originalTitle { Text("‘\(original)’").italic() }
-            if detail.availability == .available {
-                Label("In Jellyfin", systemImage: "checkmark.circle.fill").foregroundStyle(BurrowColor.success)
-            } else {
-                Text(detail.availability.label)
-            }
-        }
-        .font(.system(size: 12))
-        .foregroundStyle(.secondary)
+        var parts: [String?] = [summary.kind, detail.year.map(String.init), summary.length, detail.genres.prefix(3).joined(separator: ", ")]
+        if detail.mediaType == .tv, let episodes = detail.episodes { parts.append("\(episodes) afleveringen") }
+        if let language = detail.language { parts.append(language) }
+        if let status = detail.statusLabel { parts.append(status) }
+        return parts.compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · ")
     }
+
+    private var list: String { model.listName.lowercased() }
+    private var held: Bool { detail.availability.held }
 
     private var seasonTotal: Int? {
         guard detail.mediaType == .tv, !detail.onList, let total = detail.seasons, total > 1 else { return nil }
@@ -280,173 +137,301 @@ struct Facts: View {
     }
 
     private var actions: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 6) {
-                Button {
-                    Task { await model.toggleList(detail.ref, seasons: seasonTotal == nil ? nil : seasons.sorted()) }
-                } label: {
-                    Label(detail.onList ? "Op \(list)" : "Op \(list) zetten", systemImage: detail.onList ? "checkmark" : "plus")
+        HStack(spacing: 10) {
+            if held, model.canWatch {
+                Button { Task { await model.watch(detail.ref) } } label: {
+                    Label(watchLabel, systemImage: "play.fill")
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(detail.onList ? BurrowColor.success : BurrowColor.lumos)
-                .help(detail.onList ? "Staat op \(list); nog een keer haalt hem eraf (J)" : "Ja: zet op \(list) (J)")
-                .accessibilityIdentifier("lumos.approve.list")
-                Button {
-                    model.focus = .inspector
-                    model.reasonMenu = detail.ref
-                } label: {
-                    Label("Niet nu", systemImage: "chevron.down")
-                }
-                .help("Niet nu, reden optioneel (N)")
+                .buttonStyle(.glassProminent)
+                .help("Kijk op de tv (K)")
                 .popover(isPresented: Binding(
-                    get: { model.reasonMenu == detail.ref && model.focus == .inspector },
-                    set: { if !$0 { model.reasonMenu = nil } }
+                    get: { model.screenMenu == detail.ref },
+                    set: { if !$0 { model.screenMenu = nil } }
                 ), arrowEdge: .bottom) {
-                    ReasonMenu(ref: detail.ref)
-                }
-                if detail.trailer != nil, model.player?.ref != detail.ref {
-                    Button("Trailer", systemImage: "play") { Task { await model.playTrailer(detail.ref) } }
-                        .help("Streamt pas na deze klik (T)")
+                    ScreenChoice()
                 }
             }
-            if watchable { watchRow }
-            if let total = seasonTotal {
-                HStack(spacing: 6) {
-                    Text("Seizoenen").font(.system(size: 11.5)).foregroundStyle(.secondary)
-                    SeasonMenu(total: total, selection: $seasons) {
-                        Text(SeasonMenu<Text>.text(seasons, total: total))
-                    }
-                    .fixedSize()
-                    .onChange(of: detail.ref) { seasons = [1] }
-                }
-            }
-        }
-    }
-
-    private var watchable: Bool {
-        model.canWatch && (detail.availability == .available || detail.availability == .partiallyAvailable)
-    }
-
-    @ViewBuilder private var watchRow: some View {
-        HStack(spacing: 6) {
-            Text("Kijken").font(.system(size: 11.5)).foregroundStyle(.secondary)
-            if let info = model.watchInfo {
-                if info.web == nil {
-                    Text("Niet gevonden in Jellyfin").font(.system(size: 11.5)).foregroundStyle(.secondary)
-                } else {
-                    screenControl(info)
-                    Button("Hier", systemImage: "safari") { model.watchHere(detail.ref) }
-                        .help("Opent de pagina in Jellyfin in je browser (⇧⌘K)")
-                    if let episode = info.episode {
-                        Text(episode.label).font(.system(size: 11.5)).foregroundStyle(.secondary).lineLimit(1)
-                    }
-                }
-            } else {
-                ProgressView().controlSize(.small)
-            }
-        }
-        .popover(isPresented: Binding(
-            get: { model.screenMenu == detail.ref },
-            set: { if !$0 { model.screenMenu = nil } }
-        ), arrowEdge: .bottom) {
-            VStack(alignment: .leading, spacing: 4) {
-                ForEach(model.watchInfo?.screens ?? []) { screen in
-                    Button(screen.name) { Task { await model.play(on: screen, detail.ref) } }
-                }
-            }
-            .padding(10)
-        }
-    }
-
-    @ViewBuilder private func screenControl(_ info: WatchInfo) -> some View {
-        switch info.screens.count {
-        case 0:
-            Button("Op de tv", systemImage: "tv") {}
-                .disabled(true)
-                .help("Open Jellyfin op de tv; dan start Lumos hem daar (K)")
-        case 1:
-            Button { Task { await model.play(on: info.screens[0], detail.ref) } } label: {
-                Label("Op \(info.screens[0].name)", systemImage: "tv")
-            }
-            .help("Start op de tv (K)")
-        default:
-            Menu {
-                ForEach(info.screens) { screen in
-                    Button(screen.name) { Task { await model.play(on: screen, detail.ref) } }
-                }
+            listButton
+            Button {
+                model.focus = .inspector
+                model.reasonMenu = detail.ref
             } label: {
-                Label("Op de tv", systemImage: "tv")
+                Text("Niet nu")
             }
-            .fixedSize()
+            .buttonStyle(.glass)
+            .help("Niet nu, reden optioneel (N)")
+            .popover(isPresented: Binding(
+                get: { model.reasonMenu == detail.ref && model.focus == .inspector },
+                set: { if !$0 { model.reasonMenu = nil } }
+            ), arrowEdge: .bottom) {
+                ReasonMenu(ref: detail.ref)
+            }
+            if detail.trailer != nil {
+                Button("Trailer", systemImage: model.player?.ref == detail.ref ? "stop.fill" : "play.rectangle") {
+                    if model.player?.ref == detail.ref { model.stopTrailer() } else { Task { await model.playTrailer(detail.ref) } }
+                }
+                .buttonStyle(.glass)
+                .help("Streamt pas na deze klik; er wordt niets bewaard (T)")
+            }
+            if let total = seasonTotal {
+                SeasonMenu(total: total, selection: $seasons) {
+                    Text(SeasonMenu<Text>.text(seasons, total: total))
+                }
+                .buttonStyle(.glass)
+                .fixedSize()
+                .onChange(of: detail.ref) { seasons = [1] }
+            }
+        }
+        .controlSize(.large)
+    }
+
+    @ViewBuilder private var listButton: some View {
+        let button = Button {
+            Task { await model.toggleList(detail.ref, seasons: seasonTotal == nil ? nil : seasons.sorted()) }
+        } label: {
+            Label(detail.onList ? "Op \(list)" : held ? "Zet op \(list)" : "Ja, op \(list)", systemImage: detail.onList ? "bookmark.fill" : "bookmark")
+        }
+        .help(detail.onList ? "Staat op \(list); nog een keer haalt hem eraf (J)" : "Ja: zet op \(list) (J)")
+        .accessibilityIdentifier("lumos.approve.list")
+        if held || detail.onList {
+            button.buttonStyle(.glass)
+        } else {
+            button.buttonStyle(.glassProminent)
         }
     }
 
-    @ViewBuilder private var progress: some View {
-        let request = detail.request
-        if detail.download != nil || request?.label != nil {
-            VStack(alignment: .leading, spacing: 6) {
-                if let download = detail.download {
-                    HStack(spacing: 8) {
-                        ProgressView(value: download.progress).frame(maxWidth: 180)
-                        Text("Gedownload \(Int((download.progress * 100).rounded())) %").monospacedDigit()
-                    }
-                }
-                if let label = request?.label, detail.availability != .available {
-                    Text(label).foregroundStyle(request?.status == .failed ? BurrowColor.danger : .secondary)
-                }
-                if request?.status == .failed {
-                    Button("Opnieuw proberen", systemImage: "arrow.clockwise") {
-                        Task { await model.retryRequest(detail.ref) }
-                    }
-                    .controlSize(.small)
-                    .accessibilityIdentifier("lumos.approve.retryRequest")
-                }
-            }
-            .font(.system(size: 11.5))
+    /// "Kijken", or where the household stopped.
+    private var watchLabel: String {
+        if let resume = model.watchInfo?.resume ?? detail.library?.server?.watched?.resume {
+            if let episode = resume.episode { return "Kijk \(episode.label)" }
+            if resume.positionSeconds > 0 { return "Verder kijken" }
         }
+        return "Kijken"
+    }
+}
+
+/// K with several screens open: which one.
+private struct ScreenChoice: View {
+    @Environment(LumosModel.self) private var model
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Op welk scherm?").font(.headline)
+            ForEach(model.watchInfo?.screens ?? []) { screen in
+                Button(screen.name, systemImage: "tv") { Task { await model.play(on: screen) } }
+                    .buttonStyle(.borderless)
+            }
+        }
+        .padding(14)
+    }
+}
+
+/// The trailer, streamed only after a click; nothing is kept.
+private struct Trailer: View {
+    @Environment(LumosModel.self) private var model
+    let player: TrailerPlayback
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            TrailerPlayerView(playback: player, origin: model.connection?.serverURL)
+                .id(player.ref)
+                .aspectRatio(16 / 9, contentMode: .fit)
+                .frame(maxWidth: 820)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+            HStack(spacing: 10) {
+                Text(player.statusText)
+                    .accessibilityIdentifier("lumos.player.status")
+                Spacer()
+                if let url = player.trailer.sourceURL {
+                    Link(destination: url) { Label("Groot beeld bij de bron", systemImage: "arrow.up.right.square") }
+                }
+                Button("Stop", systemImage: "stop.fill") { model.stopTrailer() }
+                    .buttonStyle(.bordered)
+                    .help("Stop de trailer (Esc)")
+            }
+            .font(.callout)
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: 820)
+        }
+        .padding(.bottom, 24)
+    }
+}
+
+// MARK: The story
+
+private struct Story: View {
+    @Environment(LumosModel.self) private var model
+    let detail: TitleDetail
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            if let tagline = detail.tagline { Text(tagline).font(.title3).italic().foregroundStyle(.secondary) }
+            if let synopsis = detail.synopsis {
+                Text(synopsis).font(.body).lineSpacing(3).textSelection(.enabled)
+            }
+            if let pass = detail.pass {
+                HStack(spacing: 8) {
+                    Label(pass.kind == .seen ? "Al gezien" : "Overgeslagen\(pass.reason.map { ": \($0)" } ?? "")", systemImage: "eye.slash")
+                        .foregroundStyle(.secondary)
+                    Button("Terugzetten") { Task { await model.restore(verdictId: pass.id, title: detail.title) } }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                }
+                .font(.callout)
+            }
+            if detail.match != nil || (model.scope == .shared && detail.onMine && !detail.onShared) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Waarom voorgesteld").font(.headline)
+                    if let match = detail.match { Text(match).foregroundStyle(.secondary) }
+                    if model.scope == .shared, detail.onMine, !detail.onShared {
+                        Text("Staat op jouw eigen lijst; samen nog niet.").foregroundStyle(.secondary)
+                    }
+                }
+                .font(.callout)
+            }
+            labels
+            tune
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var labels: some View {
-        FlowLayout(spacing: 5) {
-            ForEach(detail.genres, id: \.self) { genre in
-                Button(genre) { model.query = genre }.buttonStyle(LabelStyle(genre: true)).help("Zoek genre \(genre)")
-            }
-            ForEach(detail.traits, id: \.self) { trait in
-                Button(trait) { model.query = trait }.buttonStyle(LabelStyle(genre: false)).help("Zoek kenmerk \(trait)")
+        FlowLayout(spacing: 6) {
+            ForEach(detail.genres + detail.traits, id: \.self) { word in
+                Button(word) { model.query = word }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .help("Zoek \(word)")
             }
         }
     }
 
     private var tune: some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 6) {
-                Button("Meer zoals dit", systemImage: "hand.thumbsup") { Task { await model.taste(.moreLikeThis, detail.ref) } }
-                    .buttonStyle(ChipStyle(on: detail.taste?.kind == .moreLikeThis))
-                Button("Minder zoals dit", systemImage: "hand.thumbsdown") { Task { await model.taste(.lessLikeThis, detail.ref) } }
-                    .buttonStyle(ChipStyle(on: detail.taste?.kind == .lessLikeThis))
+            Text("Voorstellen bijstellen").font(.headline)
+            HStack(spacing: 8) {
+                Toggle("Meer zoals dit", systemImage: "hand.thumbsup", isOn: Binding(
+                    get: { detail.taste?.kind == .moreLikeThis }, set: { _ in Task { await model.taste(.moreLikeThis, detail.ref) } }))
+                Toggle("Minder zoals dit", systemImage: "hand.thumbsdown", isOn: Binding(
+                    get: { detail.taste?.kind == .lessLikeThis }, set: { _ in Task { await model.taste(.lessLikeThis, detail.ref) } }))
             }
-            Text("Geldt voor \(model.scope == .shared ? "samen" : model.myName), op kenmerken van deze titel. ‘Al gezien’ telt nooit als afkeer.")
-                .font(.system(size: 10.5))
-                .foregroundStyle(.tertiary)
+            .toggleStyle(.button)
+            Text("Geldt voor \(model.scope == .shared ? "samen" : model.myName). Al gezien telt nooit als afkeer.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+}
+
+// MARK: Op Dobby
+
+/// What is on Dobby: size, added, seen together and by you, the picture,
+/// who manages it, and Verwijderen. While it downloads, how far; before
+/// that, what Ja does.
+private struct OnDobby: View {
+    @Environment(LumosModel.self) private var model
+    let detail: TitleDetail
+
+    var body: some View {
+        GroupBox {
+            VStack(alignment: .leading, spacing: 10) {
+                if let library = detail.library {
+                    Text("Op Dobby").font(.headline)
+                    held(library)
+                } else if detail.availability.held {
+                    Text("Op Dobby").font(.headline)
+                    Text("De mediaserver geeft geen grootte of datum.").font(.callout).foregroundStyle(.secondary)
+                } else if detail.download != nil || [.downloading, .importing, .requested, .waitingForRelease, .importProblem].contains(detail.availability) {
+                    Text("Onderweg naar Dobby").font(.headline)
+                    coming
+                } else {
+                    Text("Niet op Dobby").font(.headline)
+                    Text(model.status?.requests == true ? "Ja zet de titel op de lijst en vraagt hem aan." : "Ja zet de titel op de lijst.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                    request
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(6)
+        }
+    }
+
+    @ViewBuilder private func held(_ library: LibraryInfo) -> some View {
+        let item = ManageItem(
+            title: detail.summary, download: nil, addedAt: library.addedAt, removable: library.removable,
+            server: library.server, seen: detail.seen, spaceCandidate: nil)
+        OnDobbyFacts(item: item)
+        if let info = model.watchInfo {
+            if info.web != nil {
+                HStack {
+                    Text(info.screens.isEmpty ? "Open Jellyfin op de tv om daar te kijken." : "Op \(info.screens.map(\.name).joined(separator: " of "))")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Button("Hier", systemImage: "safari") { model.watchHere(detail.ref) }
+                        .buttonStyle(.bordered)
+                        .help("Opent de pagina in Jellyfin in je browser (⇧⌘K)")
+                }
+            } else {
+                Text("Jellyfin heeft deze titel niet gevonden.").font(.callout).foregroundStyle(.secondary)
+            }
+        }
+        if model.canDelete {
+            Button("Verwijderen…", systemImage: "trash", role: .destructive) {
+                if let held = model.libraryItem(detail.ref) {
+                    model.askDelete([held.id])
+                } else {
+                    model.deleteRequest = DeleteRequest(items: [item], kept: 0)
+                }
+            }
+            .disabled(!library.removable)
+            if !library.removable {
+                Label(item.lockReason, systemImage: "lock.fill").font(.callout).foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    @ViewBuilder private var coming: some View {
+        if let download = detail.download {
+            ProgressView(value: download.progress).accessibilityLabel("Gedownload")
+            Text(["\(Int((download.progress * 100).rounded())) %", Eta.text(download.eta)].compactMap { $0 }.joined(separator: " · "))
+                .font(.callout)
+                .monospacedDigit()
+                .foregroundStyle(.secondary)
+        } else {
+            Text(detail.availability.label).font(.callout).foregroundStyle(.secondary)
+        }
+        request
+    }
+
+    @ViewBuilder private var request: some View {
+        if let label = detail.request?.label {
+            Text(label).font(.callout).foregroundStyle(detail.request?.status == .failed ? .red : .secondary)
+        }
+        if detail.request?.status == .failed {
+            Button("Opnieuw proberen", systemImage: "arrow.clockwise") { Task { await model.retryRequest(detail.ref) } }
+                .buttonStyle(.bordered)
+                .accessibilityIdentifier("lumos.approve.retryRequest")
         }
     }
 }
 
 // MARK: Below the fold
 
-/// Scores, money, reviews, cast, makers, seasons and more like it.
+/// Scores, money, cast, makers, seasons, more like it and the reviews.
 private struct Sections: View {
     @Environment(LumosModel.self) private var model
     let detail: TitleDetail
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(alignment: .top, spacing: 24) {
+            HStack(alignment: .top, spacing: 28) {
                 InfoSection("Scores per bron") { ScoresView(scores: detail.scores, fixture: detail.dataOrigin == .fixture) }
                     .frame(maxWidth: .infinity, alignment: .leading)
                 if detail.budget != nil || detail.revenue != nil || !(detail.studios ?? []).isEmpty || detail.collection != nil {
                     InfoSection("Productie") { MoneyView(detail: detail) }
-                        .frame(width: 300, alignment: .leading)
+                        .frame(width: 320, alignment: .leading)
                 }
             }
             if let cast = detail.cast, !cast.isEmpty {
@@ -465,9 +450,6 @@ private struct Sections: View {
                 }
             }
             InfoSection("Reviews") { SnippetsView(snippets: detail.snippets) }
-            if let tmdb = detail.tmdbUrl.flatMap(URL.init(string:)) {
-                Link("TMDB-pagina", destination: tmdb).font(.caption).padding(.top, 14)
-            }
         }
     }
 }
@@ -477,44 +459,30 @@ private struct MoneyView: View {
     let detail: TitleDetail
 
     var body: some View {
-        Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 6) {
-            if let budget = detail.budget {
-                GridRow { key("Budget"); Text(Money.short(budget)).monospacedDigit() }
-            }
+        VStack(alignment: .leading, spacing: 6) {
+            if let budget = detail.budget { LabeledContent("Budget", value: Money.short(budget)) }
             if let revenue = detail.revenue {
-                GridRow {
-                    key("Opbrengst")
+                LabeledContent("Opbrengst") {
                     HStack(spacing: 6) {
                         Text(Money.short(revenue)).monospacedDigit()
                         if let budget = detail.budget, budget > 0 {
                             let ratio = revenue / budget
                             Text(String(format: "%.1f×", ratio))
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(ratio >= 2 ? BurrowColor.success : ratio >= 1 ? Color.secondary : BurrowColor.danger)
+                                .font(.caption)
+                                .foregroundStyle(ratio >= 2 ? .green : ratio >= 1 ? .secondary : .red)
                                 .help("Opbrengst gedeeld door budget, wereldwijd aan de kassa")
                         }
                     }
                 }
             }
             if let studios = detail.studios, !studios.isEmpty {
-                GridRow(alignment: .firstTextBaseline) { key(detail.mediaType == .tv ? "Zender" : "Studio"); Text(studios.joined(separator: ", ")) }
+                LabeledContent(detail.mediaType == .tv ? "Zender" : "Studio", value: studios.joined(separator: ", "))
             }
-            if let collection = detail.collection {
-                GridRow { key("Reeks"); Text(collection.name) }
-            }
-            if let date = detail.releaseDate {
-                GridRow { key(detail.mediaType == .tv ? "Eerste" : "Uitgebracht"); Text(date) }
-            }
-            if let last = detail.lastAired {
-                GridRow { key("Laatste"); Text(last) }
-            }
+            if let collection = detail.collection { LabeledContent("Reeks", value: collection.name) }
+            if let date = detail.releaseDate { LabeledContent(detail.mediaType == .tv ? "Eerste" : "Uitgebracht", value: date) }
+            if let last = detail.lastAired { LabeledContent("Laatste", value: last) }
         }
-        .font(.system(size: 12.5))
         .textSelection(.enabled)
-    }
-
-    private func key(_ text: String) -> some View {
-        Text(text).foregroundStyle(.secondary).gridColumnAlignment(.leading)
     }
 }
 
@@ -529,17 +497,18 @@ private struct PeopleRow: View {
                 ForEach(people) { person in
                     Button { model.openPerson(person.id, name: person.name) } label: {
                         VStack(spacing: 6) {
-                            Face(person: person, size: 72)
-                            Text(person.name).font(.system(size: 11.5, weight: .semibold)).lineLimit(2).multilineTextAlignment(.center)
+                            Face(person: person, size: 76)
+                            Text(person.name).font(.caption).bold().lineLimit(2).multilineTextAlignment(.center)
                             if let part = person.part {
-                                Text(part).font(.system(size: 10.5)).foregroundStyle(.secondary).lineLimit(2).multilineTextAlignment(.center)
+                                Text(part).font(.caption).foregroundStyle(.secondary).lineLimit(2).multilineTextAlignment(.center)
                             }
                         }
-                        .frame(width: 92)
+                        .frame(width: 96)
                         .contentShape(Rectangle())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.borderless)
                     .help("Alles van \(person.name)")
+                    .accessibilityLabel([person.name, person.part].compactMap { $0 }.joined(separator: ", "))
                 }
             }
             .padding(.vertical, 4)
@@ -557,12 +526,13 @@ struct Face: View {
             ZStack {
                 TileColours(person.name).start
                 Text(person.name.split(separator: " ").prefix(2).compactMap(\.first).map(String.init).joined())
-                    .font(.system(size: size * 0.32, weight: .semibold)).foregroundStyle(.white)
+                    .font(.title2).bold().foregroundStyle(.white)
             }
         }
         .frame(width: size, height: size)
         .clipShape(Circle())
-        .overlay(Circle().strokeBorder(.black.opacity(0.08)))
+        .overlay(Circle().strokeBorder(.separator))
+        .accessibilityHidden(true)
     }
 }
 
@@ -573,19 +543,20 @@ private struct SeasonsView: View {
         VStack(spacing: 0) {
             ForEach(seasons) { season in
                 HStack(spacing: 10) {
-                    CachedImage(url: season.poster.flatMap(URL.init(string:)), maxPixels: 185) { Color.secondary.opacity(0.2) }
+                    CachedImage(url: season.poster.flatMap(URL.init(string:)), maxPixels: 185) { Rectangle().fill(.quaternary) }
                         .frame(width: 30, height: 45)
                         .clipShape(RoundedRectangle(cornerRadius: 3))
-                    Text(season.name).font(.system(size: 12.5, weight: .medium))
+                        .accessibilityHidden(true)
+                    Text(season.name)
                     Spacer()
                     Text([season.episodes.map { "\($0) afl." }, season.year.map(String.init)].compactMap { $0 }.joined(separator: " · "))
-                        .font(.system(size: 11.5)).foregroundStyle(.secondary)
+                        .font(.callout).foregroundStyle(.secondary)
                 }
                 .padding(.vertical, 5)
                 if season.id != seasons.last?.id { Divider() }
             }
         }
-        .frame(maxWidth: 520, alignment: .leading)
+        .frame(maxWidth: 560, alignment: .leading)
     }
 }
 
@@ -599,28 +570,11 @@ struct InfoSection<Content: View>: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title.uppercased())
-                .font(.system(size: 11, weight: .semibold))
-                .kerning(0.4)
-                .foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 10) {
+            Text(title).font(.title3).bold().accessibilityAddTraits(.isHeader)
             content
         }
-        .padding(.top, 22)
-    }
-}
-
-struct LabelStyle: ButtonStyle {
-    var genre: Bool
-
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.system(size: 11.5, weight: genre ? .medium : .regular))
-            .foregroundStyle(genre ? AnyShapeStyle(BurrowColor.lumos) : AnyShapeStyle(.secondary))
-            .padding(.horizontal, 8)
-            .frame(height: 22)
-            .background(RoundedRectangle(cornerRadius: 5).fill(genre ? BurrowColor.lumos.opacity(0.13) : BurrowColor.linen))
-            .opacity(configuration.isPressed ? 0.7 : 1)
+        .padding(.top, 28)
     }
 }
 
@@ -634,32 +588,34 @@ struct ScoresView: View {
         if scores.isEmpty {
             Text("Nog geen scores van een bron.").font(.callout).foregroundStyle(.secondary)
         } else {
-            VStack(spacing: 0) {
-                ForEach(Array(scores.enumerated()), id: \.offset) { index, score in
-                    HStack(spacing: 8) {
-                        VStack(alignment: .leading, spacing: 0) {
-                            Text(score.source).font(.system(size: 12, weight: .medium))
-                            if let label = score.label { Text(label).font(.system(size: 10.5)).foregroundStyle(.secondary) }
+            GroupBox {
+                VStack(spacing: 0) {
+                    ForEach(Array(scores.enumerated()), id: \.offset) { index, score in
+                        HStack(spacing: 10) {
+                            VStack(alignment: .leading, spacing: 0) {
+                                Text(score.source)
+                                if let label = score.label { Text(label).font(.caption).foregroundStyle(.secondary) }
+                            }
+                            .frame(width: 130, alignment: .leading)
+                            Text(score.valueText).font(.headline).monospacedDigit()
+                            Spacer()
+                            Text([score.votesText, score.asOf].compactMap { $0 }.joined(separator: " · "))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            if let url = score.url.flatMap(URL.init(string:)) {
+                                Link(destination: url) { Image(systemName: "arrow.up.right.square") }
+                                    .help("Bron openen")
+                                    .accessibilityLabel("\(score.source) openen")
+                            }
                         }
-                        .frame(width: 120, alignment: .leading)
-                        Text(score.valueText).font(.system(size: 13.5, weight: .semibold)).monospacedDigit()
-                        Spacer()
-                        Text([score.votesText, score.asOf].compactMap { $0 }.joined(separator: " · "))
-                            .font(.system(size: 11))
-                            .foregroundStyle(.secondary)
-                        if let url = score.url.flatMap(URL.init(string:)) {
-                            Link(destination: url) { Image(systemName: "arrow.up.right.square") }.help("Bron openen")
-                        }
+                        .padding(.vertical, 6)
+                        if index < scores.count - 1 { Divider() }
                     }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 7)
-                    if index < scores.count - 1 { Divider() }
                 }
             }
-            .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(BurrowColor.hairline))
-            .frame(maxWidth: 560)
+            .frame(maxWidth: 580)
             if fixture, scores.contains(where: { $0.source.hasSuffix("(test)") }) {
-                Text("(test) = verzonnen score bij een verzonnen titel.").font(.system(size: 10.5)).foregroundStyle(.tertiary)
+                Text("(test) = verzonnen score bij een verzonnen titel.").font(.caption).foregroundStyle(.secondary)
             }
         }
     }
@@ -672,27 +628,26 @@ struct SnippetsView: View {
         if snippets.isEmpty {
             Text("Nog geen reviewfragmenten gekoppeld.").font(.callout).foregroundStyle(.secondary)
         } else {
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 8) {
                 ForEach(snippets, id: \.url) { snippet in
-                    VStack(alignment: .leading, spacing: 5) {
-                        Text("“\(snippet.quote)”")
-                            .font(.custom("New York", size: 12.5))
-                            .textSelection(.enabled)
-                        HStack(spacing: 6) {
-                            Text(snippet.source).fontWeight(.semibold)
-                            if let author = snippet.author { Text(author) }
-                            if let url = URL(string: snippet.url) { Link("Volledige review", destination: url) }
+                    GroupBox {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("“\(snippet.quote)”").font(.body).italic().textSelection(.enabled)
+                            HStack(spacing: 6) {
+                                Text(snippet.source).bold()
+                                if let author = snippet.author { Text(author) }
+                                if let url = URL(string: snippet.url) { Link("Volledige review", destination: url) }
+                            }
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                         }
-                        .font(.system(size: 11))
-                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    .padding(10)
-                    .frame(maxWidth: 640, alignment: .leading)
-                    .background(BurrowColor.linen.opacity(0.7), in: RoundedRectangle(cornerRadius: 8))
+                    .frame(maxWidth: 660)
                 }
                 Text("Korte fragmenten in de taal van de bron. De volledige review kan spoilers bevatten.")
-                    .font(.system(size: 10.5))
-                    .foregroundStyle(.tertiary)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
         }
     }

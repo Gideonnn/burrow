@@ -34,6 +34,28 @@ enum Fixture {
         """
     }
 
+    /// On Dobby: Alpha seen together (80 GB, on nobody's list), Bravo half
+    /// watched, Charlie copied in by hand, Delta seen by me in Lumos.
+    static let manage = #"""
+    {"dataOrigin":"live","disk":{"totalBytes":1000000000000,"freeBytes":400000000000},
+     "busy":[{"title":\#(title(5, "Echo")),"download":{"progress":0.4,"eta":null,"bytesLeft":6000000000},"addedAt":null,"removable":true}],
+     "library":[
+      {"title":\#(title(1, "Alpha")),"download":null,"addedAt":"2026-09-01T10:00:00Z","removable":true,"spaceCandidate":true,
+       "server":{"sizeBytes":80000000000,"media":{"resolution":"4K","hdr":"HDR10","audio":["Engels"],"subtitles":["Nederlands"]},
+                 "watched":{"played":true,"playCount":1,"lastPlayed":null,"episodesPlayed":null,"episodes":null,"resume":null}},
+       "seen":{"together":false,"me":false}},
+      {"title":\#(title(2, "Bravo")),"download":null,"addedAt":"2026-08-01T10:00:00Z","removable":true,"spaceCandidate":false,
+       "server":{"sizeBytes":8000000000,"media":null,
+                 "watched":{"played":false,"playCount":0,"lastPlayed":null,"episodesPlayed":null,"episodes":null,
+                            "resume":{"positionSeconds":3000,"runtimeSeconds":6000,"episode":null}}},
+       "seen":{"together":false,"me":false}},
+      {"title":\#(title(3, "Charlie")),"download":null,"addedAt":"2026-10-01T10:00:00Z","removable":false,"spaceCandidate":false,
+       "server":{"sizeBytes":30000000000,"media":null,"watched":null},"seen":{"together":false,"me":false}},
+      {"title":\#(title(4, "Delta")),"download":null,"addedAt":"2026-11-01T10:00:00Z","removable":true,
+       "server":{"sizeBytes":20000000000,"media":null,"watched":null},"seen":{"together":false,"me":true}}
+     ]}
+    """#
+
     static let youtube = """
     {"provider":"youtube","key":"abc","url":"https://www.youtube.com/watch?v=abc","publisher":"Studio","language":"en","checkedAt":"2026-10-24"}
     """
@@ -62,6 +84,14 @@ final class Household: @unchecked Sendable {
             next += 1
             undo["c\(next)"] = revert
             return #"{"changeId":"c\#(next)"}"#
+        }
+    }
+
+    /// The Zoeker's row: every title, whatever was passed.
+    func explore() -> String {
+        lock.withLock {
+            let items = titles.map { Fixture.title($0.0, $0.1, onList: listed.contains($0.0)) }.joined(separator: ",")
+            return #"{"dataOrigin":"fixture","rows":[{"key":"trending","title":"Nu veel bekeken","subtitle":null,"style":"poster","items":[\#(items)],"empty":null}]}"#
         }
     }
 
@@ -108,6 +138,7 @@ final class Household: @unchecked Sendable {
             let id = body.contains(#""tmdbId":2"#) ? 2 : body.contains(#""tmdbId":3"#) ? 3 : 1
             return (201, household.pass(id))
         }
+        server.on("GET", "/api/lumos/explore") { _ in (200, household.explore()) }
         server.on("POST", "/api/lumos/changes/c1/undo") { _ in household.revert("c1") }
         server.on("POST", "/api/lumos/changes/c2/undo") { _ in household.revert("c2") }
         return server
@@ -127,20 +158,18 @@ final class Household: @unchecked Sendable {
     @Test func showsThatTheCatalogueIsTestData() async {
         let model = await started(server())
         #expect(model.isFixture)
-        #expect(model.rows.map(\.key) == ["tonight", "list"])
+        // Ontdekken: the household's own rows, then the Zoeker's; the list has its own page.
+        #expect(model.rows.map(\.key) == ["tonight", "trending"])
         #expect(model.cursor == CardID(row: "tonight", ref: alpha))
     }
 
     @Test func arrowsMoveBetweenCardsAndRowsAndRememberTheColumn() async {
-        let household = Household()
-        let model = await started(server(household))
-        _ = household.list(3)
-        await model.reload()
+        let model = await started(server())
         model.move(.right)
         model.move(.right)
         #expect(model.cursor == CardID(row: "tonight", ref: charlie))
         model.move(.down)
-        #expect(model.cursor == CardID(row: "list", ref: charlie))
+        #expect(model.cursor == CardID(row: "trending", ref: charlie))
         model.move(.up)
         #expect(model.cursor == CardID(row: "tonight", ref: charlie))
         model.move(.home)
@@ -198,9 +227,12 @@ final class Household: @unchecked Sendable {
         let model = await started(server)
         await model.toggleList()
         #expect(server.requests("PUT", "/api/lumos/lists/shared/items/movie/1").count == 1)
-        #expect(model.rows.last?.items.map(\.ref) == [alpha])
+        #expect(model.rows.first?.items.first?.onList == true)
+        #expect(model.toast?.message == "Alpha staat op onze lijst.")
+        #expect(model.toast?.canUndo == true)
         await model.undo()
-        #expect(model.rows.last?.items.isEmpty == true)
+        #expect(model.rows.first?.items.first?.onList == false)
+        #expect(model.toast?.message == "Hersteld.")
         await model.undo()
         #expect(model.toast?.message == "Niets om ongedaan te maken.")
     }
@@ -230,36 +262,93 @@ final class Household: @unchecked Sendable {
         #expect(server.requests("GET", "/api/lumos/titles/movie/1").count == 2)
     }
 
-    @Test func beherenShowsTheDownloadsAndOnlyAnAdminDeletes() async {
-        let server = server()
-        let manage = Box(#"""
-        {"dataOrigin":"live","busy":[{"title":\#(Fixture.title(2, "Bravo")),"download":{"progress":0.4,"eta":null},"addedAt":null,"removable":true}],
-         "library":[{"title":\#(Fixture.title(1, "Alpha")),"download":null,"addedAt":"2026-11-01T10:00:00Z","removable":true}]}
-        """#)
+    func library(_ server: MockServer) -> Box<String> {
+        server.on("GET", "/api/lumos/status", json: #"{"dataOrigin":"fixture","catalogue":"Testgegevens","requests":true,"watch":false}"#)
+        let manage = Box(Fixture.manage)
         server.on("GET", "/api/lumos/manage") { _ in (200, manage.value) }
-        server.on("DELETE", "/api/lumos/library/movie/1") { _ in
-            manage.value = #"{"dataOrigin":"live","busy":[],"library":[]}"#
-            return (200, #"{"ok":true}"#)
+        for id in [1, 2, 3, 4] {
+            server.on("DELETE", "/api/lumos/library/movie/\(id)") { _ in (200, #"{"ok":true}"#) }
         }
-        let model = await started(server)
-        await model.show(.manage)
-        #expect(model.title == "Beheren")
-        #expect(model.manageAnswer?.busy.first?.download?.progress == 0.4)
-        #expect(model.manageAnswer?.library.map(\.title.title) == ["Alpha"])
+        return manage
+    }
 
-        // A key without the admin right deletes nothing.
-        let alpha = model.manageAnswer!.library[0]
-        #expect(!model.canDelete)
-        await model.removeFromLibrary(alpha)
+    func admin(_ server: MockServer) {
+        server.on("GET", "/api/me", json: Fixture.me.replacingOccurrences(of: #""organize"]"#, with: #""organize","admin"]"#))
+    }
+
+    @Test func theBibliotheekFiltersSortsAndSaysWhatWasSeenTogether() async {
+        let server = server()
+        _ = library(server)
+        let model = await started(server)
+        await model.show(.library)
+        #expect(model.title == "Bibliotheek")
+        #expect(model.manageAnswer?.busy.first?.download?.progress == 0.4)
+        #expect(model.disk?.free == 400e9)
+        #expect(model.disk?.films == 138e9)
+        #expect(model.disk?.tight == false)
+        // Newest first by default.
+        #expect(model.libraryRows.map(\.title) == ["Delta", "Charlie", "Alpha", "Bravo"])
+        #expect(model.libraryRows.map(\.item.watched.label) == ["Jij hebt gezien", "Niet gezien", "Samen gezien", "Samen bezig, nog 50 min"])
+        model.watchedFilter = .together
+        #expect(model.libraryRows.map(\.title) == ["Alpha"])
+        model.watchedFilter = .all
+        model.librarySort = .largest
+        #expect(model.libraryRows.map(\.title) == ["Alpha", "Charlie", "Delta", "Bravo"])
+        model.query = "char"
+        #expect(model.libraryRows.map(\.title) == ["Charlie"])
+        model.librarySelection = [charlie]
+        #expect(model.subtitle == "1 geselecteerd · 30 GB")
+    }
+
+    @Test func ruimteMakenSelectsTheLargeTitlesSeenTogetherAndDeletingAsksFirst() async {
+        let server = server()
+        _ = library(server)
+        admin(server)
+        let model = await started(server)
+        await model.show(.library)
+        model.shelf = .tv
+        model.makeRoom()
+        #expect(model.shelf == .all)
+        #expect(model.librarySort == .largest)
+        #expect(model.librarySelection == [alpha])
+
+        // ⌫ on Alpha and Charlie: Charlie was copied in by hand and stays.
+        model.librarySelection = [alpha, charlie]
+        model.askDelete()
+        #expect(model.deleteRequest?.items.map(\.title.title) == ["Alpha"])
+        #expect(model.deleteRequest?.question == "‘Alpha’ verwijderen van Dobby?")
+        #expect(model.deleteRequest?.message.contains("1 titel blijft staan: met de hand gekopieerd.") == true)
+        #expect(model.deleteRequest?.message.contains("Wat jullie gezien hebben, komt bij Al gezien.") == true)
         #expect(server.requests("DELETE", "/api/lumos/library/movie/1").isEmpty)
 
-        server.on("GET", "/api/me", json: Fixture.me.replacingOccurrences(of: #""organize"]"#, with: #""organize","admin"]"#))
-        await model.refreshProfile()
-        #expect(model.canDelete)
-        await model.removeFromLibrary(alpha)
+        await model.confirmDelete()
         #expect(server.requests("DELETE", "/api/lumos/library/movie/1").count == 1)
-        #expect(model.toast?.message == "Alpha is van Dobby verwijderd.")
-        #expect(model.manageAnswer?.library.isEmpty == true)
+        #expect(server.requests("DELETE", "/api/lumos/library/movie/3").isEmpty)
+        #expect(model.toast?.message == "‘Alpha’ is verwijderd, 80 GB vrijgemaakt. Dit kan niet worden hersteld.")
+        #expect(model.toast?.canUndo == false)
+        await model.undo()
+        #expect(model.toast?.message == "Verwijderen kan niet ongedaan worden; de bestanden zijn weg.")
+    }
+
+    @Test func onlyAnAdminDeletesAndSeveralGoOneByOne() async {
+        let server = server()
+        _ = library(server)
+        let model = await started(server)
+        await model.show(.library)
+        model.librarySelection = [alpha, bravo]
+        #expect(!model.canDelete)
+        #expect(!model.canDeleteTarget)
+        model.askDelete()
+        #expect(model.deleteRequest == nil)
+
+        admin(server)
+        await model.refreshProfile()
+        model.askDelete()
+        #expect(model.deleteRequest?.question == "2 titels verwijderen van Dobby?")
+        await model.confirmDelete()
+        #expect(server.requests("DELETE", "/api/lumos/library/movie/1").count == 1)
+        #expect(server.requests("DELETE", "/api/lumos/library/movie/2").count == 1)
+        #expect(model.toast?.message == "2 titels zijn verwijderd, 88 GB vrijgemaakt. Dit kan niet worden hersteld.")
     }
 
     @Test func chosenSeasonsGoWithYesAndIntoTheToast() async {
@@ -350,7 +439,70 @@ final class Household: @unchecked Sendable {
             hasTrailer: false, onList: false, onShared: false, onMine: false, pass: nil, taste: nil, match: nil)
         #expect(LumosModel.Mood.calm.matches(quiet))
         #expect(!LumosModel.Mood.light.matches(quiet))
-        #expect(LumosModel.Mood.all.matches(quiet))
+    }
+
+    @Test func aMoodMakesAGridOfTheRowsThatFit() async {
+        let model = await started(server())
+        await model.setFilter { $0.genre = .mood(.light) }
+        // Every fixture title is a comedy, each once.
+        #expect(model.rows.map(\.key) == ["grid"])
+        #expect(model.rows.first?.items.map(\.ref) == [alpha, bravo, charlie])
+        await model.setFilter { $0.genre = .mood(.calm) }
+        #expect(model.rows.first?.items.isEmpty == true)
+    }
+
+    @Test func theKindNarrowsTheRowsAndAFilterMakesAGridOfBothKinds() async {
+        let server = server()
+        server.on("GET", "/api/lumos/browse") { request in
+            let query = request.url?.query() ?? ""
+            let tv = query.contains("type=tv")
+            let genres = tv ? #"[{"id":"18","name":"Drama"}]"# : #"[{"id":"35","name":"Komedie"},{"id":"18","name":"Drama"}]"#
+            let items = tv ? [Fixture.title(7, "Serie", type: "tv")] : [Fixture.title(1, "Alpha"), Fixture.title(2, "Bravo")]
+            return (200, #"{"dataOrigin":"fixture","page":1,"totalPages":1,"items":[\#(items.joined(separator: ","))],"genres":\#(genres)}"#)
+        }
+        let model = await started(server)
+        await model.showDiscover(.movie)
+        #expect(model.filter.kind == .movie)
+        #expect(model.subtitle == "Films")
+
+        await model.setFilter {
+            $0.kind = .all
+            $0.sort = .top
+        }
+        #expect(model.rows.map(\.key) == ["grid"])
+        // Films and series take turns.
+        #expect(model.rows.first?.items.map(\.title) == ["Alpha", "Serie", "Bravo"])
+        #expect(model.subtitle == "Films en series · Best beoordeeld")
+
+        // A genre the series do not have asks only the films.
+        await model.setFilter { $0.genre = .genre("Komedie") }
+        #expect(model.rows.first?.items.map(\.title) == ["Alpha", "Bravo"])
+
+        // Verras me: the filters off, the kind kept, the rows back.
+        await model.setFilter { $0.kind = .movie }
+        await model.surprise()
+        #expect(model.filter.kind == .movie)
+        #expect(model.filter.plain)
+        #expect(model.rows.map(\.key) == ["tonight", "trending"])
+    }
+
+    @Test func searchingLooksInThePageYouAreOn() async {
+        let server = server()
+        server.on("GET", "/api/lumos/search", json: #"{"dataOrigin":"fixture","query":"bra","hits":[{"title":\#(Fixture.title(2, "Bravo")),"why":null}],"credits":[]}"#)
+        server.on("GET", "/api/lumos/lists/shared", json: #"{"scope":"shared","items":[{"title":\#(Fixture.title(1, "Alpha", onList: true)),"addedBy":{"id":"p1","name":"Ada"},"addedAt":"2026-11-01T10:00:00Z","seasons":null},{"title":\#(Fixture.title(3, "Charlie", onList: true)),"addedBy":{"id":"p1","name":"Ada"},"addedAt":"2026-11-01T10:00:00Z","seasons":null}]}"#)
+        let model = await started(server)
+        model.query = "bra"
+        try? await Task.sleep(for: .milliseconds(400))
+        #expect(model.rows.first?.title == "Resultaten voor ‘bra’")
+        #expect(model.rows.first?.items.map(\.ref) == [bravo])
+
+        // The list searches itself, without the server.
+        await model.show(.list)
+        #expect(model.query.isEmpty)
+        let searches = server.requests("GET", "/api/lumos/search").count
+        model.query = "char"
+        #expect(model.rows.first?.items.map(\.ref) == [charlie])
+        #expect(server.requests("GET", "/api/lumos/search").count == searches)
     }
 
     @Test func decodesATitleWithoutScoresOrTrailer() throws {
@@ -389,7 +541,8 @@ final class Household: @unchecked Sendable {
             server.on("POST", "/api/lumos/watch/movie/\(id)/screen") { request in
                 let body = request.httpBodyStream.map(readBody) ?? request.httpBody.map { String(decoding: $0, as: UTF8.self) } ?? ""
                 let name = body.contains("tv") ? "LG TV" : "Slaapkamer"
-                return (200, #"{"screen":{"deviceId":"x","name":"\#(name)","client":"Jellyfin for WebOS","playing":"Alpha"},"episode":null,"confirmed":\#(id == 1)}"#)
+                let start = id == 3 ? #","startSeconds":3000"# : ""
+                return (200, #"{"screen":{"deviceId":"x","name":"\#(name)","client":"Jellyfin for WebOS","playing":"Alpha"},"episode":null,"confirmed":\#(id == 1)\#(start)}"#)
             }
         }
     }
@@ -405,9 +558,16 @@ final class Household: @unchecked Sendable {
         #expect(model.lastChange?.kind == .played)
 
         // A screen that does not react is not called playing.
+        model.closeInspector()
         model.move(.right)
         await model.watch()
         #expect(model.toast?.message == "Bravo is gestart op LG TV; de tv meldt nog niets.")
+
+        // Where the household stopped, it picks up.
+        model.closeInspector()
+        model.move(.right)
+        await model.watch()
+        #expect(model.toast?.message == "Charlie is gestart op LG TV vanaf 50:00; de tv meldt nog niets.")
     }
 
     @Test func withoutAScreenKOpensThePageHereAndSeveralScreensAsk() async {
@@ -487,7 +647,7 @@ final class Household: @unchecked Sendable {
         #expect(model.stack.isEmpty)
     }
 
-    @Test func theShelfPagesAndNarrows() async {
+    @Test func theGridPagesAndNarrows() async {
         let server = server()
         let page: @Sendable (Int, [String]) -> String = { n, items in
             #"{"dataOrigin":"fixture","page":\#(n),"totalPages":2,"items":[\#(items.joined(separator: ","))],"genres":[{"id":"35","name":"Komedie"}]}"#
@@ -499,17 +659,18 @@ final class Household: @unchecked Sendable {
             return (200, page(1, [Fixture.title(1, "Alpha"), Fixture.title(2, "Bravo")]))
         }
         let model = await started(server)
-        await model.show(.movies)
+        await model.showDiscover(.movie)
+        await model.setFilter { $0.sort = .popular }
         #expect(model.rows.first?.items.map(\.title) == ["Alpha", "Bravo"])
-        #expect(model.browse[.movie]?.genres.first?.name == "Komedie")
+        #expect(model.genreNames == ["Komedie"])
         await model.loadMore()
         #expect(model.rows.first?.items.map(\.title) == ["Alpha", "Bravo", "Charlie"])
+        #expect(!model.canLoadMore)
         await model.loadMore()
-        #expect(server.requests("GET", "/api/lumos/browse").count == 2)
-        await model.setBrowse { $0.genre = Genre(id: "35", name: "Komedie") }
+        #expect(model.rows.first?.items.count == 3)
+        await model.setFilter { $0.genre = .genre("Komedie") }
         #expect(model.rows.first?.items.map(\.title) == ["Bravo"])
-        #expect(model.subtitle == "Populair · Komedie")
-        #expect(server.requests("GET", "/api/lumos/browse").last?.isEmpty == true)
+        #expect(model.subtitle == "Films · Populair · Komedie")
     }
 }
 

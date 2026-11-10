@@ -45,13 +45,16 @@ public struct Placeholder: View {
         ZStack(alignment: .bottomLeading) {
             LinearGradient(colors: [colours.start, colours.end], startPoint: .topLeading, endPoint: .bottomTrailing)
             Image(systemName: title.mediaType == .tv ? "tv" : "film")
-                .font(.system(size: style == .wide ? 54 : 40, weight: .ultraLight))
+                .font(style == .wide ? .largeTitle : .title)
+                .fontWeight(.ultraLight)
+                .imageScale(.large)
                 .foregroundStyle(.white.opacity(0.13))
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: style == .wide ? .trailing : .center)
                 .padding(style == .wide ? 18 : 0)
             if showsTitle {
                 Text(title.title)
-                    .font(.system(size: style == .wide ? 17 : 14, weight: .bold))
+                    .font(style == .wide ? .title3 : .headline)
+                    .bold()
                     .foregroundStyle(.white)
                     .shadow(color: .black.opacity(0.35), radius: 4)
                     .lineLimit(3)

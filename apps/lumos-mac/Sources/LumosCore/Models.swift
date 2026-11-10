@@ -25,16 +25,19 @@ public enum Availability: String, Codable, Sendable {
     case available
     case partiallyAvailable = "partially-available"
 
+    /// On Dobby, wholly or in part.
+    public var held: Bool { self == .available || self == .partiallyAvailable }
+
     public var label: String {
         switch self {
-        case .notRequested: "Nog niet in Jellyfin"
+        case .notRequested: "Niet op Dobby"
         case .requested: "Aangevraagd"
         case .waitingForRelease: "Wacht op release"
-        case .downloading: "Wordt gedownload"
-        case .importing: "Wordt toegevoegd"
-        case .importProblem: "Probleem bij toevoegen"
-        case .available: "In Jellyfin"
-        case .partiallyAvailable: "Deels in Jellyfin"
+        case .downloading: "Downloadt"
+        case .importing: "Importeert"
+        case .importProblem: "Importprobleem"
+        case .available: "Op Dobby"
+        case .partiallyAvailable: "Deels op Dobby"
         }
     }
 }
@@ -237,9 +240,81 @@ public struct RequestState: Codable, Sendable, Equatable {
     }
 }
 
-public struct Download: Codable, Sendable, Equatable {
+public struct Download: Codable, Sendable, Hashable {
     public var progress: Double
     public var eta: String?
+    /// What the download still needs on disk, when the client says.
+    public var bytesLeft: Double?
+}
+
+/// The file as Jellyfin reads it: "4K", "HDR10", audio and subtitles in Dutch.
+public struct MediaFacts: Codable, Sendable, Hashable {
+    public var resolution: String?
+    public var hdr: String?
+    public var audio: [String]
+    public var subtitles: [String]
+
+    /// "4K · HDR10"
+    public var picture: String? {
+        let parts = [resolution, hdr].compactMap { $0 }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
+}
+
+/// Where the household stopped: a film's position, or a series' episode.
+public struct ResumePoint: Codable, Sendable, Hashable {
+    public var positionSeconds: Double
+    public var runtimeSeconds: Double?
+    public var episode: Episode?
+
+    public var minutesLeft: Int? {
+        guard let runtimeSeconds, positionSeconds > 0 else { return nil }
+        return max(1, Int(((runtimeSeconds - positionSeconds) / 60).rounded()))
+    }
+
+    /// "nog 40 min", "S1E4 De dijk, nog 40 min" or "S1E4 De dijk".
+    public var label: String {
+        let left = minutesLeft.map { "nog \($0) min" }
+        guard let episode else { return left ?? "Verder kijken" }
+        return [episode.label, left].compactMap { $0 }.joined(separator: ", ")
+    }
+}
+
+/// The household's one Jellyfin account: "played" means seen together.
+public struct PlayState: Codable, Sendable, Hashable {
+    public var played: Bool
+    public var playCount: Int
+    public var lastPlayed: String?
+    public var episodesPlayed: Int?
+    public var episodes: Int?
+    public var resume: ResumePoint?
+}
+
+/// What Jellyfin knows of a title it holds; `watched` is nil without the
+/// household account on the server.
+public struct OnServer: Codable, Sendable, Hashable {
+    public var sizeBytes: Double?
+    public var media: MediaFacts?
+    public var watched: PlayState?
+}
+
+/// Lumos's own "Al gezien": the household's, and the asking person's.
+public struct SeenVerdicts: Codable, Sendable, Hashable {
+    public var together: Bool
+    public var me: Bool
+}
+
+/// The disks under the media library, each counted once.
+public struct Disk: Codable, Sendable, Hashable {
+    public var totalBytes: Double
+    public var freeBytes: Double
+}
+
+/// On Dobby: when it came, whether Radarr or Sonarr manages it, what Jellyfin knows.
+public struct LibraryInfo: Codable, Sendable, Hashable {
+    public var addedAt: String?
+    public var removable: Bool
+    public var server: OnServer?
 }
 
 public struct TitleDetail: Codable, Sendable {
@@ -288,6 +363,9 @@ public struct TitleDetail: Codable, Sendable {
     public var crew: [CastMember]?
     public var seasonList: [SeasonSummary]?
     public var episodes: Int?
+    /// Nil when the media server does not hold it.
+    public var library: LibraryInfo?
+    public var seen: SeenVerdicts?
 
     public struct Collection: Codable, Sendable, Hashable {
         public var id: Int
@@ -466,18 +544,37 @@ public struct VerdictsResponse: Codable, Sendable {
 
 /// A title on Beheren. `removable`: Radarr or Sonarr manages it, so a
 /// delete through Seerr really removes the files.
-public struct ManageItem: Codable, Sendable, Identifiable {
+public struct ManageItem: Codable, Sendable, Identifiable, Hashable {
     public var title: TitleSummary
     public var download: Download?
     public var addedAt: String?
     public var removable: Bool
+    public var server: OnServer?
+    public var seen: SeenVerdicts?
+    /// "Ruimte maken" takes it: seen together, large, and on nobody's list.
+    public var spaceCandidate: Bool?
     public var id: TitleRef { title.ref }
+
+    public init(
+        title: TitleSummary, download: Download? = nil, addedAt: String? = nil, removable: Bool, server: OnServer? = nil,
+        seen: SeenVerdicts? = nil, spaceCandidate: Bool? = nil
+    ) {
+        self.title = title
+        self.download = download
+        self.addedAt = addedAt
+        self.removable = removable
+        self.server = server
+        self.seen = seen
+        self.spaceCandidate = spaceCandidate
+    }
 }
 
 public struct ManageResponse: Codable, Sendable {
     public var dataOrigin: DataOrigin
     public var busy: [ManageItem]
     public var library: [ManageItem]
+    /// Nil when Jellyfin does not say.
+    public var disk: Disk?
 }
 
 public struct LumosStatus: Codable, Sendable {
@@ -515,6 +612,8 @@ public struct WatchInfo: Codable, Sendable, Hashable {
     /// A series: the episode a screen would start.
     public var episode: Episode?
     public var screens: [Screen]
+    /// Where the household stopped; K starts there.
+    public var resume: ResumePoint?
 }
 
 public struct PlayResponse: Codable, Sendable {
@@ -522,6 +621,8 @@ public struct PlayResponse: Codable, Sendable {
     public var episode: Episode?
     /// The screen itself reported the title as playing.
     public var confirmed: Bool
+    /// Where it started, when it picked up where the household stopped.
+    public var startSeconds: Double?
 }
 
 public struct LumosChange: Codable, Sendable {
@@ -535,8 +636,8 @@ extension APIClient {
 
     public func lumosStatus() async throws -> LumosStatus { try await call("GET", "api/lumos/status") }
 
-    public func rows(scope: ListScope) async throws -> RowsResponse {
-        try await call("GET", "api/lumos/rows", query: scoped(scope))
+    public func rows(scope: ListScope, type: MediaType? = nil) async throws -> RowsResponse {
+        try await call("GET", "api/lumos/rows", query: scoped(scope, type.map { [URLQueryItem(name: "type", value: $0.rawValue)] } ?? []))
     }
 
     public func titles(scope: ListScope, type: MediaType? = nil, available: Bool = false) async throws -> TitlesResponse {
@@ -629,24 +730,27 @@ extension APIClient {
 }
 
 extension APIClient {
-    /// A page of Films or Series the way the shop sorts them.
-    public func browse(type: MediaType, _ state: LumosModel.Browse, scope: ListScope = .shared) async throws -> BrowseResponse {
+    /// A page of films or series the way the shop sorts them.
+    public func browse(
+        type: MediaType, sort: BrowseSort, genre: String? = nil, dutch: Bool = false, decade: Int? = nil, page: Int = 1,
+        scope: ListScope = .shared
+    ) async throws -> BrowseResponse {
         var query = [
             URLQueryItem(name: "type", value: type.rawValue),
-            URLQueryItem(name: "sort", value: state.sort.rawValue),
-            URLQueryItem(name: "page", value: String(state.page)),
+            URLQueryItem(name: "sort", value: sort.rawValue),
+            URLQueryItem(name: "page", value: String(page)),
             URLQueryItem(name: "scope", value: scope.rawValue),
         ]
-        if let genre = state.genre { query.append(URLQueryItem(name: "genre", value: genre.id)) }
-        if state.dutch { query.append(URLQueryItem(name: "language", value: "nl")) }
-        if let decade = state.decade { query.append(URLQueryItem(name: "decade", value: String(decade))) }
+        if let genre { query.append(URLQueryItem(name: "genre", value: genre)) }
+        if dutch { query.append(URLQueryItem(name: "language", value: "nl")) }
+        if let decade { query.append(URLQueryItem(name: "decade", value: String(decade))) }
         return try await call("GET", "api/lumos/browse", query: query)
     }
 
-    public func explore(scope: ListScope, seed: Int) async throws -> RowsResponse {
-        try await call("GET", "api/lumos/explore", query: [
-            URLQueryItem(name: "scope", value: scope.rawValue), URLQueryItem(name: "seed", value: String(seed)),
-        ])
+    public func explore(scope: ListScope, seed: Int, type: MediaType? = nil) async throws -> RowsResponse {
+        var query = [URLQueryItem(name: "scope", value: scope.rawValue), URLQueryItem(name: "seed", value: String(seed))]
+        if let type { query.append(URLQueryItem(name: "type", value: type.rawValue)) }
+        return try await call("GET", "api/lumos/explore", query: query)
     }
 
     public func credit(_ id: String, scope: ListScope) async throws -> CreditResponse {

@@ -12,7 +12,7 @@ struct LumosApp: App {
             RootView()
                 .environment(delegate.model)
                 .environment(delegate.services.updater)
-                .frame(minWidth: 1000, minHeight: 600)
+                .frame(minWidth: 960, minHeight: 600)
         }
         .defaultSize(width: 1360, height: 860)
         .commands { LumosCommands(model: delegate.model) }
@@ -21,7 +21,6 @@ struct LumosApp: App {
             LumosSettingsView(logoutIdentifier: "lumos.approve.logout")
                 .environment(delegate.model)
                 .tint(BurrowColor.lumos)
-                .frame(width: 600, height: 520)
         }
     }
 }

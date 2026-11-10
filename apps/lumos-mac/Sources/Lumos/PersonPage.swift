@@ -20,23 +20,23 @@ struct PersonPage: View {
                         CachedImage(url: page.person?.photo.flatMap(URL.init(string:)), maxPixels: 342) {
                             ZStack {
                                 TileColours(page.name).start
-                                Image(systemName: "person.fill").font(.system(size: 48, weight: .light)).foregroundStyle(.white.opacity(0.7))
+                                Image(systemName: "person.fill").font(.largeTitle).foregroundStyle(.white.opacity(0.7))
                             }
                         }
                         .frame(width: 150, height: 225)
                         .clipShape(RoundedRectangle(cornerRadius: 8))
                         VStack(alignment: .leading, spacing: 8) {
-                            Text(page.name).font(.system(size: 26, weight: .bold))
+                            Text(page.name).font(.largeTitle).bold()
                             if let person = page.person {
-                                Text(facts(person)).font(.system(size: 12)).foregroundStyle(.secondary)
+                                Text(facts(person)).font(.callout).foregroundStyle(.secondary)
                                 if let biography = person.biography {
                                     Text(biography)
-                                        .font(.system(size: 13))
+                                        .font(.body)
                                         .lineSpacing(3)
                                         .lineLimit(fullBiography ? nil : 6)
                                         .textSelection(.enabled)
                                     if biography.count > 500 {
-                                        Button(fullBiography ? "Minder" : "Meer") { fullBiography.toggle() }.buttonStyle(.link).font(.caption)
+                                        Button(fullBiography ? "Minder" : "Meer") { fullBiography.toggle() }.buttonStyle(.borderless).font(.callout)
                                     }
                                 }
                             } else if model.personLoading {
@@ -56,7 +56,7 @@ struct PersonPage: View {
                             GridSection(row: TitleRow(key: "person-series", title: "Series", subtitle: "\(series.count)", style: .poster, items: series, empty: nil))
                         }
                         if page.titles.isEmpty, !model.personLoading {
-                            EmptyRow(text: "Niets gevonden van \(page.name).")
+                            ContentUnavailableView("Niets gevonden van \(page.name)", systemImage: "person.crop.rectangle")
                         }
                     }
                     .padding(.vertical, 16)
@@ -65,6 +65,7 @@ struct PersonPage: View {
                 ProgressView().padding(40)
             }
         }
+        .navigationTitle(model.personPage?.name ?? "Persoon")
         .focusable()
         .focused(focused, equals: .inspector)
         .focusEffectDisabled()

@@ -2,38 +2,104 @@ import AppKit
 import Foundation
 import Observation
 
-/// Lumos's state and every action its views take: the page, the cursor over
-/// the cards, the inspector and where focus returns to, the trailer, and one
-/// undo stack for the keyboard and the toast. A state machine without a
-/// window, so the tests drive it like the keyboard does.
+/// Lumos's state and every action its views take: the page, the filters,
+/// the cursor over the cards, the pages over them and where focus returns
+/// to, the Bibliotheek's selection, the trailer, and one undo stack for
+/// the keyboard and the status bar. A state machine without a window, so
+/// the tests drive it like the keyboard does.
 @MainActor
 @Observable
 public final class LumosModel {
     public enum Page: String, CaseIterable, Sendable {
-        case discover, explore, list, movies, series, manage, taste, passed, search
+        case discover, list, library
     }
 
     public enum Focus: Sendable {
         case content, inspector, search
     }
 
-    /// Tonight's mood narrows the proposals by genre and trait, never by length.
+    /// Ontdekken's first filter.
+    public enum Kind: String, CaseIterable, Sendable {
+        case all, movie, tv
+
+        public var type: MediaType? { self == .all ? nil : MediaType(rawValue: rawValue) }
+        public var label: String {
+            switch self {
+            case .all: "Alles"
+            case .movie: "Films"
+            case .tv: "Series"
+            }
+        }
+    }
+
+    /// "Voor jullie" shows the rows; every other sort is a grid that loads on.
+    public enum Sort: String, CaseIterable, Sendable {
+        case forYou, popular, new, upcoming, top, gems
+
+        var browse: BrowseSort {
+            switch self {
+            case .forYou, .popular: .popular
+            case .new: .new
+            case .upcoming: .upcoming
+            case .top: .top
+            case .gems: .gems
+            }
+        }
+    }
+
+    /// Tonight's mood narrows by genre and trait, never by length. It heads
+    /// the Genre menu.
     public enum Mood: String, CaseIterable, Sendable {
-        case all = "Alles"
         case light = "Luchtig"
         case tense = "Spannend"
         case calm = "Rustig"
 
         public func matches(_ title: TitleSummary) -> Bool {
-            if self == .all { return true }
             let (genres, traits): ([String], [String]) =
                 switch self {
-                case .all: ([], [])
-                case .light: (["Komedie", "Romantiek", "Animatie"], ["Warm", "Absurd", "Droge humor"])
-                case .tense: (["Thriller", "Sciencefiction", "Misdaad"], ["Mysterie", "Whodunit", "Spionage", "Hoog tempo"])
+                case .light: (["Komedie", "Romantiek", "Animatie", "Avontuur"], ["Warm", "Absurd", "Droge humor"])
+                case .tense: (["Thriller", "Sciencefiction", "Misdaad", "Horror"], ["Mysterie", "Whodunit", "Spionage", "Hoog tempo"])
                 case .calm: (["Drama", "Documentaire"], ["Rustig tempo", "Melancholisch", "Dagelijks leven", "Natuur"])
                 }
             return title.genres.contains(where: genres.contains) || title.traits.contains(where: traits.contains)
+        }
+    }
+
+    public enum GenreChoice: Hashable, Sendable {
+        case mood(Mood)
+        case genre(String)
+    }
+
+    /// Ontdekken's row of filters.
+    public struct Filter: Equatable, Sendable {
+        public var kind: Kind = .all
+        public var sort: Sort = .forYou
+        public var genre: GenreChoice?
+        public var decade: Int?
+        public var dutch = false
+        public init() {}
+
+        /// Without a filter the page is rows; any filter makes it a grid.
+        public var plain: Bool { sort == .forYou && genre == nil && decade == nil && !dutch }
+        var mood: Mood? { if case .mood(let mood) = genre { mood } else { nil } }
+        var genreName: String? { if case .genre(let name) = genre { name } else { nil } }
+    }
+
+    /// The Bibliotheek's segments.
+    public enum Shelf: String, CaseIterable, Sendable {
+        case all, movie, tv, busy
+    }
+
+    public enum WatchedFilter: String, CaseIterable, Sendable {
+        case all, together, partly, none
+
+        public var label: String {
+            switch self {
+            case .all: "Alles"
+            case .together: "Samen gezien"
+            case .partly: "Eén van ons, of half"
+            case .none: "Niet gezien"
+            }
         }
     }
 
@@ -44,7 +110,7 @@ public final class LumosModel {
     }
 
     public struct ChangeNote: Equatable, Sendable {
-        public enum Kind: Sendable { case listed, unlisted, passed, seen, restored, tuned, undone, played }
+        public enum Kind: Sendable { case listed, unlisted, passed, seen, restored, tuned, undone, played, deleted }
 
         public var kind: Kind
         public var ref: TitleRef?
@@ -61,6 +127,8 @@ public final class LumosModel {
     public static let passReasons = ["Niet ons ding", "Liever een andere avond", "Eén van ons wil niet"]
     /// The "Niet nu" menu: no reason first, so Enter takes it.
     public static let reasonOptions = ["Zonder reden", "Al gezien"] + passReasons
+    /// The rows of `/rows` that Ontdekken shows above the Zoeker's.
+    static let ownRows: Set<String> = ["continue", "tonight", "mine-not-shared", "like"]
 
     public private(set) var connection: Connection?
     public private(set) var profile: Profile?
@@ -69,38 +137,53 @@ public final class LumosModel {
     public let reachability: ServerReachability
 
     public var scope: ListScope = .shared {
-        didSet { if oldValue != scope { Task { await scopeChanged() } } }
+        didSet { if oldValue != scope { Task { await reload() } } }
     }
     public private(set) var page: Page = .discover
-    private var pageBeforeSearch: Page = .discover
+    /// Searches the page you are on: the catalogue, the list or the Bibliotheek.
     public var query = "" {
         didSet { if oldValue != query { queryChanged() } }
     }
-    public var mood: Mood = .all {
-        didSet { if oldValue != mood { layout() } }
-    }
-    /// What the page shows, before the mood.
+    public private(set) var filter = Filter()
+    /// Genres per kind, as the catalogue names them.
+    public private(set) var genres: [MediaType: [Genre]] = [:]
+    /// What the page shows.
     public private(set) var loaded: [TitleRow] = []
     public private(set) var searchCredits: [Credit] = []
-    public private(set) var verdictItems: [Verdict] = []
-    /// Beheren: what the media server is busy with, and what it holds.
-    public private(set) var manageAnswer: ManageResponse?
     public private(set) var listCount = 0
-    public private(set) var passedCount = 0
     public private(set) var isLoading = false
+    /// The surprise rows; a new seed reshuffles them.
+    public private(set) var exploreSeed = Int.random(in: 1...999_999)
+    public private(set) var loadingMore = false
+    private var gridPages: [MediaType: (page: Int, total: Int)] = [:]
+
+    /// The Bibliotheek: what the media server is busy with, what it holds, the disk.
+    public private(set) var manageAnswer: ManageResponse?
+    public var shelf: Shelf = .all
+    public var watchedFilter: WatchedFilter = .all
+    public var librarySort: LibrarySort = .newest
+    public var librarySelection: Set<TitleRef> = []
+    public var libraryInspector = true
+    /// The question before a delete; nil when none is asked.
+    public var deleteRequest: DeleteRequest?
+    /// The last thing done was a delete, which Z cannot take back.
+    private var lastWasDelete = false
+
+    /// Smaak and Overgeslagen in the settings, for both scopes.
+    public private(set) var settingsVerdicts: [Verdict] = []
 
     public private(set) var cursor: CardID?
     public var focus: Focus = .content
     public private(set) var navigator = CardNavigator()
     private var gridColumns: [String: Int] = [:]
 
-    /// A page over the rows: a title, or a person, with the way back.
+    /// A page over the page: a title, or a person, with the way back.
     public enum Place: Hashable, Sendable {
         case title(TitleRef)
         case person(String)
     }
 
-    /// The pages on top of the rows; Esc goes back one, empty is the rows.
+    /// The pages on top; Esc goes back one, empty is the page itself.
     public private(set) var stack: [Place] = []
     private var inspectorOrigin: CardID?
     /// The title whose page is on top, if a title is.
@@ -137,22 +220,6 @@ public final class LumosModel {
     public var personPage: PersonPage? { openPerson.flatMap { people[$0] } }
     public private(set) var personLoading = false
 
-    /// Films and Series: how the shelf is sorted and narrowed, per kind.
-    public struct Browse: Equatable, Sendable {
-        public var sort: BrowseSort = .popular
-        public var genre: Genre?
-        public var dutch = false
-        public var decade: Int?
-        public var page = 1
-        public var totalPages = 1
-        public var genres: [Genre] = []
-        public init() {}
-    }
-    public var browse: [MediaType: Browse] = [.movie: Browse(), .tv: Browse()]
-    public private(set) var loadingMore = false
-    /// The Zoeker's surprise rows; a new seed reshuffles them.
-    public private(set) var exploreSeed = Int.random(in: 1...999_999)
-
     public private(set) var player: TrailerPlayback?
     /// Where the open title can be watched; nil until Jellyfin has answered.
     public private(set) var watchInfo: WatchInfo?
@@ -165,8 +232,9 @@ public final class LumosModel {
         didSet { if oldValue != reasonMenu { reasonChoice = 0 } }
     }
     public private(set) var reasonChoice = 0
+    /// What the status bar says.
     public private(set) var toast: Toast?
-    /// What just happened, for a face that wants to celebrate or react to it.
+    /// What just happened, for a face that wants to react to it.
     public private(set) var lastChange: ChangeNote?
     private var undoStack: [UndoEntry] = []
     public var searchFocusRequest = 0
@@ -181,8 +249,8 @@ public final class LumosModel {
     private var detailTask: Task<Void, Never>?
     private var watchTask: Task<Void, Never>?
     private var toastTask: Task<Void, Never>?
-    /// Off in tests, so a toast stays until the next one.
-    var toastSeconds: Double? = 5
+    /// Off in tests, so the status bar keeps its line.
+    var toastSeconds: Double? = 6
 
     public init(
         store: ConnectionStore = ConnectionStore(app: "lumos"),
@@ -212,8 +280,11 @@ public final class LumosModel {
 
     public var isFixture: Bool { status?.dataOrigin == .fixture }
     public var myName: String { profile?.person.name ?? "Ik" }
-    /// The server has Jellyfin, so available titles can be watched.
+    /// The server has Jellyfin, so what is on Dobby can be watched.
     public var canWatch: Bool { status?.watch == true }
+    /// Deleting files is for a household admin; no bot can hold that right.
+    public var canDelete: Bool { profile?.isAdmin == true }
+    public var listName: String { scope == .shared ? "Onze lijst" : "Jouw lijst" }
 
     // MARK: Connecting
 
@@ -231,6 +302,7 @@ public final class LumosModel {
         connection = nil
         profile = nil
         loaded = []
+        manageAnswer = nil
         details.removeAll()
         detailOrder.removeAll()
         people.removeAll()
@@ -257,6 +329,8 @@ public final class LumosModel {
             return
         }
         await reload()
+        Task { await loadGenres() }
+        if page != .library { Task { await refreshLibrary() } }
         eventsTask?.cancel()
         eventsTask = Task { [weak self] in
             let reachability = self?.reachability
@@ -306,53 +380,129 @@ public final class LumosModel {
     public var title: String {
         switch page {
         case .discover: "Ontdekken"
-        case .explore: "Zoeker"
-        case .list: scope == .shared ? "Onze lijst" : "Jouw lijst"
-        case .movies: "Films"
-        case .series: "Series"
-        case .manage: "Beheren"
-        case .taste: "Smaak"
-        case .passed: "Overgeslagen"
-        case .search: "Zoeken"
+        case .list: listName
+        case .library: "Bibliotheek"
         }
     }
 
     public var subtitle: String {
         switch page {
-        case .discover: scope == .shared ? "Wat kijken jullie samen?" : "Voorstellen voor \(myName)"
-        case .explore: "Rijen om doorheen te dwalen; Verras me schudt opnieuw"
-        case .movies, .series: browseLine(page == .movies ? .movie : .tv)
-        case .search: query.isEmpty ? "" : "Titel, maker, cast, genre of kenmerk"
-        default: scope == .shared ? "Samen" : myName
+        case .discover:
+            if !queryText.isEmpty { return "Zoeken in films en series" }
+            return [filter.kind == .all ? "Films en series" : filter.kind.label, filter.plain ? nil : filterLine]
+                .compactMap { $0 }.joined(separator: " · ")
+        case .list:
+            return listCount == 1 ? "1 titel" : "\(listCount) titels"
+        case .library:
+            let selected = selectedItems
+            if !selected.isEmpty {
+                return "\(selected.count) geselecteerd · \(Bytes.text(selected.compactMap(\.sizeBytes).reduce(0, +)))"
+            }
+            let all = manageAnswer?.library ?? []
+            let size = all.compactMap(\.sizeBytes).reduce(0, +)
+            return "\(all.count) titels" + (size > 0 ? " · \(Bytes.text(size))" : "")
         }
     }
 
-    /// "Populair · Komedie · Nederlands · jaren 90"
-    public func browseLine(_ type: MediaType) -> String {
-        let b = browse[type] ?? Browse()
-        return [b.sort.label, b.genre?.name, b.dutch ? "Nederlands" : nil, b.decade.map { "jaren \(String($0).suffix(2))" }]
+    public var searchPrompt: String {
+        switch page {
+        case .discover: "Zoek"
+        case .list: "Zoek in \(listName.lowercased())"
+        case .library: "Zoek in Bibliotheek"
+        }
+    }
+
+    /// "Best beoordeeld · Komedie · jaren 90 · Nederlands"
+    public var filterLine: String {
+        [filter.sort == .forYou ? nil : sortLabel(filter.sort), genreLabel, filter.decade.map { "jaren \(String($0).suffix(2))" },
+         filter.dutch ? "Nederlands" : nil]
             .compactMap { $0 }.joined(separator: " · ")
     }
 
+    public func sortLabel(_ sort: Sort) -> String {
+        switch sort {
+        case .forYou: scope == .shared ? "Voor jullie" : "Voor jou"
+        case .popular: "Populair"
+        case .new: "Nieuw"
+        case .upcoming: "Binnenkort"
+        case .top: "Best beoordeeld"
+        case .gems: "Verborgen parels"
+        }
+    }
+
+    public var genreLabel: String? {
+        switch filter.genre {
+        case .mood(let mood): mood.rawValue
+        case .genre(let name): name
+        case nil: nil
+        }
+    }
+
+    /// The genre names for the Genre menu: those of the kind, or of both.
+    public var genreNames: [String] {
+        let lists = filter.kind.type.map { [genres[$0] ?? []] } ?? [genres[.movie] ?? [], genres[.tv] ?? []]
+        var names: [String] = []
+        for genre in lists.joined() where !names.contains(genre.name) { names.append(genre.name) }
+        return names.sorted { $0.localizedStandardCompare($1) == .orderedAscending }
+    }
+
     public func show(_ page: Page) async {
-        if page != .search, self.page == .search { searchTask?.cancel(); query = "" }
-        // The sidebar always lands on the rows, whatever page was open over them.
+        // The sidebar always lands on the page, whatever was open over it.
         if !stack.isEmpty { closeInspector(restoreFocus: false) }
         guard page != self.page || loaded.isEmpty else { return }
+        searchTask?.cancel()
         self.page = page
+        if !query.isEmpty { query = "" }
+        cursor = nil
+        librarySelection = []
+        await reload()
+    }
+
+    /// ⌘4 and ⌘5: Ontdekken with only films or only series.
+    public func showDiscover(_ kind: Kind) async {
+        if page != .discover || !stack.isEmpty {
+            filter.kind = kind
+            await show(.discover)
+        } else {
+            await setFilter { $0.kind = kind }
+        }
+    }
+
+    public func setFilter(_ change: (inout Filter) -> Void) async {
+        var next = filter
+        change(&next)
+        guard next != filter else { return }
+        filter = next
         cursor = nil
         await reload()
     }
 
-    /// The rows on screen: Ontdekken narrowed by the mood.
+    /// Verras me (V): the filters off, and new surprise rows.
+    public func surprise() async {
+        exploreSeed = Int.random(in: 1...999_999)
+        let kind = filter.kind
+        filter = Filter()
+        filter.kind = kind
+        if !query.isEmpty { query = "" }
+        cursor = nil
+        if page != .discover || !stack.isEmpty { await show(.discover) } else { await reload() }
+    }
+
+    /// The rows on screen: the list page narrowed by the search.
     public var rows: [TitleRow] {
-        guard page == .discover, mood != .all else { return loaded }
+        guard page == .list, !queryText.isEmpty else { return loaded }
         return loaded.compactMap { row in
             var row = row
-            row.items = row.items.filter(mood.matches)
-            if row.items.isEmpty, row.key == "tonight" { row.empty = "Niets past bij deze stemming. Kies Alles." }
-            return row.items.isEmpty && row.empty == nil ? nil : row
+            row.items = row.items.filter { Self.matches($0, queryText) }
+            return row.items.isEmpty && row.key != "list" ? nil : row
         }
+    }
+
+    var queryText: String { query.trimmingCharacters(in: .whitespaces) }
+
+    static func matches(_ title: TitleSummary, _ text: String) -> Bool {
+        let haystack = ([title.title, title.year.map(String.init) ?? ""] + title.genres + title.traits).joined(separator: " ")
+        return haystack.localizedCaseInsensitiveContains(text)
     }
 
     public func reload() async {
@@ -363,56 +513,31 @@ public final class LumosModel {
         // again; the old ones stay meanwhile, so an open page keeps its place.
         for ref in details.keys { details[ref]?.at = .distantPast }
         do {
-            // The counts for the sidebar come in alongside the page itself.
-            async let passedCount = countPassed(api)
             async let listCount = countList(api)
             switch page {
             case .discover:
-                loaded = try await api.rows(scope: scope).rows
-                writeSnapshot(loaded)
+                try await loadDiscover(api)
             case .list:
                 let list = try await api.list(scope).items.map(\.title)
                 var rows = [TitleRow(
-                    key: "list", title: scope == .shared ? "Onze lijst" : "Jouw lijst",
-                    subtitle: "\(list.count) bewaard · Ja zet een titel hier, Niet nu haalt hem eraf", items: list,
-                    empty: "Nog leeg. Bewaar titels in Ontdekken met J.", grid: true)]
+                    key: "list", title: "", items: list,
+                    empty: "Nog niets op de lijst.", grid: true)]
                 if scope == .shared {
                     let mine = try await api.list(.mine).items.map(\.title).filter { !$0.onShared }
                     if !mine.isEmpty {
                         rows.append(TitleRow(
                             key: "mine-not-shared", title: "Op jouw lijst, nog niet samen",
-                            subtitle: "Samen kijken? Zet het op onze lijst met J", items: mine, grid: true))
+                            subtitle: "alleen jij ziet deze rij", items: mine, grid: true))
                     }
                 }
                 loaded = rows
-            case .manage:
-                manageAnswer = try await api.manage(scope: scope)
+            case .library:
                 loaded = []
-                followManage()
-            case .movies, .series:
-                let type: MediaType = page == .movies ? .movie : .tv
-                var state = browse[type] ?? Browse()
-                state.page = 1
-                let found = try await api.browse(type: type, state)
-                state.totalPages = found.totalPages
-                state.genres = found.genres
-                browse[type] = state
-                loaded = [TitleRow(
-                    key: "browse-\(type.rawValue)", title: browseLine(type),
-                    subtitle: found.totalPages > 1 ? "Blader verder voor meer" : nil, items: found.items,
-                    empty: "Niets gevonden met deze keuzes.", grid: true)]
-            case .explore:
-                loaded = try await api.explore(scope: scope, seed: exploreSeed).rows
-            case .passed, .taste:
-                let all = try await api.verdicts(scope).items
-                verdictItems = all.filter { $0.kind.isPass == (page == .passed) }
-                loaded = []
-            case .search:
-                await runSearch()
+                try await loadLibrary(api)
             }
-            self.passedCount = try await passedCount ?? verdictItems.count
             self.listCount = try await listCount ?? loaded.first?.items.count ?? 0
             error = nil
+        } catch is CancellationError {
         } catch {
             report(error, quiet: true)
         }
@@ -420,20 +545,112 @@ public final class LumosModel {
         if let inspected { await loadDetail(inspected) }
     }
 
-    private func scopeChanged() async {
-        await reload()
-    }
-
-    /// Nil when the page itself holds the count.
-    private func countPassed(_ api: APIClient) async throws -> Int? {
-        if page == .passed { return nil }
-        return try await api.verdicts(scope).items.filter(\.kind.isPass).count
-    }
-
     private func countList(_ api: APIClient) async throws -> Int? {
         if page == .list { return nil }
         return try await api.list(scope).items.count
     }
+
+    // MARK: Ontdekken
+
+    private func loadDiscover(_ api: APIClient) async throws {
+        searchCredits = []
+        gridPages = [:]
+        let text = queryText
+        if !text.isEmpty {
+            let found = try await api.search(titles: text, scope: scope)
+            guard text == queryText else { return }
+            let items = found.hits.map { hit -> TitleSummary in
+                var title = hit.title
+                title.match = hit.why
+                return title
+            }.filter(keeps)
+            searchCredits = found.credits
+            loaded = [TitleRow(key: "search", title: "Resultaten voor ‘\(text)’", subtitle: Self.count(items.count), items: items, grid: true)]
+            return
+        }
+        if filter.sort == .forYou, filter.genreName == nil, filter.decade == nil, !filter.dutch {
+            let rows = try await discoverRows(api)
+            if let mood = filter.mood {
+                var seen = Set<TitleRef>()
+                let items = rows.flatMap(\.items).filter { seen.insert($0.ref).inserted && mood.matches($0) }
+                loaded = [TitleRow(key: "grid", title: mood.rawValue, subtitle: Self.count(items.count), items: items, grid: true)]
+            } else {
+                loaded = rows
+                if filter.kind == .all { writeSnapshot(rows) }
+            }
+            return
+        }
+        let items = try await browsePage(api, page: 1)
+        loaded = [TitleRow(key: "grid", title: filter.kind == .all ? "Films en series" : filter.kind.label, subtitle: nil, items: items, grid: true)]
+    }
+
+    /// `/rows` for the household's own rows, then the Zoeker's.
+    private func discoverRows(_ api: APIClient) async throws -> [TitleRow] {
+        async let own = api.rows(scope: scope, type: filter.kind.type)
+        async let more = api.explore(scope: scope, seed: exploreSeed, type: filter.kind.type)
+        let rows = try await own.rows.filter { Self.ownRows.contains($0.key) }
+        let explore = (try? await more.rows) ?? []
+        return rows + explore
+    }
+
+    /// A page of the shop's shelves for the kind, or both kinds side by side.
+    private func browsePage(_ api: APIClient, page: Int) async throws -> [TitleSummary] {
+        let types = filter.kind.type.map { [$0] } ?? [.movie, .tv]
+        var answers: [[TitleSummary]] = []
+        for type in types {
+            if page > 1, let known = gridPages[type], known.page >= known.total { continue }
+            var genre: String?
+            if let name = filter.genreName {
+                guard let id = genres[type]?.first(where: { $0.name == name })?.id else { continue }
+                genre = id
+            }
+            let found = try await api.browse(
+                type: type, sort: filter.sort.browse, genre: genre, dutch: filter.dutch, decade: filter.decade, page: page, scope: scope)
+            gridPages[type] = (page, found.totalPages)
+            if genres[type]?.isEmpty ?? true { genres[type] = found.genres }
+            answers.append(found.items.filter(keeps))
+        }
+        // Films and series take turns, so neither kind hides behind the other.
+        var merged: [TitleSummary] = []
+        for index in 0..<(answers.map(\.count).max() ?? 0) {
+            for answer in answers where index < answer.count { merged.append(answer[index]) }
+        }
+        return merged
+    }
+
+    private func keeps(_ title: TitleSummary) -> Bool {
+        (filter.kind.type == nil || title.mediaType == filter.kind.type) && (filter.mood?.matches(title) ?? true)
+    }
+
+    /// The next page of the grid, appended; the last page stops it.
+    public func loadMore() async {
+        guard let api, page == .discover, !loadingMore, !gridPages.isEmpty,
+              let index = loaded.firstIndex(where: { $0.key == "grid" }) else { return }
+        let next = (gridPages.values.map(\.page).min() ?? 1) + 1
+        guard gridPages.values.contains(where: { $0.page < $0.total }) else { return }
+        loadingMore = true
+        defer { loadingMore = false }
+        do {
+            let items = try await browsePage(api, page: next)
+            guard page == .discover, loaded.indices.contains(index) else { return }
+            let known = Set(loaded[index].items.map(\.ref))
+            loaded[index].items += items.filter { !known.contains($0.ref) }
+            layout()
+        } catch {
+            report(error, quiet: true)
+        }
+    }
+
+    public var canLoadMore: Bool { gridPages.values.contains { $0.page < $0.total } }
+
+    func loadGenres() async {
+        guard let api, genres.isEmpty, status?.dataOrigin != nil else { return }
+        for type in [MediaType.movie, .tv] {
+            if let found = try? await api.browse(type: type, sort: .popular, scope: scope) { genres[type] = found.genres }
+        }
+    }
+
+    static func count(_ n: Int) -> String { n == 1 ? "1 titel" : "\(n) titels" }
 
     // MARK: The snapshot on disk
 
@@ -484,15 +701,19 @@ public final class LumosModel {
     public func summary(_ ref: TitleRef) -> TitleSummary? {
         if let known = details[ref], known.fresh { return known.detail.summary }
         for row in loaded { if let found = row.items.first(where: { $0.ref == ref }) { return found } }
-        return verdictItems.first(where: { $0.title.ref == ref })?.title
+        return libraryItem(ref)?.title
+            ?? settingsVerdicts.first(where: { $0.title.ref == ref })?.title
             ?? similar.first(where: { $0.ref == ref })
             ?? personPage?.titles.first(where: { $0.ref == ref })
             ?? details[ref]?.detail.summary
     }
 
-    /// What J, N and T act on: the open title when focus is in the inspector.
+    /// What J, N, T and K act on: the open page, the card under the cursor,
+    /// or the one title selected in the Bibliotheek.
     public var target: TitleRef? {
-        focus == .inspector ? inspected ?? cursor?.ref : cursor?.ref ?? inspected
+        if let inspected { return inspected }
+        if page == .library { return librarySelection.count == 1 ? librarySelection.first : nil }
+        return cursor?.ref
     }
 
     public func select(_ card: CardID) {
@@ -504,25 +725,25 @@ public final class LumosModel {
     public func move(_ move: Move) {
         guard let next = navigator.move(move, from: cursor) else { return }
         cursor = next
-        // A title page opened from the rows follows the keyboard, like the design.
-        if inspected != nil, stack.count == 1, next.ref != inspected {
+        // A title page opened from the rows follows the keyboard.
+        if inspected != nil, stack.count == 1, next.ref != inspected, page != .library {
             open(next.ref, from: next, focusInside: false)
         } else {
             prefetch(next.ref)
         }
-        // The row's last cards: more of the shelf, before the keyboard gets there.
-        if page == .movies || page == .series, let line = navigator.position(of: next)?.line, line >= navigator.lines.count - 2 {
+        // The grid's last lines: more, before the keyboard gets there.
+        if let line = navigator.position(of: next)?.line, line >= navigator.lines.count - 2, loaded.contains(where: { $0.key == "grid" }) {
             Task { await loadMore() }
         }
     }
 
-    // MARK: The pages over the rows
+    // MARK: The pages over the page
 
     public var inspectorShown: Bool { !stack.isEmpty }
 
-    /// Opens a title's page. From a card (the rows) it is the page over the
-    /// rows; from inside a page (Meer zoals dit, a person's work) it goes
-    /// on top, so Esc comes back here.
+    /// Opens a title's page. From a card or a table row it replaces what was
+    /// open; from inside a page (Meer zoals dit, a person's work) it goes on
+    /// top, so Esc comes back there.
     public func open(_ ref: TitleRef, from card: CardID? = nil, focusInside: Bool) {
         if inspected != ref {
             stopTrailer()
@@ -549,7 +770,12 @@ public final class LumosModel {
         Task { await loadPerson(id) }
     }
 
-    /// Esc, or the back button: one page back; the rows when it was the last.
+    /// The navigation stack's back button and swipe set the path itself.
+    public func setStack(_ path: [Place]) {
+        while stack.count > path.count { back() }
+    }
+
+    /// Esc, ⌘[ or the back button: one page back; the page when it was the last.
     public func back() {
         guard !stack.isEmpty else { return }
         stopTrailer()
@@ -563,7 +789,7 @@ public final class LumosModel {
         }
     }
 
-    /// Space: shows or hides the title's page without moving focus.
+    /// Space: shows or hides the title's page.
     public func toggleInspector() {
         guard let cursor else { return }
         if inspected == cursor.ref { closeInspector(restoreFocus: false) } else { open(cursor.ref, from: cursor, focusInside: false) }
@@ -650,52 +876,11 @@ public final class LumosModel {
         }
     }
 
-    // MARK: Browsing
-
-    private var browseType: MediaType? { page == .movies ? .movie : page == .series ? .tv : nil }
-
-    /// Sort, genre, Dutch or a decade for Films or Series; the shelf reloads.
-    public func setBrowse(_ change: (inout Browse) -> Void) async {
-        guard let type = browseType else { return }
-        var state = browse[type] ?? Browse()
-        change(&state)
-        browse[type] = state
-        cursor = nil
-        await reload()
-    }
-
-    /// The next page of the shelf, appended; the last page stops it.
-    public func loadMore() async {
-        guard let api, let type = browseType, var state = browse[type], !loadingMore, state.page < state.totalPages,
-              let index = loaded.firstIndex(where: { $0.key == "browse-\(type.rawValue)" }) else { return }
-        loadingMore = true
-        defer { loadingMore = false }
-        state.page += 1
-        do {
-            let found = try await api.browse(type: type, state)
-            guard browseType == type, loaded.indices.contains(index) else { return }
-            let known = Set(loaded[index].items.map(\.ref))
-            loaded[index].items += found.items.filter { !known.contains($0.ref) }
-            state.totalPages = found.totalPages
-            browse[type] = state
-            layout()
-        } catch {
-            report(error, quiet: true)
-        }
-    }
-
-    /// Verras me: new surprise rows in the Zoeker.
-    public func shuffle() async {
-        exploreSeed = Int.random(in: 1...999_999)
-        cursor = nil
-        await reload()
-    }
-
-    /// After the details: where an available title can be watched. Asked
+    /// After the details: where a title on Dobby can be watched. Asked
     /// apart, so a slow Jellyfin never holds the details back.
     private func followWatch(of detail: TitleDetail) {
         watchTask?.cancel()
-        guard canWatch, let api, detail.availability == .available || detail.availability == .partiallyAvailable else { return }
+        guard canWatch, let api, detail.availability.held else { return }
         let ref = detail.ref
         watchTask = Task { [weak self] in
             guard let info = try? await api.watch(ref), !Task.isCancelled, self?.inspected == ref else { return }
@@ -723,32 +908,132 @@ public final class LumosModel {
         }
     }
 
+    // MARK: The Bibliotheek
+
     private var manageTask: Task<Void, Never>?
 
-    /// While something downloads or waits, Beheren looks again now and then.
+    private func loadLibrary(_ api: APIClient) async throws {
+        guard status?.requests == true else {
+            manageAnswer = nil
+            return
+        }
+        manageAnswer = try await api.manage(scope: scope)
+        librarySelection.formIntersection(Set(manageAnswer?.library.map(\.id) ?? []))
+        followManage()
+    }
+
+    /// The sidebar's disk and count, also while another page is open.
+    func refreshLibrary() async {
+        guard let api, status?.requests == true else { return }
+        if let answer = try? await api.manage(scope: scope) { manageAnswer = answer }
+    }
+
+    /// While something downloads or waits, the Bibliotheek looks again now and then.
     private func followManage() {
         manageTask?.cancel()
-        guard page == .manage, manageAnswer?.busy.isEmpty == false, let seconds = progressSeconds else { return }
+        guard page == .library, manageAnswer?.busy.isEmpty == false, let seconds = progressSeconds else { return }
         manageTask = Task { [weak self] in
             try? await Task.sleep(for: .seconds(seconds))
-            guard !Task.isCancelled, let self, page == .manage, let api else { return }
+            guard !Task.isCancelled, let self, page == .library, let api else { return }
             if let answer = try? await api.manage(scope: scope) { manageAnswer = answer }
             followManage()
         }
     }
 
-    /// Deleting files is for a household admin; no bot can hold that right.
-    public var canDelete: Bool { profile?.isAdmin == true }
+    public func libraryItem(_ ref: TitleRef) -> ManageItem? {
+        manageAnswer.flatMap { answer in answer.library.first { $0.id == ref } ?? answer.busy.first { $0.id == ref } }
+    }
 
-    public func removeFromLibrary(_ item: ManageItem) async {
-        guard let api, canDelete else { return }
-        do {
-            try await api.removeFromLibrary(item.id)
-            show("\(item.title.title) is van Dobby verwijderd.")
-            await reload()
-        } catch {
-            report(error)
+    public var disk: DiskUse? {
+        guard let answer = manageAnswer, let disk = answer.disk else { return nil }
+        return DiskUse(disk: disk, library: answer.library, busy: answer.busy)
+    }
+
+    public var busyCount: Int { manageAnswer?.busy.count ?? 0 }
+
+    /// The table: the shelf, the watched filter and the search, sorted.
+    public var libraryRows: [LibraryRow] {
+        let items = (manageAnswer?.library ?? []).filter { item in
+            switch shelf {
+            case .all, .busy: true
+            case .movie: item.title.mediaType == .movie
+            case .tv: item.title.mediaType == .tv
+            }
+        }.filter { item in
+            watchedFilter == .all || item.watched.kind.rawValue == watchedFilter.rawValue
+        }.filter { queryText.isEmpty || Self.matches($0.title, queryText) }
+        return librarySort.sorted(items.map(LibraryRow.init))
+    }
+
+    public var busyItems: [ManageItem] {
+        (manageAnswer?.busy ?? []).filter { queryText.isEmpty || Self.matches($0.title, queryText) }
+    }
+
+    public var selectedItems: [ManageItem] {
+        (manageAnswer?.library ?? []).filter { librarySelection.contains($0.id) }
+    }
+
+    /// What "Ruimte maken" selects: seen together, large, on nobody's list, largest first.
+    public var spaceCandidates: [ManageItem] {
+        (manageAnswer?.library ?? []).filter { $0.spaceCandidate == true }.sorted { ($0.sizeBytes ?? 0) > ($1.sizeBytes ?? 0) }
+    }
+
+    public func makeRoom() {
+        if !stack.isEmpty { closeInspector(restoreFocus: false) }
+        if page != .library {
+            page = .library
+            loaded = []
         }
+        shelf = .all
+        watchedFilter = .all
+        librarySort = .largest
+        if !query.isEmpty { query = "" }
+        librarySelection = Set(spaceCandidates.map(\.id))
+    }
+
+    /// ⌫: asks first, and only for what Radarr or Sonarr manages.
+    public func askDelete(_ refs: [TitleRef]? = nil) {
+        guard canDelete else { return }
+        let wanted = refs ?? (page == .library && stack.isEmpty ? Array(librarySelection) : target.map { [$0] } ?? [])
+        let items = wanted.compactMap { ref in manageAnswer?.library.first { $0.id == ref } }
+        let removable = items.filter(\.removable)
+        guard !removable.isEmpty else {
+            if let first = items.first { show(first.lockReason) }
+            return
+        }
+        deleteRequest = DeleteRequest(items: removable, kept: items.count - removable.count)
+    }
+
+    public var canDeleteTarget: Bool {
+        guard canDelete else { return false }
+        let refs = page == .library && stack.isEmpty ? Array(librarySelection) : target.map { [$0] } ?? []
+        return refs.contains { ref in manageAnswer?.library.first { $0.id == ref }?.removable == true }
+    }
+
+    /// Deletes what the question named, one title at a time.
+    public func confirmDelete() async {
+        guard let request = deleteRequest, let api, canDelete else { return }
+        deleteRequest = nil
+        var done: [ManageItem] = []
+        for item in request.items {
+            do {
+                try await api.removeFromLibrary(item.id)
+                done.append(item)
+            } catch {
+                report(error)
+                break
+            }
+        }
+        guard !done.isEmpty else { return }
+        let bytes = done.compactMap(\.sizeBytes).reduce(0, +)
+        let what = done.count == 1 ? "‘\(done[0].title.title)’ is" : "\(done.count) titels zijn"
+        show("\(what) verwijderd\(bytes > 0 ? ", \(Bytes.text(bytes)) vrijgemaakt" : ""). Dit kan niet worden hersteld.")
+        lastWasDelete = true
+        lastChange = ChangeNote(kind: .deleted, ref: done.first?.id, scope: scope)
+        librarySelection.subtract(done.map(\.id))
+        if let inspected, done.contains(where: { $0.id == inspected }) { closeInspector(restoreFocus: false) }
+        await reload()
+        if page != .library { await refreshLibrary() }
     }
 
     public func retryRequest(_ ref: TitleRef) async {
@@ -762,7 +1047,7 @@ public final class LumosModel {
         }
     }
 
-    /// Esc: the menu, then the trailer, then one page back, then the search.
+    /// Esc: the menu, then the trailer, then one page back, then the selection.
     public func escape() {
         if reasonMenu != nil {
             reasonMenu = nil
@@ -770,14 +1055,14 @@ public final class LumosModel {
             stopTrailer()
         } else if !stack.isEmpty {
             back()
-        } else if page == .search {
-            query = ""
+        } else if page == .library, !librarySelection.isEmpty {
+            librarySelection = []
         }
     }
 
     // MARK: The trailer
 
-    /// T, or the play button: opens the details and starts the trailer.
+    /// T: opens the title and starts the trailer.
     public func playTrailer(_ ref: TitleRef? = nil) async {
         guard let ref = ref ?? target else { return }
         if inspected != ref { open(ref, from: cursor?.ref == ref ? cursor : nil, focusInside: true) }
@@ -802,8 +1087,9 @@ public final class LumosModel {
 
     // MARK: Watching
 
-    /// K, or the buttons: starts an available title on the TV when one screen
-    /// has Jellyfin open, opens it here when none has, and asks when several have.
+    /// K: starts a title on Dobby on the TV when one screen has Jellyfin
+    /// open, opens it here when none has, and asks when several have. It
+    /// picks up where the household stopped.
     public func watch(_ ref: TitleRef? = nil) async {
         guard let ref = ref ?? target else { return }
         guard canWatch else {
@@ -815,9 +1101,7 @@ public final class LumosModel {
         await watchTask?.value
         guard inspected == ref, let detail else { return }
         guard let info = watchInfo, info.web != nil else {
-            show(detail.availability == .available || detail.availability == .partiallyAvailable
-                ? "Jellyfin heeft \(detail.title) niet gevonden."
-                : "\(detail.title) staat nog niet in Jellyfin.")
+            show(detail.availability.held ? "Jellyfin heeft \(detail.title) niet gevonden." : "\(detail.title) staat nog niet op Dobby.")
             return
         }
         switch info.screens.count {
@@ -843,9 +1127,10 @@ public final class LumosModel {
         do {
             let played = try await api.play(ref, on: screen.deviceId)
             let what = played.episode.map { "\(title) \($0.label)" } ?? title
+            let from = played.startSeconds.map { " vanaf \(Clock.text($0))" } ?? ""
             show(played.confirmed
-                ? "\(what) speelt op \(played.screen.name)."
-                : "\(what) is gestart op \(played.screen.name); de tv meldt nog niets.")
+                ? "\(what) speelt op \(played.screen.name)\(from)."
+                : "\(what) is gestart op \(played.screen.name)\(from); de tv meldt nog niets.")
             lastChange = ChangeNote(kind: .played, ref: ref, scope: scope)
         } catch {
             report(error)
@@ -860,9 +1145,12 @@ public final class LumosModel {
         do {
             let change = try await work(api)
             if undoable { undoStack.append(UndoEntry(changeId: change.changeId, label: label, cursor: at)) }
+            lastWasDelete = false
             lastChange = ChangeNote(kind: kind, ref: ref, scope: scope)
             show(label, canUndo: undoable)
             await reload()
+            if page != .library, manageAnswer != nil { await refreshLibrary() }
+            if !settingsVerdicts.isEmpty { await loadVerdicts() }
         } catch {
             report(error)
         }
@@ -872,15 +1160,22 @@ public final class LumosModel {
     /// picks which seasons of a series are asked for; none means the first.
     public func toggleList(_ ref: TitleRef? = nil, seasons: [Int]? = nil) async {
         guard let ref = ref ?? target, let title = summary(ref) else { return }
-        let list = scope == .shared ? "onze lijst" : "jouw lijst"
+        let list = listName.lowercased()
         if title.onList {
             await perform("\(title.title) van \(list) gehaald.", .unlisted, ref) { try await $0.removeFromList(ref, scope: scope) }
         } else {
-            let requests = status?.requests == true && title.availability == .notRequested
-            let which = seasons.map { Self.seasonsLabel($0) }.map { " (\($0))" } ?? ""
-            let label = requests ? "\(title.title) staat op \(list) en wordt zo aangevraagd\(which)." : "\(title.title) staat op \(list)\(which)."
-            await perform(label, .listed, ref) { try await $0.addToList(ref, scope: scope, seasons: seasons) }
+            await addToList(ref, seasons: seasons)
         }
+    }
+
+    /// A poster or a row dropped on the list in the sidebar.
+    public func addToList(_ ref: TitleRef, seasons: [Int]? = nil) async {
+        guard let title = summary(ref), !title.onList else { return }
+        let list = listName.lowercased()
+        let requests = status?.requests == true && title.availability == .notRequested
+        let which = seasons.map { Self.seasonsLabel($0) }.map { " (\($0))" } ?? ""
+        let label = requests ? "\(title.title) staat op \(list) en wordt zo aangevraagd\(which)." : "\(title.title) staat op \(list)\(which)."
+        await perform(label, .listed, ref) { try await $0.addToList(ref, scope: scope, seasons: seasons) }
     }
 
     /// "seizoen 1, 2" or "alle 4 seizoenen".
@@ -890,11 +1185,22 @@ public final class LumosModel {
         return "seizoen " + sorted.map(String.init).joined(separator: ", ")
     }
 
+    /// N: the reason menu on a card or a page; in the table straight away.
+    public func askNotNow() async {
+        guard let ref = target else { return }
+        if page == .library, stack.isEmpty {
+            await notNow(ref)
+        } else {
+            if inspected != nil { focus = .inspector }
+            reasonMenu = ref
+        }
+    }
+
     /// N with a reason or none; "Al gezien" is its own kind and no dislike.
     public func notNow(_ ref: TitleRef? = nil, reason: String? = nil) async {
         reasonMenu = nil
         guard let ref = ref ?? target, let title = summary(ref) else { return }
-        let label = reason.map { "\(title.title) overgeslagen: \($0.lowercased())." } ?? "\(title.title) overgeslagen."
+        let label = reason.map { "Niet nu: \(title.title), \($0.lowercased())." } ?? "Niet nu: \(title.title)."
         await perform(label, .passed, ref) { try await $0.addVerdict(.notNow, ref, scope: scope, reason: reason) }
     }
 
@@ -916,7 +1222,7 @@ public final class LumosModel {
     public func seen(_ ref: TitleRef? = nil) async {
         reasonMenu = nil
         guard let ref = ref ?? target, let title = summary(ref) else { return }
-        await perform("\(title.title): al gezien.", .seen, ref) { try await $0.addVerdict(.seen, ref, scope: scope) }
+        await perform("Al gezien: \(title.title).", .seen, ref) { try await $0.addVerdict(.seen, ref, scope: scope) }
     }
 
     public func restore(_ verdict: Verdict) async {
@@ -938,10 +1244,25 @@ public final class LumosModel {
         }
     }
 
-    public var canUndo: Bool { !undoStack.isEmpty }
+    /// Smaak and Overgeslagen in the settings: the household's and your own.
+    public func loadVerdicts() async {
+        guard let api else { return }
+        async let shared = api.verdicts(.shared).items
+        async let mine = api.verdicts(.mine).items
+        if let shared = try? await shared, let mine = try? await mine {
+            settingsVerdicts = (shared + mine).sorted { $0.createdAt > $1.createdAt }
+        }
+    }
 
-    /// Z or ⌘Z: the last change, exactly, and focus back where it was.
+    public var canUndo: Bool { !undoStack.isEmpty && !lastWasDelete }
+
+    /// Z or ⌘Z: the last change, exactly, and focus back where it was. A
+    /// delete is never taken back: the files are gone.
     public func undo() async {
+        if lastWasDelete {
+            show("Verwijderen kan niet ongedaan worden; de bestanden zijn weg.")
+            return
+        }
         guard let entry = undoStack.popLast() else {
             show("Niets om ongedaan te maken.")
             return
@@ -950,8 +1271,9 @@ public final class LumosModel {
         do {
             _ = try await api.undo(change: entry.changeId)
             lastChange = ChangeNote(kind: .undone, ref: nil, scope: scope)
-            show("Ongedaan gemaakt.")
+            show("Hersteld.")
             await reload()
+            if !settingsVerdicts.isEmpty { await loadVerdicts() }
             if let at = entry.cursor, navigator.position(of: at) != nil { cursor = at }
         } catch {
             report(error)
@@ -966,48 +1288,21 @@ public final class LumosModel {
     }
 
     private func queryChanged() {
+        // Typing while a title is open goes back to the page being searched.
+        if !stack.isEmpty { closeInspector(restoreFocus: false) }
         searchTask?.cancel()
-        let text = query.trimmingCharacters(in: .whitespaces)
-        if text.isEmpty {
-            if page == .search {
-                page = pageBeforeSearch
-                searchTask = Task { await reload() }
+        switch page {
+        case .discover:
+            cursor = nil
+            searchTask = Task {
+                try? await Task.sleep(for: .milliseconds(200))
+                guard !Task.isCancelled else { return }
+                await reload()
             }
-            return
-        }
-        if page != .search {
-            pageBeforeSearch = page
-            page = .search
-        }
-        searchTask = Task {
-            try? await Task.sleep(for: .milliseconds(200))
-            guard !Task.isCancelled else { return }
-            await reload()
-        }
-    }
-
-    private func runSearch() async {
-        guard let api else { return }
-        let text = query.trimmingCharacters(in: .whitespaces)
-        guard !text.isEmpty else {
-            loaded = []
-            searchCredits = []
-            return
-        }
-        do {
-            let found = try await api.search(titles: text, scope: scope)
-            guard text == query.trimmingCharacters(in: .whitespaces) else { return }
-            let items = found.hits.map { hit -> TitleSummary in
-                var title = hit.title
-                title.match = hit.why
-                return title
-            }
-            searchCredits = found.credits
-            loaded = [TitleRow(
-                key: "search", title: "Resultaten", subtitle: "\(items.count) voor ‘\(text)’", items: items,
-                empty: "Geen resultaat voor ‘\(text)’. Probeer een kenmerk als Droge humor.", grid: true)]
-        } catch {
-            report(error, quiet: true)
+        case .list:
+            layout()
+        case .library:
+            librarySelection.formIntersection(Set(libraryRows.map(\.id)))
         }
     }
 
@@ -1017,7 +1312,7 @@ public final class LumosModel {
         cursor = navigator.first
     }
 
-    // MARK: Toast
+    // MARK: The status bar
 
     public func show(_ message: String, canUndo: Bool = false) {
         let next = Toast(message: message, canUndo: canUndo)
@@ -1033,25 +1328,12 @@ public final class LumosModel {
 
 extension TitleRow.Style {
     /// A card's width plus the gap, in points.
-    public var cardWidth: Double { self == .wide ? 250 : 124 }
-    public var cardStep: Double { cardWidth + 14 }
+    public var cardWidth: Double { self == .wide ? 300 : 150 }
+    public var cardStep: Double { cardWidth + 16 }
 }
 
 /// LumosUI's image loader warms its cache for a prefetched title; the model
 /// itself knows no AppKit image loading.
 public enum ImageLoaderHook {
     @MainActor public static var prefetch: (([String]) -> Void)?
-}
-
-extension BrowseSort {
-    public var label: String {
-        switch self {
-        case .popular: "Populair"
-        case .new: "Nieuw"
-        case .upcoming: "Binnenkort"
-        case .top: "Best beoordeeld"
-        case .trending: "Trending"
-        case .gems: "Verborgen parels"
-        }
-    }
 }

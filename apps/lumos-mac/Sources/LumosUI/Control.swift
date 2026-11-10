@@ -13,7 +13,10 @@ public func controlState(_ model: LumosModel) -> [String: Any] {
         "page": model.page.rawValue,
         "scope": model.scope.rawValue,
         "query": model.query,
-        "mood": model.mood.rawValue,
+        "filter": [
+            "kind": model.filter.kind.rawValue, "sort": model.filter.sort.rawValue,
+            "genre": model.genreLabel ?? NSNull(), "decade": model.filter.decade ?? NSNull(), "dutch": model.filter.dutch,
+        ] as [String: Any],
         "rows": model.rows.map { row in
             [
                 "key": row.key, "title": row.title,
@@ -24,6 +27,16 @@ public func controlState(_ model: LumosModel) -> [String: Any] {
         "focus": "\(model.focus)",
         "canUndo": model.canUndo,
     ]
+    if let answer = model.manageAnswer {
+        state["library"] = [
+            "shelf": model.shelf.rawValue, "watched": model.watchedFilter.rawValue, "sort": model.librarySort.rawValue,
+            "titles": model.libraryRows.prefix(30).map { "\($0.title) (\($0.id)) \($0.item.watched.label)\($0.item.sizeBytes.map { ", \(Bytes.text($0))" } ?? "")\($0.item.removable ? "" : ", met de hand")" },
+            "busy": answer.busy.map { "\($0.title.title) \($0.title.availability.rawValue)\($0.download.map { " \(Int($0.progress * 100))%" } ?? "")" },
+            "selection": model.librarySelection.map(\.description),
+            "disk": model.disk.map { "\(Bytes.text($0.free)) vrij van \(Bytes.text($0.total))" } ?? NSNull(),
+            "spaceCandidates": model.spaceCandidates.map(\.title.title),
+        ] as [String: Any]
+    }
     if let detail = model.detail {
         state["open"] = [
             "ref": detail.ref.description, "title": detail.title, "onList": detail.onList,
@@ -31,6 +44,13 @@ public func controlState(_ model: LumosModel) -> [String: Any] {
             "trailer": detail.trailer?.publisher ?? NSNull(),
             "scores": detail.scores.map { "\($0.source) \($0.label ?? "") \($0.valueText)" },
             "availability": detail.availability.rawValue,
+            "library": detail.library.map { info in
+                [
+                    "removable": info.removable, "size": info.server?.sizeBytes.map(Bytes.text) ?? NSNull(),
+                    "picture": info.server?.media?.picture ?? NSNull(),
+                    "watched": info.server?.watched.map { $0.played ? "samen gezien" : $0.resume?.label ?? "niet gezien" } ?? NSNull(),
+                ] as [String: Any]
+            } ?? NSNull(),
             "cast": (detail.cast ?? []).prefix(8).map { "\($0.name) (\($0.id))\($0.part.map { " \($0)" } ?? "")" },
             "budget": detail.budget ?? NSNull(), "revenue": detail.revenue ?? NSNull(),
             "similar": model.similar.prefix(8).map { "\($0.title) (\($0.ref))" },
@@ -43,7 +63,7 @@ public func controlState(_ model: LumosModel) -> [String: Any] {
     }
     state["stack"] = model.stack.map { "\($0)" }
     if let player = model.player { state["player"] = player.statusText }
-    if let toast = model.toast { state["toast"] = toast.message }
+    if let toast = model.toast { state["status"] = toast.message }
     if let error = model.error { state["error"] = error }
     return state
 }
@@ -53,11 +73,11 @@ public func controlState(_ model: LumosModel) -> [String: Any] {
 @MainActor
 public func registerCommands(_ service: ControlService, model: LumosModel) {
     service.register(
-        "show", help: "Show a page: discover, explore, list, movies, series, manage, taste or passed; optionally for shared or mine.",
-        arguments: [.init("page", "discover, explore, list, movies, series, manage, taste or passed"), .init("scope", "shared or mine")]
+        "show", help: "Show a page: discover, list or library; optionally for shared or mine.",
+        arguments: [.init("page", "discover, list or library"), .init("scope", "shared or mine")]
     ) { request in
-        guard let page = LumosModel.Page(rawValue: request["page"] as? String ?? "discover"), page != .search else {
-            throw ControlError("page is discover, explore, list, movies, series, manage, taste or passed")
+        guard let page = LumosModel.Page(rawValue: request["page"] as? String ?? "discover") else {
+            throw ControlError("page is discover, list or library")
         }
         if let text = request["scope"] as? String {
             guard let scope = ListScope(rawValue: text) else { throw ControlError("scope is shared or mine") }
@@ -66,7 +86,20 @@ public func registerCommands(_ service: ControlService, model: LumosModel) {
         await model.show(page)
         return controlState(model)
     }
-    service.register("search", help: "Search titles by title, maker, cast, genre or trait.", arguments: [.init("query", "the words")]) { request in
+    service.register(
+        "filter", help: "Narrow Ontdekken: kind all, movie or tv; sort forYou, popular, new, upcoming, top or gems.",
+        arguments: [.init("kind", "all, movie or tv"), .init("sort", "forYou, popular, new, upcoming, top or gems")]
+    ) { request in
+        let kind = (request["kind"] as? String).flatMap(LumosModel.Kind.init(rawValue:))
+        let sort = (request["sort"] as? String).flatMap(LumosModel.Sort.init(rawValue:))
+        await model.show(.discover)
+        await model.setFilter { filter in
+            if let kind { filter.kind = kind }
+            if let sort { filter.sort = sort }
+        }
+        return controlState(model)
+    }
+    service.register("search", help: "Search the page you are on: the catalogue, the list or the library.", arguments: [.init("query", "the words")]) { request in
         model.query = request["query"] as? String ?? ""
         try? await Task.sleep(for: .milliseconds(400))
         return controlState(model)
