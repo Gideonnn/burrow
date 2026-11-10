@@ -85,8 +85,7 @@ Every command of every running app becomes a tool `<app>_<command>`; `burrow_app
   person. The call waits up to five minutes; the dialog is not in the tree, so an agent
   cannot approve itself.
 - Not possible at all: logging in or out, keys, the server address, starting a
-  recording. `set_setting` only reaches settings modules declare and the app's own
-  local settings.
+  recording. `set_setting` only reaches settings modules declare.
 - The sockets are `~/Library/Application Support/Burrow/control/<app>.sock`, mode 600:
   any process of the same macOS user can use them. `BURROW_CONTROL_DIR` moves them, for
   a test copy next to the real apps.

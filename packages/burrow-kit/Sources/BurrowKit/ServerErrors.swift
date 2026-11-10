@@ -69,6 +69,24 @@ public final class ServerReachability {
         }
     }
 
+    /// The server's live stream, which also tells this indicator when it
+    /// opens or drops.
+    public func events(from api: APIClient) -> AsyncStream<ServerEvent> {
+        api.events { [weak self] up in
+            Task { @MainActor in up ? await self?.answered() : self?.lost() }
+        }
+    }
+
+    /// Marks the server lost on a connection error and returns what to show;
+    /// nil for a `quiet` call (a load, an upload), which repeats once it is back.
+    public func message(for error: any Error, quiet: Bool = false) -> String? {
+        if APIError.isTransient(error) {
+            lost()
+            if quiet { return nil }
+        }
+        return APIError.describe(error)
+    }
+
     /// The server answered elsewhere, e.g. the live stream connected again.
     public func answered() async {
         retrying?.cancel()

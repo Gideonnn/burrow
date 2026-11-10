@@ -113,6 +113,16 @@ public struct APIClient: Sendable {
 
     public func profile() async throws -> Profile { try await call("GET", "api/me") }
 
+    /// Whether the server answers at all; a refusal counts as an answer.
+    public func answers() async -> Bool {
+        do {
+            _ = try await profile()
+            return true
+        } catch {
+            return !APIError.isTransient(error)
+        }
+    }
+
     public func settingsSchema() async throws -> [SettingDefinition] { try await call("GET", "api/settings/schema") }
 
     public func settings() async throws -> [String: SettingValue] { try await call("GET", "api/me/settings") }
@@ -201,10 +211,6 @@ public struct APIClient: Sendable {
     @discardableResult
     public func setRunner(id: String, paused: Bool) async throws -> RunnerInfo {
         try await call("PATCH", "api/runners/\(id)", body: ["paused": paused])
-    }
-
-    public func deleteRunner(id: String) async throws {
-        let _: Empty = try await call("DELETE", "api/runners/\(id)")
     }
 
     /// Posts the agent's raw JSON answer; the server validates it.

@@ -2,22 +2,6 @@ import AppKit
 import BurrowKit
 import Foundation
 
-/// A setting of the app on this Mac (not on the server) that an agent may
-/// read and change, such as whether this Mac runs tasks.
-public struct LocalSetting {
-    public var name: String
-    public var help: String
-    public var get: @MainActor () -> String
-    public var set: @MainActor (String) throws -> Void
-
-    public init(name: String, help: String, get: @escaping @MainActor () -> String, set: @escaping @MainActor (String) throws -> Void) {
-        self.name = name
-        self.help = help
-        self.get = get
-        self.set = set
-    }
-}
-
 /// What every Burrow app runs next to its own model: signed updates from the
 /// server, a clean restart, and the control socket through which agents on
 /// this Mac operate the app (`burrowctl <app> …`). The standard commands are
@@ -29,7 +13,6 @@ public final class AppServices {
     public let updater: Updater
     public private(set) var control: ControlService?
     private var socket: ControlSocketServer?
-    private var localSettings: [LocalSetting] = []
     private let api: @MainActor () -> APIClient?
 
     public init(app: String, appName: String, api: @escaping @MainActor () -> APIClient?) {
@@ -49,8 +32,6 @@ public final class AppServices {
         guard Bundle.main.bundleURL.pathExtension == "app" else { return 0 }
         return Int(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "") ?? 0
     }
-
-    public func addLocalSetting(_ setting: LocalSetting) { localSettings.append(setting) }
 
     /// Looks for a newer build now and then every hour.
     public func startUpdates() {
@@ -88,10 +69,8 @@ public final class AppServices {
     ) {
         let api = api
         let updater = updater
-        service.register("settings", help: "The person's settings on the server and this app's settings on this Mac, with what each means.") { [weak self] _ in
-            var out: [String: Any] = [
-                "local": (self?.localSettings ?? []).map { ["name": $0.name, "help": $0.help, "value": $0.get()] },
-            ]
+        service.register("settings", help: "The person's settings on the server, with what each means.") { _ in
+            var out: [String: Any] = [:]
             if let api = api() {
                 let schema = try await api.settingsSchema()
                 let values = try await api.settings()
@@ -105,15 +84,11 @@ public final class AppServices {
             return out
         }
         service.register(
-            "set_setting", help: "Change one setting: a server setting from `settings` (true, false, an option, text, or null for the default) or a local one.",
+            "set_setting", help: "Change one setting from `settings`: true, false, an option, text, or null for the default.",
             arguments: [.init("name", "the setting's name"), .init("value", "the new value")]
-        ) { [weak self] request in
+        ) { request in
             let name = request["name"] as? String ?? ""
             let raw = request["value"] as? String ?? ""
-            if let local = self?.localSettings.first(where: { $0.name == name }) {
-                try local.set(raw)
-                return ["name": name, "value": local.get()]
-            }
             guard let api = api() else { throw ControlError("not logged in") }
             guard let definition = try await api.settingsSchema().first(where: { $0.key == name }) else {
                 throw ControlError("no setting \(name); see `settings`")

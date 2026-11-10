@@ -50,6 +50,17 @@ public struct ConnectionStore: Sendable {
         }
     }
 
+    /// `<PREFIX>_SERVER` and `<PREFIX>_KEY` connect without the Keychain, for
+    /// demos and automated runs against a test server; else `given`, else the
+    /// stored connection.
+    public func initial(_ given: Connection?, environment prefix: String) -> Connection? {
+        let environment = ProcessInfo.processInfo.environment
+        if given == nil, let server = environment["\(prefix)_SERVER"].flatMap(URL.init(string:)), let key = environment["\(prefix)_KEY"] {
+            return Connection(serverURL: server, token: key)
+        }
+        return given ?? load()
+    }
+
     public func clear() {
         UserDefaults.standard.removeObject(forKey: defaultsKey)
         SecItemDelete(baseQuery() as CFDictionary)

@@ -1,18 +1,11 @@
 import AppKit
 import SwiftUI
 
-/// The Burrow palette from docs/design/burrow-design-system.html: warm
-/// neutrals, one brick accent for the platform, a colour per app and per
-/// person. Every colour has a light and a dark value.
+/// The Burrow palette from docs/design/burrow-design-system.html as the Mac
+/// apps use it: status colours, a colour per app and per person. The apps
+/// draw everything else in system colours. Every colour has a light and a
+/// dark value.
 public enum BurrowColor {
-    public static let hearth = dynamic(0xA24E1D, 0xF0956A)
-    public static let plaster = dynamic(0xF4F1EC, 0x1C1A17)
-    public static let paper = dynamic(0xFFFFFF, 0x242120)
-    public static let linen = dynamic(0xECE8E1, 0x2B2825)
-    public static let hairline = dynamic(0xE2DDD5, 0x35312D)
-    public static let soot = dynamic(0x1F1C18, 0xF2EEE8)
-    public static let secondaryText = dynamic(0x6B655D, 0xA39C92)
-
     public static let success = dynamic(0x2A7549, 0x5FCB85)
     public static let warning = dynamic(0x9A5B00, 0xF0B24A)
     public static let danger = dynamic(0xC8372D, 0xF07A6E)
@@ -22,10 +15,6 @@ public enum BurrowColor {
     public static let pensieve = dynamic(0x237A6F, 0x6FCDBF)
     public static let lumos = dynamic(0x735B84, 0xC9AEDC)
     public static let hogsmeade = dynamic(0x7A3FC9, 0xC9A6FF)
-    public static let remembrall = dynamic(0xB9436B, 0xF08BAE)
-    public static let gringotts = dynamic(0x85660F, 0xE3BE4F)
-    public static let weasleyClock = dynamic(0x43753A, 0x8BCB7C)
-    public static let patronus = dynamic(0x5A5FBF, 0xA3A7F2)
 
     static let people = [
         dynamic(0x3B4A6B, 0x9FB0D6), // ink
@@ -39,17 +28,6 @@ public enum BurrowColor {
     public static func person(_ name: String) -> Color {
         let stable = name.lowercased().unicodeScalars.reduce(0) { ($0 &* 31 &+ Int($1.value)) & 0xFFFF }
         return people[stable % people.count]
-    }
-
-    /// The accent of a module, for task rows and badges.
-    public static func module(_ name: String) -> Color {
-        switch name {
-        case "hedwig", "message": hedwig
-        case "pensieve", "recording": pensieve
-        case "lumos": lumos
-        case "hogsmeade": hogsmeade
-        default: hearth
-        }
     }
 
     static func dynamic(_ light: UInt32, _ dark: UInt32) -> Color {

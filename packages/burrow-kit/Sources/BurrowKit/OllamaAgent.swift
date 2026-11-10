@@ -38,20 +38,13 @@ public struct OllamaAgent: AgentRunning {
         http.httpBody = try JSONEncoder().encode(Body(
             model: name, format: request.schema,
             messages: [Message(role: "system", content: request.system), Message(role: "user", content: request.prompt)]))
-        let (data, response) = try await send(http)
-        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
         struct Reply: Decodable {
             struct Message: Decodable { var content: String }
             var message: Message?
             var error: String?
         }
-        let reply = try? JSONDecoder().decode(Reply.self, from: data)
-        if status == 404 || reply?.error?.contains("not found") == true {
-            throw RunnerError.ollama("Het model \(name) staat niet op deze Mac: ollama pull \(name)")
-        }
-        guard status == 200, let content = reply?.message?.content else {
-            throw RunnerError.ollama("Ollama faalde: \(reply?.error ?? "status \(status)")")
-        }
+        let reply: Reply = try await send(http, model: name) { $0.error }
+        guard let content = reply.message?.content else { throw RunnerError.ollama("Ollama faalde: \(reply.error ?? "status 200")") }
         let answer = Data(content.utf8)
         guard (try? JSONSerialization.jsonObject(with: answer)) != nil else { throw RunnerError.invalidAnswer }
         return answer
@@ -73,14 +66,9 @@ public struct OllamaAgent: AgentRunning {
         http.setValue("application/json", forHTTPHeaderField: "Content-Type")
         http.timeoutInterval = 300
         http.httpBody = try JSONEncoder().encode(Body(model: Self.modelName(model), input: texts))
-        let (data, response) = try await send(http)
-        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
-        let reply = try? JSONDecoder().decode(Reply.self, from: data)
-        if status == 404 || reply?.error?.contains("not found") == true {
-            throw RunnerError.ollama("Het model \(Self.modelName(model)) staat niet op deze Mac: ollama pull \(Self.modelName(model))")
-        }
-        guard status == 200, let vectors = reply?.embeddings, vectors.count == texts.count else {
-            throw RunnerError.ollama("Ollama faalde: \(reply?.error ?? "status \(status)")")
+        let reply: Reply = try await send(http, model: Self.modelName(model)) { $0.error }
+        guard let vectors = reply.embeddings, vectors.count == texts.count else {
+            throw RunnerError.ollama("Ollama faalde: \(reply.error ?? "status 200")")
         }
         return vectors.map { v in dims.map { Array(v.prefix($0)) } ?? v }
     }
@@ -90,7 +78,7 @@ public struct OllamaAgent: AgentRunning {
         var http = URLRequest(url: baseURL.appendingPathComponent("api/tags"))
         http.timeoutInterval = 5
         struct Tags: Decodable { struct Model: Decodable { var name: String }; var models: [Model] }
-        guard let (data, _) = try? await send(http), let tags = try? JSONDecoder().decode(Tags.self, from: data) else { return [] }
+        guard let (data, _) = try? await data(http), let tags = try? JSONDecoder().decode(Tags.self, from: data) else { return [] }
         return tags.models.map { "ollama:\($0.name)" }
     }
 
@@ -99,7 +87,20 @@ public struct OllamaAgent: AgentRunning {
         installed.contains(model) || installed.contains("\(model):latest")
     }
 
-    private func send(_ request: URLRequest) async throws -> (Data, URLResponse) {
+    /// The reply of a 200; a missing model and any other failure as Ollama words them.
+    private func send<Reply: Decodable>(_ request: URLRequest, model: String, error: (Reply) -> String?) async throws -> Reply {
+        let (data, response) = try await data(request)
+        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+        let reply = try? JSONDecoder().decode(Reply.self, from: data)
+        let message = reply.flatMap(error)
+        if status == 404 || message?.contains("not found") == true {
+            throw RunnerError.ollama("Het model \(model) staat niet op deze Mac: ollama pull \(model)")
+        }
+        guard status == 200, let reply else { throw RunnerError.ollama("Ollama faalde: \(message ?? "status \(status)")") }
+        return reply
+    }
+
+    private func data(_ request: URLRequest) async throws -> (Data, URLResponse) {
         do {
             return try await session.data(for: request)
         } catch let error as URLError where [.cannotConnectToHost, .cannotFindHost, .networkConnectionLost].contains(error.code) {
