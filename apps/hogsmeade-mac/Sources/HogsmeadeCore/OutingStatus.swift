@@ -77,6 +77,8 @@ extension String {
         guard let first else { return self }
         return first.lowercased() + dropFirst()
     }
+
+    public var capitalisedFirst: String { prefix(1).uppercased() + dropFirst() }
 }
 
 // MARK: Dutch dates
@@ -123,6 +125,19 @@ public enum OutingFormat {
     public static func day(_ date: Date, calendar: Calendar = .current) -> String { string(date, "d", calendar) }
 
     public static func time(_ date: Date, calendar: Calendar = .current) -> String { string(date, "HH:mm", calendar) }
+
+    /// "vrijdag"
+    public static func weekday(_ date: Date, calendar: Calendar = .current) -> String { string(date, "EEEE", calendar) }
+
+    /// "Deuren 20:00 · tot 04:00", what is known.
+    public static func times(_ outing: Outing, calendar: Calendar = .current) -> String? {
+        var parts: [String] = []
+        if let doors = outing.doorsAt { parts.append("Deuren \(time(doors, calendar: calendar))") }
+        if let end = outing.endsAt, calendar.isDate(end, inSameDayAs: outing.startsAt) || outing.doorsAt != nil {
+            parts.append("tot \(time(end, calendar: calendar))")
+        }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
 
     public static func date(_ date: Date, now: Date = .now, calendar: Calendar = .current) -> String {
         let sameYear = calendar.component(.year, from: date) == calendar.component(.year, from: now)

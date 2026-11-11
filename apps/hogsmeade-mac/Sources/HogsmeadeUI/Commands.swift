@@ -2,7 +2,7 @@ import BurrowUI
 import HogsmeadeCore
 import SwiftUI
 
-/// The menu bar both faces share: new, the pages, search and refresh.
+/// The menu bar: new, the pages, search and refresh.
 public struct HogsmeadeCommands: Commands {
     let model: OutingsModel
 

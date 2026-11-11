@@ -95,7 +95,7 @@ private struct Hero: View {
 
     private var subtitle: String {
         var parts: [String] = []
-        if let kind = outing.kind { parts.append(kind.prefix(1).uppercased() + kind.dropFirst()) }
+        if let kind = outing.kind { parts.append(kind.capitalisedFirst) }
         if !outing.allDay {
             var time = OutingFormat.time(outing.startsAt)
             if let end = outing.endsAt { time += " tot \(OutingFormat.time(end))" }
@@ -301,7 +301,7 @@ private struct TicketsCard: View {
                             ForEach(outing.shopLinks, id: \.label) { link in
                                 Button {
                                     if let url = link.webURL { NSWorkspace.shared.open(url) }
-                                } label: { Label(link.label.replacingOccurrences(of: "Kaartjes bij ", with: ""), systemImage: "arrow.up.right") }
+                                } label: { Label(link.shop, systemImage: "arrow.up.right") }
                             }
                             Button("Kies bestand…") { pick() }.disabled(!model.canOrganize)
                         }
@@ -517,7 +517,7 @@ private struct Details: View {
     @Environment(OutingsModel.self) private var model
     let outing: Outing
     @State private var confirmDelete = false
-    @State private var reading: MailRef?
+    @State private var reading: OutingMail?
     @State private var newAlias = ""
 
     var body: some View {
@@ -558,7 +558,7 @@ private struct Details: View {
             }
         }
         .textSelection(.enabled)
-        .sheet(item: $reading) { MailSheet(mail: $0.mail) }
+        .sheet(item: $reading) { MailSheet(mail: $0) }
     }
 
     private func key(_ text: String) -> some View {
@@ -577,7 +577,7 @@ private struct Details: View {
                 ForEach(outing.mails) { mail in
                     if mail.visible {
                         HStack(spacing: 6) {
-                            Button { reading = MailRef(mail: mail) } label: {
+                            Button { reading = mail } label: {
                                 Label(mail.subject ?? "(zonder onderwerp)", systemImage: "envelope").lineLimit(1)
                             }
                             .buttonStyle(.link)
@@ -606,7 +606,7 @@ private struct Details: View {
     }
 
     @ViewBuilder private func mailMenu(_ mail: OutingMail) -> some View {
-        Button("Lees") { reading = MailRef(mail: mail) }
+        Button("Lees") { reading = mail }
         Menu("Verplaats naar") {
             ForEach(model.upcoming.filter { $0.id != outing.id } + model.past.filter { $0.id != outing.id }) { other in
                 Button("\(other.title), \(OutingFormat.date(other.startsAt))") {
@@ -648,11 +648,6 @@ private struct Details: View {
         guard outing.updatedAt.timeIntervalSince(outing.createdAt) > 60 else { return added }
         return "\(added), laatst gewijzigd door \(outing.updatedBy.name)"
     }
-}
-
-private struct MailRef: Identifiable {
-    let mail: OutingMail
-    var id: String { mail.id }
 }
 
 private struct TrailingIcon: LabelStyle {

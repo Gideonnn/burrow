@@ -220,6 +220,11 @@ import UniformTypeIdentifiers
         #expect(model.outings.first?.image == nil)
     }
 
+    @Test func hslBecomesRGB() {
+        let orange = HSL(hue: 30, saturation: 1, lightness: 0.5).rgb
+        #expect(abs(orange.red - 1) < 0.01 && abs(orange.green - 0.5) < 0.01 && orange.blue < 0.01)
+    }
+
     // MARK: The cache
 
     @Test func eachVersionOfAPictureIsFetchedOnce() async throws {

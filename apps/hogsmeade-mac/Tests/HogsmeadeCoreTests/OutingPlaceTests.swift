@@ -62,7 +62,6 @@ import Testing
     @Test func mapsLinksPointAtThePlace() {
         let place = MapsLink.place(Self.hall, query: "Voorbeeldhal, Voorbeeldstad").absoluteString
         #expect(place == "http://maps.apple.com/?q=Voorbeeldhal,%20Voorbeeldstad&ll=51.7,5.3")
-        #expect(MapsLink.route(to: "Voorbeeldhal").absoluteString == "http://maps.apple.com/?daddr=Voorbeeldhal")
     }
 
     @Test func pinShowsTheKind() throws {

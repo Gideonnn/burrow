@@ -132,24 +132,3 @@ public struct DateTile: View {
         .accessibilityLabel(OutingFormat.date(date))
     }
 }
-
-extension OutingFormat {
-    /// "vrijdag"
-    public static func weekday(_ date: Date, calendar: Calendar = .current) -> String {
-        let f = DateFormatter()
-        f.locale = locale
-        f.timeZone = calendar.timeZone
-        f.dateFormat = "EEEE"
-        return f.string(from: date)
-    }
-
-    /// "Deuren 20:00 · tot 04:00", what is known.
-    public static func times(_ outing: Outing, calendar: Calendar = .current) -> String? {
-        var parts: [String] = []
-        if let doors = outing.doorsAt { parts.append("Deuren \(time(doors, calendar: calendar))") }
-        if let end = outing.endsAt, calendar.isDate(end, inSameDayAs: outing.startsAt) || outing.doorsAt != nil {
-            parts.append("tot \(time(end, calendar: calendar))")
-        }
-        return parts.isEmpty ? nil : parts.joined(separator: " · ")
-    }
-}

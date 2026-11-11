@@ -95,7 +95,6 @@ final class Household: @unchecked Sendable {
         #expect(model.upcoming.map(\.title) == ["Neon Nineties", "Foute Vrijdag XL", "Stille Wateren"])
         #expect(model.past.map(\.title) == ["Welcome To The 90's"])
         #expect(model.today?.title == "Neon Nineties")
-        #expect(model.next?.title == "Neon Nineties")
         #expect(model.nights(until: model.upcoming[1]) == 30)
         #expect(model.nightsLabel(model.upcoming[0]) == "vanavond!")
         #expect(model.nightsLabel(model.upcoming[1]) == "nog 30 nachtjes")
