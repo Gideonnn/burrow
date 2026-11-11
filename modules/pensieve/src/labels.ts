@@ -120,7 +120,6 @@ export class Labels {
     }
   }
 
-  // The person's label names per recording.
   namesFor(personId: string, recordingIds: string[]) {
     const out = new Map<string, string[]>();
     if (!recordingIds.length) return out;
