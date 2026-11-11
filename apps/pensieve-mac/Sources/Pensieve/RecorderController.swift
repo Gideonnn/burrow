@@ -100,7 +100,7 @@ final class RecorderController {
             return
         }
         self.kind = kind
-        self.title = name.isEmpty ? RecordingDefaults.name(of: kind) : name
+        self.title = name.isEmpty ? kind.title : name
         self.labels = labels ?? suggestion.labels
         marks = MarkList()
         startedAt = Date()
@@ -201,9 +201,4 @@ final class RecorderController {
 }
 
 /// "1:02:03" or "42:17".
-func clock(_ seconds: TimeInterval) -> String {
-    let s = Int(seconds.rounded(.down))
-    return s >= 3600
-        ? String(format: "%d:%02d:%02d", s / 3600, s / 60 % 60, s % 60)
-        : String(format: "%d:%02d", s / 60, s % 60)
-}
+func clock(_ seconds: TimeInterval) -> String { stamp(seconds, padded: false) }

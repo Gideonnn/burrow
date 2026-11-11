@@ -194,7 +194,7 @@ struct LabelSettings: View {
             Button("Voeg toe") { Task { await model.addLabel(name) } }
             Button("Annuleer", role: .cancel) {}
         }
-        .alert("Naam van het label", isPresented: Binding(get: { renaming != nil }, set: { if !$0 { renaming = nil } })) {
+        .alert("Naam van het label", isPresented: $renaming.isPresent()) {
             TextField("Naam", text: $name)
             Button("Bewaar") { if let id = renaming?.id { Task { await model.renameLabel(id, to: name) } } }
             Button("Annuleer", role: .cancel) {}

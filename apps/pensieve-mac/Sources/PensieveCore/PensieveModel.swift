@@ -289,7 +289,7 @@ public final class PensieveModel {
     public func dictate(audio: URL, startedAt: Date, labels: [String] = [], timeout: Duration = .seconds(60)) async throws -> RecordingDetail {
         guard let api else { throw APIError.unauthorized }
         let upload = PendingUpload(
-            kind: .dictation, title: RecordingDefaults.name(of: .dictation), startedAt: startedAt, audio: audio.lastPathComponent,
+            kind: .dictation, title: RecordingKind.dictation.title, startedAt: startedAt, audio: audio.lastPathComponent,
             labels: labels)
         try outbox.add(upload)
         pending = outbox.all()
@@ -360,19 +360,19 @@ public final class PensieveModel {
     }
 
     public func setMarks(_ id: String, _ marks: [Mark]) async {
-        await act { _ = try await $0.setMarks(recording: id, marks); return nil }
+        await act { try await $0.setMarks(recording: id, marks) }
     }
 
     public func addLabel(_ name: String) async {
-        await act { _ = try await $0.addLabel(name); return nil }
+        await act { try await $0.addLabel(name) }
     }
 
     public func renameLabel(_ id: String, to name: String) async {
-        await act { _ = try await $0.renameLabel(id, to: name); return nil }
+        await act { try await $0.renameLabel(id, to: name) }
     }
 
     public func deleteLabel(_ id: String) async {
-        await act { try await $0.deleteLabel(id); return nil }
+        await act { try await $0.deleteLabel(id) }
     }
 
     public func delete(_ id: String) async {
@@ -386,7 +386,7 @@ public final class PensieveModel {
         }
     }
 
-    private func act(_ change: (APIClient) async throws -> RecordingSummary?) async {
+    private func act<T>(_ change: (APIClient) async throws -> T) async {
         guard let api else { return }
         do {
             _ = try await change(api)

@@ -58,9 +58,10 @@ public enum Naming {
 }
 
 /// "07:12", or "1:02:03" past the hour; the server's stamps look the same.
-public func stamp(_ seconds: Double) -> String {
+/// Unpadded, "7:12" is a running clock.
+public func stamp(_ seconds: Double, padded: Bool = true) -> String {
     let s = max(0, Int(seconds.rounded(.down)))
     return s >= 3600
         ? String(format: "%d:%02d:%02d", s / 3600, s / 60 % 60, s % 60)
-        : String(format: "%02d:%02d", s / 60, s % 60)
+        : String(format: padded ? "%02d:%02d" : "%d:%02d", s / 60, s % 60)
 }

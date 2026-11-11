@@ -4,19 +4,10 @@ import Foundation
 /// labels of the person's previous recording of that kind. The calendar will
 /// come first once Burrow has the calendars.
 public enum RecordingDefaults {
-    public static func name(of kind: RecordingKind) -> String {
-        switch kind {
-        case .call: "Gesprek"
-        case .video: "Video"
-        case .screen: "Scherm"
-        case .dictation: "Dictaat"
-        }
-    }
-
     public static func suggestion(for kind: RecordingKind, after recordings: [RecordingSummary]) -> (title: String, labels: [String]) {
         let previous = recordings.filter { $0.mine && $0.kind == kind }.max { $0.startedAt < $1.startedAt }
         // A dictation's title is its first words, so it is never carried over.
-        let title = kind == .dictation ? name(of: kind) : previous?.title ?? name(of: kind)
+        let title = kind == .dictation ? kind.title : previous?.title ?? kind.title
         return (title, previous?.labels ?? [])
     }
 }
