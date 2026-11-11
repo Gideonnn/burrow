@@ -46,6 +46,8 @@ function household() {
     await h.workers.drain();
     return res;
   };
+  const recorded = async (extra: Record<string, unknown> = {}, key = token) =>
+    recordingSummary.parse(await (await record(extra, key)).json());
   const detail = async (id: string, key = token) =>
     recordingDetail.parse(
       await (await h.call(key, `/api/pensieve/recordings/${id}`)).json(),
@@ -56,7 +58,18 @@ function household() {
       .parse(
         await (await h.call(key, `/api/pensieve/recordings${query}`)).json(),
       );
-  return { ...h, gideon, eva, token, evaToken, send, record, detail, list };
+  return {
+    ...h,
+    gideon,
+    eva,
+    token,
+    evaToken,
+    send,
+    record,
+    recorded,
+    detail,
+    list,
+  };
 }
 
 describe('a recording', () => {
@@ -104,7 +117,7 @@ describe('a recording', () => {
     const h = household();
     h.transcripts.push('Hallo.');
     h.decisions.push(NOTES);
-    const { id } = recordingSummary.parse(await (await h.record()).json());
+    const { id } = await h.recorded();
     const part = await h.call(h.token, `/api/pensieve/recordings/${id}/audio`, {
       headers: { range: 'bytes=4-7' },
     });
@@ -132,16 +145,12 @@ describe('a recording', () => {
   it('gets a title of its own on request, keeping the notes it has', async () => {
     const h = household();
     const notesMarkdown = '## Samenvatting\n\nUit RecHoarder.';
-    const { id } = recordingSummary.parse(
-      await (
-        await h.record({
-          title: 'standup',
-          source: 'imported',
-          transcript: 'A: Ron loopt de prijzen voor de poorten na.',
-          notesMarkdown,
-        })
-      ).json(),
-    );
+    const { id } = await h.recorded({
+      title: 'standup',
+      source: 'imported',
+      transcript: 'A: Ron loopt de prijzen voor de poorten na.',
+      notesMarkdown,
+    });
     h.decisions.push({ title: 'Prijzen poorten met Ron' });
     const res = await h.send(
       h.token,
@@ -180,7 +189,7 @@ describe('a recording', () => {
       new Error('429'),
       new Error('429'),
     );
-    const { id } = recordingSummary.parse(await (await h.record()).json());
+    const { id } = await h.recorded();
     expect(await h.detail(id)).toMatchObject({
       status: 'failed',
       error: '429',
@@ -204,7 +213,7 @@ describe('a recording', () => {
       values: { 'pensieve.notes': false },
     });
     h.transcripts.push('Kort gesprek.');
-    const { id } = recordingSummary.parse(await (await h.record()).json());
+    const { id } = await h.recorded();
     expect(await h.detail(id)).toMatchObject({
       status: 'done',
       hasNotes: false,
@@ -251,7 +260,7 @@ describe('sharing a recording', () => {
     const h = household();
     h.transcripts.push('Gesprek over de vakantie.');
     h.decisions.push(NOTES);
-    const { id } = recordingSummary.parse(await (await h.record()).json());
+    const { id } = await h.recorded();
 
     expect(await h.list(h.evaToken)).toEqual([]);
     expect(
@@ -410,9 +419,7 @@ describe('kinds of recording', () => {
       summary: 'Een rapportage maken.',
       steps: [{ text: 'Open Rapportages.', at: 2 }],
     });
-    const { id } = recordingSummary.parse(
-      await (await h.record({ kind: 'screen', transcribe: true })).json(),
-    );
+    const { id } = await h.recorded({ kind: 'screen', transcribe: true });
     expect(await h.detail(id)).toMatchObject({
       status: 'done',
       notes: { type: 'steps', steps: [{ text: 'Open Rapportages.', at: 2 }] },
@@ -425,9 +432,7 @@ describe('kinds of recording', () => {
     h.transcripts.push(
       'Hoi Ruben, de kozijnen aan de achterkant kunnen volgende week geplaatst worden.',
     );
-    const { id } = recordingSummary.parse(
-      await (await h.record({ kind: 'dictation', title: 'Dictaat' })).json(),
-    );
+    const { id } = await h.recorded({ kind: 'dictation', title: 'Dictaat' });
     const done = await h.detail(id);
     expect(done).toMatchObject({
       kind: 'dictation',
@@ -484,9 +489,7 @@ describe('kinds of recording', () => {
 describe('marks', () => {
   it('can be changed by the owner only', async () => {
     const h = household();
-    const { id } = recordingSummary.parse(
-      await (await h.record({ kind: 'video' })).json(),
-    );
+    const { id } = await h.recorded({ kind: 'video' });
     await h.send(h.token, 'POST', `/api/pensieve/recordings/${id}/share`, {
       personId: h.eva.id,
     });
@@ -514,11 +517,10 @@ describe('marks', () => {
 describe('labels', () => {
   it('belong to each person, also on a recording shared with them', async () => {
     const h = household();
-    const { id } = recordingSummary.parse(
-      await (
-        await h.record({ kind: 'video', labels: ['Interviews', 'werk'] })
-      ).json(),
-    );
+    const { id } = await h.recorded({
+      kind: 'video',
+      labels: ['Interviews', 'werk'],
+    });
     await h.send(h.token, 'POST', `/api/pensieve/recordings/${id}/share`, {
       personId: h.eva.id,
     });
@@ -567,9 +569,7 @@ describe('labels', () => {
 
   it('can be added, renamed into another and removed', async () => {
     const h = household();
-    const { id } = recordingSummary.parse(
-      await (await h.record({ kind: 'video', labels: ['Werk'] })).json(),
-    );
+    const { id } = await h.recorded({ kind: 'video', labels: ['Werk'] });
     const created = label.parse(
       await (
         await h.send(h.token, 'POST', '/api/pensieve/labels', {
@@ -610,9 +610,7 @@ describe('labels', () => {
 
   it('cannot be put on a recording the person cannot see', async () => {
     const h = household();
-    const { id } = recordingSummary.parse(
-      await (await h.record({ kind: 'video' })).json(),
-    );
+    const { id } = await h.recorded({ kind: 'video' });
     expect(
       (
         await h.send(
