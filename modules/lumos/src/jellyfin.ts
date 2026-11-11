@@ -339,7 +339,6 @@ export class JellyfinPlayer {
     return this.userId;
   }
 
-  // Whether a household account is configured at all.
   get readsUser() {
     return Boolean(this.options.user?.trim());
   }
@@ -514,7 +513,6 @@ export class JellyfinPlayer {
     return value;
   }
 
-  // What Jellyfin knows of one title, from the library read above.
   async facts(t: Findable) {
     return (await this.library()).get(t);
   }

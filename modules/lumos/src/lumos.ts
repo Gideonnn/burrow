@@ -73,13 +73,11 @@ export const MODULE = 'lumos';
 const SPACE_CANDIDATE_BYTES = 25_000_000_000;
 
 export class LumosError extends Error {}
-// No catalogue is connected; lists still work.
 export class NotConnected extends LumosError {
   constructor() {
     super('Lumos is niet gekoppeld aan een catalogus');
   }
 }
-// No Jellyfin is connected; everything but watching works.
 export class NoPlayer extends LumosError {
   constructor() {
     super('Lumos is niet gekoppeld aan Jellyfin');
@@ -174,7 +172,6 @@ export class Lumos {
     });
   }
 
-  // On anyone's list, the shared one or a person's own.
   private listedAnywhere() {
     return new Set(
       this.db
