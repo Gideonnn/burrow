@@ -136,31 +136,22 @@ export function outingRoutes(outings: OutingsService) {
           const { path, ticket } = await run(() =>
             outings.ticketFile(c.req.param('id'), c.req.param('ticketId')),
           );
-          const size = await stat(path).then(
-            (s) => s.size,
-            () => {
-              throw notFound();
-            },
-          );
-          return new Response(
-            Readable.toWeb(createReadStream(path)) as ReadableStream,
-            {
-              headers: {
-                'content-type': ticket.contentType,
-                'content-length': String(size),
-                'content-disposition': `attachment; filename*=UTF-8''${encodeURIComponent(ticket.name)}`,
-                'x-content-type-options': 'nosniff',
-                'cache-control': 'private, no-store',
-              },
-            },
-          );
+          return sendFile(path, {
+            'content-type': ticket.contentType,
+            'content-disposition': `attachment; filename*=UTF-8''${encodeURIComponent(ticket.name)}`,
+            'x-content-type-options': 'nosniff',
+            'cache-control': 'private, no-store',
+          });
         },
       )
       .get('/outings/:id/image', requireRight('read'), async (c) => {
         const { path, contentType } = await run(() =>
           outings.pictures.file(c.req.param('id')),
         );
-        return sendFile(path, contentType, 'private, max-age=86400');
+        return sendFile(
+          path,
+          imageHeaders(contentType, 'private, max-age=86400'),
+        );
       })
       .get('/outings/:id/image/options', requireRight('read'), async (c) => {
         ticketsAllowed(c.var.access);
@@ -304,7 +295,7 @@ function imageHeaders(contentType: string, cache = 'private, no-store') {
   };
 }
 
-async function sendFile(path: string, contentType: string, cache: string) {
+async function sendFile(path: string, headers: Record<string, string>) {
   const size = await stat(path).then(
     (s) => s.size,
     () => {
@@ -313,11 +304,6 @@ async function sendFile(path: string, contentType: string, cache: string) {
   );
   return new Response(
     Readable.toWeb(createReadStream(path)) as ReadableStream,
-    {
-      headers: {
-        ...imageHeaders(contentType, cache),
-        'content-length': String(size),
-      },
-    },
+    { headers: { ...headers, 'content-length': String(size) } },
   );
 }
