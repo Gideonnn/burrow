@@ -7,7 +7,7 @@ summary of the best thirty to order them and answer. The design, its principles 
 rejected alternatives are in `docs/design/hedwig-search.html` and
 `docs/plans/2026-11-02-hedwig-search.md`. Code: `modules/hedwig/src/server/search.ts`,
 `search-text.ts`, `people.ts`, `ai-search.ts`, `vectors.ts`, `embeddings.ts`; on the
-Mac `Sources/HedwigCore/Search.swift` and the search part of `AppModel.swift`.
+Mac `Sources/HedwigCore/Search.swift` and `AppModel+Search.swift`.
 
 ## The index
 

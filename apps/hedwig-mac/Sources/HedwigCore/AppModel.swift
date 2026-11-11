@@ -2,53 +2,6 @@ import BurrowKit
 import Foundation
 import Observation
 
-public enum SidebarItem: Hashable, Sendable {
-    case inbox(mailboxId: String)
-    /// Archief, Verstuurd or Spam of one mailbox.
-    case folder(MailFolder, mailboxId: String)
-    /// Concepten of one mailbox: drafts prepared by bots or agents, to review.
-    case drafts(mailboxId: String)
-    case tasks
-    /// Gedeeld: mail shared with or by this person, and Winky's suggestions.
-    case shared
-
-    /// The mailbox this place belongs to; the sidebar shows it under that mailbox.
-    public var mailboxId: String? {
-        switch self {
-        case .inbox(let id), .folder(_, let id), .drafts(let id): id
-        case .tasks, .shared: nil
-        }
-    }
-
-    /// The place as text, for @SceneStorage.
-    public var storageKey: String {
-        switch self {
-        case .inbox(let id): "inbox:\(id)"
-        case .folder(let folder, let id): "\(folder.rawValue):\(id)"
-        case .drafts(let id): "drafts:\(id)"
-        case .tasks: "tasks"
-        case .shared: "shared"
-        }
-    }
-
-    public init?(storageKey: String) {
-        switch storageKey {
-        case "tasks": self = .tasks
-        case "shared": self = .shared
-        default:
-            let parts = storageKey.split(separator: ":", maxSplits: 1).map(String.init)
-            guard parts.count == 2, !parts[1].isEmpty else { return nil }
-            switch parts[0] {
-            case "inbox": self = .inbox(mailboxId: parts[1])
-            case "drafts": self = .drafts(mailboxId: parts[1])
-            default:
-                guard let folder = MailFolder(rawValue: parts[0]), folder != .inbox else { return nil }
-                self = .folder(folder, mailboxId: parts[1])
-            }
-        }
-    }
-}
-
 /// The app's state and every action the views can take. Views stay dumb; this
 /// is where the API is called, so it is what the tests exercise.
 @MainActor
@@ -97,17 +50,17 @@ public final class AppModel {
         }
     }
     /// What the field offers as chips for the words being typed.
-    public private(set) var searchSuggestions: [SearchSuggestion] = []
+    public internal(set) var searchSuggestions: [SearchSuggestion] = []
     /// The bot's plan as chips, after a search by meaning.
-    public private(set) var planTokens: [SearchToken] = []
+    public internal(set) var planTokens: [SearchToken] = []
     /// The bot's answer to the question, with the mail it rests on.
-    public private(set) var searchAnswer: SearchAnswer?
+    public internal(set) var searchAnswer: SearchAnswer?
     /// The bot is reading the best results.
-    public private(set) var searchRanking = false
+    public internal(set) var searchRanking = false
     /// Every match on the server, beyond the list.
-    public private(set) var searchTotal = 0
+    public internal(set) var searchTotal = 0
     /// The word search found no mail with every word and shows the closest.
-    public private(set) var searchLoose = false
+    public internal(set) var searchLoose = false
     public var searchSort: SearchSort = .best {
         didSet { if oldValue != searchSort { sortResults() } }
     }
@@ -120,8 +73,8 @@ public final class AppModel {
         didSet { if oldValue != searchIncludesLow, isSearching { rerunSearch() } }
     }
     /// What the bot searched for after an AI search.
-    public private(set) var searchExplanation: String?
-    public private(set) var aiSearching = false
+    public internal(set) var searchExplanation: String?
+    public internal(set) var aiSearching = false
     /// Bumped by ⌘F; the window moves focus to the search field.
     public var searchFocusRequest = 0
     public var isSearching: Bool { !searchQuery.isEmpty || !searchTokens.isEmpty }
@@ -162,8 +115,8 @@ public final class AppModel {
         }
     }
     public private(set) var detail: MessageDetail?
-    public private(set) var insights: MessageInsights?
-    public private(set) var insightsLoading = false
+    public internal(set) var insights: MessageInsights?
+    public internal(set) var insightsLoading = false
     /// Everyone in the household, to share mail with.
     public internal(set) var people: [Person] = []
     /// What the bot moved to Spam or Archief and the person has not reviewed yet.
@@ -172,10 +125,10 @@ public final class AppModel {
     public private(set) var doubts: [FilteredEntry] = []
     public private(set) var drafts: [Draft] = []
     public var selectedDraftId: String?
-    public private(set) var tasks: [TaskItem] = []
+    public internal(set) var tasks: [TaskItem] = []
     public var selectedTaskId: String?
     /// The household's runners and the work waiting for this person.
-    public private(set) var runners: RunnersResponse?
+    public internal(set) var runners: RunnersResponse?
     /// The server's count per mailbox and folder, over all mail and not only the loaded page.
     public private(set) var folderCounts: [FolderCount] = []
     public private(set) var isLoading = false
@@ -199,6 +152,8 @@ public final class AppModel {
     // since the lenses are drawn from it.
     var bestResults: [MessageSummary] = []
     @ObservationIgnored var lastPlan: JSONValue?
+    // The last search asked the bot, so a new place asks it again.
+    var searchedByMeaning = false
     @ObservationIgnored var droppedPlanKeys: [String] = []
     /// Embeds the question on this Mac, when Ollama has the model; nil otherwise.
     @ObservationIgnored public var embedQuestion: @Sendable (String) async -> [Double]? = { question in
@@ -278,7 +233,6 @@ public final class AppModel {
         await refreshCounts()
         await refreshDrafts()
         await refreshTasks()
-        await refreshRunners()
         eventsTask?.cancel()
         eventsTask = Task { [weak self] in
             let reachability = self?.reachability
@@ -442,7 +396,7 @@ public final class AppModel {
     }
 
     /// Drops selected mail the list no longer holds; with none left, the first is selected.
-    private func keepOnlyListedSelection() {
+    func keepOnlyListedSelection() {
         let listed = selectedMessageIds.filter { id in messages.contains { $0.id == id } }
         if listed.isEmpty { selectFirst() } else if listed != selectedMessageIds { selectedMessageIds = listed }
     }
@@ -727,201 +681,6 @@ public final class AppModel {
         }
     }
 
-    // MARK: Search
-
-    private var searchQuery: String { searchText.trimmingCharacters(in: .whitespacesAndNewlines) }
-    // The last search asked the bot, so a new place asks it again.
-    private var searchedByMeaning = false
-
-    /// The place in the sidebar as a search scope; nil for places without mail.
-    public var placeScope: SearchScope? {
-        switch selection {
-        case .inbox(let id): SearchScope(mailboxId: id, folder: .inbox)
-        case .folder(let folder, let id): SearchScope(mailboxId: id, folder: folder)
-        case nil: .everywhere
-        default: nil
-        }
-    }
-
-    public var searchScope: SearchScope { searchEverywhere ? .everywhere : placeScope ?? .everywhere }
-
-    private func rerunSearch() {
-        searchLoad?.cancel()
-        searchLoad = Task { searchedByMeaning ? await rerunPlan() : await searchWords() }
-    }
-
-    /// Word search as you type, after a short pause; an empty field brings the list back.
-    func searchWords() async {
-        let query = searchQuery
-        let tokens = searchTokens
-        searchExplanation = nil
-        aiSearching = false
-        searchedByMeaning = false
-        planTokens = []
-        searchAnswer = nil
-        searchRanking = false
-        lastPlan = nil
-        droppedPlanKeys = []
-        guard isSearching else {
-            searchEverywhere = false
-            searchTotal = 0
-            await loadSelection(keepSelection: true)
-            return
-        }
-        try? await Task.sleep(for: .milliseconds(120))
-        guard !Task.isCancelled, let api else { return }
-        do {
-            let scope = searchScope
-            let response = try await api.search(query, in: scope, filters: SearchFilters(tokens: tokens), includeLow: searchIncludesLow)
-            guard !Task.isCancelled, query == searchQuery, tokens == searchTokens, scope == searchScope else { return }
-            searchTotal = response.total ?? response.results.count
-            searchLoose = response.loose ?? false
-            showResults(response.results)
-        } catch {
-            if !Task.isCancelled { report(error, quiet: true) }
-        }
-    }
-
-    private var chosenKeys: Set<String> { Set(searchTokens.map { $0.id }) }
-
-    /// Offers chips for what is being typed: people after @, periods, kinds of mail.
-    private func suggest() {
-        suggestionLoad?.cancel()
-        typedBeforeChip = searchText
-        let chosen = chosenKeys
-        if let mention = SearchWords.mention(in: searchText) {
-            suggestionLoad = Task {
-                try? await Task.sleep(for: .milliseconds(80))
-                guard !Task.isCancelled, let api, let people = try? await api.people(mention) else { return }
-                guard !Task.isCancelled, SearchWords.mention(in: searchText) == mention else { return }
-                searchSuggestions = people.map { SearchSuggestion(token: $0.token, detail: $0.detail) }.filter { !chosen.contains($0.id) }
-            }
-        } else {
-            searchSuggestions = SearchWords.suggestions(for: searchText).filter { !chosen.contains($0.id) }
-        }
-    }
-
-    /// Lenses over the results: people, kinds, attachments and years to narrow to.
-    public var searchLenses: [SearchLens] {
-        let own = Set((me?.mailboxes ?? []).map { $0.address.lowercased() })
-        // The best thirty: further down the list a search by meaning is loose.
-        return SearchWords.lenses(for: Array(bestResults.prefix(30)), own: own, chosen: searchTokens)
-    }
-
-    public func addSearchToken(_ token: SearchToken) {
-        guard !chosenKeys.contains(token.id) else { return }
-        searchTokens.append(token)
-    }
-
-    public func removeSearchToken(_ token: SearchToken) {
-        searchTokens.removeAll { $0.id == token.id }
-    }
-
-    /// Drops one of the bot's chips and runs its plan again without it; no new plan.
-    public func removePlanToken(_ token: SearchToken) {
-        droppedPlanKeys.append(token.id)
-        planTokens.removeAll { $0.id == token.id }
-        searchAnswer = nil
-        searchLoad?.cancel()
-        searchLoad = Task { await rerunPlan() }
-    }
-
-    /// Search by meaning (Enter in the search field): the bot plans the search on the server.
-    public func searchWithAI() async {
-        searchLoad?.cancel()
-        suggestionLoad?.cancel()
-        searchSuggestions = []
-        await askBot()
-    }
-
-    private func askBot() async {
-        let question = searchQuery
-        guard !question.isEmpty, let api else { return }
-        let scope = searchScope
-        let tokens = searchTokens
-        searchedByMeaning = true
-        aiSearching = true
-        searchAnswer = nil
-        planTokens = []
-        lastPlan = nil
-        droppedPlanKeys = []
-        defer { if question == searchQuery, scope == searchScope { aiSearching = false } }
-        do {
-            let vector = await questionVector(question)
-            let response = try await api.aiSearch(
-                question, in: scope, filters: SearchFilters(tokens: tokens), includeLow: searchIncludesLow,
-                vector: vector.map { ("ollama:embeddinggemma", $0) })
-            guard question == searchQuery, scope == searchScope, tokens == searchTokens else { return }
-            show(response)
-            aiSearching = false
-            await rank(question: question, wantsAnswer: response.wantsAnswer ?? false)
-        } catch {
-            if question == searchQuery, scope == searchScope { report(error) }
-        }
-    }
-
-    /// The last plan again, with the chips the person kept; the bot is not asked.
-    private func rerunPlan() async {
-        guard let plan = lastPlan, let api else { return await askBot() }
-        let question = searchQuery
-        let scope = searchScope
-        let tokens = searchTokens
-        do {
-            let response = try await api.aiSearch(
-                question, in: scope, filters: SearchFilters(tokens: tokens), includeLow: searchIncludesLow,
-                plan: plan, without: droppedPlanKeys)
-            guard !Task.isCancelled, question == searchQuery, scope == searchScope, tokens == searchTokens else { return }
-            show(response)
-        } catch {
-            if !Task.isCancelled { report(error, quiet: true) }
-        }
-    }
-
-    private func show(_ response: SearchResponse) {
-        searchLoose = false
-        searchExplanation = response.explanation
-        planTokens = response.tokens ?? []
-        if let plan = response.plan, plan != .null { lastPlan = plan }
-        // The list is what the passes fused; the server's total counts loose matches too.
-        searchTotal = response.results.count
-        showResults(response.results)
-    }
-
-    /// The bot reads the best thirty, orders them and answers when the question asks.
-    private func rank(question: String, wantsAnswer: Bool) async {
-        let ids = bestResults.prefix(30).map(\.id)
-        guard ids.count >= 2, let api else { return }
-        searchRanking = true
-        defer { if question == searchQuery { searchRanking = false } }
-        guard let ranked = try? await api.rank(question, ids: ids, answer: wantsAnswer), question == searchQuery else { return }
-        let rest = bestResults.filter { m in !ranked.results.contains { $0.id == m.id } }
-        searchAnswer = ranked.answer
-        showResults(ranked.results + rest)
-        if let first = ranked.answer?.messageIds.first, searchSort == .best { selectedMessageId = first }
-    }
-
-    /// The question's meaning from Ollama on this Mac, or nil within two seconds.
-    private func questionVector(_ question: String) async -> [Double]? {
-        let embed = embedQuestion
-        return await withTaskGroup(of: [Double]?.self) { group in
-            group.addTask { await embed(question) }
-            group.addTask { try? await Task.sleep(for: .seconds(2)); return nil }
-            let first = await group.next() ?? nil
-            group.cancelAll()
-            return first
-        }
-    }
-
-    private func showResults(_ results: [MessageSummary]) {
-        bestResults = results
-        sortResults()
-    }
-
-    private func sortResults() {
-        messages = searchSort == .newest ? bestResults.sorted { $0.receivedAt > $1.receivedAt } : bestResults
-        keepOnlyListedSelection()
-    }
-
     private func replace(_ message: MessageSummary) {
         if let index = messages.firstIndex(where: { $0.id == message.id }) { messages[index] = message }
     }
@@ -987,179 +746,6 @@ public final class AppModel {
             try await action(api)
             await refreshFiltered()
             await refreshCounts()
-        } catch {
-            report(error)
-        }
-    }
-
-    // MARK: Writing
-
-    public func reply(all: Bool = false) -> ComposeDraft? {
-        detail.map { reply(to: $0, all: all) }
-    }
-
-    public func forward() -> ComposeDraft? {
-        detail.map(forward)
-    }
-
-    /// A reply or forward from a context menu, also for a message that is not open.
-    public func draft(replyingTo id: String, all: Bool = false, forwarding: Bool = false) async -> ComposeDraft? {
-        let message: MessageDetail
-        if let detail, detail.id == id {
-            message = detail
-        } else {
-            guard let api else { return nil }
-            do { message = try await api.message(id: id) } catch {
-                report(error)
-                return nil
-            }
-        }
-        return forwarding ? forward(message) : reply(to: message, all: all)
-    }
-
-    private func reply(to message: MessageDetail, all: Bool) -> ComposeDraft {
-        let recipients = (all ? message.replyAll : message.reply) ?? Recipients(to: [message.from], cc: [])
-        return ComposeDraft(
-            mailboxId: message.mailboxId,
-            to: Address.format(recipients.to),
-            cc: Address.format(recipients.cc),
-            subject: message.subject.lowercased().hasPrefix("re:") ? message.subject : "Re: \(message.subject)",
-            body: "\n\n" + quote(message),
-            inReplyTo: message.id)
-    }
-
-    private func forward(_ message: MessageDetail) -> ComposeDraft {
-        ComposeDraft(
-            mailboxId: message.mailboxId,
-            subject: message.subject.lowercased().hasPrefix("fwd:") ? message.subject : "Fwd: \(message.subject)",
-            body: "\n\n" + quote(message))
-    }
-
-    public func newMessage() -> ComposeDraft? {
-        guard let box = currentMailboxId ?? me?.mailboxes.first?.id else { return nil }
-        return ComposeDraft(mailboxId: box)
-    }
-
-    public var currentMailboxId: String? { selection?.mailboxId ?? detail?.mailboxId }
-
-    public func compose(from draft: Draft) -> ComposeDraft {
-        ComposeDraft(
-            mailboxId: draft.mailboxId, to: Address.format(draft.to), cc: Address.format(draft.cc),
-            subject: draft.subject, body: draft.body, inReplyTo: draft.inReplyTo, serverDraftId: draft.id)
-    }
-
-    public func send(_ draft: ComposeDraft) async throws {
-        guard let api else { return }
-        try await api.send(
-            SendRequest(
-                mailboxId: draft.mailboxId, to: Address.parseList(draft.to), cc: Address.parseList(draft.cc),
-                subject: draft.subject, body: draft.body, inReplyTo: draft.inReplyTo))
-        if let id = draft.serverDraftId {
-            try? await api.deleteDraft(id)
-            await refreshDrafts()
-        }
-    }
-
-    /// Keeps an unsent message under Concepten; a draft it came from gives way to it.
-    public func saveDraft(_ draft: ComposeDraft) async throws {
-        guard let api else { return }
-        _ = try await api.createDraft(
-            mailboxId: draft.mailboxId, to: Address.parseList(draft.to), cc: Address.parseList(draft.cc),
-            subject: draft.subject, body: draft.body, inReplyTo: draft.inReplyTo)
-        if let id = draft.serverDraftId { try? await api.deleteDraft(id) }
-        await refreshDrafts()
-    }
-
-    public func discard(_ draft: Draft) async {
-        guard let api else { return }
-        try? await api.deleteDraft(draft.id)
-        await refreshDrafts()
-    }
-
-    private func quote(_ message: MessageDetail) -> String {
-        let date = message.receivedAt.formatted(date: .long, time: .shortened)
-        let text = message.bodyText ?? message.snippet
-        let quoted = text.split(separator: "\n", omittingEmptySubsequences: false).map { "> \($0)" }.joined(separator: "\n")
-        return "Op \(date) schreef \(message.from.display):\n\(quoted)"
-    }
-}
-
-extension AppModel {
-    public func loadInsights() async {
-        guard let api, let id = detail?.id else { return }
-        insightsLoading = true
-        defer { insightsLoading = false }
-        if let result = try? await api.insights(messageId: id), detail?.id == id { insights = result }
-    }
-
-    public func compose(reply: MessageInsights.Reply) -> ComposeDraft? {
-        guard var draft = self.reply() else { return nil }
-        draft.body = reply.body + draft.body
-        return draft
-    }
-}
-
-// MARK: Tasks
-
-extension AppModel {
-    public func refreshTasks() async {
-        guard let api else { return }
-        await refreshRunners()
-        if let list = try? await api.tasks() {
-            tasks = list
-            if selectedTaskId == nil || !list.contains(where: { $0.id == selectedTaskId }) {
-                selectedTaskId = list.first(where: { $0.status == "review" })?.id ?? list.first?.id
-            }
-        }
-    }
-
-    public func approve(_ task: TaskItem) async {
-        guard let api else { return }
-        do {
-            try await api.approve(task: task.id)
-            await refreshTasks()
-            await refreshDrafts()
-        } catch {
-            report(error)
-        }
-    }
-
-    public func reject(_ task: TaskItem) async {
-        guard let api else { return }
-        do {
-            try await api.reject(task: task.id)
-            await refreshTasks()
-        } catch {
-            report(error)
-        }
-    }
-
-    public var tasksAwaitingReview: Int { tasks.filter { $0.status == "review" }.count }
-
-    public func refreshRunners() async {
-        guard let api, me?.can(.read) == true else { return }
-        runners = try? await api.runners()
-    }
-
-    /// The runners this person registered from this Mac (`burrowctl runner`).
-    public var thisMacRunners: [RunnerInfo] {
-        let name = RunnerConfig.load().name
-        return runners?.runners.filter { $0.mine && $0.name == name } ?? []
-    }
-
-    /// What this Mac's runner is doing, for the task list.
-    public var runnerStatus: String {
-        guard let mine = thisMacRunners.first else { return "Geen runner op deze Mac" }
-        if !mine.online { return "Runner offline" }
-        if mine.paused { return "Runner gepauzeerd" }
-        return mine.doing ?? "Runner wacht op taken"
-    }
-
-    public func setRunner(_ runner: RunnerInfo, paused: Bool) async {
-        guard let api else { return }
-        do {
-            try await api.setRunner(id: runner.id, paused: paused)
-            await refreshRunners()
         } catch {
             report(error)
         }
