@@ -33,6 +33,7 @@ const ENCODE = [
   '32k',
 ];
 const TIMEOUT_MS = 30 * 60_000;
+const QUIET = ['-nostdin', '-hide_banner', '-loglevel', 'error', '-y'];
 // About half a second at 32 kbit/s.
 const MIN_PART_BYTES = 2_048;
 
@@ -45,19 +46,7 @@ export class FfmpegAudio implements Audio {
   async compress(input: string, output: string) {
     await run(
       this.ffmpeg,
-      [
-        '-nostdin',
-        '-hide_banner',
-        '-loglevel',
-        'error',
-        '-y',
-        '-i',
-        input,
-        ...ENCODE,
-        '-movflags',
-        '+faststart',
-        output,
-      ],
+      [...QUIET, '-i', input, ...ENCODE, '-movflags', '+faststart', output],
       { timeout: TIMEOUT_MS },
     );
     return { seconds: await this.duration(output) };
@@ -67,11 +56,7 @@ export class FfmpegAudio implements Audio {
     await run(
       this.ffmpeg,
       [
-        '-nostdin',
-        '-hide_banner',
-        '-loglevel',
-        'error',
-        '-y',
+        ...QUIET,
         '-i',
         input,
         '-f',

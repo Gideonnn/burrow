@@ -93,7 +93,7 @@ export class OpenAITranscriber implements Transcriber {
 
 // "A: Zullen we beginnen?" per segment, or the sentences run together
 // without speakers.
-export function plainText(segments: TranscriptSegment[]) {
+function plainText(segments: TranscriptSegment[]) {
   return segments.some((s) => s.speaker)
     ? segments.map((s) => `${s.speaker ?? '?'}: ${s.text}`).join('\n')
     : segments.map((s) => s.text).join(' ');

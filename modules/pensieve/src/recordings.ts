@@ -163,12 +163,7 @@ export class Recordings {
     if (request.labels.length) {
       this.labels.set(access.personId, row.id, request.labels);
     }
-    platform.workers.enqueue({
-      kind: 'pensieve.compress',
-      personId: row.ownerId,
-      subject: step(row),
-      priority: priorityOf(row),
-    });
+    this.enqueue('pensieve.compress', row);
     this.changed(row);
     return this.summary(row, access);
   }
@@ -358,12 +353,7 @@ export class Recordings {
       if (!row.transcript && !row.notesMarkdown) {
         throw new RecordingError('there is no transcript');
       }
-      this.o.platform.workers.enqueue({
-        kind: 'pensieve.title',
-        personId: row.ownerId,
-        subject: step(row),
-        priority: priorityOf(row),
-      });
+      this.enqueue('pensieve.title', row);
     } else if (which === 'transcript') {
       this.next(
         this.update(row.id, {
@@ -395,20 +385,24 @@ export class Recordings {
     const named = (label: string) => (t: TaskRow) => ({
       title: `${label}: ${about(t)?.title ?? 'opname'}`,
     });
+    const failed = (t: TaskRow, error: string) => {
+      const row = about(t);
+      if (row) this.update(row.id, { status: 'failed', error });
+    };
     return [
       {
         name: 'pensieve.compress',
         describe: named('Comprimeren'),
         attempts: 2,
         run: (t) => this.compress(this.taskRow(t)),
-        failed: (t, error) => this.failed(t, error),
+        failed,
       },
       {
         name: 'pensieve.transcribe',
         describe: named('Transcriberen'),
         attempts: 3,
         run: (t) => this.transcribe(this.taskRow(t)),
-        failed: (t, error) => this.failed(t, error),
+        failed,
       },
       {
         name: 'pensieve.notes',
@@ -426,7 +420,7 @@ export class Recordings {
           request: (t) => this.notesRequest(this.taskRow(t)),
           accept: (t, raw) => this.acceptNotes(this.taskRow(t), raw),
         },
-        failed: (t, error) => this.failed(t, error),
+        failed,
       },
       {
         // On request only, so it leaves the status of the recording alone.
@@ -517,10 +511,16 @@ export class Recordings {
     }
   }
 
+  // The constructor checked that the bot has the skill.
+  private botRequest(skill: string) {
+    const { catalog } = this.o.platform;
+    return botRequest(catalog.bots.get(this.o.bot)!, [
+      catalog.skills.get(skill)!,
+    ]);
+  }
+
   private notesRequest(row: RecordingRow) {
     if (!hasNotes(row.kind)) throw new Error('a dictation has no notes');
-    const { catalog } = this.o.platform;
-    const bot = catalog.bots.get(this.o.bot)!;
     const owner = this.o.platform.owner(row.ownerId);
     const minutes = row.durationSeconds
       ? `${Math.round(row.durationSeconds / 60)} minutes`
@@ -534,7 +534,7 @@ export class Recordings {
           .join('\n')
       : '(none)';
     return {
-      ...botRequest(bot, [catalog.skills.get(NOTES_SKILLS[row.kind])!]),
+      ...this.botRequest(NOTES_SKILLS[row.kind]),
       timeoutMs: 15 * 60_000,
       prompt: `${NOTES_TASK[row.kind]} for ${owner.name}.
 
@@ -593,11 +593,9 @@ Answer with JSON only, matching the schema. Write the notes in ${owner.language}
   }
 
   private titleRequest(row: RecordingRow) {
-    const { catalog } = this.o.platform;
-    const bot = catalog.bots.get(this.o.bot)!;
     const owner = this.o.platform.owner(row.ownerId);
     return {
-      ...botRequest(bot, [catalog.skills.get(TITLE_SKILL)!]),
+      ...this.botRequest(TITLE_SKILL),
       timeoutMs: 5 * 60_000,
       prompt: `Give this recording a title for ${owner.name}.
 
@@ -644,19 +642,16 @@ Answer with JSON only, matching the schema. Write the title in ${owner.language}
       kind = 'pensieve.notes';
     }
     const updated = this.update(row.id, { status, error: null });
-    if (kind) {
-      platform.workers.enqueue({
-        kind,
-        personId: row.ownerId,
-        subject: step(updated),
-        priority: priorityOf(updated),
-      });
-    }
+    if (kind) this.enqueue(kind, updated);
   }
 
-  private failed(t: TaskRow, error: string) {
-    const row = this.row(t.subjectId ?? '');
-    if (row) this.update(row.id, { status: 'failed', error });
+  private enqueue(kind: string, row: RecordingRow) {
+    this.o.platform.workers.enqueue({
+      kind,
+      personId: row.ownerId,
+      subject: step(row),
+      priority: priorityOf(row),
+    });
   }
 
   // --- helpers ------------------------------------------------------------
@@ -690,12 +685,16 @@ Answer with JSON only, matching the schema. Write the title in ${owner.language}
     );
   }
 
+  private peopleNames() {
+    return new Map(listPeople(this.db).map((p) => [p.id, p.name]));
+  }
+
   private summaries(rows: RecordingRow[], access: Access) {
     const labels = this.labels.namesFor(
       access.personId,
       rows.map((r) => r.id),
     );
-    const people = new Map(listPeople(this.db).map((p) => [p.id, p.name]));
+    const people = this.peopleNames();
     return rows.map((r) => this.summary(r, access, labels, people));
   }
 
@@ -703,7 +702,7 @@ Answer with JSON only, matching the schema. Write the title in ${owner.language}
     row: RecordingRow,
     access: Access,
     labels = this.labels.namesFor(access.personId, [row.id]),
-    people = new Map(listPeople(this.db).map((p) => [p.id, p.name])),
+    people = this.peopleNames(),
   ): RecordingSummary {
     const named = (id: string) => ({ id, name: people.get(id) ?? '?' });
     const preview =
@@ -750,7 +749,7 @@ function sortMarks(marks: Mark[]) {
 }
 
 // A dictation's title from its first words: "Hoi Ruben, de kozijnen aan…".
-export function firstWords(text: string, max = 48) {
+function firstWords(text: string, max = 48) {
   const flat = text.replace(/\s+/g, ' ').trim();
   if (flat.length <= max) return flat;
   const cut = flat.slice(0, max);

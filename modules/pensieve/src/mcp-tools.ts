@@ -15,6 +15,14 @@ const filters = {
     .describe('Only recordings with any of these labels of the person'),
 };
 
+const refusing = (work: () => unknown) => {
+  try {
+    return mcpText(work());
+  } catch (error) {
+    return mcpRefusal((error as Error).message);
+  }
+};
+
 // Pensieve's tools for agents: find and read recordings the key's person owns
 // or had shared with them, and label them. Recording, transcribing, deleting
 // and sharing stay with the person.
@@ -91,13 +99,8 @@ export function registerPensieveTools(
         description: 'Give one of the person’s own recordings a better title.',
         inputSchema: { id: z.string(), title: z.string().min(1).max(120) },
       },
-      async ({ id, title }) => {
-        try {
-          return mcpText(recordings.rename(access, id, title));
-        } catch (error) {
-          return mcpRefusal((error as Error).message);
-        }
-      },
+      async ({ id, title }) =>
+        refusing(() => recordings.rename(access, id, title)),
     );
     server.registerTool(
       'label_recording',
@@ -109,13 +112,8 @@ export function registerPensieveTools(
           labels: z.array(z.string().trim().min(1).max(60)).max(20),
         },
       },
-      async ({ id, labels }) => {
-        try {
-          return mcpText(recordings.setLabels(access, id, labels));
-        } catch (error) {
-          return mcpRefusal((error as Error).message);
-        }
-      },
+      async ({ id, labels }) =>
+        refusing(() => recordings.setLabels(access, id, labels)),
     );
   }
 }
