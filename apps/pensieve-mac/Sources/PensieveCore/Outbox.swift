@@ -49,6 +49,8 @@ public struct Outbox: Sendable {
 
     public init(dir: URL = Outbox.defaultDir) { self.dir = dir }
 
+    private var records: RecordFolder<PendingUpload> { RecordFolder(dir: dir) }
+
     public static var defaultDir: URL {
         FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent("Library/Application Support/Pensieve/Outbox", isDirectory: true)
@@ -56,34 +58,19 @@ public struct Outbox: Sendable {
 
     /// A fresh audio file for a new recording.
     public func newAudioFile(extension ext: String = "wav") throws -> URL {
-        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        return dir.appendingPathComponent("\(UUID().uuidString).\(ext)")
+        try records.newFile(extension: ext)
     }
 
-    public func add(_ upload: PendingUpload) throws {
-        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
-        try encoder.encode(upload).write(to: dir.appendingPathComponent("\(upload.id).json"), options: .atomic)
-    }
+    public func add(_ upload: PendingUpload) throws { try records.save(upload) }
 
-    public func all() -> [PendingUpload] {
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        let files = (try? FileManager.default.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil)) ?? []
-        return files.filter { $0.pathExtension == "json" }
-            .compactMap { try? decoder.decode(PendingUpload.self, from: Data(contentsOf: $0)) }
-            .sorted { $0.startedAt < $1.startedAt }
-    }
+    public func all() -> [PendingUpload] { records.all().sorted { $0.startedAt < $1.startedAt } }
 
-    public func audioURL(_ upload: PendingUpload) -> URL {
-        upload.audio.hasPrefix("/") ? URL(fileURLWithPath: upload.audio) : dir.appendingPathComponent(upload.audio)
-    }
+    public func audioURL(_ upload: PendingUpload) -> URL { records.url(upload.audio) }
 
     /// Forgets an upload the server has; deletes its audio only if the
     /// outbox made it (an imported file stays where it was).
     public func remove(_ upload: PendingUpload) {
-        try? FileManager.default.removeItem(at: dir.appendingPathComponent("\(upload.id).json"))
+        records.remove(upload.id)
         if !upload.audio.hasPrefix("/") { try? FileManager.default.removeItem(at: audioURL(upload)) }
     }
 
@@ -91,9 +78,7 @@ public struct Outbox: Sendable {
     public func send(_ upload: PendingUpload, api: APIClient, progress: @Sendable (Double) -> Void = { _ in }) async throws -> RecordingSummary {
         var upload = upload
         do {
-            let uploadId = try await api.upload(file: audioURL(upload), resuming: upload.uploadId) { fraction in
-                progress(fraction)
-            }
+            let uploadId = try await api.upload(file: audioURL(upload), resuming: upload.uploadId, progress: progress)
             upload.uploadId = uploadId
             try add(upload)
             let recording = try await api.createRecording(.init(

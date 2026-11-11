@@ -28,11 +28,6 @@ public struct Profile: Codable, Sendable {
 
     public func can(_ right: Right) -> Bool { rights.contains(right) }
     public var isAdmin: Bool { admin == true && can(.admin) }
-
-    public func enabled(_ setting: String) -> Bool {
-        if case .bool(let on) = settings?[setting] { return on }
-        return false
-    }
 }
 
 /// A setting value: on/off, a choice or text, or nothing (the default).

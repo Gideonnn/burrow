@@ -64,28 +64,15 @@ private struct StageLabels: View {
     var body: some View {
         @Bindable var recorder = recorder
         HStack(spacing: 6) {
-            ForEach(recorder.labels, id: \.self) { label in
-                Text(label)
-                    .font(.caption.weight(.medium))
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 2)
-                    .foregroundStyle(.tint)
-                    .overlay(Capsule().strokeBorder(.tint.opacity(0.6)))
-            }
-            Menu {
+            ForEach(recorder.labels, id: \.self) { LabelPill(name: $0) }
+            LabelMenu {
                 ForEach(model.labels) { label in
                     Toggle(label.name, isOn: Binding(get: { recorder.labels.contains(label.name) }, set: { on in
                         if on { recorder.labels.append(label.name) } else { recorder.labels.removeAll { $0 == label.name } }
                     }))
                 }
                 if model.labels.isEmpty { Text("Nog geen labels") }
-            } label: {
-                Label("Label", systemImage: "plus").labelStyle(.titleAndIcon).font(.caption)
             }
-            .menuStyle(.borderlessButton)
-            .menuIndicator(.hidden)
-            .fixedSize()
-            .foregroundStyle(.secondary)
         }
     }
 }

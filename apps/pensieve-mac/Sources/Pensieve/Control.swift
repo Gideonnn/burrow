@@ -62,8 +62,7 @@ func registerCommands(_ service: ControlService, model: PensieveModel, recorder:
         }
         model.scope = scope
         model.kindFilter = RecordingKind(rawValue: kindText)
-        model.labelFilter = Set(
-            (request["labels"] as? String ?? "").split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty })
+        model.labelFilter = Set(labels(request))
         await model.reload()
         return controlState(model, recorder)
     }
@@ -71,9 +70,7 @@ func registerCommands(_ service: ControlService, model: PensieveModel, recorder:
         "label", help: "Set your labels on a recording you can see, replacing the ones it had.",
         arguments: [.init("id", "a recording id"), .init("labels", "label names separated by commas")]
     ) { request in
-        let labels = (request["labels"] as? String ?? "").split(separator: ",")
-            .map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
-        await model.setLabels(request["id"] as? String ?? "", labels)
+        await model.setLabels(request["id"] as? String ?? "", labels(request))
         return controlState(model, recorder)
     }
     service.register("transcribe", help: "Make the transcript of a stored video or screen recording; only its sound goes to the server.", arguments: [.init("id", "a recording id")]) { request in
@@ -137,4 +134,9 @@ func registerCommands(_ service: ControlService, model: PensieveModel, recorder:
         let last: Any = model.lastMirror.map { ISO8601DateFormatter().string(from: $0) } ?? NSNull()
         return ["lastMirror": last]
     }
+}
+
+/// "werk, klant a" → ["werk", "klant a"].
+private func labels(_ request: [String: Any]) -> [String] {
+    (request["labels"] as? String ?? "").split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
 }

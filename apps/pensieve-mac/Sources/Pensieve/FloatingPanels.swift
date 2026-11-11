@@ -20,6 +20,16 @@ final class FloatingPanel: NSPanel {
     }
 
     override var canBecomeKey: Bool { false }
+
+    /// Sized to its content, where `place` puts it on the main screen.
+    func show(_ place: (_ visible: NSRect, _ size: NSSize) -> NSPoint) {
+        layoutIfNeeded()
+        if let screen = NSScreen.main {
+            let size = contentView?.fittingSize ?? .zero
+            setFrame(NSRect(origin: place(screen.visibleFrame, size), size: size), display: true)
+        }
+        orderFrontRegardless()
+    }
 }
 
 // MARK: Dictation
@@ -37,14 +47,7 @@ final class DictationHUD {
         let panel = FloatingPanel(movable: false) { DictationPill(state: state) }
         self.panel?.orderOut(nil)
         self.panel = panel
-        panel.layoutIfNeeded()
-        if let screen = NSScreen.main {
-            let size = panel.contentView?.fittingSize ?? .zero
-            panel.setFrame(
-                NSRect(x: screen.visibleFrame.midX - size.width / 2, y: screen.visibleFrame.minY + 80, width: size.width, height: size.height),
-                display: true)
-        }
-        panel.orderFrontRegardless()
+        panel.show { visible, size in NSPoint(x: visible.midX - size.width / 2, y: visible.minY + 80) }
         switch state {
         case .pasted, .failed:
             hide = Task {
@@ -141,15 +144,7 @@ final class RecordingOrb {
         let wanted = recorder.isRecording && recorder.kind != .video && !NSApp.isActive
         if wanted, panel == nil {
             let panel = FloatingPanel(movable: true) { OrbView().environment(recorder) }
-            panel.layoutIfNeeded()
-            if let screen = NSScreen.main {
-                let size = panel.contentView?.fittingSize ?? .zero
-                panel.setFrame(
-                    NSRect(x: screen.visibleFrame.maxX - size.width - 24, y: screen.visibleFrame.maxY - size.height - 24,
-                           width: size.width, height: size.height),
-                    display: true)
-            }
-            panel.orderFrontRegardless()
+            panel.show { visible, size in NSPoint(x: visible.maxX - size.width - 24, y: visible.maxY - size.height - 24) }
             self.panel = panel
         } else if !wanted, let panel {
             panel.orderOut(nil)

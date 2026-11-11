@@ -71,17 +71,9 @@ public final class PensieveModel {
         self.makeClient = makeClient
         self.outbox = outbox
         self.mirror = mirror
-        // PENSIEVE_SERVER and PENSIEVE_KEY connect without the Keychain, for
-        // demos and automated runs against a test server.
-        let environment = ProcessInfo.processInfo.environment
-        if connection == nil, let server = environment["PENSIEVE_SERVER"].flatMap(URL.init(string:)),
-           let key = environment["PENSIEVE_KEY"] {
-            self.connection = Connection(serverURL: server, token: key)
-        } else {
-            self.connection = connection ?? store.load()
-        }
+        self.connection = store.initial(connection, environment: "PENSIEVE")
         pending = outbox.all()
-        reachability.probe = { [weak self] in await self?.serverAnswers() ?? false }
+        reachability.probe = { [weak self] in await self?.api?.answers() ?? false }
         reachability.onRegained = { [weak self] in await self?.reconnected() }
     }
 
@@ -125,13 +117,8 @@ public final class PensieveModel {
         Task { await sendPending() }
         Task { await compressVideos() }
         eventsTask?.cancel()
-        eventsTask = Task { [weak self] in
-            let reachability = self?.reachability
-            let connected: @Sendable (Bool) -> Void = { up in
-                Task { @MainActor in up ? await reachability?.answered() : reachability?.lost() }
-            }
-            guard let stream = self?.api?.events(connected: connected) else { return }
-            for await event in stream where event.type.hasPrefix("recording.") || event.type == "settings.changed" {
+        eventsTask = Task { [weak self, reachability] in
+            for await event in reachability.events(from: api) where event.type.hasPrefix("recording.") || event.type == "settings.changed" {
                 await self?.handle(event)
             }
         }
@@ -155,21 +142,7 @@ public final class PensieveModel {
     /// call was a load or an upload (`quiet`), only the indicator in the
     /// sidebar changes: it repeats once the server is back.
     func report(_ error: any Error, quiet: Bool = false, as text: (String) -> String = { $0 }) {
-        if APIError.isTransient(error) {
-            reachability.lost()
-            if quiet { return }
-        }
-        self.error = text(APIError.describe(error))
-    }
-
-    func serverAnswers() async -> Bool {
-        guard let api else { return false }
-        do {
-            _ = try await api.profile()
-            return true
-        } catch {
-            return !APIError.isTransient(error)
-        }
+        if let message = reachability.message(for: error, quiet: quiet) { self.error = text(message) }
     }
 
     /// Catches up on what changed while the server was away, and sends what waits.
@@ -316,7 +289,7 @@ public final class PensieveModel {
     public func dictate(audio: URL, startedAt: Date, labels: [String] = [], timeout: Duration = .seconds(60)) async throws -> RecordingDetail {
         guard let api else { throw APIError.unauthorized }
         let upload = PendingUpload(
-            kind: .dictation, title: RecordingDefaults.name(of: .dictation), startedAt: startedAt, audio: audio.lastPathComponent,
+            kind: .dictation, title: RecordingKind.dictation.title, startedAt: startedAt, audio: audio.lastPathComponent,
             labels: labels)
         try outbox.add(upload)
         pending = outbox.all()
@@ -387,19 +360,19 @@ public final class PensieveModel {
     }
 
     public func setMarks(_ id: String, _ marks: [Mark]) async {
-        await act { _ = try await $0.setMarks(recording: id, marks); return nil }
+        await act { try await $0.setMarks(recording: id, marks) }
     }
 
     public func addLabel(_ name: String) async {
-        await act { _ = try await $0.addLabel(name); return nil }
+        await act { try await $0.addLabel(name) }
     }
 
     public func renameLabel(_ id: String, to name: String) async {
-        await act { _ = try await $0.renameLabel(id, to: name); return nil }
+        await act { try await $0.renameLabel(id, to: name) }
     }
 
     public func deleteLabel(_ id: String) async {
-        await act { try await $0.deleteLabel(id); return nil }
+        await act { try await $0.deleteLabel(id) }
     }
 
     public func delete(_ id: String) async {
@@ -413,7 +386,7 @@ public final class PensieveModel {
         }
     }
 
-    private func act(_ change: (APIClient) async throws -> RecordingSummary?) async {
+    private func act<T>(_ change: (APIClient) async throws -> T) async {
         guard let api else { return }
         do {
             _ = try await change(api)

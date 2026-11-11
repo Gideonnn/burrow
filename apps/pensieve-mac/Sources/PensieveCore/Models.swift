@@ -10,6 +10,16 @@ public enum RecordingStatus: String, Codable, Sendable {
 public enum RecordingKind: String, Codable, CaseIterable, Sendable {
     case call, video, screen, dictation
 
+    /// What a recording of this kind is called before anyone types.
+    public var title: String {
+        switch self {
+        case .call: "Gesprek"
+        case .video: "Video"
+        case .screen: "Scherm"
+        case .dictation: "Dictaat"
+        }
+    }
+
     /// Whether the server transcribes it without being asked.
     public var transcribesByDefault: Bool { self == .call || self == .dictation }
     /// Whether the Mac keeps a video file of it.
@@ -99,8 +109,6 @@ public struct MeetingNotes: Codable, Hashable, Sendable {
     }
 }
 
-public typealias RecordingNotes = MeetingNotes
-
 public struct RecordingSummary: Codable, Hashable, Identifiable, Sendable {
     public var id: String
     public var kind: RecordingKind
@@ -123,31 +131,32 @@ public struct RecordingSummary: Codable, Hashable, Identifiable, Sendable {
     public var updatedAt: Date
 }
 
-public struct RecordingDetail: Codable, Hashable, Identifiable, Sendable {
-    public var id: String
-    public var kind: RecordingKind
-    public var title: String
-    public var owner: Person
-    public var mine: Bool
-    public var sharedWith: [Person]
-    public var labels: [String]
-    public var startedAt: Date
-    public var durationSeconds: Double?
-    public var status: RecordingStatus
-    public var error: String?
-    public var source: String
-    public var audioBytes: Int?
-    public var hasTranscript: Bool
-    public var hasSegments: Bool
-    public var hasNotes: Bool
-    public var markCount: Int
-    public var preview: String?
-    public var updatedAt: Date
+/// A recording with everything it has: the summary's fields, which read
+/// straight through (`detail.title`), and the text.
+@dynamicMemberLookup
+public struct RecordingDetail: Decodable, Hashable, Identifiable, Sendable {
+    public var summary: RecordingSummary
     public var transcript: String?
     public var segments: [TranscriptSegment]?
     public var marks: [Mark]
     public var notes: MeetingNotes?
     public var notesMarkdown: String?
+
+    public var id: String { summary.id }
+
+    public subscript<T>(dynamicMember field: KeyPath<RecordingSummary, T>) -> T { summary[keyPath: field] }
+
+    private enum CodingKeys: String, CodingKey { case transcript, segments, marks, notes, notesMarkdown }
+
+    public init(from decoder: any Decoder) throws {
+        summary = try RecordingSummary(from: decoder)
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        transcript = try c.decodeIfPresent(String.self, forKey: .transcript)
+        segments = try c.decodeIfPresent([TranscriptSegment].self, forKey: .segments)
+        marks = try c.decode([Mark].self, forKey: .marks)
+        notes = try c.decodeIfPresent(MeetingNotes.self, forKey: .notes)
+        notesMarkdown = try c.decodeIfPresent(String.self, forKey: .notesMarkdown)
+    }
 }
 
 public enum RecordingScope: String, CaseIterable, Sendable {

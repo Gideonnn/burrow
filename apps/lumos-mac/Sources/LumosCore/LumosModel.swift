@@ -263,16 +263,8 @@ public final class LumosModel {
         self.makeClient = makeClient
         self.reachability = reachability
         self.cacheDirectory = cacheDirectory
-        // LUMOS_SERVER and LUMOS_KEY connect without the Keychain, for demos
-        // and automated runs against a development server.
-        let environment = ProcessInfo.processInfo.environment
-        if connection == nil, let server = environment["LUMOS_SERVER"].flatMap(URL.init(string:)),
-           let key = environment["LUMOS_KEY"] {
-            self.connection = Connection(serverURL: server, token: key)
-        } else {
-            self.connection = connection ?? store.load()
-        }
-        reachability.probe = { [weak self] in await self?.serverAnswers() ?? false }
+        self.connection = store.initial(connection, environment: "LUMOS")
+        reachability.probe = { [weak self] in await self?.api?.answers() ?? false }
         reachability.onRegained = { [weak self] in await self?.reload() }
     }
 
@@ -332,13 +324,8 @@ public final class LumosModel {
         Task { await loadGenres() }
         if page != .library { Task { await refreshLibrary() } }
         eventsTask?.cancel()
-        eventsTask = Task { [weak self] in
-            let reachability = self?.reachability
-            let connected: @Sendable (Bool) -> Void = { up in
-                Task { @MainActor in up ? await reachability?.answered() : reachability?.lost() }
-            }
-            guard let stream = self?.api?.events(connected: connected) else { return }
-            for await event in stream {
+        eventsTask = Task { [weak self, reachability] in
+            for await event in reachability.events(from: api) {
                 switch event.type {
                 case "lumos.changed": await self?.reload()
                 // A setting such as lumos.enabled changed somewhere: who we are and the status again.
@@ -357,22 +344,8 @@ public final class LumosModel {
         if let status = try? await status { self.status = status }
     }
 
-    func serverAnswers() async -> Bool {
-        guard let api else { return false }
-        do {
-            _ = try await api.profile()
-            return true
-        } catch {
-            return !APIError.isTransient(error)
-        }
-    }
-
     func report(_ error: any Error, quiet: Bool = false) {
-        if APIError.isTransient(error) {
-            reachability.lost()
-            if quiet { return }
-        }
-        self.error = APIError.describe(error)
+        if let message = reachability.message(for: error, quiet: quiet) { self.error = message }
     }
 
     // MARK: Pages
@@ -825,9 +798,7 @@ public final class LumosModel {
             return
         }
         do {
-            async let detailAnswer = api.title(ref, scope: scope)
-            async let similarAnswer = api.similar(to: ref, scope: scope).items
-            let (loaded, similar) = try await (detailAnswer, similarAnswer)
+            let (loaded, similar) = try await fetch(ref, api)
             remember(ref, loaded, similar)
             guard inspected == ref else { return }
             followProgress(of: loaded)
@@ -836,6 +807,14 @@ public final class LumosModel {
         } catch {
             if inspected == ref { report(error) }
         }
+    }
+
+    /// A title's page and those like it; without the latter when only that failed.
+    private func fetch(_ ref: TitleRef, _ api: APIClient, similarRequired: Bool = true) async throws -> (TitleDetail, [TitleSummary]) {
+        async let detail = api.title(ref, scope: scope)
+        async let similar = api.similar(to: ref, scope: scope).items
+        if similarRequired { return try await (detail, similar) }
+        return try await (detail, (try? await similar) ?? [])
     }
 
     private func remember(_ ref: TitleRef, _ detail: TitleDetail, _ similar: [TitleSummary]) {
@@ -855,16 +834,11 @@ public final class LumosModel {
             guard !Task.isCancelled, let self, details[ref]?.fresh != true else { return }
             prefetching.insert(ref)
             defer { prefetching.remove(ref) }
-            async let detailAnswer = api.title(ref, scope: scope)
-            async let similarAnswer = api.similar(to: ref, scope: scope).items
-            guard let loaded = try? await detailAnswer else { return }
-            let similar = (try? await similarAnswer) ?? []
+            guard let (loaded, similar) = try? await fetch(ref, api, similarRequired: false) else { return }
             remember(ref, loaded, similar)
             ImageLoaderHook.prefetch?([loaded.backdrop, loaded.poster].compactMap { $0 } + similar.compactMap(\.poster))
         }
     }
-
-    public var isPrefetched: (TitleRef) -> Bool { { [self] in details[$0] != nil } }
 
     func loadPerson(_ id: String) async {
         guard let api else { return }
@@ -994,11 +968,15 @@ public final class LumosModel {
         librarySelection = Set(spaceCandidates.map(\.id))
     }
 
+    /// What ⌫ deletes: the Bibliotheek's selection, or the title it acts on.
+    private var deleteTargets: [TitleRef] {
+        page == .library && stack.isEmpty ? Array(librarySelection) : target.map { [$0] } ?? []
+    }
+
     /// ⌫: asks first, and only for what Radarr or Sonarr manages.
     public func askDelete(_ refs: [TitleRef]? = nil) {
         guard canDelete else { return }
-        let wanted = refs ?? (page == .library && stack.isEmpty ? Array(librarySelection) : target.map { [$0] } ?? [])
-        let items = wanted.compactMap { ref in manageAnswer?.library.first { $0.id == ref } }
+        let items = (refs ?? deleteTargets).compactMap { ref in manageAnswer?.library.first { $0.id == ref } }
         let removable = items.filter(\.removable)
         guard !removable.isEmpty else {
             if let first = items.first { show(first.lockReason) }
@@ -1009,8 +987,7 @@ public final class LumosModel {
 
     public var canDeleteTarget: Bool {
         guard canDelete else { return false }
-        let refs = page == .library && stack.isEmpty ? Array(librarySelection) : target.map { [$0] } ?? []
-        return refs.contains { ref in manageAnswer?.library.first { $0.id == ref }?.removable == true }
+        return deleteTargets.contains { ref in manageAnswer?.library.first { $0.id == ref }?.removable == true }
     }
 
     /// Deletes what the question named, one title at a time.

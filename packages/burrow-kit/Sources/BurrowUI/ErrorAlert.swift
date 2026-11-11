@@ -8,7 +8,7 @@ extension View {
     public func errorAlert(_ error: Binding<String?>) -> some View {
         alert(
             "Er ging iets mis",
-            isPresented: Binding(get: { error.wrappedValue != nil }, set: { if !$0 { error.wrappedValue = nil } }),
+            isPresented: error.isPresent(),
             actions: { Button("OK") { error.wrappedValue = nil } },
             message: { Text(ErrorText.short(error.wrappedValue ?? "")) })
     }
@@ -17,6 +17,13 @@ extension View {
     /// or alert closes.
     public func keepsWindowOnScreen() -> some View {
         background(WindowKeeper())
+    }
+}
+
+extension Binding {
+    /// Whether an optional holds something, for `isPresented:`; dismissing clears it.
+    public func isPresent<Wrapped: Sendable>() -> Binding<Bool> where Value == Wrapped? {
+        Binding<Bool>(get: { wrappedValue != nil }, set: { if !$0 { wrappedValue = nil } })
     }
 }
 

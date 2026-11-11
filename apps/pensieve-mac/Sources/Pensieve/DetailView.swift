@@ -90,15 +90,8 @@ private struct LabelPills: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            ForEach(detail.labels, id: \.self) { label in
-                Text(label)
-                    .font(.caption.weight(.medium))
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 2)
-                    .foregroundStyle(.tint)
-                    .overlay(Capsule().strokeBorder(.tint.opacity(0.6)))
-            }
-            Menu {
+            ForEach(detail.labels, id: \.self) { LabelPill(name: $0) }
+            LabelMenu {
                 ForEach(model.labels) { label in
                     Toggle(label.name, isOn: Binding(get: { detail.labels.contains(label.name) }, set: { on in
                         let labels = on ? detail.labels + [label.name] : detail.labels.filter { $0 != label.name }
@@ -110,15 +103,7 @@ private struct LabelPills: View {
                     newLabel = ""
                     adding = true
                 }
-            } label: {
-                Label("Label", systemImage: "plus")
-                    .labelStyle(.titleAndIcon)
-                    .font(.caption)
             }
-            .menuStyle(.borderlessButton)
-            .menuIndicator(.hidden)
-            .fixedSize()
-            .foregroundStyle(.secondary)
         }
         .alert("Nieuw label", isPresented: $adding) {
             TextField("Naam", text: $newLabel)
@@ -128,6 +113,33 @@ private struct LabelPills: View {
             }
             Button("Annuleer", role: .cancel) {}
         }
+    }
+}
+
+/// A label on a recording, as on the stage while recording.
+struct LabelPill: View {
+    let name: String
+
+    var body: some View {
+        Text(name)
+            .font(.caption.weight(.medium))
+            .padding(.horizontal, 7)
+            .padding(.vertical, 2)
+            .foregroundStyle(.tint)
+            .overlay(Capsule().strokeBorder(.tint.opacity(0.6)))
+    }
+}
+
+/// The small "+ Label" menu beside the pills.
+struct LabelMenu<Items: View>: View {
+    @ViewBuilder let items: Items
+
+    var body: some View {
+        Menu { items } label: { Label("Label", systemImage: "plus").labelStyle(.titleAndIcon).font(.caption) }
+            .menuStyle(.borderlessButton)
+            .menuIndicator(.hidden)
+            .fixedSize()
+            .foregroundStyle(.secondary)
     }
 }
 

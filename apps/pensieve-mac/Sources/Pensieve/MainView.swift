@@ -307,7 +307,7 @@ struct RecordingList: View {
             }
         }
         .listStyle(.inset)
-        .alert("Titel", isPresented: Binding(get: { renaming != nil }, set: { if !$0 { renaming = nil } })) {
+        .alert("Titel", isPresented: $renaming.isPresent()) {
             TextField("Titel", text: $newTitle)
             Button("Bewaar") { if let id = renaming?.id { Task { await model.rename(id, to: newTitle) } } }
             Button("Annuleer", role: .cancel) {}
@@ -315,7 +315,7 @@ struct RecordingList: View {
         .onDeleteCommand { if let selected = model.selected, selected.mine { deleting = selected } }
         .confirmationDialog(
             "‘\(deleting?.title ?? "")’ verwijderen?",
-            isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }),
+            isPresented: $deleting.isPresent(),
             titleVisibility: .visible,
             presenting: deleting
         ) { recording in
@@ -489,8 +489,6 @@ final class Thumbnails {
 extension RecordingKind {
     static let lastKey = "pensieve.lastKind"
     static let recordable: [RecordingKind] = [.call, .video, .screen]
-
-    var title: String { RecordingDefaults.name(of: self) }
 
     var plural: String {
         switch self {

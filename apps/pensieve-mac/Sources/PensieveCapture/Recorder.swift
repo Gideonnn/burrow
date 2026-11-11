@@ -54,8 +54,6 @@ public final class Recorder {
   private var micSawSignal = false
   private var callSawSignal = false
   private var lastBuffer = Date.distantPast
-  private(set) var debugPeaks: (mic: Float, call: Float) = (0, 0)
-  var debugStreams: [Int] { streamChannels(aggregateID, scope: kAudioObjectPropertyScopeInput) }
 
   public init(microphone: Device, url: URL) throws {
     self.microphone = microphone
@@ -178,7 +176,6 @@ public final class Recorder {
     self.micPeak = micPeak
     self.callPeak = callPeak
     micSawSignal = micSawSignal || micPeak > 0
-    debugPeaks = (max(debugPeaks.mic, micPeak), max(debugPeaks.call, callPeak))
     callSawSignal = callSawSignal || callPeak > 0
     lastBuffer = Date()
     lock.unlock()

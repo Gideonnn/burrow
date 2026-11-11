@@ -1,13 +1,11 @@
 import Carbon.HIToolbox
 import Foundation
 
-// A global hot key that reports both press and release, for hold-to-talk
-// (Option+Space). Carbon's hot keys need no Accessibility permission and
+// Option+Space as a global hot key that reports both press and release, for
+// hold-to-talk. Carbon's hot keys need no Accessibility permission and
 // swallow the keystroke, so the space never reaches the app underneath.
 
 public final class HoldHotKey {
-  public static let optionSpace = (keyCode: UInt32(kVK_Space), modifiers: UInt32(optionKey))
-
   private var ref: EventHotKeyRef?
   private var handler: EventHandlerRef?
   private let id: UInt32
@@ -18,10 +16,7 @@ public final class HoldHotKey {
   private static var registered: [UInt32: Weak] = [:]
 
   /// Calls back on the main thread. Fails when another app holds the key.
-  public init(
-    keyCode: UInt32 = HoldHotKey.optionSpace.keyCode, modifiers: UInt32 = HoldHotKey.optionSpace.modifiers,
-    onPress: @escaping () -> Void, onRelease: @escaping () -> Void
-  ) throws {
+  public init(onPress: @escaping () -> Void, onRelease: @escaping () -> Void) throws {
     id = Self.next
     Self.next += 1
     self.onPress = onPress
@@ -40,7 +35,7 @@ public final class HoldHotKey {
     }, types.count, &types, nil, &handler)
     guard status == noErr else { throw CaptureError("Kon de sneltoets voor dicteren niet instellen.") }
     let signature = OSType(0x5053_5645) // "PSVE"
-    guard RegisterEventHotKey(keyCode, modifiers, EventHotKeyID(signature: signature, id: id), GetApplicationEventTarget(), 0, &ref) == noErr
+    guard RegisterEventHotKey(UInt32(kVK_Space), UInt32(optionKey), EventHotKeyID(signature: signature, id: id), GetApplicationEventTarget(), 0, &ref) == noErr
     else {
       if let handler { RemoveEventHandler(handler) }
       throw CaptureError("⌥ Spatie is al in gebruik door een andere app.")

@@ -23,17 +23,8 @@ public final class DictationRecorder {
     } catch {
       throw CaptureError("Kon niet beginnen met dicteren: \(error.localizedDescription)")
     }
-    recorder.isMeteringEnabled = true
     guard recorder.record() else { throw CaptureError("Kon niet beginnen met dicteren. Controleer de microfoontoegang van Pensieve.") }
   }
-
-  /// Decibels, for the listening dot.
-  public var level: Double {
-    recorder.updateMeters()
-    return Double(recorder.averagePower(forChannel: 0))
-  }
-
-  public var elapsed: TimeInterval { Date().timeIntervalSince(started) }
 
   /// Stops and closes the file; returns how long it ran.
   @discardableResult

@@ -19,16 +19,6 @@ public enum Clock {
     }
 }
 
-enum ServerDate {
-    static func parse(_ text: String?) -> Date? {
-        guard let text else { return nil }
-        if let date = try? Date(text, strategy: .iso8601) { return date }
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        return formatter.date(from: text)
-    }
-}
-
 /// Seen or not, the way the Bibliotheek shows it. The household watches on
 /// one Jellyfin account, so Jellyfin's "played" is "samen gezien"; per
 /// person there is only Lumos's own "Al gezien".
@@ -73,7 +63,9 @@ public struct Watched: Hashable, Sendable {
 extension ManageItem {
     public var watched: Watched { Watched(server: server, seen: seen, mediaType: title.mediaType) }
     public var sizeBytes: Double? { server?.sizeBytes }
-    public var added: Date? { ServerDate.parse(addedAt) }
+    public var added: Date? {
+        addedAt.flatMap { (try? Date($0, strategy: .iso8601)) ?? APIClient.isoFractional.date(from: $0) }
+    }
     /// Radarr for a film, Sonarr for a series; nobody for a file copied in by hand.
     public var managedBy: String { removable ? (title.mediaType == .movie ? "Radarr" : "Sonarr") : "niemand" }
     public var lockReason: String {
@@ -121,12 +113,15 @@ public struct LibrarySort: Equatable, Sendable, RawRepresentable {
 
     func sorted(_ rows: [LibraryRow]) -> [LibraryRow] {
         rows.sorted { a, b in
+            func compare<T: Comparable>(_ x: T, _ y: T) -> ComparisonResult {
+                x == y ? .orderedSame : x < y ? .orderedAscending : .orderedDescending
+            }
             let order: ComparisonResult =
                 switch key {
                 case .title: a.title.localizedStandardCompare(b.title)
-                case .watched: a.watchedRank == b.watchedRank ? .orderedSame : a.watchedRank < b.watchedRank ? .orderedAscending : .orderedDescending
-                case .added: a.added == b.added ? .orderedSame : a.added < b.added ? .orderedAscending : .orderedDescending
-                case .size: a.size == b.size ? .orderedSame : a.size < b.size ? .orderedAscending : .orderedDescending
+                case .watched: compare(a.watchedRank, b.watchedRank)
+                case .added: compare(a.added, b.added)
+                case .size: compare(a.size, b.size)
                 }
             if order == .orderedSame { return a.title.localizedStandardCompare(b.title) == .orderedAscending }
             return ascending ? order == .orderedAscending : order == .orderedDescending
