@@ -7,6 +7,7 @@ import type {
   Trailer,
 } from '@burrow/contracts';
 import {
+  bareTitle,
   type BrowsePage,
   type BrowseQuery,
   type CatalogueHit,
@@ -54,11 +55,14 @@ type Seed = {
   tmdbUrl?: string;
 };
 
-const slug = (name: string) =>
-  name
+const fold = (text: string) =>
+  text
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '')
-    .toLowerCase()
+    .toLowerCase();
+
+const slug = (name: string) =>
+  fold(name)
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '');
 
@@ -592,36 +596,27 @@ const credits = (seed: Seed): Credit[] => [
   })),
 ];
 
-const toTitle = (seed: Seed): CatalogueTitle => ({
-  mediaType: seed.type,
-  tmdbId: seed.id,
-  title: seed.title,
-  year: seed.year,
-  runtimeMinutes: seed.minutes ?? null,
-  seasons: seed.seasons ?? null,
-  genres: seed.genres,
-  traits: seed.traits,
-  language: seed.language,
-  poster: null,
-  backdrop: null,
-  availability: seed.availability,
-  popularity: seed.popularity,
-  synopsis: seed.synopsis,
-  synopsisLanguage: 'nl',
-  credits: credits(seed),
-  scores: seed.scores ?? [],
-  snippets: seed.snippets ?? [],
-  trailer: seed.trailer ?? null,
-  stills: [],
-  stillsCredit: null,
-  tmdbUrl: seed.tmdbUrl ?? null,
-});
-
-const fold = (text: string) =>
-  text
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase();
+const toTitle = (seed: Seed): CatalogueTitle =>
+  bareTitle({
+    mediaType: seed.type,
+    tmdbId: seed.id,
+    title: seed.title,
+    year: seed.year,
+    runtimeMinutes: seed.minutes ?? null,
+    seasons: seed.seasons ?? null,
+    genres: seed.genres,
+    traits: seed.traits,
+    language: seed.language,
+    availability: seed.availability,
+    popularity: seed.popularity,
+    synopsis: seed.synopsis,
+    synopsisLanguage: 'nl',
+    credits: credits(seed),
+    scores: seed.scores ?? [],
+    snippets: seed.snippets ?? [],
+    trailer: seed.trailer ?? null,
+    tmdbUrl: seed.tmdbUrl ?? null,
+  });
 
 const ROLE = { director: 'Regie', creator: 'Maker', cast: 'Cast' } as const;
 

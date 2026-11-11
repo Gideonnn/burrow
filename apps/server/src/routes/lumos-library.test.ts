@@ -8,6 +8,7 @@ import {
   watchResponse,
 } from '@burrow/contracts';
 import {
+  bareTitle,
   type CatalogueProvider,
   type CatalogueTitle,
   type Holding,
@@ -29,28 +30,17 @@ const TICKS = 10_000_000;
 const title = (
   over: Partial<CatalogueTitle> &
     Pick<CatalogueTitle, 'mediaType' | 'tmdbId' | 'title'>,
-): CatalogueTitle => ({
-  year: 2024,
-  runtimeMinutes: 100,
-  seasons: over.mediaType === 'tv' ? 1 : null,
-  genres: ['Drama'],
-  traits: [],
-  language: 'Engels',
-  poster: null,
-  backdrop: null,
-  availability: 'available',
-  popularity: 5,
-  synopsis: null,
-  synopsisLanguage: null,
-  credits: [],
-  scores: [],
-  snippets: [],
-  trailer: null,
-  stills: [],
-  stillsCredit: null,
-  tmdbUrl: null,
-  ...over,
-});
+): CatalogueTitle =>
+  bareTitle({
+    year: 2024,
+    runtimeMinutes: 100,
+    seasons: over.mediaType === 'tv' ? 1 : null,
+    genres: ['Drama'],
+    language: 'Engels',
+    availability: 'available',
+    popularity: 5,
+    ...over,
+  });
 
 // On Dobby: two films seen together (one large, one small), one being
 // watched, one copied in by hand, and a series half seen. Two titles are

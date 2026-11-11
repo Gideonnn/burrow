@@ -1,5 +1,6 @@
 import { lumosStatus, playResponse, watchResponse } from '@burrow/contracts';
 import {
+  bareTitle,
   type CatalogueProvider,
   type CatalogueTitle,
   JellyfinPlayer,
@@ -15,28 +16,15 @@ const WEB = 'http://media.example.nl:8096';
 const title = (
   over: Partial<CatalogueTitle> &
     Pick<CatalogueTitle, 'mediaType' | 'tmdbId' | 'title'>,
-): CatalogueTitle => ({
-  year: 2024,
-  runtimeMinutes: 100,
-  seasons: null,
-  genres: [],
-  traits: [],
-  language: 'en',
-  poster: null,
-  backdrop: null,
-  availability: 'available',
-  popularity: 1,
-  synopsis: null,
-  synopsisLanguage: null,
-  credits: [],
-  scores: [],
-  snippets: [],
-  trailer: null,
-  stills: [],
-  stillsCredit: null,
-  tmdbUrl: null,
-  ...over,
-});
+): CatalogueTitle =>
+  bareTitle({
+    year: 2024,
+    runtimeMinutes: 100,
+    language: 'en',
+    availability: 'available',
+    popularity: 1,
+    ...over,
+  });
 
 // The catalogue knows the film's Jellyfin id (Seerr passes it on); the
 // series it only knows by name, and the third title is not in the library.
