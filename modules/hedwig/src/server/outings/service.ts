@@ -1,4 +1,4 @@
-import { mkdir, rm, writeFile } from 'node:fs/promises';
+import { rm, writeFile } from 'node:fs/promises';
 import { extname, join } from 'node:path';
 import {
   type AddTicketRequest,
@@ -305,7 +305,7 @@ export class OutingsService {
   ) {
     this.row(id);
     const ticketId = crypto.randomUUID();
-    const dir = await this.ensureDir(id);
+    const dir = await this.o.platform.files.ensureDir('hedwig', 'outings', id);
     let name: string;
     let contentType: string;
     let size: number;
@@ -860,10 +860,6 @@ export class OutingsService {
 
   private dir(id: string) {
     return this.o.platform.files.path('hedwig', 'outings', id);
-  }
-
-  private ensureDir(id: string) {
-    return mkdir(this.dir(id), { recursive: true }).then(() => this.dir(id));
   }
 
   private toOuting(row: OutingRow, access: Access): Outing {
