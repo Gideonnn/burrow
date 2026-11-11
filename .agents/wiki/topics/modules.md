@@ -19,7 +19,9 @@ Pensieve is the cleanest example to copy.
      matter (`platform.settings.enabled(personId, key)`).
    - `api`: a Hono router mounted under `/api`; guard with `requireRight` and answer
      `notFound()` for anything outside the key's scope. Owner checks, never the admin
-     right, for content.
+     right, for content. Wrap service calls in `httpErrors(YourError)` so a service
+     error answers 404 ("not found") or 400 instead of a 500.
+   - Whether a bot may do a job: `botWithSkill(catalog, bot, skill)`.
    - `subjects`: what tasks and routines can be about, with visibility, the agent prompt
      (fence untrusted text with `untrusted()`), and how to apply a result.
    - `taskKinds`: agent kinds (`agent.request`, `accept`) or code kinds (`run`), with
