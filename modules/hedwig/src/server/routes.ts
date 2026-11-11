@@ -27,6 +27,7 @@ import {
 } from '@burrow/contracts';
 import {
   type Access,
+  httpErrors,
   notFound,
   type PlatformEnv,
   requireRight,
@@ -86,17 +87,8 @@ const sharedFor = (
     ? undefined
     : sharing.sharedIds(access);
 
-const sharingCall = <T>(call: () => T): T => {
-  try {
-    return call();
-  } catch (error) {
-    if (error instanceof SharingError) {
-      if (error.message === 'not found') throw notFound();
-      throw new HTTPException(400, { message: error.message });
-    }
-    throw error;
-  }
-};
+const sharingCall = httpErrors(SharingError);
+const draftCall = httpErrors(DraftError);
 
 const filterCondition = (criterion: MessageFilter, address: string) => {
   switch (criterion) {
@@ -470,10 +462,10 @@ export function hedwigRoutes({
         '/messages/:id/share',
         requireRight('organize'),
         zValidator('json', shareMessageRequest),
-        (c) => {
+        async (c) => {
           contentAllowed(c.var.access);
           return c.json(
-            sharingCall(() =>
+            await sharingCall(() =>
               sharing.share(
                 c.var.access,
                 c.req.param('id'),
@@ -483,16 +475,19 @@ export function hedwigRoutes({
           );
         },
       )
-      .delete('/messages/:id/share/:personId', requireRight('organize'), (c) =>
-        c.json(
-          sharingCall(() =>
-            sharing.unshare(
-              c.var.access,
-              c.req.param('id'),
-              c.req.param('personId'),
+      .delete(
+        '/messages/:id/share/:personId',
+        requireRight('organize'),
+        async (c) =>
+          c.json(
+            await sharingCall(() =>
+              sharing.unshare(
+                c.var.access,
+                c.req.param('id'),
+                c.req.param('personId'),
+              ),
             ),
           ),
-        ),
       )
       .get('/shared', requireRight('read'), (c) =>
         c.json<SharedResponse>(sharing.shared(c.var.access)),
@@ -507,11 +502,11 @@ export function hedwigRoutes({
         '/share/suggestions/:messageId',
         requireRight('organize'),
         zValidator('json', shareDecisionRequest),
-        (c) => {
+        async (c) => {
           contentAllowed(c.var.access);
           const { decision, always } = c.req.valid('json');
           return c.json(
-            sharingCall(() =>
+            await sharingCall(() =>
               sharing.decide(
                 c.var.access,
                 c.req.param('messageId'),
@@ -568,22 +563,13 @@ export function hedwigRoutes({
         '/drafts',
         requireRight('draft'),
         zValidator('json', createDraftRequest),
-        (c) => {
-          try {
-            return c.json(
+        async (c) =>
+          c.json(
+            await draftCall(() =>
               createDraft(c.var.db, c.var.access, c.req.valid('json')),
-              201,
-            );
-          } catch (error) {
-            if (error instanceof DraftError) {
-              throw new HTTPException(
-                error.message === 'not found' ? 404 : 400,
-                { message: error.message },
-              );
-            }
-            throw error;
-          }
-        },
+            ),
+            201,
+          ),
       )
       // Discarding is part of handling a draft, so read is enough; it never
       // touches the provider.

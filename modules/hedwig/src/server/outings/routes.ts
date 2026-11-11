@@ -13,6 +13,7 @@ import {
 } from '@burrow/contracts';
 import {
   type Access,
+  httpErrors,
   notFound,
   type PlatformEnv,
   requireRight,
@@ -23,21 +24,7 @@ import { HTTPException } from 'hono/http-exception';
 import { PictureError } from './pictures';
 import { OutingError, type OutingsService } from './service';
 
-const asHttp = (error: unknown): never => {
-  if (error instanceof OutingError || error instanceof PictureError) {
-    if (error.message === 'not found') throw notFound();
-    throw new HTTPException(400, { message: error.message });
-  }
-  throw error;
-};
-
-const run = async <T>(fn: () => T | Promise<T>) => {
-  try {
-    return await fn();
-  } catch (error) {
-    return asHttp(error);
-  }
-};
+const run = httpErrors(OutingError, PictureError);
 
 // Tickets are what gets you in; a facts-only key never sees them.
 const ticketsAllowed = (access: Access) => {

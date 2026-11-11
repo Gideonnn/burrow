@@ -30,3 +30,19 @@ export const requireRight = (right: Right) =>
 // Outside the key's scope answers 404, not 403, so a key cannot even learn
 // that something exists.
 export const notFound = () => new HTTPException(404, { message: 'not found' });
+
+// Runs a route's work; errors of these service classes are the caller's
+// (404 for "not found", 400 otherwise), anything else stays a 500.
+export const httpErrors =
+  (...kinds: (abstract new (...args: never[]) => Error)[]) =>
+  async <T>(work: () => T | Promise<T>): Promise<T> => {
+    try {
+      return await work();
+    } catch (error) {
+      if (!kinds.some((kind) => error instanceof kind)) throw error;
+      const { message } = error as Error;
+      throw new HTTPException(message === 'not found' ? 404 : 400, {
+        message,
+      });
+    }
+  };
