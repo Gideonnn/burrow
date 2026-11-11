@@ -2,6 +2,7 @@ import type { RequestState } from '@burrow/contracts';
 import type { Platform } from '@burrow/platform';
 import { and, eq, isNull, lte } from 'drizzle-orm';
 import { type MediaRequester, refKey, type TitleRef } from './catalogue';
+import type { Tx } from './changes';
 import { lumosListItems, lumosRequests } from './schema';
 import { SeerrError } from './seerr';
 
@@ -11,7 +12,6 @@ const MAX_ATTEMPTS = 8;
 const backoff = (attempts: number) =>
   Math.min(6 * 60 * 60_000, 60_000 * 2 ** (attempts - 1));
 
-type Tx = Parameters<Parameters<Platform['db']['transaction']>[0]>[0];
 type Row = typeof lumosRequests.$inferSelect;
 
 export const requestState = (row: Row): RequestState => ({

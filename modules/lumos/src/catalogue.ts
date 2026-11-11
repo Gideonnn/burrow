@@ -16,6 +16,11 @@ export type TitleRef = { mediaType: MediaType; tmdbId: number };
 
 export const refKey = (ref: TitleRef) => `${ref.mediaType}:${ref.tmdbId}`;
 
+export const parseRefKey = (key: string): TitleRef => {
+  const [mediaType, id] = key.split(':');
+  return { mediaType: mediaType as MediaType, tmdbId: Number(id) };
+};
+
 // A title as a provider knows it, before Lumos adds lists and verdicts.
 export type CatalogueTitle = TitleRef & {
   title: string;
@@ -62,6 +67,32 @@ export type CatalogueTitle = TitleRef & {
   seasonList?: SeasonSummary[];
   episodes?: number | null;
 };
+
+// A title with everything a provider may not know left empty.
+export const bareTitle = (
+  known: TitleRef & { title: string } & Partial<CatalogueTitle>,
+): CatalogueTitle => ({
+  year: null,
+  runtimeMinutes: null,
+  seasons: null,
+  genres: [],
+  traits: [],
+  language: null,
+  poster: null,
+  backdrop: null,
+  availability: 'not-requested',
+  popularity: 0,
+  synopsis: null,
+  synopsisLanguage: null,
+  credits: [],
+  scores: [],
+  snippets: [],
+  trailer: null,
+  stills: [],
+  stillsCredit: null,
+  tmdbUrl: null,
+  ...known,
+});
 
 export type BrowseQuery = {
   mediaType: MediaType;

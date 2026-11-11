@@ -11,7 +11,6 @@ import {
   type ManageItem,
   type ManageResponse,
   type MediaType,
-  type ResumePoint,
   type SeenVerdicts,
   passKinds,
   type PlayResponse,
@@ -20,36 +19,58 @@ import {
   type TitleRow,
   type TitleSummary,
   type Verdict,
-  type VerdictKind,
   type VerdictRef,
-  tasteKinds,
   type WatchResponse,
 } from '@burrow/contracts';
 import { type Access, listPeople, type Platform } from '@burrow/platform';
-import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
+import { and, desc, eq, isNull } from 'drizzle-orm';
 import {
+  bareTitle,
   type CatalogueProvider,
   type CatalogueTitle,
   type Holding,
   type MediaRequester,
   overlap,
+  parseRefKey,
   refKey,
   type TitleRef,
 } from './catalogue';
-import { type JellyfinPlayer, LibraryFacts } from './jellyfin';
-import { LumosRequests, requestState } from './requests';
 import {
-  type ChangeEffects,
-  lumosChanges,
-  lumosListItems,
-  type lumosRequests,
-  lumosVerdicts,
-} from './schema';
+  groupOf,
+  insertVerdict,
+  isOwner,
+  isPass,
+  noEffects,
+  recordChange,
+  removeFromList,
+  scopeOf,
+  undoChange,
+  undoVerdicts,
+} from './changes';
+import {
+  type Going,
+  type JellyfinPlayer,
+  LibraryFacts,
+  type TitleFacts,
+} from './jellyfin';
+import {
+  type Context,
+  listedIn,
+  matchOf,
+  mulberry,
+  type Pool,
+  rank,
+  resumeLine,
+  seedOf,
+  type VerdictRow,
+} from './ranking';
+import { LumosRequests, requestState } from './requests';
+import { lumosChanges, lumosListItems, lumosVerdicts } from './schema';
 
 export const MODULE = 'lumos';
 
 // "Ruimte maken" proposes titles larger than this.
-export const SPACE_CANDIDATE_BYTES = 25_000_000_000;
+const SPACE_CANDIDATE_BYTES = 25_000_000_000;
 
 export class LumosError extends Error {}
 // No catalogue is connected; lists still work.
@@ -65,49 +86,14 @@ export class NoPlayer extends LumosError {
   }
 }
 
-type Tx = Parameters<Parameters<Platform['db']['transaction']>[0]>[0];
-type VerdictRow = typeof lumosVerdicts.$inferSelect;
-
-const isPass = (kind: VerdictKind) =>
-  (passKinds as readonly string[]).includes(kind);
-const groupOf = (kind: VerdictKind) => (isPass(kind) ? passKinds : tasteKinds);
-
 const verdictRef = (row: VerdictRow): VerdictRef => ({
   id: row.id,
   kind: row.kind,
   reason: row.reason,
 });
 
-// What one request needs to know about lists and verdicts, read once.
-type Context = {
-  scope: ListScope;
-  shared: Set<string>;
-  mine: Set<string>;
-  pass: Map<string, VerdictRow>;
-  taste: Map<string, VerdictRow>;
-  requests: Map<string, typeof lumosRequests.$inferSelect>;
-};
-
-const noEffects = (): ChangeEffects => ({
-  listAdded: [],
-  listRemoved: [],
-  verdictsAdded: [],
-  verdictsUndone: [],
-});
-
-const minutes = (s: number) => Math.max(1, Math.round(s / 60));
-
-// "Nog 50 min", or for a series "S1E4 De dijk, nog 40 min".
-function resumeLine(r: ResumePoint) {
-  const left =
-    r.runtimeSeconds && r.positionSeconds
-      ? `nog ${minutes(r.runtimeSeconds - r.positionSeconds)} min`
-      : null;
-  if (!r.episode) return left ? `N${left.slice(1)}` : 'Verder kijken';
-  const e = r.episode;
-  const name = `S${e.season}E${e.number}${e.title ? ` ${e.title}` : ''}`;
-  return left ? `${name}, ${left}` : name;
-}
+const onServer = (f: TitleFacts | null) =>
+  f ? { sizeBytes: f.sizeBytes, media: f.media, watched: f.watched } : null;
 
 // Lumos: a catalogue to browse with lists and verdicts of its own. The
 // household's list and verdicts belong to everyone in it; a personal list is
@@ -224,8 +210,7 @@ export class Lumos {
   // catalogue's "available" is not taken on trust.
   async watch(ref: TitleRef): Promise<WatchResponse> {
     const player = this.needPlayer();
-    const t = await this.need().title(ref);
-    if (!t) throw new LumosError('not found');
+    const t = await this.known(ref);
     const [item, screens] = await Promise.all([
       player.item(t),
       player.screens(),
@@ -253,8 +238,7 @@ export class Lumos {
 
   async play(ref: TitleRef, deviceId: string): Promise<PlayResponse> {
     const player = this.needPlayer();
-    const t = await this.need().title(ref);
-    if (!t) throw new LumosError('not found');
+    const t = await this.known(ref);
     const item = await player.item(t);
     if (!item) throw new LumosError('Jellyfin heeft deze titel niet');
     return player.play(deviceId, item);
@@ -262,17 +246,6 @@ export class Lumos {
 
   private owner(access: Access, scope: ListScope) {
     return scope === 'shared' ? null : access.personId;
-  }
-
-  private ownerIs(column: typeof lumosListItems.ownerId, owner: string | null) {
-    return owner === null ? isNull(column) : eq(column, owner);
-  }
-
-  private personIs(
-    column: typeof lumosVerdicts.personId,
-    person: string | null,
-  ) {
-    return person === null ? isNull(column) : eq(column, person);
   }
 
   // --- reading -------------------------------------------------------------
@@ -313,7 +286,7 @@ export class Lumos {
       .from(lumosVerdicts)
       .where(
         and(
-          this.personIs(lumosVerdicts.personId, person),
+          isOwner(lumosVerdicts.personId, person),
           eq(lumosVerdicts.origin, this.origin),
           isNull(lumosVerdicts.undoneAt),
         ),
@@ -344,7 +317,7 @@ export class Lumos {
       backdrop: t.backdrop,
       availability: this.availability(t, ctx),
       hasTrailer: t.trailer !== null,
-      onList: (ctx.scope === 'shared' ? ctx.shared : ctx.mine).has(key),
+      onList: listedIn(ctx).has(key),
       onShared: ctx.shared.has(key),
       onMine: ctx.mine.has(key),
       pass: pass ? verdictRef(pass) : null,
@@ -374,67 +347,14 @@ export class Lumos {
       (k) => !keys.has(k),
     );
     const extra = await Promise.all(
-      missing.map((k) => {
-        const [mediaType, id] = k.split(':');
-        return this.catalogue
-          ?.title({
-            mediaType: mediaType as 'movie' | 'tv',
-            tmdbId: Number(id),
-          })
-          .catch(() => undefined);
-      }),
+      missing.map((k) =>
+        this.catalogue?.title(parseRefKey(k)).catch(() => undefined),
+      ),
     );
     return [
       ...all,
       ...extra.flatMap((t) => (t ? [{ ...t, popularity: 0 }] : [])),
     ];
-  }
-
-  // The provider's popularity, the scope's list, and "more/less like this".
-  // "Seen" and "not now" only hide a title; they never weigh others down.
-  private rank(
-    t: CatalogueTitle,
-    ctx: Context,
-    pool: Map<string, CatalogueTitle>,
-    watched: CatalogueTitle[] = [],
-  ) {
-    const key = refKey(t);
-    let score = t.popularity;
-    // What the household watched to the end counts as a light "more like this".
-    for (const source of watched) {
-      if (refKey(source) !== key) score += overlap(source, t) * 0.3;
-    }
-    if ((ctx.scope === 'shared' ? ctx.shared : ctx.mine).has(key)) score += 2;
-    if (ctx.scope === 'shared' && ctx.mine.has(key)) score += 1;
-    for (const verdict of ctx.taste.values()) {
-      const source = pool.get(refKey(verdict));
-      if (!source) continue;
-      const sign = verdict.kind === 'more-like-this' ? 1 : -1;
-      score +=
-        refKey(source) === key ? sign * 4 : sign * overlap(source, t) * 1.2;
-    }
-    return score;
-  }
-
-  private matchOf(
-    t: CatalogueTitle,
-    ctx: Context,
-    pool: Map<string, CatalogueTitle>,
-  ) {
-    const key = refKey(t);
-    if (ctx.scope === 'shared' && ctx.shared.has(key)) return 'Op onze lijst';
-    if (ctx.mine.has(key)) return 'Op jouw lijst';
-    let best: { title: string; shared: number } | undefined;
-    for (const verdict of ctx.taste.values()) {
-      if (verdict.kind !== 'more-like-this') continue;
-      const source = pool.get(refKey(verdict));
-      if (!source || refKey(source) === key) continue;
-      const shared = overlap(source, t);
-      if (shared > 0 && (!best || shared > best.shared)) {
-        best = { title: source.title, shared };
-      }
-    }
-    return best ? `Lijkt op ${best.title}` : null;
   }
 
   async rows(access: Access, scope: ListScope, type?: MediaType) {
@@ -452,52 +372,27 @@ export class Lumos {
     const watched = all.filter(played);
     const ranked = all
       .filter((t) => !ctx.pass.has(refKey(t)) && !played(t))
-      .map((t) => ({ t, score: this.rank(t, ctx, pool, watched) }))
+      .map((t) => ({ t, score: rank(t, ctx, pool, watched) }))
       .sort((a, b) => b.score - a.score)
       .map(({ t }) => t);
     const card = (t: CatalogueTitle) =>
-      this.summary(t, ctx, this.matchOf(t, ctx, pool));
+      this.summary(t, ctx, matchOf(t, ctx, pool));
     const together = scope === 'shared';
     const onlyMine = (t: CatalogueTitle) =>
       together && ctx.mine.has(refKey(t)) && !ctx.shared.has(refKey(t));
-    const listed = together ? ctx.shared : ctx.mine;
     const list = all
-      .filter((t) => listed.has(refKey(t)))
+      .filter((t) => listedIn(ctx).has(refKey(t)))
       .sort((a, b) => b.popularity - a.popularity);
-    const seed = this.seed(ctx, pool, list, ranked);
+    const seed = seedOf(ctx, pool, list, ranked);
     const newest = Math.max(...all.map((t) => t.year ?? 0));
     const rows: TitleRow[] = [];
     if (going.length) {
-      // Jellyfin's item to the catalogue: by the id Seerr knows, else TMDB's.
-      const byItem = new Map(
-        all.flatMap((t) =>
-          t.mediaServerId
-            ? [[t.mediaServerId.replaceAll('-', '').toLowerCase(), t]]
-            : [],
-        ),
-      );
-      const titles = await Promise.all(
-        going.slice(0, 12).map(async (g) => {
-          let t = byItem.get(g.itemId.replaceAll('-', '').toLowerCase());
-          if (!t && g.key) {
-            const [mediaType, id] = g.key.split(':');
-            const ref = {
-              mediaType: mediaType as MediaType,
-              tmdbId: Number(id),
-            };
-            t =
-              pool.get(refKey(ref)) ??
-              (await catalogue.title(ref).catch(() => undefined));
-          }
-          return t ? this.summary(t, ctx, resumeLine(g.resume)) : null;
-        }),
-      );
       rows.push({
         key: 'continue',
         title: 'Verder kijken',
         subtitle: 'Waar jullie op de tv gebleven zijn',
         style: 'wide',
-        items: titles.filter((t): t is TitleSummary => t !== null),
+        items: await this.continueWatching(going, all, pool, ctx),
         empty: null,
       });
     }
@@ -601,18 +496,34 @@ export class Lumos {
     };
   }
 
-  // The newest "more like this", else the top of the list, else the top pick.
-  private seed(
+  // Jellyfin's item to the catalogue: by the id Seerr knows, else TMDB's.
+  private async continueWatching(
+    going: Going[],
+    all: CatalogueTitle[],
+    pool: Pool,
     ctx: Context,
-    pool: Map<string, CatalogueTitle>,
-    list: CatalogueTitle[],
-    ranked: CatalogueTitle[],
   ) {
-    for (const verdict of ctx.taste.values()) {
-      const source = pool.get(refKey(verdict));
-      if (verdict.kind === 'more-like-this' && source) return source;
-    }
-    return list[0] ?? ranked[0];
+    const plain = (id: string) => id.replaceAll('-', '').toLowerCase();
+    const byItem = new Map(
+      all.flatMap((t) =>
+        t.mediaServerId ? [[plain(t.mediaServerId), t]] : [],
+      ),
+    );
+    const titles = await Promise.all(
+      going.slice(0, 12).map(async ({ itemId, key, resume }) => {
+        let t = byItem.get(plain(itemId));
+        if (!t && key) {
+          const ref = parseRefKey(key);
+          t =
+            pool.get(refKey(ref)) ??
+            (await this.need()
+              .title(ref)
+              .catch(() => undefined));
+        }
+        return t ? this.summary(t, ctx, resumeLine(resume)) : null;
+      }),
+    );
+    return titles.filter((t): t is TitleSummary => t !== null);
   }
 
   // A library page: everything, passed titles included, so nothing hides.
@@ -633,7 +544,7 @@ export class Lumos {
             (!filter.mediaType || t.mediaType === filter.mediaType) &&
             (!filter.available || t.availability === 'available'),
         )
-        .sort((a, b) => this.rank(b, ctx, pool) - this.rank(a, ctx, pool))
+        .sort((a, b) => rank(b, ctx, pool) - rank(a, ctx, pool))
         .map((t) => this.summary(t, ctx)),
     };
   }
@@ -671,8 +582,7 @@ export class Lumos {
     ref: TitleRef,
   ): Promise<TitleDetail> {
     const catalogue = this.need();
-    const t = await catalogue.title(ref);
-    if (!t) throw new LumosError('not found');
+    const t = await this.known(ref);
     const ctx = this.context(access, scope);
     // Without Seerr nothing is known about files, so nothing is claimed.
     const held =
@@ -684,20 +594,14 @@ export class Lumos {
       held ? this.libraryFacts() : new LibraryFacts(),
     ]);
     const pool = new Map(candidates.map((c) => [refKey(c), c]));
-    const server = facts.get(t);
+    const request = ctx.requests.get(refKey(t));
     return {
-      ...this.summary(t, ctx, this.matchOf(t, ctx, pool)),
+      ...this.summary(t, ctx, matchOf(t, ctx, pool)),
       library: held
         ? {
             addedAt: t.addedAt ?? null,
             removable: t.removable ?? false,
-            server: server
-              ? {
-                  sizeBytes: server.sizeBytes,
-                  media: server.media,
-                  watched: server.watched,
-                }
-              : null,
+            server: onServer(facts.get(t)),
           }
         : null,
       seen: this.seenVerdicts(access)(t),
@@ -711,10 +615,7 @@ export class Lumos {
       stills: t.stills,
       stillsCredit: t.stillsCredit,
       tmdbUrl: t.tmdbUrl,
-      request: (() => {
-        const row = ctx.requests.get(refKey(t));
-        return row ? requestState(row) : null;
-      })(),
+      request: request ? requestState(request) : null,
       download: t.download ?? null,
       tagline: t.tagline ?? null,
       originalTitle: t.originalTitle ?? null,
@@ -840,7 +741,7 @@ export class Lumos {
       if (items.length)
         rows.push({ key, title, subtitle, style, items, empty: null });
     };
-    const listed = scope === 'shared' ? ctx.shared : ctx.mine;
+    const listed = listedIn(ctx);
     const liked = [...ctx.taste.values()]
       .filter((v) => v.kind === 'more-like-this')
       .map((v) => pool.get(refKey(v)))
@@ -954,7 +855,7 @@ export class Lumos {
       .from(lumosListItems)
       .where(
         and(
-          this.ownerIs(lumosListItems.ownerId, this.owner(access, scope)),
+          isOwner(lumosListItems.ownerId, this.owner(access, scope)),
           eq(lumosListItems.origin, this.origin),
           isNull(lumosListItems.removedAt),
         ),
@@ -979,31 +880,9 @@ export class Lumos {
     row: typeof lumosListItems.$inferSelect,
     ctx: Context,
   ): TitleSummary {
+    const { mediaType, tmdbId, title, year, poster } = row;
     return this.summary(
-      {
-        mediaType: row.mediaType,
-        tmdbId: row.tmdbId,
-        title: row.title,
-        year: row.year,
-        runtimeMinutes: null,
-        seasons: null,
-        genres: [],
-        traits: [],
-        language: null,
-        poster: row.poster,
-        backdrop: null,
-        availability: 'not-requested',
-        popularity: 0,
-        synopsis: null,
-        synopsisLanguage: null,
-        credits: [],
-        scores: [],
-        snippets: [],
-        trailer: null,
-        stills: [],
-        stillsCredit: null,
-        tmdbUrl: null,
-      },
+      bareTitle({ mediaType, tmdbId, title, year, poster }),
       ctx,
     );
   }
@@ -1036,67 +915,11 @@ export class Lumos {
     return t;
   }
 
-  private record(access: Access, effects: ChangeEffects, tx: Tx) {
-    return tx
-      .insert(lumosChanges)
-      .values({ personId: access.personId, effects })
-      .returning({ id: lumosChanges.id })
-      .get().id;
-  }
-
   private changed(access: Access, scope: ListScope) {
     const data = { type: 'lumos.changed', scope };
     if (scope === 'shared')
       this.platform.events.emit({ data, visibleTo: () => true });
     else this.platform.events.emitTo([access.personId], data);
-  }
-
-  private undoActive(
-    tx: Tx,
-    person: string | null,
-    ref: TitleRef,
-    kinds: readonly VerdictKind[],
-    effects: ChangeEffects,
-  ) {
-    const rows = tx
-      .update(lumosVerdicts)
-      .set({ undoneAt: new Date() })
-      .where(
-        and(
-          this.personIs(lumosVerdicts.personId, person),
-          eq(lumosVerdicts.mediaType, ref.mediaType),
-          eq(lumosVerdicts.tmdbId, ref.tmdbId),
-          eq(lumosVerdicts.origin, this.origin),
-          inArray(lumosVerdicts.kind, [...kinds]),
-          isNull(lumosVerdicts.undoneAt),
-        ),
-      )
-      .returning({ id: lumosVerdicts.id })
-      .all();
-    effects.verdictsUndone.push(...rows.map((r) => r.id));
-  }
-
-  private removeFromList(
-    tx: Tx,
-    owner: string | null,
-    ref: TitleRef,
-    effects: ChangeEffects,
-  ) {
-    const rows = tx
-      .update(lumosListItems)
-      .set({ removedAt: new Date() })
-      .where(
-        and(
-          this.ownerIs(lumosListItems.ownerId, owner),
-          eq(lumosListItems.mediaType, ref.mediaType),
-          eq(lumosListItems.tmdbId, ref.tmdbId),
-          eq(lumosListItems.origin, this.origin),
-          isNull(lumosListItems.removedAt),
-        ),
-      )
-      .returning({ id: lumosListItems.id })
-      .all();
-    effects.listRemoved.push(...rows.map((r) => r.id));
   }
 
   // "Ja": on the scope's list, and no longer passed there. Adding twice, or
@@ -1128,7 +951,7 @@ export class Lumos {
         .returning({ id: lumosListItems.id })
         .all();
       effects.listAdded.push(...added.map((r) => r.id));
-      this.undoActive(tx, owner, t, passKinds, effects);
+      undoVerdicts(tx, this.origin, owner, t, passKinds, effects);
       // Series: only the chosen seasons, the first when none was chosen.
       this.requests?.want(
         tx,
@@ -1136,7 +959,7 @@ export class Lumos {
         t.mediaType === 'tv' ? (seasons?.length ? seasons : [1]) : null,
         access.personId,
       );
-      return this.record(access, effects, tx);
+      return recordChange(tx, access.personId, effects);
     });
     this.requests?.schedule();
     this.changed(access, scope);
@@ -1160,10 +983,7 @@ export class Lumos {
     const seen = this.seenVerdicts(access);
     const listed = this.listedAnywhere();
     const item = (h: Holding): ManageItem => {
-      const f = facts.get(h.title);
-      const server = f
-        ? { sizeBytes: f.sizeBytes, media: f.media, watched: f.watched }
-        : null;
+      const server = onServer(facts.get(h.title));
       return {
         title: this.summary(h.title, ctx),
         download: h.download,
@@ -1217,10 +1037,7 @@ export class Lumos {
     await manager.remove(ref);
     this.requests?.forget(ref);
     if (watched) this.markSeenTogether(access, ref);
-    this.platform.events.emit({
-      data: { type: 'lumos.changed', scope: 'shared' },
-      visibleTo: () => true,
-    });
+    this.changed(access, 'shared');
     return { ok: true as const };
   }
 
@@ -1229,10 +1046,10 @@ export class Lumos {
     if (this.seenVerdicts(access)(ref).together) return;
     this.db.transaction((tx) => {
       const effects = noEffects();
-      this.undoActive(tx, null, ref, passKinds, effects);
-      const row = tx
-        .insert(lumosVerdicts)
-        .values({
+      undoVerdicts(tx, this.origin, null, ref, passKinds, effects);
+      insertVerdict(
+        tx,
+        {
           personId: null,
           byId: access.personId,
           mediaType: ref.mediaType,
@@ -1240,11 +1057,10 @@ export class Lumos {
           origin: this.origin,
           kind: 'seen',
           reason: null,
-        })
-        .returning({ id: lumosVerdicts.id })
-        .get();
-      effects.verdictsAdded.push(row.id);
-      this.record(access, effects, tx);
+        },
+        effects,
+      );
+      recordChange(tx, access.personId, effects);
     });
   }
 
@@ -1257,8 +1073,8 @@ export class Lumos {
   removeFromScope(access: Access, scope: ListScope, ref: TitleRef) {
     const changeId = this.db.transaction((tx) => {
       const effects = noEffects();
-      this.removeFromList(tx, this.owner(access, scope), ref, effects);
-      return this.record(access, effects, tx);
+      removeFromList(tx, this.origin, this.owner(access, scope), ref, effects);
+      return recordChange(tx, access.personId, effects);
     });
     this.changed(access, scope);
     return { changeId };
@@ -1272,11 +1088,11 @@ export class Lumos {
     const person = this.owner(access, scope);
     const changeId = this.db.transaction((tx) => {
       const effects = noEffects();
-      this.undoActive(tx, person, t, groupOf(kind), effects);
-      if (isPass(kind)) this.removeFromList(tx, person, t, effects);
-      const row = tx
-        .insert(lumosVerdicts)
-        .values({
+      undoVerdicts(tx, this.origin, person, t, groupOf(kind), effects);
+      if (isPass(kind)) removeFromList(tx, this.origin, person, t, effects);
+      insertVerdict(
+        tx,
+        {
           personId: person,
           byId: access.personId,
           mediaType: t.mediaType,
@@ -1284,11 +1100,10 @@ export class Lumos {
           origin: this.origin,
           kind,
           reason: request.reason?.trim() || null,
-        })
-        .returning({ id: lumosVerdicts.id })
-        .get();
-      effects.verdictsAdded.push(row.id);
-      return this.record(access, effects, tx);
+        },
+        effects,
+      );
+      return recordChange(tx, access.personId, effects);
     });
     this.changed(access, scope);
     return { changeId };
@@ -1310,14 +1125,16 @@ export class Lumos {
         .set({ undoneAt: new Date() })
         .where(eq(lumosVerdicts.id, id))
         .run();
-      return this.record(access, { ...noEffects(), verdictsUndone: [id] }, tx);
+      return recordChange(tx, access.personId, {
+        ...noEffects(),
+        verdictsUndone: [id],
+      });
     });
-    this.changed(access, row.personId === null ? 'shared' : 'mine');
+    this.changed(access, scopeOf(row.personId));
     return { changeId };
   }
 
-  // Reverses exactly what one change did. A row someone else has since put
-  // back (the same title re-added to the shared list) stays as it is.
+  // Reverses exactly what one change did; see `undoChange`.
   undo(access: Access, changeId: string) {
     const change = this.db
       .select()
@@ -1331,105 +1148,10 @@ export class Lumos {
       )
       .get();
     if (!change) throw new LumosError('not found');
-    const { effects } = change;
-    const scopes = new Set<ListScope>();
-    const scopeOf = (owner: string | null): ListScope =>
-      owner === null ? 'shared' : 'mine';
-    this.db.transaction((tx) => {
-      const now = new Date();
-      for (const id of effects.listAdded) {
-        const row = tx
-          .update(lumosListItems)
-          .set({ removedAt: now })
-          .where(
-            and(eq(lumosListItems.id, id), isNull(lumosListItems.removedAt)),
-          )
-          .returning()
-          .get();
-        if (row) scopes.add(scopeOf(row.ownerId));
-      }
-      for (const id of effects.verdictsAdded) {
-        const row = tx
-          .update(lumosVerdicts)
-          .set({ undoneAt: now })
-          .where(and(eq(lumosVerdicts.id, id), isNull(lumosVerdicts.undoneAt)))
-          .returning()
-          .get();
-        if (row) scopes.add(scopeOf(row.personId));
-      }
-      for (const id of effects.listRemoved) {
-        const row = tx
-          .select()
-          .from(lumosListItems)
-          .where(eq(lumosListItems.id, id))
-          .get();
-        if (!row?.removedAt) continue;
-        const active = tx
-          .select({ id: lumosListItems.id })
-          .from(lumosListItems)
-          .where(
-            and(
-              this.ownerIs(lumosListItems.ownerId, row.ownerId),
-              eq(lumosListItems.mediaType, row.mediaType),
-              eq(lumosListItems.tmdbId, row.tmdbId),
-              eq(lumosListItems.origin, row.origin),
-              isNull(lumosListItems.removedAt),
-            ),
-          )
-          .get();
-        if (active) continue;
-        tx.update(lumosListItems)
-          .set({ removedAt: null })
-          .where(eq(lumosListItems.id, id))
-          .run();
-        scopes.add(scopeOf(row.ownerId));
-      }
-      for (const id of effects.verdictsUndone) {
-        const row = tx
-          .select()
-          .from(lumosVerdicts)
-          .where(eq(lumosVerdicts.id, id))
-          .get();
-        if (!row?.undoneAt) continue;
-        const active = tx
-          .select({ id: lumosVerdicts.id })
-          .from(lumosVerdicts)
-          .where(
-            and(
-              this.personIs(lumosVerdicts.personId, row.personId),
-              eq(lumosVerdicts.mediaType, row.mediaType),
-              eq(lumosVerdicts.tmdbId, row.tmdbId),
-              eq(lumosVerdicts.origin, row.origin),
-              inArray(lumosVerdicts.kind, [...groupOf(row.kind)]),
-              isNull(lumosVerdicts.undoneAt),
-            ),
-          )
-          .get();
-        if (active) continue;
-        tx.update(lumosVerdicts)
-          .set({ undoneAt: null })
-          .where(eq(lumosVerdicts.id, id))
-          .run();
-        scopes.add(scopeOf(row.personId));
-      }
-      tx.update(lumosChanges)
-        .set({ undoneAt: now })
-        .where(eq(lumosChanges.id, changeId))
-        .run();
-    });
+    const scopes = this.db.transaction((tx) =>
+      undoChange(tx, changeId, change.effects),
+    );
     for (const scope of scopes) this.changed(access, scope);
     return { changeId };
   }
-}
-
-// A small seeded random, so "Verras me" is the same until the seed changes.
-function mulberry(seed: number) {
-  let a = seed >>> 0;
-  return () => {
-    a = (a + 0x6d2b79f5) >>> 0;
-    let t = a;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
 }
