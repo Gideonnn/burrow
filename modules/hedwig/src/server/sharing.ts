@@ -12,6 +12,7 @@ import {
 import {
   type Access,
   botRequest,
+  botWithSkill,
   listPeople,
   type Platform,
   shares,
@@ -682,14 +683,8 @@ export class SharingService {
 
   kinds(): TaskKind[] {
     const { catalog } = this.o.platform;
-    const bot = catalog.bots.get(this.o.bot);
-    if (
-      bot?.agent !== 'local' ||
-      !bot.skills.includes(SHARE_SKILL) ||
-      !catalog.skills.has(SHARE_SKILL)
-    ) {
-      return [];
-    }
+    const bot = botWithSkill(catalog, this.o.bot, SHARE_SKILL);
+    if (bot?.agent !== 'local') return [];
     return [
       {
         name: 'hedwig.share',

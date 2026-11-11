@@ -15,6 +15,7 @@ import {
 import {
   type Access,
   botRequest,
+  botWithSkill,
   type Platform,
   people,
 } from '@burrow/platform';
@@ -107,14 +108,8 @@ export class OutingsService {
       bot: o.bot,
       changed: (id) => this.changed(id),
     });
-    const { catalog } = o.platform;
-    const bot = o.bot ? catalog.bots.get(o.bot) : undefined;
-    this.readerOn = Boolean(
-      bot &&
-      bot.agent !== 'local' &&
-      bot.skills.includes(OUTING_SKILL) &&
-      catalog.skills.has(OUTING_SKILL),
-    );
+    const bot = botWithSkill(o.platform.catalog, o.bot, OUTING_SKILL);
+    this.readerOn = Boolean(bot && bot.agent !== 'local');
   }
 
   private get db() {

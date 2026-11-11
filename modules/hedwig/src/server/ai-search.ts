@@ -9,7 +9,12 @@ import {
   type SearchToken,
   searchPlan,
 } from '@burrow/contracts';
-import { botRequest, type Platform, untrusted } from '@burrow/platform';
+import {
+  botRequest,
+  botWithSkill,
+  type Platform,
+  untrusted,
+} from '@burrow/platform';
 import { and, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 import { redact } from './facts/rules';
@@ -143,9 +148,7 @@ export class SearchService {
   constructor(private readonly o: SearchServiceOptions) {}
 
   private has(skill: string) {
-    const { catalog } = this.o.platform;
-    const bot = catalog.bots.get(this.o.bot);
-    return Boolean(bot?.skills.includes(skill) && catalog.skills.has(skill));
+    return Boolean(botWithSkill(this.o.platform.catalog, this.o.bot, skill));
   }
 
   get available(): boolean {

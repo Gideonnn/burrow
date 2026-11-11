@@ -7,6 +7,7 @@ import {
 } from '@burrow/contracts';
 import {
   botRequest,
+  botWithSkill,
   listPeople,
   type Platform,
   type StandingWork,
@@ -610,12 +611,8 @@ export class FactsService {
   kinds(): TaskKind[] {
     const { catalog } = this.o.platform;
     const kinds: TaskKind[] = [];
-    const factsBot = catalog.bots.get(this.o.factsBot);
-    if (
-      factsBot?.agent === 'local' &&
-      factsBot.skills.includes(FACTS_SKILL) &&
-      catalog.skills.has(FACTS_SKILL)
-    ) {
+    const factsBot = botWithSkill(catalog, this.o.factsBot, FACTS_SKILL);
+    if (factsBot?.agent === 'local') {
       kinds.push({
         name: 'hedwig.facts',
         title: 'Mail-facts',
@@ -646,13 +643,12 @@ export class FactsService {
         },
       });
     }
-    const templatesBot = catalog.bots.get(this.o.templatesBot);
-    if (
-      templatesBot &&
-      templatesBot.agent !== 'local' &&
-      templatesBot.skills.includes(TEMPLATES_SKILL) &&
-      catalog.skills.has(TEMPLATES_SKILL)
-    ) {
+    const templatesBot = botWithSkill(
+      catalog,
+      this.o.templatesBot,
+      TEMPLATES_SKILL,
+    );
+    if (templatesBot && templatesBot.agent !== 'local') {
       this.templatesOn = true;
       kinds.push({
         name: 'hedwig.templates',

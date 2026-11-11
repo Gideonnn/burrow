@@ -1,5 +1,10 @@
 import { type LineupRead, lineupRead } from '@burrow/contracts';
-import { botRequest, type Platform, untrusted } from '@burrow/platform';
+import {
+  botRequest,
+  botWithSkill,
+  type Platform,
+  untrusted,
+} from '@burrow/platform';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { decodeEntities, htmlToText } from '../../html';
@@ -32,14 +37,8 @@ export class OutingLineups {
       changed: (id: string) => void;
     },
   ) {
-    const { catalog } = o.platform;
-    const bot = o.bot ? catalog.bots.get(o.bot) : undefined;
-    this.on = Boolean(
-      bot &&
-      bot.agent !== 'local' &&
-      bot.skills.includes(LINEUP_SKILL) &&
-      catalog.skills.has(LINEUP_SKILL),
-    );
+    const bot = botWithSkill(o.platform.catalog, o.bot, LINEUP_SKILL);
+    this.on = Boolean(bot && bot.agent !== 'local');
   }
 
   private get db() {
