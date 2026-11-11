@@ -840,8 +840,6 @@ public final class LumosModel {
         }
     }
 
-    public var isPrefetched: (TitleRef) -> Bool { { [self] in details[$0] != nil } }
-
     func loadPerson(_ id: String) async {
         guard let api else { return }
         if let known = people[id], known.person != nil { return }

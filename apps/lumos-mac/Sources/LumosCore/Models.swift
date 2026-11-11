@@ -47,8 +47,6 @@ public enum VerdictKind: String, Codable, Sendable {
     case seen
     case moreLikeThis = "more-like-this"
     case lessLikeThis = "less-like-this"
-
-    public var isPass: Bool { self == .notNow || self == .seen }
 }
 
 public struct TitleRef: Hashable, Codable, Sendable, CustomStringConvertible {
