@@ -317,75 +317,71 @@ public struct LibraryInfo: Codable, Sendable, Hashable {
     public var server: OnServer?
 }
 
-public struct TitleDetail: Codable, Sendable {
-    public var dataOrigin: DataOrigin
-    public var mediaType: MediaType
-    public var tmdbId: Int
-    public var title: String
-    public var year: Int?
-    public var runtimeMinutes: Int?
-    public var seasons: Int?
-    public var genres: [String]
-    public var traits: [String]
-    public var language: String?
-    public var poster: String?
-    public var backdrop: String?
-    public var availability: Availability
-    public var hasTrailer: Bool
-    public var onList: Bool
-    public var onShared: Bool
-    public var onMine: Bool
-    public var pass: VerdictRef?
-    public var taste: VerdictRef?
-    public var match: String?
-    public var synopsis: String?
-    public var synopsisLanguage: String?
-    public var credits: [Credit]
-    public var scores: [Score]
-    public var snippets: [Snippet]
-    public var trailer: Trailer?
-    public var stills: [String]
-    public var stillsCredit: String?
-    public var tmdbUrl: String?
-    public var request: RequestState?
-    public var download: Download?
-    public var tagline: String?
-    public var originalTitle: String?
-    public var status: String?
-    public var releaseDate: String?
-    public var lastAired: String?
-    /// In US dollars; nil when the source does not know.
-    public var budget: Double?
-    public var revenue: Double?
-    public var studios: [String]?
-    public var collection: Collection?
-    public var cast: [CastMember]?
-    public var crew: [CastMember]?
-    public var seasonList: [SeasonSummary]?
-    public var episodes: Int?
-    /// Nil when the media server does not hold it.
-    public var library: LibraryInfo?
-    public var seen: SeenVerdicts?
+/// A title with everything its page shows: the card's fields, which read
+/// straight through (`detail.title`), and the rest.
+@dynamicMemberLookup
+public struct TitleDetail: Decodable, Sendable {
+    public var summary: TitleSummary
+    public var extra: Extra
 
-    public struct Collection: Codable, Sendable, Hashable {
-        public var id: Int
-        public var name: String
+    public init(from decoder: any Decoder) throws {
+        summary = try TitleSummary(from: decoder)
+        extra = try Extra(from: decoder)
     }
 
-    public var ref: TitleRef { TitleRef(mediaType: mediaType, tmdbId: tmdbId) }
+    public subscript<T>(dynamicMember field: KeyPath<TitleSummary, T>) -> T { summary[keyPath: field] }
+    public subscript<T>(dynamicMember field: KeyPath<Extra, T>) -> T { extra[keyPath: field] }
 
-    /// "Released" and friends in Dutch, when the source says so.
-    public var statusLabel: String? {
-        switch status {
-        case "Released": nil
-        case "Returning Series": "Loopt nog"
-        case "Ended": "Afgelopen"
-        case "Canceled": "Gestopt"
-        case "In Production", "Post Production": "In productie"
-        case "Planned": "Gepland"
-        case "Rumored": "Gerucht"
-        case let other?: other
-        case nil: nil
+    /// What the page shows beyond the card.
+    public struct Extra: Decodable, Sendable {
+        public var dataOrigin: DataOrigin
+        public var synopsis: String?
+        public var synopsisLanguage: String?
+        public var credits: [Credit]
+        public var scores: [Score]
+        public var snippets: [Snippet]
+        public var trailer: Trailer?
+        public var stills: [String]
+        public var stillsCredit: String?
+        public var tmdbUrl: String?
+        public var request: RequestState?
+        public var download: Download?
+        public var tagline: String?
+        public var originalTitle: String?
+        public var status: String?
+        public var releaseDate: String?
+        public var lastAired: String?
+        /// In US dollars; nil when the source does not know.
+        public var budget: Double?
+        public var revenue: Double?
+        public var studios: [String]?
+        public var collection: Collection?
+        public var cast: [CastMember]?
+        public var crew: [CastMember]?
+        public var seasonList: [SeasonSummary]?
+        public var episodes: Int?
+        /// Nil when the media server does not hold it.
+        public var library: LibraryInfo?
+        public var seen: SeenVerdicts?
+
+        public struct Collection: Codable, Sendable, Hashable {
+            public var id: Int
+            public var name: String
+        }
+
+        /// "Released" and friends in Dutch, when the source says so.
+        public var statusLabel: String? {
+            switch status {
+            case "Released": nil
+            case "Returning Series": "Loopt nog"
+            case "Ended": "Afgelopen"
+            case "Canceled": "Gestopt"
+            case "In Production", "Post Production": "In productie"
+            case "Planned": "Gepland"
+            case "Rumored": "Gerucht"
+            case let other?: other
+            case nil: nil
+            }
         }
     }
 }
@@ -453,16 +449,6 @@ public enum Money {
         if dollars >= 1_000_000 { return "$ \(formatter.string(from: NSNumber(value: dollars / 1_000_000)) ?? "") mln" }
         formatter.maximumFractionDigits = 0
         return "$ \(formatter.string(from: NSNumber(value: dollars)) ?? "")"
-    }
-}
-
-extension TitleDetail {
-    public var summary: TitleSummary {
-        TitleSummary(
-            mediaType: mediaType, tmdbId: tmdbId, title: title, year: year, runtimeMinutes: runtimeMinutes,
-            seasons: seasons, genres: genres, traits: traits, language: language, poster: poster, backdrop: backdrop,
-            availability: availability, hasTrailer: hasTrailer, onList: onList, onShared: onShared, onMine: onMine,
-            pass: pass, taste: taste, match: match)
     }
 }
 

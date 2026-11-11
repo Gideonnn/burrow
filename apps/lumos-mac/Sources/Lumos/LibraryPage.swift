@@ -55,9 +55,10 @@ struct DeleteDialog: ViewModifier {
     @Environment(LumosModel.self) private var model
 
     func body(content: Content) -> some View {
+        @Bindable var model = model
         content.confirmationDialog(
             model.deleteRequest?.question ?? "",
-            isPresented: Binding(get: { model.deleteRequest != nil }, set: { if !$0 { model.deleteRequest = nil } }),
+            isPresented: $model.deleteRequest.isPresent(),
             titleVisibility: .visible,
             presenting: model.deleteRequest
         ) { _ in
