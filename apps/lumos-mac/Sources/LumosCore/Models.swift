@@ -143,7 +143,7 @@ public struct Snippet: Codable, Sendable, Hashable {
     public var checkedAt: String
 }
 
-public enum Trailer: Codable, Sendable, Hashable {
+public enum Trailer: Decodable, Sendable, Hashable {
     case youtube(key: String, url: String, publisher: String, language: String?, checkedAt: String)
     case direct(url: String, sourceUrl: String?, publisher: String, language: String?, license: String?, checkedAt: String)
 
@@ -166,27 +166,6 @@ public enum Trailer: Codable, Sendable, Hashable {
                 url: try c.decode(String.self, forKey: .url), sourceUrl: try c.decodeIfPresent(String.self, forKey: .sourceUrl),
                 publisher: publisher, language: language, license: try c.decodeIfPresent(String.self, forKey: .license),
                 checkedAt: checkedAt)
-        }
-    }
-
-    public func encode(to encoder: any Encoder) throws {
-        var c = encoder.container(keyedBy: CodingKeys.self)
-        switch self {
-        case let .youtube(key, url, publisher, language, checkedAt):
-            try c.encode("youtube", forKey: .provider)
-            try c.encode(key, forKey: .key)
-            try c.encode(url, forKey: .url)
-            try c.encode(publisher, forKey: .publisher)
-            try c.encode(language, forKey: .language)
-            try c.encode(checkedAt, forKey: .checkedAt)
-        case let .direct(url, sourceUrl, publisher, language, license, checkedAt):
-            try c.encode("direct", forKey: .provider)
-            try c.encode(url, forKey: .url)
-            try c.encode(sourceUrl, forKey: .sourceUrl)
-            try c.encode(publisher, forKey: .publisher)
-            try c.encode(language, forKey: .language)
-            try c.encode(license, forKey: .license)
-            try c.encode(checkedAt, forKey: .checkedAt)
         }
     }
 
