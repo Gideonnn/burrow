@@ -172,7 +172,7 @@ const languages = (streams: Stream[], type: string) => {
   return names;
 };
 
-export function mediaFactsOf(item: Item | undefined): MediaFacts | null {
+function mediaFactsOf(item: Item | undefined): MediaFacts | null {
   const streams = item?.MediaSources?.[0]?.MediaStreams ?? [];
   if (!streams.length) return null;
   const video = streams.find((s) => s.Type === 'Video');
@@ -312,11 +312,8 @@ export class JellyfinPlayer {
       fields: 'ProviderIds',
       limit: '20',
     });
-    const wanted = String(title.tmdbId);
-    const match = (page.Items ?? []).find((i) =>
-      Object.entries(i.ProviderIds ?? {}).some(
-        ([key, value]) => key.toLowerCase() === 'tmdb' && value === wanted,
-      ),
+    const match = (page.Items ?? []).find(
+      (i) => tmdbOf(i) === String(title.tmdbId),
     );
     return match ? found(match) : null;
   }
@@ -554,9 +551,11 @@ export class JellyfinPlayer {
   async episode(
     item: LibraryItem,
     userId?: string | null,
-  ): Promise<
-    (Episode & { id: string; positionSeconds: number | null }) | null
-  > {
+  ): Promise<{
+    id: string;
+    episode: Episode;
+    positionSeconds: number | null;
+  } | null> {
     if (item.type !== 'tv') return null;
     const user: Record<string, string> = userId ? { userId } : {};
     let found: Item | undefined;
@@ -578,7 +577,7 @@ export class JellyfinPlayer {
     return found
       ? {
           id: found.Id,
-          ...episodeOf(found),
+          episode: episodeOf(found),
           positionSeconds: userId
             ? seconds(found.UserData?.PlaybackPositionTicks)
             : null,
@@ -611,16 +610,16 @@ export class JellyfinPlayer {
     }
     // The TV's own account decides where it stopped; else the household's.
     const userId = session.UserId ?? (await this.user());
-    const episode = await this.episode(item, userId);
-    if (item.type === 'tv' && !episode) {
+    const next = await this.episode(item, userId);
+    if (item.type === 'tv' && !next) {
       throw new JellyfinError(
         'Jellyfin heeft nog geen aflevering van deze serie',
         409,
       );
     }
-    const itemId = episode?.id ?? item.id;
-    const start = episode
-      ? episode.positionSeconds
+    const itemId = next?.id ?? item.id;
+    const start = next
+      ? next.positionSeconds
       : await this.position(item.id, userId);
     const command: Record<string, string> = {
       playCommand: 'PlayNow',
@@ -645,13 +644,7 @@ export class JellyfinPlayer {
     const { userId: _user, ...screen } = toScreen(latest);
     return {
       screen,
-      episode: episode
-        ? {
-            season: episode.season,
-            number: episode.number,
-            title: episode.title,
-          }
-        : null,
+      episode: next?.episode ?? null,
       confirmed,
       ...(start ? { startSeconds: start } : {}),
     };

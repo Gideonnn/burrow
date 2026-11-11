@@ -215,18 +215,10 @@ export class Lumos {
       player.item(t),
       player.screens(),
     ]);
-    const episode = item
-      ? await player.episode(item, screens[0]?.userId)
-      : null;
+    const next = item ? await player.episode(item, screens[0]?.userId) : null;
     const answer: WatchResponse = {
       web: item ? await player.webUrl(item) : null,
-      episode: episode
-        ? {
-            season: episode.season,
-            number: episode.number,
-            title: episode.title,
-          }
-        : null,
+      episode: next?.episode ?? null,
       screens: screens.map(({ userId: _user, ...screen }) => screen),
     };
     if (player.readsUser) {
