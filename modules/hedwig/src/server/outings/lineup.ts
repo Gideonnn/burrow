@@ -1,12 +1,17 @@
 import { type LineupRead, lineupRead } from '@burrow/contracts';
-import { botRequest, type Platform, untrusted } from '@burrow/platform';
+import {
+  botRequest,
+  botWithSkill,
+  type Platform,
+  untrusted,
+} from '@burrow/platform';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { decodeEntities, htmlToText } from '../../html';
 import { outingLineups, outings } from '../schema';
 import { type FetchPublic, pageLimit } from './images';
 
-export const LINEUP_SKILL = 'festival-lineup';
+const LINEUP_SKILL = 'festival-lineup';
 const schema = z.toJSONSchema(lineupRead, { target: 'draft-7' });
 // Pages next to the home page that may name acts: the line-up itself and
 // the latest news, where festivals announce names one by one.
@@ -32,14 +37,8 @@ export class OutingLineups {
       changed: (id: string) => void;
     },
   ) {
-    const { catalog } = o.platform;
-    const bot = o.bot ? catalog.bots.get(o.bot) : undefined;
-    this.on = Boolean(
-      bot &&
-      bot.agent !== 'local' &&
-      bot.skills.includes(LINEUP_SKILL) &&
-      catalog.skills.has(LINEUP_SKILL),
-    );
+    const bot = botWithSkill(o.platform.catalog, o.bot, LINEUP_SKILL);
+    this.on = Boolean(bot && bot.agent !== 'local');
   }
 
   private get db() {
@@ -157,7 +156,7 @@ export class OutingLineups {
 }
 
 // Line-up pages first, then the newest news, all on the event's own site.
-export function pageLinks(html: string, base: string): string[] {
+function pageLinks(html: string, base: string): string[] {
   const host = new URL(base).hostname.replace(/^www\./, '');
   const lineup: string[] = [];
   const news: string[] = [];
@@ -178,7 +177,7 @@ export function pageLinks(html: string, base: string): string[] {
   return [...lineup.slice(0, 3), ...news];
 }
 
-export function pageText(html: string) {
+function pageText(html: string) {
   return htmlToText(
     html.replace(/<(nav|footer|noscript)[\s\S]*?<\/\1>/gi, ''),
   ).slice(0, PAGE_CHARS);

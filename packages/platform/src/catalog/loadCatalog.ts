@@ -62,6 +62,18 @@ export async function loadCatalog(dirs: CatalogDirs): Promise<Catalog> {
   return { bots, skills };
 }
 
+// The bot, when it exists and may use the skill.
+export function botWithSkill(
+  catalog: Catalog,
+  name: string | undefined,
+  skill: string,
+): BotDefinition | undefined {
+  const bot = name ? catalog.bots.get(name) : undefined;
+  return bot?.skills.includes(skill) && catalog.skills.has(skill)
+    ? bot
+    : undefined;
+}
+
 async function listDir(dir: string) {
   try {
     return await readdir(dir, { withFileTypes: true });

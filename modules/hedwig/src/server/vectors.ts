@@ -7,7 +7,7 @@ import { messageVectors } from './schema';
 // about 50 MB of memory instead of 160.
 export const DIMS = 256;
 
-export function normalised(values: readonly number[]): Float32Array {
+function normalised(values: readonly number[]): Float32Array {
   const v = Float32Array.from(values.slice(0, DIMS));
   let norm = 0;
   for (const x of v) norm += x * x;

@@ -23,6 +23,9 @@ Pensieve is the cleanest example to copy.
      Map the module's own errors to HTTP once with `.onError(asHttp)` on the router
      (rethrow what is not yours): the platform mounts it with `route()`, which wraps
      every handler in the router's error handler, so no route needs a `try`.
+     Hedwig and the platform still wrap single calls in `httpErrors(YourError)`, which
+     answers 404 ("not found") or 400 the same way; new code uses `.onError`.
+   - Whether a bot may do a job: `botWithSkill(catalog, bot, skill)`.
    - `subjects`: what tasks and routines can be about, with visibility, the agent prompt
      (fence untrusted text with `untrusted()`), and how to apply a result.
    - `taskKinds`: agent kinds (`agent.request`, `accept`) or code kinds (`run`), with

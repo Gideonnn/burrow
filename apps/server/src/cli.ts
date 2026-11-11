@@ -17,6 +17,7 @@ import {
   createPerson,
   listKeys,
   listPeople,
+  personByName,
   revokeKey,
   routines,
   SecretBox,
@@ -55,9 +56,7 @@ switch (command) {
   }
   case 'set-email': {
     const store = db();
-    const name = required(args[0], 'name');
-    const person = listPeople(store).find((p) => p.name === name);
-    if (!person) fail(`no person named ${name}`);
+    const person = named(store, required(args[0], 'name'));
     const updated = setPersonEmail(
       store,
       person.id,
@@ -70,9 +69,7 @@ switch (command) {
     // For a new device, or when the init key is lost; revoke the old one in
     // Hedwig afterwards.
     const store = db();
-    const name = required(args[0], 'name');
-    const person = listPeople(store).find((p) => p.name === name);
-    if (!person) fail(`no person named ${name}`);
+    const person = named(store, required(args[0], 'name'));
     const rights = right
       .array()
       .safeParse(
@@ -203,6 +200,10 @@ switch (command) {
     fail(
       'usage: cli init <name> | add-person <name> | set-email <name> <email> | create-key <name> <key name> [rights] | revoke-key <key id> | list | generate-secret | seed-demo | backup <file>',
     );
+}
+
+function named(store: ReturnType<typeof db>, name: string) {
+  return personByName(store, name) ?? fail(`no person named ${name}`);
 }
 
 function required(value: string | undefined, what: string): string {

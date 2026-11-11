@@ -4,8 +4,6 @@ import type { Db } from './db';
 import { hashToken } from './keys';
 import { apiKeys } from './schema';
 
-export type KeyRow = typeof apiKeys.$inferSelect;
-
 // Modules add what they resolve per key through declaration merging, e.g.
 // Hedwig adds `mailboxIds`.
 // biome-ignore lint: an empty interface is what modules merge into
@@ -45,14 +43,6 @@ export function resolveAccess(
     .set({ lastUsedAt: new Date() })
     .where(eq(apiKeys.id, key.id))
     .run();
-  return accessForKey(db, key, extenders);
-}
-
-export function accessForKey(
-  db: Db,
-  key: KeyRow,
-  extenders: readonly AccessExtender[] = [],
-): Access {
   const base: BaseAccess = {
     keyId: key.id,
     keyName: key.name,

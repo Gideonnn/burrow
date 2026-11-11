@@ -1,5 +1,5 @@
 import { type MessageInsights, messageInsights } from '@burrow/contracts';
-import { type Platform, botRequest } from '@burrow/platform';
+import { botRequest, botWithSkill, type Platform } from '@burrow/platform';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import type { MailService } from './mail-service';
@@ -23,8 +23,7 @@ export class InsightsService {
   private readonly running = new Map<string, Promise<MessageInsights>>();
 
   constructor(private readonly o: InsightsOptions) {
-    const bot = o.platform.catalog.bots.get(o.bot);
-    if (!bot?.skills.includes(SKILL) || !o.platform.catalog.skills.has(SKILL)) {
+    if (!botWithSkill(o.platform.catalog, o.bot, SKILL)) {
       throw new Error(
         `bot "${o.bot}" needs the ${SKILL} skill for reply suggestions`,
       );

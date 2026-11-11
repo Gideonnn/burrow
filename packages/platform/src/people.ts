@@ -115,7 +115,7 @@ export function revokeKey(db: Db, id: string) {
   return summarizeKey(row);
 }
 
-export function summarizeKey(row: typeof apiKeys.$inferSelect): ApiKeySummary {
+function summarizeKey(row: typeof apiKeys.$inferSelect): ApiKeySummary {
   return {
     id: row.id,
     personId: row.personId,

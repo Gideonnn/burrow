@@ -3,10 +3,7 @@ import type { AgentRequest } from './agents/runner';
 
 // The bot's persona followed by exactly the skills this run needs, so
 // instructions for other jobs cannot leak in.
-export function systemPrompt(
-  bot: BotDefinition,
-  skills: SkillDefinition[],
-): string {
+function systemPrompt(bot: BotDefinition, skills: SkillDefinition[]): string {
   return [
     bot.persona,
     ...skills.map((s) => `# Skill: ${s.name}\n\n${s.instructions}`),

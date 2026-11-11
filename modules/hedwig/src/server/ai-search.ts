@@ -9,7 +9,12 @@ import {
   type SearchToken,
   searchPlan,
 } from '@burrow/contracts';
-import { botRequest, type Platform, untrusted } from '@burrow/platform';
+import {
+  botRequest,
+  botWithSkill,
+  type Platform,
+  untrusted,
+} from '@burrow/platform';
 import { and, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 import { redact } from './facts/rules';
@@ -82,10 +87,7 @@ const FULL_MONTHS = [
 ];
 
 // "maart 2026", "2025", "1 mrt – 15 apr 2026", "na 1 mrt 2026".
-export function periodLabel(
-  after: string | null,
-  before: string | null,
-): string {
+function periodLabel(after: string | null, before: string | null): string {
   const d = (s: string) => new Date(`${s}T00:00:00Z`);
   const day = (s: string) =>
     `${d(s).getUTCDate()} ${MONTHS[d(s).getUTCMonth()]} ${d(s).getUTCFullYear()}`;
@@ -146,9 +148,7 @@ export class SearchService {
   constructor(private readonly o: SearchServiceOptions) {}
 
   private has(skill: string) {
-    const { catalog } = this.o.platform;
-    const bot = catalog.bots.get(this.o.bot);
-    return Boolean(bot?.skills.includes(skill) && catalog.skills.has(skill));
+    return Boolean(botWithSkill(this.o.platform.catalog, this.o.bot, skill));
   }
 
   get available(): boolean {

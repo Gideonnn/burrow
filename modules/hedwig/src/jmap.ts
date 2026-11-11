@@ -11,7 +11,7 @@ import type {
   SyncResult,
 } from './provider';
 
-export const FASTMAIL_SESSION_URL = 'https://api.fastmail.com/jmap/session';
+const FASTMAIL_SESSION_URL = 'https://api.fastmail.com/jmap/session';
 const USING = [
   'urn:ietf:params:jmap:core',
   'urn:ietf:params:jmap:mail',
@@ -87,7 +87,7 @@ type Session = {
 };
 type Invocation = [string, Record<string, unknown>, string];
 
-export class JmapError extends Error {
+class JmapError extends Error {
   constructor(
     readonly type: string,
     message: string,
@@ -498,7 +498,7 @@ export class JmapClient implements MailProviderClient {
   }
 }
 
-export function parseJmapEmail(
+function parseJmapEmail(
   e: JmapEmail,
   roleOf: Map<string, string>,
 ): ProviderMessage {

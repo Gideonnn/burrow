@@ -9,18 +9,11 @@ import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import { z } from 'zod';
 import type { PlatformEnv } from '../env';
-import { requireRight } from '../middleware';
+import { httpErrors, requireRight } from '../middleware';
 import { RoutineError } from '../workers/routines';
 import { WorkerError } from '../workers/tasks';
 
-const asHttp = (error: unknown): never => {
-  if (error instanceof RoutineError || error instanceof WorkerError) {
-    throw new HTTPException(error.message === 'not found' ? 404 : 400, {
-      message: error.message,
-    });
-  }
-  throw error;
-};
+const run = httpErrors(RoutineError, WorkerError);
 
 const failRequest = z.object({ error: z.string().min(1) });
 const tasksQuery = z.object({
@@ -57,37 +50,31 @@ export const workRoutes = new Hono<PlatformEnv>()
     '/routines',
     requireRight('organize'),
     zValidator('json', routineInput),
-    (c) => {
-      try {
-        return c.json(
+    async (c) =>
+      c.json(
+        await run(() =>
           c.var.platform.routines.create(
             c.var.access.personId,
             c.req.valid('json'),
           ),
-          201,
-        );
-      } catch (error) {
-        return asHttp(error);
-      }
-    },
+        ),
+        201,
+      ),
   )
   .put(
     '/routines/:id',
     requireRight('organize'),
     zValidator('json', routineInput),
-    (c) => {
-      try {
-        return c.json(
+    async (c) =>
+      c.json(
+        await run(() =>
           c.var.platform.routines.update(
             c.var.access.personId,
             c.req.param('id'),
             c.req.valid('json'),
           ),
-        );
-      } catch (error) {
-        return asHttp(error);
-      }
-    },
+        ),
+      ),
   )
   .delete('/routines/:id', requireRight('organize'), (c) => {
     if (
@@ -107,27 +94,21 @@ export const workRoutes = new Hono<PlatformEnv>()
     );
   })
   .post('/tasks/:id/approve', requireRight('organize'), async (c) => {
-    try {
-      await c.var.platform.workers.approve(c.req.param('id'), c.var.access);
-    } catch (error) {
-      asHttp(error);
-    }
+    await run(() =>
+      c.var.platform.workers.approve(c.req.param('id'), c.var.access),
+    );
     return c.json({ approved: true });
   })
-  .post('/tasks/:id/reject', requireRight('organize'), (c) => {
-    try {
-      c.var.platform.workers.reject(c.req.param('id'), c.var.access);
-    } catch (error) {
-      asHttp(error);
-    }
+  .post('/tasks/:id/reject', requireRight('organize'), async (c) => {
+    await run(() =>
+      c.var.platform.workers.reject(c.req.param('id'), c.var.access),
+    );
     return c.json({ rejected: true });
   })
-  .post('/tasks/:id/retry', requireRight('organize'), (c) => {
-    try {
-      c.var.platform.workers.retry(c.req.param('id'), c.var.access);
-    } catch (error) {
-      asHttp(error);
-    }
+  .post('/tasks/:id/retry', requireRight('organize'), async (c) => {
+    await run(() =>
+      c.var.platform.workers.retry(c.req.param('id'), c.var.access),
+    );
     return c.json({ queued: true });
   })
   .post(
@@ -154,54 +135,42 @@ export const workRoutes = new Hono<PlatformEnv>()
     '/runners/:id',
     requireRight('tasks'),
     zValidator('json', updateRunnerRequest),
-    (c) => {
-      try {
-        return c.json(
+    async (c) =>
+      c.json(
+        await run(() =>
           c.var.platform.workers.setPaused(
             c.req.param('id'),
             c.var.access,
             c.req.valid('json').paused,
           ),
-        );
-      } catch (error) {
-        return asHttp(error);
-      }
-    },
+        ),
+      ),
   )
-  .delete('/runners/:id', requireRight('tasks'), (c) => {
-    try {
-      c.var.platform.workers.removeRunner(c.req.param('id'), c.var.access);
-    } catch (error) {
-      asHttp(error);
-    }
+  .delete('/runners/:id', requireRight('tasks'), async (c) => {
+    await run(() =>
+      c.var.platform.workers.removeRunner(c.req.param('id'), c.var.access),
+    );
     return c.json({ deleted: true });
   })
   .post('/runner/tasks/:id/complete', requireRight('tasks'), async (c) => {
-    try {
-      await c.var.platform.workers.complete(
-        c.req.param('id'),
-        c.var.access,
-        await c.req.json(),
-      );
-    } catch (error) {
-      asHttp(error);
-    }
+    const raw: unknown = await c.req.json();
+    await run(() =>
+      c.var.platform.workers.complete(c.req.param('id'), c.var.access, raw),
+    );
     return c.json({ accepted: true });
   })
   .post(
     '/runner/tasks/:id/fail',
     requireRight('tasks'),
     zValidator('json', failRequest),
-    (c) => {
-      try {
+    async (c) => {
+      await run(() =>
         c.var.platform.workers.fail(
           c.req.param('id'),
           c.var.access,
           c.req.valid('json').error,
-        );
-      } catch (error) {
-        asHttp(error);
-      }
+        ),
+      );
       return c.json({ failed: true });
     },
   );

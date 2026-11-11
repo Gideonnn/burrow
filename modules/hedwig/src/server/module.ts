@@ -219,7 +219,7 @@ export function hedwigModule(platform: Platform, options: HedwigOptions) {
     restrictions: [mailboxRestriction],
     api,
     browser: connect?.browser,
-    // Hogsmeade's two faces show the same outings and get their updates here.
+    // Hogsmeade shows the same outings and gets its updates here.
     clients: ['hedwig', 'hogsmeade'],
     me: (access) => ({
       mailboxes: access.mailboxIds.length

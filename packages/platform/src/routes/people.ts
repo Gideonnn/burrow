@@ -11,7 +11,7 @@ import { zValidator } from '@hono/zod-validator';
 import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import type { PlatformEnv } from '../env';
-import { requireRight } from '../middleware';
+import { httpErrors, requireRight } from '../middleware';
 import {
   AccessError,
   createKey,
@@ -23,12 +23,8 @@ import {
 } from '../people';
 import { SettingsError } from '../settings';
 
-const asHttp = (error: unknown): never => {
-  if (error instanceof AccessError || error instanceof SettingsError) {
-    throw new HTTPException(400, { message: error.message });
-  }
-  throw error;
-};
+// No message of these is "not found", so every one answers 400.
+const run = httpErrors(AccessError, SettingsError);
 
 // The person behind the key, their settings, and the household: both people
 // are admins who manage each other's settings and devices, but no route here
@@ -68,13 +64,11 @@ export const peopleRoutes = new Hono<PlatformEnv>()
     '/me',
     requireRight('organize'),
     zValidator('json', updateMeRequest),
-    (c) => {
+    async (c) => {
       const { language } = c.req.valid('json');
-      try {
-        c.var.platform.settings.update(c.var.access.personId, { language });
-      } catch (error) {
-        asHttp(error);
-      }
+      await run(() =>
+        c.var.platform.settings.update(c.var.access.personId, { language }),
+      );
       return c.json({ language });
     },
   )
@@ -90,17 +84,15 @@ export const peopleRoutes = new Hono<PlatformEnv>()
     '/me/settings',
     requireRight('organize'),
     zValidator('json', updateSettingsRequest),
-    (c) => {
-      try {
-        const values = c.var.platform.settings.update(
+    async (c) => {
+      const values = await run(() =>
+        c.var.platform.settings.update(
           c.var.access.personId,
           c.req.valid('json').values,
-        );
-        settingsChanged(c.var.platform, c.var.access.personId);
-        return c.json(values);
-      } catch (error) {
-        return asHttp(error);
-      }
+        ),
+      );
+      settingsChanged(c.var.platform, c.var.access.personId);
+      return c.json(values);
     },
   )
   // The person's standing instructions for every bot that works for them.
@@ -142,7 +134,7 @@ export const peopleRoutes = new Hono<PlatformEnv>()
   .patch(
     '/admin/people/:id/settings',
     zValidator('json', updateSettingsRequest),
-    (c) => {
+    async (c) => {
       const id = c.req.param('id');
       if (!person(c.var.db, id)) {
         throw new HTTPException(404, { message: 'unknown person' });
@@ -156,13 +148,11 @@ export const peopleRoutes = new Hono<PlatformEnv>()
           message: `only the person changes ${personal.map((d) => d.key).join(', ')}`,
         });
       }
-      try {
-        const updated = c.var.platform.settings.update(id, values);
-        settingsChanged(c.var.platform, id);
-        return c.json(updated);
-      } catch (error) {
-        return asHttp(error);
-      }
+      const updated = await run(() =>
+        c.var.platform.settings.update(id, values),
+      );
+      settingsChanged(c.var.platform, id);
+      return c.json(updated);
     },
   )
   .get('/admin/people/:id/instructions', (c) =>
@@ -183,24 +173,18 @@ export const peopleRoutes = new Hono<PlatformEnv>()
   .get('/admin/keys', (c) => c.json(listKeys(c.var.db)))
   // An admin makes keys for themselves only: a key for someone else would
   // read their mail. The other person logs in on their own Mac instead.
-  .post('/admin/keys', zValidator('json', createKeyRequest), (c) => {
+  .post('/admin/keys', zValidator('json', createKeyRequest), async (c) => {
     const request = c.req.valid('json');
     if (request.personId !== c.var.access.personId) {
       throw new HTTPException(403, {
         message: 'a key for someone else is made by logging in on their device',
       });
     }
-    try {
-      const made = createKey(
-        c.var.db,
-        request,
-        c.var.platform.restrictionChecks,
-      );
-      householdChanged(c.var.platform);
-      return c.json(made, 201);
-    } catch (error) {
-      return asHttp(error);
-    }
+    const made = await run(() =>
+      createKey(c.var.db, request, c.var.platform.restrictionChecks),
+    );
+    householdChanged(c.var.platform);
+    return c.json(made, 201);
   })
   .delete('/admin/keys/:id', (c) => {
     const id = c.req.param('id');

@@ -3,6 +3,7 @@
 Newest first.
 
 - [2026-11-11 Module routers map errors once](2026-11-11-module-routers-map-errors-once.md): one `onError` per router instead of a `try` per route, Lumos split into changes, ranking and the Seerr mappers, and the hook that refuses `.key` in Bash.
+- [2026-11-11 A refactor pass over the server, the platform and Hedwig](2026-11-11-server-refactor-pass.md): shared helpers for route errors, bot skills, progress counts and single runs; what was rejected, and the secret hook trap.
 - [2026-11-11 Hogsmeade keeps the native face](2026-11-11-hogsmeade-keeps-the-native-face.md): Feest is gone, Evenementen moves from Hedwig, a HIG pass; mails can be read and moved; merging waits for the server.
 - [2026-11-11 Hedwig becomes a native mail client](2026-11-11-hedwig-becomes-a-native-mail-client.md): Evenementen moves to Hogsmeade (reminders stay), multiple selection with one call per message, a scope bar that must not switch views, a window delegate for Concept bewaren?, attachments through existing routes.
 - [2026-11-11 Triage stopped when the Claude login expired](2026-11-11-triage-stopped-when-the-claude-login-expired.md): eight days without triage, a Codex fallback that never worked, a third of the keeps unsure; sender rules both ways, doubts in the inbox, and what was rejected.

@@ -77,7 +77,7 @@ const phrase = (word: string, prefix: boolean) =>
 
 // The FTS5 expression for the words and people; null when there is nothing
 // to match on and the filters alone decide.
-export function ftsExpression(query: SearchQuery): string | null {
+function ftsExpression(query: SearchQuery): string | null {
   const groups = query.groups
     .map((group, gi) => {
       const last = gi === query.groups.length - 1;
@@ -426,10 +426,4 @@ export function typedQuery(
     hasAttachments: filters.hasAttachments ?? false,
     unreadOnly: filters.unreadOnly ?? false,
   };
-}
-
-// Splits typed words; quotes keep a phrase together.
-export function words(q: string): string[][] {
-  const parsed = parseQuery(q);
-  return [...parsed.words, ...parsed.phrases].map((w) => [w]);
 }

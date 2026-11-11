@@ -9,6 +9,7 @@ import {
 import { and, count, desc, eq, inArray, isNull, notInArray } from 'drizzle-orm';
 import { z } from 'zod';
 import { FACTS_FEATURE } from './facts/service';
+import { Recent } from './memo';
 import { mailboxes, messageFacts, messages, messageVectors } from './schema';
 import { DIMS, type VectorIndex } from './vectors';
 
@@ -24,7 +25,7 @@ const embedAnswer = z.object({ vectors: z.array(z.array(z.number())) });
 
 // What a message means, for the model: subject, sender, the facts' summary
 // or else the start of the body, and the search words.
-export function embedText(
+function embedText(
   m: {
     subject: string;
     from: { name?: string | null; email: string };
@@ -38,21 +39,15 @@ export function embedText(
   return `title: ${m.subject} | text: ${m.subject}\nVan: ${m.from.name || m.from.email}\n${body}${words}`;
 }
 
-// The way a question is put to the same model.
-export const embedQuery = (question: string) =>
-  `task: search result | query: ${question}`;
-
 // Search by meaning needs every message as a vector. The runner on the
 // owner's Mac makes them with Ollama, sixty-four at a time, newest first, for
 // people who let their mail be indexed; nothing leaves the Mac but numbers.
 export class EmbeddingsService {
   // Vectors a runner sent, held from accepting the answer until applying it.
   private readonly pending = new Map<string, number[][]>();
-  // Counting is a scan; runners ask after every piece.
-  private readonly counted = new Map<
-    string,
-    { at: number; value: { waiting: number; done: number } }
-  >();
+  private readonly progress = new Recent<{ waiting: number; done: number }>(
+    30_000,
+  );
 
   constructor(
     private readonly platform: Platform,
@@ -84,24 +79,22 @@ export class EmbeddingsService {
       if (!this.platform.settings.enabled(personId, FACTS_FEATURE)) {
         return { waiting: 0, done: null };
       }
-      const cached = this.counted.get(personId);
-      if (cached && Date.now() - cached.at < 30_000) return cached.value;
-      const base = this.db
-        .select({ n: count() })
-        .from(messages)
-        .innerJoin(mailboxes, eq(mailboxes.id, messages.mailboxId))
-        .leftJoin(messageVectors, eq(messageVectors.messageId, messages.id));
-      const waiting = base.where(this.waiting(personId)).get()!.n;
-      const done = this.db
-        .select({ n: count() })
-        .from(messageVectors)
-        .innerJoin(messages, eq(messages.id, messageVectors.messageId))
-        .innerJoin(mailboxes, eq(mailboxes.id, messages.mailboxId))
-        .where(eq(mailboxes.ownerId, personId))
-        .get()!.n;
-      const value = { waiting, done };
-      this.counted.set(personId, { at: Date.now(), value });
-      return value;
+      return this.progress.get(personId, () => {
+        const base = this.db
+          .select({ n: count() })
+          .from(messages)
+          .innerJoin(mailboxes, eq(mailboxes.id, messages.mailboxId))
+          .leftJoin(messageVectors, eq(messageVectors.messageId, messages.id));
+        const waiting = base.where(this.waiting(personId)).get()!.n;
+        const done = this.db
+          .select({ n: count() })
+          .from(messageVectors)
+          .innerJoin(messages, eq(messages.id, messageVectors.messageId))
+          .innerJoin(mailboxes, eq(mailboxes.id, messages.mailboxId))
+          .where(eq(mailboxes.ownerId, personId))
+          .get()!.n;
+        return { waiting, done };
+      });
     },
     next: (personId, running, access) => {
       if (!this.platform.settings.enabled(personId, FACTS_FEATURE))

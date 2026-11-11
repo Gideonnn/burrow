@@ -1,5 +1,4 @@
 import { resolve } from 'node:path';
-import type { OAuthAppConfig } from '@burrow/hedwig/server';
 import { z } from 'zod';
 
 const env = z.object({
@@ -60,42 +59,7 @@ const env = z.object({
   LUMOS_JELLYFIN_USER: z.string().optional(),
 });
 
-export type Config = {
-  port: number;
-  host: string;
-  dataDir: string;
-  dbPath: string;
-  publicUrl: string;
-  secretKey: string | undefined;
-  google: OAuthAppConfig | undefined;
-  microsoft: OAuthAppConfig | undefined;
-  cloudflareAccess:
-    | { team: string; audience: string; port: number }
-    | undefined;
-  botsDirs: string[];
-  skillsDirs: string[];
-  triageBot: string;
-  notesBot: string;
-  contact: string | undefined;
-  language: string;
-  agents: { name: 'claude' | 'codex'; command: string }[];
-  codexModel: string | undefined;
-  workers: number;
-  agentRuns: number;
-  devLoginAs: string | undefined;
-  openaiKey: string | undefined;
-  transcribeModel: string;
-  ffmpeg: string;
-  ffprobe: string;
-  lumosCatalogue: 'fixture' | undefined;
-  // Seerr's address and the household's one service key.
-  seerr: { url: string; apiKey: string } | undefined;
-  jellyfin:
-    | { url: string; apiKey: string; webUrl?: string; user?: string }
-    | undefined;
-};
-
-export function loadConfig(source: NodeJS.ProcessEnv = process.env): Config {
+export function loadConfig(source: NodeJS.ProcessEnv = process.env) {
   const parsed = env.parse(source);
   const dataDir = resolve(parsed.BURROW_DATA_DIR);
   const team = parsed.CLOUDFLARE_ACCESS_TEAM?.replace(
@@ -147,6 +111,7 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): Config {
     ffmpeg: parsed.BURROW_FFMPEG,
     ffprobe: parsed.BURROW_FFPROBE,
     lumosCatalogue: lumosCatalogue(parsed, Boolean(team)),
+    // Seerr's address and the household's one service key.
     seerr:
       parsed.LUMOS_SEERR_URL && parsed.LUMOS_SEERR_API_KEY
         ? {
