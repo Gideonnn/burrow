@@ -3,8 +3,8 @@
 An **outing** is something the household goes to: a concert, play, festival or party,
 often bought half a year ahead from a ticket shop. Outings are the household's, not one
 person's: everyone sees and changes every outing. Code: `modules/hedwig/src/server/outings/`,
-contracts in `packages/contracts/src/outings.ts`, the shared Mac logic in
-`apps/hedwig-mac/Sources/HedwigCore/Outing*.swift`. Designs:
+contracts in `packages/contracts/src/outings.ts`, the Mac logic in
+`apps/hogsmeade-mac/Sources/HogsmeadeCore/`. Designs:
 [`docs/design/hedwig-events.html`](../../../docs/design/hedwig-events.html) (the page, v2),
 [`docs/design/hedwig-cards.html`](../../../docs/design/hedwig-cards.html) (the card, v1) and
 the plan in [`docs/plans/2026-10-22-calendars.md`](../../../docs/plans/2026-10-22-calendars.md).
@@ -93,8 +93,8 @@ changing `organize`. MCP: `list_outings` (read) and `add_outing` (organize); no 
 
 ## On the Mac
 
-Hogsmeade shows and changes the outings ([hogsmeade](hogsmeade.md)). What both Mac apps
-share sits in `HedwigCore`, tested without a window:
+Hogsmeade shows and changes the outings ([hogsmeade](hogsmeade.md)). The logic sits in
+`HogsmeadeCore`, tested without a window:
 
 - `OutingStatus.swift`: the one status sentence per outing, in this order: "Vanavond"/
   "Vandaag" with the place on the day, "Nog doen: …" for the most urgent item due within
@@ -102,7 +102,7 @@ share sits in `HedwigCore`, tested without a window:
   geregeld". An outing needs attention when an open item is due within 28 days (an item
   without a date is due on the day itself) or it has no tickets within 14 days.
 - `OutingPlaces.swift`: `PlaceBook` asks `MKLocalSearch` for "venue, address", then the
-  address alone, and keeps the answers in `~/Library/Application Support/Hedwig/places.json`.
+  address alone, and keeps the answers in `~/Library/Application Support/Hogsmeade/places.json`.
   `CLGeocoder` is deprecated from macOS 26, so it is not used.
 - `OutingTickets.swift`, `TicketCodes.swift`: a `.pkpass` shows its own colours and code
   from `pass.json` (a small zip reader); a pdf or image is searched with Vision (every pdf
@@ -112,12 +112,8 @@ share sits in `HedwigCore`, tested without a window:
   `updatedAt`, the backdrop colours, the title's colours without a picture, and the frame
   (`imageFrame`: a point and a zoom of 1 to 4, never an empty edge).
 
-`AppModel` (Hedwig's model) still holds the outing list, the card logic and every outing
-change, but asks the server only when an app sets `followsOutings` (the list) or
-`showsOutingCards` (the card per mail). Hedwig sets only the first, for its reminders.
-
-**Reminders until Patronus**: Hedwig schedules local notifications (UserNotifications,
-`apps/hedwig-mac/Sources/Hedwig/OutingNotifications.swift`) at 09:00 on the day
+**Reminders until Patronus**: Hogsmeade schedules local notifications (UserNotifications,
+`apps/hogsmeade-mac/Sources/Hogsmeade/Reminders.swift`) at 09:00 on the day
 ("Vanavond: …"; at noon the day before for a start before 10:00) and 28 and 7 days before
 an open item's due date. They are rescheduled whenever the outings change; permission is
 asked once, and only when there is something to remind of. Each Mac reminds its own

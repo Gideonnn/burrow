@@ -1,4 +1,4 @@
-import HedwigCore
+@testable import HogsmeadeCore
 import Testing
 
 struct TicketDedupeTests {

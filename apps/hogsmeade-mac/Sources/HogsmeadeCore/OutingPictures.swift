@@ -141,8 +141,6 @@ public enum PastedPicture: Equatable, Sendable {
 }
 
 extension PastedContents {
-    public static let dropTypes: [UTType] = [.fileURL, .image, .url, .plainText]
-
     /// Reads dropped items: files first, then image bytes, links and text.
     /// Runs on the caller's actor because `NSItemProvider` is not Sendable.
     public nonisolated(nonsending) static func load(_ providers: [NSItemProvider]) async -> PastedContents {
@@ -234,67 +232,38 @@ public enum PictureUpload {
     }
 }
 
-// MARK: Backdrop colours
+/// The outings' pictures, one version per outing, so the wall and the page
+/// load each picture once.
+@MainActor
+public final class OutingPictureCache {
+    private var pictures: [String: (version: Date, picture: OutingPicture?)] = [:]
+    private var loads: [String: (version: Date, task: Task<OutingPicture?, Never>)] = [:]
+    private var order: [String] = []
+    let limit: Int
 
-/// The few strong colours of a picture, for a backdrop with the picture's
-/// mood but without the grey a blurred copy smears in the middle.
-public enum PictureColours {
-    /// Up to `count` colours, the most present first; grey, near black and
-    /// near white pixels do not count. A picture without colour gives one grey.
-    public static func dominant(_ image: CGImage, count: Int = 3) -> [HSL] {
-        let side = 12
-        var pixels = [UInt8](repeating: 0, count: side * side * 4)
-        let drawn = pixels.withUnsafeMutableBytes { buffer -> Bool in
-            guard let context = CGContext(
-                data: buffer.baseAddress, width: side, height: side, bitsPerComponent: 8, bytesPerRow: side * 4,
-                space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
-            else { return false }
-            context.interpolationQuality = .medium
-            context.draw(image, in: CGRect(x: 0, y: 0, width: side, height: side))
-            return true
-        }
-        guard drawn else { return [] }
-        var bins: [Int: (weight: Double, r: Double, g: Double, b: Double)] = [:]
-        for i in stride(from: 0, to: pixels.count, by: 4) where pixels[i + 3] > 128 {
-            let (r, g, b) = (Double(pixels[i]) / 255, Double(pixels[i + 1]) / 255, Double(pixels[i + 2]) / 255)
-            let colour = HSL(red: r, green: g, blue: b)
-            guard colour.saturation > 0.18, (0.1...0.92).contains(colour.lightness) else { continue }
-            let bin = Int(colour.hue / 30) % 12
-            let weight = colour.saturation
-            let old = bins[bin] ?? (0, 0, 0, 0)
-            bins[bin] = (old.weight + weight, old.r + r * weight, old.g + g * weight, old.b + b * weight)
-        }
-        let strongest = bins.values.sorted { $0.weight > $1.weight }.prefix(count)
-        guard !strongest.isEmpty else { return [HSL(hue: 0, saturation: 0, lightness: 0.5)] }
-        return strongest.map { HSL(red: $0.r / $0.weight, green: $0.g / $0.weight, blue: $0.b / $0.weight) }
+    public init(limit: Int = 80) { self.limit = limit }
+
+    public func cached(_ outingId: String, version: Date) -> OutingPicture?? {
+        guard let hit = pictures[outingId], hit.version == version else { return nil }
+        return .some(hit.picture)
     }
 
-    /// Light enough for black text in light mode, deep enough for white in dark.
-    public static func backdrop(_ colours: [HSL], dark: Bool) -> [HSL] {
-        colours.map { colour in
-            let saturation = colour.saturation < 0.05 ? 0 : min(max(colour.saturation, 0.45), 0.8)
-            return HSL(hue: colour.hue, saturation: saturation, lightness: dark ? 0.24 : 0.87)
-        }
+    public func picture(_ outingId: String, version: Date, load: @escaping @MainActor () async -> OutingPicture?) async -> OutingPicture? {
+        if let hit = cached(outingId, version: version) { return hit }
+        if let running = loads[outingId], running.version == version { return await running.task.value }
+        let task = Task { await load() }
+        loads[outingId] = (version, task)
+        let picture = await task.value
+        if loads[outingId]?.version == version { loads[outingId] = nil }
+        store(picture, for: outingId, version: version)
+        return picture
     }
-}
 
-extension HSL {
-    public init(red: Double, green: Double, blue: Double) {
-        let high = max(red, green, blue), low = min(red, green, blue)
-        let lightness = (high + low) / 2
-        guard high > low else {
-            self.init(hue: 0, saturation: 0, lightness: lightness)
-            return
-        }
-        let delta = high - low
-        var hue: Double =
-            switch high {
-            case red: ((green - blue) / delta).truncatingRemainder(dividingBy: 6)
-            case green: (blue - red) / delta + 2
-            default: (red - green) / delta + 4
-            }
-        hue *= 60
-        if hue < 0 { hue += 360 }
-        self.init(hue: hue, saturation: min(1, delta / (1 - abs(2 * lightness - 1))), lightness: lightness)
+    private func store(_ picture: OutingPicture?, for outingId: String, version: Date) {
+        if let known = pictures[outingId], known.version > version { return }
+        pictures[outingId] = (version, picture)
+        order.removeAll { $0 == outingId }
+        order.append(outingId)
+        while order.count > limit { pictures[order.removeFirst()] = nil }
     }
 }

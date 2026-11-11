@@ -94,7 +94,7 @@ import Testing
     }
 
     @Test func placesSurviveAsTextAndAGoneMailboxFallsBack() async {
-        for place: SidebarItem in [.inbox(mailboxId: "mb1"), .folder(.archive, mailboxId: "mb1"), .drafts(mailboxId: "mb1"), .tasks, .outings, .shared] {
+        for place: SidebarItem in [.inbox(mailboxId: "mb1"), .folder(.archive, mailboxId: "mb1"), .drafts(mailboxId: "mb1"), .tasks, .shared] {
             #expect(SidebarItem(storageKey: place.storageKey) == place)
         }
         #expect(SidebarItem(storageKey: "nonsense") == nil)

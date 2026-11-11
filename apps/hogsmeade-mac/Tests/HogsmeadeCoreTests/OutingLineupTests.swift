@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import HedwigCore
+@testable import HogsmeadeCore
 
 @Suite struct OutingLineupTests {
     private static let calendar: Calendar = {

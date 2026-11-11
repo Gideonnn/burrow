@@ -4,8 +4,7 @@ import HogsmeadeCore
 import MapKit
 import SwiftUI
 
-// Where an outing is: Hedwig's place book (the same file, so a place found
-// in one app is known in the other), a still map with a pin, the travel
+// Where an outing is: the place book, a still map with a pin, the travel
 // time when this Mac may know where it is, and Route in Apple Maps.
 
 @MainActor

@@ -83,20 +83,11 @@ extension Outing {
 public enum MapsLink {
     /// The place itself, searched near its spot so Maps shows the venue's card.
     public static func place(_ place: OutingPlace, query: String) -> URL {
-        link([
+        var components = URLComponents(string: "http://maps.apple.com/")!
+        components.queryItems = [
             URLQueryItem(name: "q", value: query),
             URLQueryItem(name: "ll", value: "\(place.latitude),\(place.longitude)"),
-        ])
-    }
-
-    /// Directions from here, for when the map found nothing.
-    public static func route(to query: String) -> URL {
-        link([URLQueryItem(name: "daddr", value: query)])
-    }
-
-    private static func link(_ items: [URLQueryItem]) -> URL {
-        var components = URLComponents(string: "http://maps.apple.com/")!
-        components.queryItems = items
+        ]
         return components.url!
     }
 }
@@ -153,7 +144,7 @@ public final class PlaceBook {
 
     public static var defaultFile: URL {
         FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Library/Application Support/Hedwig/places.json")
+            .appendingPathComponent("Library/Application Support/Hogsmeade/places.json")
     }
 
     public func cached(_ outing: Outing) -> OutingPlace? {

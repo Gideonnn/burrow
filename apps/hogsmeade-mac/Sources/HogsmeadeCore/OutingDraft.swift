@@ -48,13 +48,3 @@ public struct OutingDraft: Equatable, Sendable {
         return patch
     }
 }
-
-extension APIClient {
-    public func linkMail(outingId: String, messageId: String) async throws -> Outing {
-        try await call("POST", "api/outings/\(outingId)/mails", body: ["messageId": messageId])
-    }
-
-    public func unlinkMail(outingId: String, messageId: String) async throws -> Outing {
-        try await call("DELETE", "api/outings/\(outingId)/mails/\(messageId)")
-    }
-}

@@ -1,7 +1,7 @@
 import CoreGraphics
 import Foundation
 import Testing
-@testable import HedwigCore
+@testable import HogsmeadeCore
 
 @Suite struct TicketCodeTests {
     /// A pdf like a ticket shop's: an A4 page with each code somewhere on it.

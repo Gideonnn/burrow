@@ -1,97 +1,21 @@
 import Foundation
 import Testing
-@testable import HedwigCore
+@testable import HogsmeadeCore
 
 @MainActor
 @Suite(.serialized) struct OutingTests {
-    private static let suggestion = """
-    {"outingId":null,"title":"Neon Nineties","kind":"concert","startsAt":"2027-05-13T19:00:00.000Z","endsAt":null,
-     "doorsAt":null,"venue":"Voorbeeldhal","address":null,"organiser":null,"vendor":"Kaartloket","orderNumber":"KL-48291",
-     "url":null,"personaliseBy":"2027-04-29T00:00:00.000Z","aliases":["Neon Nineties","Kaartloket"],
-     "tickets":[{"id":"a1","name":"kaarten.pdf","contentType":"application/pdf","size":2000}],"confidence":"structured"}
-    """
-    private static let outing = """
-    {"id":"o1","title":"Neon Nineties","kind":"concert","startsAt":"2027-05-13T19:00:00.000Z","endsAt":null,"doorsAt":null,
-     "allDay":false,"venue":"Voorbeeldhal","address":null,"organiser":null,"vendor":"Kaartloket","orderNumber":"KL-48291",
-     "url":null,"notes":"","aliases":["Neon Nineties"],"inCalendar":false,
-     "attendees":[{"id":"p1","name":"Gideon"},{"id":"p2","name":"Eva"}],
-     "tickets":[{"id":"t1","name":"kaarten.pdf","contentType":"application/pdf","size":2000,"holder":null,"personalised":false,
-       "messageId":"m1","addedBy":{"id":"p1","name":"Gideon"},"addedAt":"2026-10-22T08:00:00.000Z"}],
-     "tasks":[{"id":"k1","kind":"calendar","title":"In de agenda zetten","dueAt":null,"assignee":null,"doneAt":null,"doneBy":null},
-       {"id":"k2","kind":"personalise","title":"Kaarten op naam zetten","dueAt":"2027-04-29T00:00:00.000Z","assignee":null,"doneAt":null,"doneBy":null}],
-     "mails":[{"id":"m1","visible":true,"owner":{"id":"p1","name":"Gideon"},"subject":"Je bestelling","from":{"email":"tickets@kaartloket.example.com"},"receivedAt":"2026-10-22T08:00:00.000Z"}],
-     "createdBy":{"id":"p1","name":"Gideon"},"createdAt":"2026-10-22T08:00:00.000Z",
-     "updatedBy":{"id":"p1","name":"Gideon"},"updatedAt":"2026-10-22T08:00:00.000Z"}
-    """
-
-    private func model(_ server: MockServer) -> AppModel {
+    private func model(_ server: MockServer) -> OutingsModel {
         let client = server.client()
-        let model = AppModel(
-            store: ConnectionStore(service: "app.burrow.hedwig.tests"),
+        let model = OutingsModel(
+            store: ConnectionStore(service: "app.burrow.hogsmeade.tests"),
             makeClient: { _ in client },
             connection: Connection(serverURL: URL(string: "http://burrow.test")!, token: "bk_test"))
-        model.followsOutings = true
-        model.showsOutingCards = true
+        model.toastSeconds = nil
+        model.now = { Self.now }
         return model
     }
 
-    @Test func aMailClientWithoutTheCardNeverAsksAboutAMail() async throws {
-        let server = MockServer()
-        server.on("GET", "/api/me", json: Fixture.me)
-        server.on("GET", "/api/mailboxes/mb1/messages", json: "[\(Fixture.message("m1", subject: "Je bestelling", unread: false))]")
-        server.on("GET", "/api/messages/m1", json: Fixture.message("m1", subject: "Je bestelling", unread: false))
-        server.on("GET", "/api/messages/m1/outing", json: Self.suggestion)
-        server.on("GET", "/api/outings", json: "[]")
-        let model = model(server)
-        model.showsOutingCards = false
-        await model.start()
-        await model.selectionLoad?.value
-        await model.messageLoad?.value
-        #expect(server.requests("GET", "/api/messages/m1/outing").isEmpty)
-    }
-
-    @Test func anOrderMailBecomesASharedOutingInOneClick() async throws {
-        let server = MockServer()
-        server.on("GET", "/api/me", json: Fixture.me)
-        server.on("GET", "/api/mailboxes/mb1/messages", json: "[\(Fixture.message("m1", subject: "Je bestelling", unread: false))]")
-        server.on("GET", "/api/messages/m1", json: Fixture.message("m1", subject: "Je bestelling", unread: false))
-        server.on("GET", "/api/messages/m1/outing", json: Self.suggestion)
-        server.on("POST", "/api/outings", json: Self.outing)
-        let model = model(server)
-        await model.start()
-        model.selection = .inbox(mailboxId: "mb1")
-        await model.selectionLoad?.value
-        await model.openSelected()
-        #expect(model.showsOutingCard)
-        #expect(model.outing == nil)
-
-        await model.saveOuting()
-        let body = try #require(server.requests("POST", "/api/outings").last)
-        #expect(body.contains(#""startsAt":"2027-05-13T19:00:00.000Z""#))
-        #expect(body.contains(#""personaliseBy":"2027-04-29T00:00:00.000Z""#))
-        #expect(body.contains(#""messageId":"m1""#))
-        #expect(body.contains(#""attachmentIds":["a1"]"#))
-        #expect(!body.contains("endsAt"))
-        #expect(model.outing?.openPersonalise?.id == "k2")
-        #expect(model.outing?.tickets.first?.holder == nil)
-    }
-
-    @Test func ordinaryMailHasNoCard() async throws {
-        let server = MockServer()
-        server.on("GET", "/api/me", json: Fixture.me)
-        server.on("GET", "/api/mailboxes/mb1/messages", json: "[\(Fixture.message("m1", subject: "Etentje", unread: false))]")
-        server.on("GET", "/api/messages/m1", json: Fixture.message("m1", subject: "Etentje", unread: false))
-        server.on("GET", "/api/messages/m1/outing", json: Self.suggestion
-            .replacingOccurrences(of: #""confidence":"structured""#, with: #""confidence":"none""#))
-        let model = model(server)
-        await model.start()
-        model.selection = .inbox(mailboxId: "mb1")
-        await model.selectionLoad?.value
-        await model.openSelected()
-        #expect(!model.showsOutingCard)
-    }
-
-    // MARK: The Evenementen page
+    // MARK: The wall
 
     private static let amsterdam: Calendar = {
         var calendar = Calendar(identifier: .gregorian)
@@ -186,7 +110,7 @@ import Testing
         let model = model(server)
         await model.start()
         #expect(model.outings.count == 5)
-        #expect(model.outingsNeedingAttention(now: Self.now) == 2)
+        #expect(model.attentionCount == 2)
     }
 
     @Test func theNewOutingSheetPostsWhatWhenAndWhere() async throws {
@@ -197,7 +121,7 @@ import Testing
         await model.start()
         let startsAt = try #require(APIClient.isoFractional.date(from: "2026-11-08T19:15:00.000Z"))
 
-        let created = await model.createOuting(title: " Cabaret Theo Voorbeeld ", startsAt: startsAt, venue: "Stadsschouwburg Voorbeeld")
+        let created = await model.create(title: " Cabaret Theo Voorbeeld ", startsAt: startsAt, venue: "Stadsschouwburg Voorbeeld")
         let body = try #require(server.requests("POST", "/api/outings").last)
         #expect(body.contains(#""title":"Cabaret Theo Voorbeeld""#))
         #expect(body.contains(#""startsAt":"2026-11-08T19:15:00.000Z""#))
@@ -205,7 +129,7 @@ import Testing
         // Who goes is everyone unless someone changes it.
         #expect(!body.contains("attendeeIds"))
         #expect(created?.id == "n1")
-        #expect(model.selectedOutingId == "n1")
+        #expect(model.open?.id == "n1")
         #expect(model.outings.map(\.id) == ["n1"])
     }
 
@@ -218,9 +142,9 @@ import Testing
             "o1", "Foute Vrijdag XL", startsAt: "2026-11-20T20:30:00.000Z", tasks: [Self.task("k1", "Oppas regelen", done: true)]))
         let model = model(server)
         await model.start()
-        let task = try #require(model.outings.first?.checklist.first)
+        let outing = try #require(model.outings.first)
 
-        await model.setTask(task, done: true, in: "o1")
+        await model.setTask(try #require(outing.checklist.first), done: true, in: outing)
         #expect(server.requests("PATCH", "/api/outings/o1/tasks/k1") == [#"{"done":true}"#])
         #expect(model.outings.first?.checklist.first?.done == true)
         #expect(model.outings.first?.checklist.first?.doneBy?.name == "Eva")
@@ -244,25 +168,6 @@ import Testing
         #expect(server.requests("PATCH", "/api/outings/o1").last == #"{"attendeeIds":["p1","p3"]}"#)
     }
 
-    @Test func aChangeOnTheOtherMacReloadsTheList() async throws {
-        let one = Self.outingJSON("o1", "Stille Wateren", startsAt: "2026-12-01T19:00:00.000Z")
-        let two = Self.outingJSON("o2", "Neon Nineties", startsAt: "2027-05-13T19:00:00.000Z")
-        let server = MockServer()
-        server.on("GET", "/api/me", json: Fixture.me)
-        server.on("GET", "/api/outings", json: "[\(one)]")
-        let model = model(server)
-        await model.start()
-        model.selection = .outings
-        await model.selectionLoad?.value
-        #expect(model.outings.map(\.id) == ["o1"])
-        #expect(model.selectedOutingId == "o1")
-
-        server.on("GET", "/api/outings", json: "[\(one),\(two)]")
-        await model.handle(ServerEvent(type: "outing.changed", fields: ["outingId": "o2"]))
-        #expect(model.outings.map(\.id) == ["o1", "o2"])
-        #expect(model.selectedOutingId == "o1")
-    }
-
     @Test func theMacRemindsOnlyOfOutingsItsPersonGoesTo() async throws {
         let mine = Self.outingJSON("o1", "Stille Wateren", startsAt: "2026-12-01T19:00:00.000Z")
         let evasOnly = Self.outingJSON("o2", "Yoga-avond", startsAt: "2026-12-02T19:00:00.000Z")
@@ -272,7 +177,7 @@ import Testing
         server.on("GET", "/api/outings", json: "[\(mine),\(evasOnly)]")
         let model = model(server)
         await model.start()
-        #expect(Set(model.outingReminders(now: Self.now).map(\.outingId)) == ["o1"])
+        #expect(Set(model.reminders().map(\.outingId)) == ["o1"])
     }
 
     @Test func theMacRemindsOnTheDayAndBeforeADeadline() throws {

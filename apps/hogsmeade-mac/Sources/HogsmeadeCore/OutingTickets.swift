@@ -38,10 +38,7 @@ extension Outing {
 
     /// "Je kaartjes staan bij Weeztix", or "bij Weeztix en Paylogic".
     public var shopSentence: String? {
-        let shops = shopLinks.map(\.shop)
-        guard let last = shops.last else { return nil }
-        let names = shops.count == 1 ? last : shops.dropLast().joined(separator: ", ") + " en " + last
-        return "Je kaartjes staan bij \(names)"
+        OutingsModel.sentence(shopLinks.map(\.shop)).map { "Je kaartjes staan bij \($0)" }
     }
 }
 
@@ -66,32 +63,31 @@ public struct PassColour: Hashable, Sendable {
     }
 }
 
-public struct PassBarcode: Hashable, Sendable {
-    public enum Format: String, Sendable {
-        case qr, pdf417, aztec, code128
-
-        public init?(passKit name: String) {
-            switch name {
-            case "PKBarcodeFormatQR": self = .qr
-            case "PKBarcodeFormatPDF417": self = .pdf417
-            case "PKBarcodeFormatAztec": self = .aztec
-            case "PKBarcodeFormatCode128": self = .code128
-            default: return nil
-            }
+extension TicketCode.Kind {
+    public init?(passKit name: String) {
+        switch name {
+        case "PKBarcodeFormatQR": self = .qr
+        case "PKBarcodeFormatPDF417": self = .pdf417
+        case "PKBarcodeFormatAztec": self = .aztec
+        case "PKBarcodeFormatCode128": self = .code128
+        default: return nil
         }
-
-        public var filterName: String {
-            switch self {
-            case .qr: "CIQRCodeGenerator"
-            case .pdf417: "CIPDF417BarcodeGenerator"
-            case .aztec: "CIAztecCodeGenerator"
-            case .code128: "CICode128BarcodeGenerator"
-            }
-        }
-
-        /// QR and Aztec are square; the others are wide strips.
-        public var isSquare: Bool { self == .qr || self == .aztec }
     }
+
+    public var filterName: String? {
+        switch self {
+        case .qr: "CIQRCodeGenerator"
+        case .pdf417: "CIPDF417BarcodeGenerator"
+        case .aztec: "CIAztecCodeGenerator"
+        case .code128: "CICode128BarcodeGenerator"
+        case .dataMatrix, .other: nil
+        }
+    }
+}
+
+public struct PassBarcode: Hashable, Sendable {
+    /// A pass knows QR, PDF417, Aztec and Code 128.
+    public typealias Format = TicketCode.Kind
 
     public var format: Format
     public var message: String
@@ -105,7 +101,7 @@ public struct PassBarcode: Hashable, Sendable {
 
     /// The code at one pixel per module, to be drawn larger without smoothing.
     public func image() -> CGImage? {
-        guard let data = messageData, let filter = CIFilter(name: format.filterName) else { return nil }
+        guard let data = messageData, let name = format.filterName, let filter = CIFilter(name: name) else { return nil }
         filter.setValue(data, forKey: "inputMessage")
         if format == .qr { filter.setValue("M", forKey: "inputCorrectionLevel") }
         if format == .code128 { filter.setValue(0, forKey: "inputQuietSpace") }

@@ -101,8 +101,7 @@ public struct OutingLineup: Codable, Hashable, Sendable {
         format.calendar = calendar
         format.timeZone = calendar.timeZone
         format.dateFormat = "EEEE d MMMM"
-        let text = format.string(from: date)
-        return text.prefix(1).uppercased() + text.dropFirst()
+        return format.string(from: date).capitalisedFirst
     }
 
     /// "Bijgewerkt 5 minuten geleden", "Bijgewerkt zojuist".

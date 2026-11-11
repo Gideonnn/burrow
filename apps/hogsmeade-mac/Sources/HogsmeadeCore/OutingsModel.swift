@@ -1,13 +1,12 @@
 import BurrowKit
 import Foundation
-import HedwigCore
 import Observation
 
 /// Hogsmeade's state and every action it takes: the household's
 /// outings from the server, which one is open, the search, and the changes
 /// (tasks, who goes, tickets, pictures). A state machine without a window,
-/// so the tests drive it like the faces do. The outings are Hedwig's: the
-/// same routes, the same types, the same `outing.changed` events.
+/// so the tests drive it like the window does. The outings are Hedwig's
+/// module on the server: its routes and `outing.changed` events.
 @MainActor
 @Observable
 public final class OutingsModel {
@@ -55,7 +54,7 @@ public final class OutingsModel {
     }
 
     public private(set) var connection: Connection?
-    public private(set) var me: Me?
+    public private(set) var me: Profile?
     public private(set) var people: [Person] = []
     public private(set) var outings: [Outing] = [] {
         didSet { if outings != oldValue { onOutingsChanged?() } }
@@ -70,7 +69,7 @@ public final class OutingsModel {
     public private(set) var openId: String?
     public private(set) var toast: Toast?
     public private(set) var ticketUploads = 0
-    /// Bumped by ⌘N and ⌘F; the faces open the sheet and focus the search.
+    /// Bumped by ⌘N and ⌘F; the window opens the sheet and focuses the search.
     public var newRequest = 0
     public var searchFocusRequest = 0
     /// The outing whose edit sheet or picture picker is open.
@@ -126,7 +125,7 @@ public final class OutingsModel {
 
     public func connect(serverURL: URL, token: String) async throws {
         let candidate = Connection(serverURL: serverURL, token: token)
-        me = try await makeClient(candidate).me()
+        me = try await makeClient(candidate).profile()
         try store.save(candidate)
         connection = candidate
         await start()
@@ -145,7 +144,7 @@ public final class OutingsModel {
         guard let api else { return }
         if outings.isEmpty, let kept = readSnapshot() { outings = kept }
         do {
-            async let me = api.me()
+            async let me = api.profile()
             async let people = api.people()
             self.me = try await me
             self.people = (try? await people) ?? []
@@ -170,7 +169,7 @@ public final class OutingsModel {
                 case "outing.changed": await self?.refresh()
                 case "settings.changed", "household.changed":
                     if let api = self?.api {
-                        self?.me = (try? await api.me()) ?? self?.me
+                        self?.me = (try? await api.profile()) ?? self?.me
                         self?.people = (try? await api.people()) ?? self?.people ?? []
                     }
                 default: break
@@ -196,7 +195,7 @@ public final class OutingsModel {
     func serverAnswers() async -> Bool {
         guard let api else { return false }
         do {
-            _ = try await api.me()
+            _ = try await api.profile()
             return true
         } catch {
             return !APIError.isTransient(error)
@@ -235,7 +234,7 @@ public final class OutingsModel {
         try? data.write(to: file, options: .atomic)
     }
 
-    // MARK: What the faces show
+    // MARK: What the window shows
 
     /// Still to come, the nearest first; today's outing is the first.
     public var upcoming: [Outing] {
@@ -254,9 +253,6 @@ public final class OutingsModel {
         let now = now()
         return upcoming.first { $0.isToday(now: now) }
     }
-
-    /// The first outing that is still to come: what the greeting counts to.
-    public var next: Outing? { upcoming.first }
 
     /// What the page shows after the sidebar's filter and the search.
     public var shown: [Outing] {
@@ -290,7 +286,7 @@ public final class OutingsModel {
         for outing in upcoming {
             guard let key = Self.kindKey(outing.kind) else { continue }
             let label = outing.kind?.trimmingCharacters(in: .whitespaces) ?? key
-            counts[key, default: (label.prefix(1).uppercased() + label.dropFirst(), 0)].count += 1
+            counts[key, default: (label.capitalisedFirst, 0)].count += 1
         }
         return counts.map { ($0.key, $0.value.label, $0.value.count) }.sorted { $0.count > $1.count || ($0.count == $1.count && $0.key < $1.key) }
     }
@@ -372,7 +368,7 @@ public final class OutingsModel {
         outing.attendees.filter { $0.id != myId }.map(\.name)
     }
 
-    public static func sentence(_ names: [String]) -> String? {
+    public nonisolated static func sentence(_ names: [String]) -> String? {
         switch names.count {
         case 0: nil
         case 1: names[0]
@@ -382,6 +378,7 @@ public final class OutingsModel {
 
     // MARK: Changes
 
+    @discardableResult
     private func change(_ call: (APIClient) async throws -> Outing, saying label: String? = nil) async -> Outing? {
         guard let api else { return nil }
         do {
@@ -407,11 +404,10 @@ public final class OutingsModel {
     /// Nieuw uitje: what, when and where; everyone goes until someone says otherwise.
     @discardableResult
     public func create(title: String, startsAt: Date, venue: String, kind: String? = nil) async -> Outing? {
-        let place = venue.trimmingCharacters(in: .whitespacesAndNewlines)
-        var request = CreateOutingRequest(
-            title: title.trimmingCharacters(in: .whitespacesAndNewlines), startsAt: startsAt, venue: place.isEmpty ? nil : place)
-        request.kind = kind?.trimmingCharacters(in: .whitespaces).nilIfEmpty
-        guard let created = await change({ try await $0.createOuting(request) }) else { return nil }
+        let title = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let venue = venue.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+        let kind = kind?.trimmingCharacters(in: .whitespaces).nilIfEmpty
+        guard let created = await change({ try await $0.createOuting(title: title, startsAt: startsAt, kind: kind, venue: venue) }) else { return nil }
         show("\(created.title) hangt aan de wand.")
         openId = created.id
         return created
@@ -467,8 +463,8 @@ public final class OutingsModel {
     }
 
     /// A linked mail to read, when this key may see it.
-    public func mail(_ messageId: String) async -> MessageDetail? {
-        try? await api?.message(id: messageId)
+    public func mail(_ messageId: String) async -> LinkedMail? {
+        try? await api?.linkedMail(id: messageId)
     }
 
     /// What the Mac reminds its person of: only outings they go to. macOS
@@ -653,7 +649,7 @@ public final class OutingsModel {
 enum PictureError: Error { case notAPicture }
 
 extension String {
-    var nilIfEmpty: String? { isEmpty ? nil : self }
+    public var nilIfEmpty: String? { isEmpty ? nil : self }
 }
 
 // MARK: What a poster says
@@ -661,7 +657,7 @@ extension String {
 extension Outing {
     /// "Feest · De Kolenloods"
     public var kindAndVenue: String {
-        [kind.map { $0.prefix(1).uppercased() + $0.dropFirst() }, venue].compactMap { $0 }.joined(separator: " · ")
+        [kind?.capitalisedFirst, venue].compactMap { $0 }.joined(separator: " · ")
     }
 
     /// The city alone, for "De Kolenloods, Amsterdam".

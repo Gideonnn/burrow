@@ -179,7 +179,7 @@ struct PosterCard: View {
     }
 
     private var subtitle: String {
-        past ? "Geweest · \(OutingFormat.date(outing.startsAt))" : outing.kindAndVenue.nilIfEmptyText ?? OutingFormat.when(outing)
+        past ? "Geweest · \(OutingFormat.date(outing.startsAt))" : outing.kindAndVenue.nilIfEmpty ?? OutingFormat.when(outing)
     }
 
     private var art: some View {
@@ -223,8 +223,4 @@ struct StatusChip: View {
         case .later, .past: return AnyShapeStyle(.secondary)
         }
     }
-}
-
-extension String {
-    var nilIfEmptyText: String? { isEmpty ? nil : self }
 }

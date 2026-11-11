@@ -27,7 +27,6 @@ extension AppModel {
             "drafts": drafts.count,
             "filtered": filtered.count,
             "tasksAwaitingReview": tasksAwaitingReview,
-            "outingsNeedingAttention": outingsBadge,
         ]
         if let detail {
             state["message"] = [
@@ -46,7 +45,6 @@ extension AppModel {
         case .inbox(let id): "inbox:\(mailbox(id)?.address ?? id)"
         case .drafts(let id): "drafts:\(mailbox(id)?.address ?? id)"
         case .tasks: "tasks"
-        case .outings: "outings"
         case .shared: "shared"
         case .folder(let folder, let id): "\(folder.rawValue):\(mailbox(id)?.address ?? id)"
         case nil: nil
@@ -56,8 +54,7 @@ extension AppModel {
     /// `inbox`, `archive`, `sent`, `spam` or `drafts` of the open mailbox (the
     /// first one elsewhere), each also as `<place>:<address>`; a role (`private`,
     /// `work`, `school`: the inbox of its first mailbox); `filtered` (the first
-    /// Spam or Archief with mail to review), `tasks` or `shared` (`outings` only where
-    /// `showsOutingCards` is on).
+    /// Spam or Archief with mail to review), `tasks` or `shared`.
     public func show(_ place: String) async throws {
         try select(place)
         await selectionLoad?.value
@@ -68,9 +65,7 @@ extension AppModel {
         let boxes = me?.mailboxes ?? []
         switch place {
         case "tasks": selection = .tasks
-        case "outings":
-            guard showsOutingCards else { throw ControlError("outings moved to Hogsmeade") }
-            selection = .outings
+        case "outings": throw ControlError("outings moved to Hogsmeade")
         case "shared": selection = .shared
         case "private", "work", "school":
             // The merged inbox per role is gone; older links land on a single inbox.

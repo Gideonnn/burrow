@@ -1,5 +1,5 @@
 import CoreGraphics
-import HedwigCore
+@testable import HogsmeadeCore
 import Testing
 
 struct PictureFrameTests {
