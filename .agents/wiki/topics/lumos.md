@@ -31,7 +31,7 @@ so no TMDB key is needed:
   count. Synopses are English (`language=en`).
 - availability from Seerr's media status; "downloading" only with a live download status
   (Seerr's `PROCESSING` alone proves nothing), with progress in the details.
-- every answer is mapped field by field; a test feeds the key and user records through
+- every answer is mapped field by field (`seerr-map.ts`); a test feeds the key and user records through
   every Seerr answer and checks no Lumos answer carries them.
 
 `FixtureCatalogue` (`fixtures.ts`) is for development, switched on with
@@ -85,6 +85,9 @@ without a catalogue.
 - `lumos_changes`: every change records what it added, removed and undid, and answers
   with its `changeId`; `POST /api/lumos/changes/:id/undo` reverses exactly that, for its
   author only, once. Nothing is deleted; undoing sets `removedAt` or `undoneAt` back.
+  The writes and the undo live in `changes.ts`; `lumos.ts` only orchestrates.
+- The proposals' weighing (`rank`, "Lijkt op", the seed of "Meer zoals") is in
+  `ranking.ts`, pure functions over one request's lists and verdicts.
 - A personal list and personal verdicts are their person's; there is no route that names
   someone else's. The household's are everyone's, like [outings](outings.md). Changes emit
   `lumos.changed` with the scope, to every Mac of the scope, so the two people's Macs
