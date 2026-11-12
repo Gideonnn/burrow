@@ -67,6 +67,13 @@ private let cloudflarePage = """
 
 @MainActor
 @Suite struct ServerReachabilityTests {
+    @Test func aCancelledRequestShowsNothing() {
+        let reachability = ServerReachability()
+        #expect(reachability.message(for: URLError(.cancelled)) == nil)
+        #expect(reachability.message(for: CancellationError()) == nil)
+        #expect(reachability.isReachable)
+    }
+
     @Test func retriesQuietlyUntilTheServerAnswers() async throws {
         let answers = Answers(failing: 2)
         let reachability = ServerReachability(delays: [.milliseconds(10)])

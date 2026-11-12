@@ -78,8 +78,10 @@ public final class ServerReachability {
     }
 
     /// Marks the server lost on a connection error and returns what to show;
-    /// nil for a `quiet` call (a load, an upload), which repeats once it is back.
+    /// nil for a `quiet` call (a load, an upload), which repeats once it is back,
+    /// and for a cancelled request: a newer one replaced it.
     public func message(for error: any Error, quiet: Bool = false) -> String? {
+        if error is CancellationError || (error as? URLError)?.code == .cancelled { return nil }
         if APIError.isTransient(error) {
             lost()
             if quiet { return nil }
