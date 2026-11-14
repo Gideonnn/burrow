@@ -31,6 +31,7 @@ import type { Access } from '../access';
 import type { AgentRequest, AgentRunner } from '../agents/runner';
 import type { Db } from '../db';
 import type { EventBus } from '../events';
+import { wellFormed } from '../prompt';
 import { people, runners, tasks } from '../schema';
 import type { Subjects } from './subjects';
 
@@ -417,7 +418,12 @@ export class Workers {
   // The kind builds the request; the task's model wins over the bot's own,
   // and a local task never reaches a cloud agent.
   private request(row: TaskRow): AgentRequest {
-    const request = this.kinds.get(row.kind)!.agent!.request(row);
+    const built = this.kinds.get(row.kind)!.agent!.request(row);
+    const request = {
+      ...built,
+      system: wellFormed(built.system),
+      prompt: wellFormed(built.prompt),
+    };
     const model = row.model ? { ...request, model: row.model } : request;
     return row.queue === 'local'
       ? { ...model, agent: 'local', effort: undefined }

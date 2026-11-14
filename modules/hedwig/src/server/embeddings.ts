@@ -5,6 +5,7 @@ import {
   type StandingWork,
   type TaskKind,
   type TaskRow,
+  wellFormed,
 } from '@burrow/platform';
 import { and, count, desc, eq, inArray, isNull, notInArray } from 'drizzle-orm';
 import { z } from 'zod';
@@ -36,7 +37,9 @@ function embedText(
   const body =
     f?.summary ?? (m.bodyText ?? '').replace(/\s+/g, ' ').slice(0, 400);
   const words = f?.keywords.length ? `\n${f.keywords.join(', ')}` : '';
-  return `title: ${m.subject} | text: ${m.subject}\nVan: ${m.from.name || m.from.email}\n${body}${words}`;
+  return wellFormed(
+    `title: ${m.subject} | text: ${m.subject}\nVan: ${m.from.name || m.from.email}\n${body}${words}`,
+  );
 }
 
 // Search by meaning needs every message as a vector. The runner on the

@@ -72,3 +72,6 @@ A Mac nobody sits at logs in with a key from the server CLI, piped in so it neve
 - The Ollama app (`brew install --cask ollama-app`), not the Homebrew formula: only the
   app's MLX runner has structured output. Ollama does not show the schema to the model,
   so the skill lists every category.
+- **Cutting text can split an emoji.** Swift's JSON decoder refuses half a surrogate
+  pair, so the task workers pass every runner prompt through `wellFormed()`; text that
+  travels as JSON inside a prompt (the embed texts) needs it before `JSON.stringify`.

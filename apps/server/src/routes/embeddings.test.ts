@@ -39,7 +39,7 @@ async function setup() {
         })
       ).json(),
     );
-  return { ...h, gideon, token, post, claim };
+  return { ...h, gideon, home, token, post, claim };
 }
 
 describe('vectors for search by meaning', () => {
@@ -118,6 +118,25 @@ describe('vectors for search by meaning', () => {
     });
     const [first] = claimed.parse(await res.json());
     expect(first!.task.kind).toBe('hedwig.embed');
+  });
+
+  // A runner's JSON decoder rejects half an emoji; one such mail stuck the
+  // runner on the same batch for days.
+  it('never cuts a character in half where it shortens a body', async () => {
+    const s = await setup();
+    s.platform.settings.update(s.gideon.id, { 'hedwig.facts': true });
+    s.provider(s.home.id).deliver({
+      subject: 'Groeten uit Texel',
+      bodyText: `${'a'.repeat(399)}😀 tot snel`,
+      receivedAt: new Date('2026-11-01T08:00:00Z'),
+    });
+    await s.mail.sync(s.home.id);
+    const [task] = (await s.claim(['ollama:embeddinggemma'])).filter(
+      (t) => t.task.kind === 'hedwig.embed',
+    );
+    const { texts } = JSON.parse(task!.request.prompt) as { texts: string[] };
+    expect(texts[0]).toContain('Groeten uit Texel');
+    expect(texts[0]).not.toMatch(/\p{Cs}/u);
   });
 
   it('refuses an answer with the wrong number of vectors', async () => {

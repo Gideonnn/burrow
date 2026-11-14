@@ -2,6 +2,7 @@
 
 Newest first.
 
+- [2026-11-15 Half an emoji stuck the embeddings](2026-11-15-half-an-emoji-stuck-the-embeddings.md): a body cut at 400 characters split an emoji, Swift refused the prompt, and the same batch failed for two days; every runner request is now made well formed.
 - [2026-11-11 Module routers map errors once](2026-11-11-module-routers-map-errors-once.md): one `onError` per router instead of a `try` per route, Lumos split into changes, ranking and the Seerr mappers, and the hook that refuses `.key` in Bash.
 - [2026-11-11 A refactor pass over the server, the platform and Hedwig](2026-11-11-server-refactor-pass.md): shared helpers for route errors, bot skills, progress counts and single runs; what was rejected, and the secret hook trap.
 - [2026-11-11 A detail wraps its summary](2026-11-11-swift-refactor-pass-pensieve-lumos-kit.md): a Swift refactor pass over Pensieve, Lumos and BurrowKit; details read their summary through dynamic member lookup, shared helpers for the app models, unused API gone.

@@ -34,3 +34,9 @@ export function untrusted(tag: string, text: string): string {
   const closing = `</${tag}>`;
   return `<${tag}>\n${text.replaceAll(closing, `</${tag}_>`)}\n${closing}`;
 }
+
+// Cutting text with slice() can split an emoji into half a surrogate pair,
+// and strict JSON decoders (Swift's) then reject the whole payload.
+export function wellFormed(text: string): string {
+  return text.replace(/\p{Cs}/gu, '�');
+}

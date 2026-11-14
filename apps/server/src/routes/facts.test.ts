@@ -175,6 +175,20 @@ describe('mail facts', () => {
     });
   });
 
+  // A prompt that cuts a long body can cut an emoji in half, and a runner's
+  // JSON decoder rejects the whole claim, so no task would reach the Mac.
+  it('hands a runner only whole characters', async () => {
+    const s = await setup();
+    await s.indexing(s.token);
+    await s.deliver(s.home.id, {
+      subject: 'Lange mail',
+      bodyText: `${'a'.repeat(3_999)}😀 tot snel`,
+    });
+    const [task] = await s.claim(s.token);
+    expect(task?.request.prompt).toContain('Lange mail');
+    expect(task?.request.prompt).not.toMatch(/\p{Cs}/u);
+  });
+
   it('never lets a model lift the sensitive flag', async () => {
     const s = await setup();
     await s.indexing(s.token);
