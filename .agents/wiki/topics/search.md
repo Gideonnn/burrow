@@ -80,6 +80,8 @@ thinking and 6 s without. Haiku 5.5 thinks regardless and plans in 3.5 to 5 s.
   `ollama:embeddinggemma`, priority normal (mail facts always has work and starved it):
   sixty-four messages per task, newest first, for people with `hedwig.facts` on. The
   runner offers the model when Ollama has it and sends the first 256 numbers.
+- A failed batch is tried again one mail at a time; a mail that fails twice is skipped
+  (counted in memory, so a restart tries it once more).
 - The text is `title: <subject> | text: <subject>\nVan: <sender>\n<summary or body>`;
   a question is `task: search result | query: <question>`.
 - `message_vectors` holds them as float32; `VectorIndex` keeps one model's vectors in

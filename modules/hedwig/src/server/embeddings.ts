@@ -20,6 +20,7 @@ import { DIMS, type VectorIndex } from './vectors';
 // most of the meaning.
 export const EMBED_MODEL = 'ollama:embeddinggemma';
 const BATCH = 64;
+const MAX_ATTEMPTS = 2;
 const FOLDERS = ['inbox', 'archive', 'sent'] as const;
 
 const embedAnswer = z.object({ vectors: z.array(z.array(z.number())) });
@@ -51,6 +52,9 @@ export class EmbeddingsService {
   private readonly progress = new Recent<{ waiting: number; done: number }>(
     30_000,
   );
+  // Failed attempts per message. Kept in memory: after a restart a broken
+  // mail costs one failed batch before it is found again.
+  private readonly failures = new Map<string, number>();
 
   constructor(
     private readonly platform: Platform,
@@ -61,12 +65,20 @@ export class EmbeddingsService {
     return this.platform.db;
   }
 
+  private skipped() {
+    return [...this.failures]
+      .filter(([, n]) => n >= MAX_ATTEMPTS)
+      .map(([id]) => id);
+  }
+
   private waiting(personId: string, scope?: readonly string[]) {
+    const skipped = this.skipped();
     return and(
       eq(mailboxes.ownerId, personId),
       scope ? inArray(messages.mailboxId, [...scope]) : undefined,
       inArray(messages.folder, [...FOLDERS]),
       isNull(messageVectors.messageId),
+      skipped.length ? notInArray(messages.id, skipped) : undefined,
     );
   }
 
@@ -120,8 +132,12 @@ export class EmbeddingsService {
         .orderBy(desc(messages.receivedAt))
         .limit(BATCH)
         .all();
-      return rows.length
-        ? { input: { ids: rows.map((r) => r.id) } }
+      // A mail from a failed batch goes alone, so one broken mail cannot
+      // hold back the rest and is skipped after its own attempts.
+      const suspect = rows.find((r) => this.failures.has(r.id));
+      const batch = suspect ? [suspect] : rows;
+      return batch.length
+        ? { input: { ids: batch.map((r) => r.id) } }
         : undefined;
     },
   };
@@ -196,6 +212,7 @@ export class EmbeddingsService {
           this.pending.delete(t.id);
           if (!vectors) return;
           const list = ids(t);
+          for (const id of list) this.failures.delete(id);
           this.db.transaction(() => {
             list.forEach((id, i) => {
               const v = vectors[i];
@@ -212,6 +229,11 @@ export class EmbeddingsService {
               }
             });
           });
+        },
+        failed: (t) => {
+          for (const id of ids(t)) {
+            this.failures.set(id, (this.failures.get(id) ?? 0) + 1);
+          }
         },
       },
     ];

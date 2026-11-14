@@ -24,6 +24,11 @@ lone surrogate would have made the whole claim response undecodable. The embed t
 apply it themselves, because they travel as JSON inside the prompt, where the outer
 pass only sees ASCII escapes.
 
+**Never stuck again.** Embed now does what mail facts does: a failed batch is handed out
+again one mail at a time, and a mail that fails twice is skipped, so one broken mail
+costs one batch instead of all of them. The attempts live in memory, not in a column:
+a restart costs one failed batch, which did not justify a migration.
+
 **Traps.**
 - Text read from SQLite is always well formed (it is stored as UTF-8); the problem only
   arises from slicing in code, so a test must cut a long body, not store a broken one.

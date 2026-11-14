@@ -139,6 +139,39 @@ describe('vectors for search by meaning', () => {
     expect(texts[0]).not.toMatch(/\p{Cs}/u);
   });
 
+  it('retries a failed batch one mail at a time and skips a mail that keeps failing', async () => {
+    const s = await setup();
+    s.platform.settings.update(s.gideon.id, { 'hedwig.facts': true });
+    const embedTasks = async () =>
+      (await s.claim(['ollama:embeddinggemma'])).filter(
+        (t) => t.task.kind === 'hedwig.embed',
+      );
+    const subjects = (t: { request: { prompt: string } }) =>
+      (JSON.parse(t.request.prompt) as { texts: string[] }).texts.map((x) =>
+        x.includes('Zomerkamp') ? 'Zomerkamp' : 'Energie',
+      );
+    const fail = (id: string) =>
+      s.post(`/api/runner/tasks/${id}/fail`, { error: 'Ollama faalde' });
+
+    const [batch] = await embedTasks();
+    expect(subjects(batch!)).toEqual(['Zomerkamp', 'Energie']);
+    await fail(batch!.task.id);
+
+    const [broken, healthy, ...rest] = await embedTasks();
+    expect(rest).toEqual([]);
+    expect(subjects(broken!)).toEqual(['Zomerkamp']);
+    expect(subjects(healthy!)).toEqual(['Energie']);
+    await fail(broken!.task.id);
+    const done = await s.post(
+      `/api/runner/tasks/${healthy!.task.id}/complete`,
+      { vectors: [along(1)] },
+    );
+    expect(done.status).toBe(200);
+
+    // Two failed attempts: the broken mail is skipped.
+    expect(await embedTasks()).toEqual([]);
+  });
+
   it('refuses an answer with the wrong number of vectors', async () => {
     const s = await setup();
     s.platform.settings.update(s.gideon.id, { 'hedwig.facts': true });
